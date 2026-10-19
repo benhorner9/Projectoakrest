@@ -16,5 +16,5 @@ test('skill arc includes four abilities, attack, swap and dodge',()=>{
 });
 test('style swap updates its next-style label without removing existing ability handlers',()=>{
  assert.ok(main.includes("swap.querySelector('small').textContent=upcoming.toUpperCase()"));
- assert.ok(main.includes("b.addEventListener('click',()=>useAbility(i))"));
+ assert.ok(main.includes("b.addEventListener('click',()=>a?useAbility(i):bookOpen('abilities'))"));
 });

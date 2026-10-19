@@ -158,7 +158,7 @@ export function skillMilestones(skill){
    for(const a of skillCatalogue(skill,id)){
     // A weapon-family ability can be used only after that weapon family is wieldable.
     const level=Math.max(w.requiredLevel,a.requiredLevel);
-    const key=w.family+':'+a.id;
+    const key=a.id.startsWith('s')?'shared:'+a.id:w.family+':'+a.id;
     if(seen.has(key))continue;seen.add(key);
     result.push({level,type:'Learn',name:a.name,detail:a.note});
    }

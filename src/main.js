@@ -97,7 +97,7 @@ function showSkillDetail(id){
  $('skill-detail-title').textContent=def.icon+' '+def.label+' · Level '+info.level;
  const body=$('skill-detail-body');body.replaceChildren();
  el('p',def.description,body,'detail-desc');
- el('p',info.maxed?'MAX LEVEL':xpText(info.needed)+' XP needed for level '+(info.level+1),body,'detail-xp');
+ el('p',info.maxed?'MAX LEVEL':xpText(info.current)+' / '+xpText(info.required)+' XP · '+xpText(info.needed)+' XP needed for level '+(info.level+1),body,'detail-xp');
  el('h3','What you learn or can wear',body);
  const milestones=skillMilestones(id);
  for(const entry of milestones){

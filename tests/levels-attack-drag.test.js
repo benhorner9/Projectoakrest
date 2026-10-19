@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { xpProgress,xpToLevel } from '../src/rules.js';
+import { xpProgress,xpToLevel,SKILLS_OVERVIEW } from '../src/rules.js';
 import { attackDragDelta } from '../src/controls.js';
 import { readFileSync } from 'node:fs';
 test('all skill XP overview numbers are accurate',()=>{
@@ -14,11 +14,12 @@ test('maximum skill level does not show a future level',()=>{
 test('attack-drag ignores small finger jitter and huge pointer jumps',()=>{
  assert.equal(attackDragDelta(.4),0);assert.equal(attackDragDelta(24),24);assert.equal(attackDragDelta(-25),-25);assert.equal(attackDragDelta(900),48);assert.equal(attackDragDelta(-900),-48);assert.equal(attackDragDelta(NaN),0);
 });
-test('Levels menu has all four skills and XP needed',()=>{
+test('Skills menu lists all four XP tracks and opens level unlock details',()=>{
  const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- for(const key of ['melee','ranged','magic','vitality'])assert.ok(source.includes("['"+key+"'"));
- assert.ok(source.includes('xpProgress(data.xp[key])'));
- assert.ok(source.includes("format(info.needed)+' XP to Level '"));
+ assert.deepEqual(SKILLS_OVERVIEW.map(s=>s.id),['melee','ranged','magic','vitality']);
+ assert.ok(source.includes('xpProgress(data.xp[skill.id])'));
+ assert.ok(source.includes('showSkillDetail(skill.id)'));
+ assert.ok(source.includes("xpText(info.needed)+' XP needed for level '"));
 });
 test('Attack drag turns horizontally without releasing auto-attack',()=>{
  const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
