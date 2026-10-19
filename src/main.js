@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity } from './controls.js';
+import { installGameZoomGuard } from './touch-gestures.js';
 
 const $=id=>document.getElementById(id);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
 document.documentElement.classList.toggle('touch-enabled',isTouch);
+// Suppress Safari page zoom while keeping gameplay multitouch working.
+installGameZoomGuard(document);
 const now=()=>performance.now()/1000;
 const rand=(seed)=>{let s=seed;return ()=>{s=(s*16807)%2147483647;return (s-1)/2147483646;};};
 const random=rand(27184);

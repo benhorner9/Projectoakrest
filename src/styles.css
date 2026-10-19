@@ -62,3 +62,8 @@
 .touch-enabled .touch-look-zone{top:24%;bottom:42%}
 .touch-enabled .quest{display:none}
 }
+
+/* Keep Safari from zooming/bouncing the whole viewport when both thumbs play. */
+html,body{overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-touch-callout:none}
+#game,#hud,canvas,.combatbar,.skills,.styles,.skill,.style,.touch-controls,.touch-look-zone,.touch-actions,.touch-actions button,.joystick,#intro,#begin{touch-action:none;-webkit-touch-callout:none}
+#controls-panel input{touch-action:pan-x}

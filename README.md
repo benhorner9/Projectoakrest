@@ -40,3 +40,6 @@ Gear-progression dungeons, potentially style-restricted dungeons, are planned fo
 - A keyboard without a mouse can use WASD to move, the left/right arrows to rotate the camera, J or Enter to attack, Tab to swap, Q/E/R/F for skills, and Space to dodge.
 
 These are early controls: check comfort on real iPad hardware before considering them final.
+
+## iPad / Safari zoom fix
+Safari pinch, double-tap and multi-thumb page zoom are suppressed on the fullscreen gameplay surface without disabling taps, attacks or single-finger camera drag. The camera sensitivity slider remains usable.

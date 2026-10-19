@@ -7,6 +7,6 @@
   "scripts": {
     "dev": "python3 -m http.server 5173",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/main.js && node --check src/rules.js && node --check src/controls.js"
+    "check": "node --check src/main.js && node --check src/rules.js && node --check src/controls.js && node --check src/touch-gestures.js"
   }
 }
