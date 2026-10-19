@@ -31,3 +31,12 @@ The prototype is static, no server functions or build step. Import this GitHub r
 
 ## Future direction
 Gear-progression dungeons, potentially style-restricted dungeons, are planned for later. First prove the single-village combat loop is fun. This is a prototype: no multiplayer, server-authoritative gameplay, account login or production asset pipeline yet. Test iPad performance and controls in a real browser before treating the client as ready.
+
+## Mouse-free / iPad controls (0.2)
+- Left joystick moves; drag the right side of the scene to look.
+- Hold ATTACK for repeated basic attacks at your equipped weapon's attack speed.
+- DODGE and SWAP have their own touch buttons; all four abilities and three combat-style buttons remain tappable.
+- ⚙ opens the camera sensitivity slider and full input instructions.
+- A keyboard without a mouse can use WASD to move, the left/right arrows to rotate the camera, J or Enter to attack, Tab to swap, Q/E/R/F for skills, and Space to dodge.
+
+These are early controls: check comfort on real iPad hardware before considering them final.

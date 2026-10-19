@@ -18,8 +18,15 @@
     <header class="topbar">
       <div class="brand"><span class="rune">◇</span><div><b>OAKREST</b><small>COMBAT PROTOTYPE · 0.1</small></div></div>
       <div class="location"><span class="dot"></span><span id="area">Oakrest Village</span></div>
-      <button id="help-button" class="top-button" aria-label="Show controls">?</button>
+      <button id="help-button" class="top-button" type="button" aria-label="Controls and camera settings" aria-expanded="false">⚙</button>
     </header>
+    <section id="controls-panel" class="controls-panel" hidden aria-label="Controls and camera settings">
+      <div class="settings-heading"><strong>CONTROLS & CAMERA</strong><button id="close-controls" type="button" aria-label="Close controls">✕</button></div>
+      <p class="touch-help">Left thumb: move · Right thumb: drag to look · Hold ATTACK to keep fighting · Tap a skill or SWAP to change styles.</p>
+      <p class="desktop-help">WASD move · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · Tab switch · Space dodge.</p>
+      <label for="look-speed">Camera speed <output id="look-speed-value">1.0×</output></label>
+      <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
+    </section>
     <section class="vitals">
       <div class="vital-line"><strong id="health-label">100 / 100 HP</strong><span id="level-label">VITALITY 1</span></div>
       <div class="bar health"><div id="hp-fill"></div></div>
@@ -30,22 +37,28 @@
     <div class="targetbox" id="targetbox" hidden><div id="target-name">Field Boar</div><div class="bar enemy-health"><div id="target-hp"></div></div></div>
     <div class="reticle" aria-hidden="true"><i></i><i></i></div>
     <div id="notifications" aria-live="polite"></div>
+    <div id="touch-look-zone" class="touch-look-zone" aria-label="Drag here to turn the camera">
+      <div id="touch-look-tip" class="look-tip"><span>↔</span> DRAG TO LOOK</div>
+    </div>
     <footer class="combatbar">
       <div class="equipment-picker" id="equipment-picker" hidden></div>
       <div class="styles" id="styles"></div>
       <div class="weaponline"><span id="weapon-name">Iron Longsword</span><button id="gear-button">CHANGE WEAPON ▾</button></div>
       <div class="skills" id="skills"></div>
-      <div class="bottom-hint">Left click to attack · Q E R F abilities · TAB switch style · SHIFT dodge · ESC release mouse</div>
+      <div class="bottom-hint">WASD move · Mouse or drag to look · Arrow keys turn · J attack · Q E R F skills · TAB switch · SPACE dodge</div>
     </footer>
     <div id="touch-controls" class="touch-controls">
       <div id="joystick" class="joystick"><div id="stick"></div></div>
-      <div class="touch-actions"><button id="touch-dodge">DODGE</button><button id="touch-attack">ATTACK</button></div>
-      <div class="touch-tip">Swipe the right side to turn the camera</div>
+      <div class="touch-actions">
+        <button id="touch-dodge" type="button" aria-label="Dodge">↝<small>DODGE</small></button>
+        <button id="touch-swap" type="button" aria-label="Switch combat style">⇄<small>SWAP</small></button>
+        <button id="touch-attack" type="button" aria-label="Hold to attack">⚔<small>ATTACK</small></button>
+      </div>
     </div>
     <div id="floating"></div>
   </div>
   <div id="intro" class="overlay">
-    <div class="panel"><span class="eyebrow">A NEW WORLD BEGINS</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>One village. Three fighting styles. Your skill decides the battle.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><div class="intro-hint">Desktop: WASD + mouse · iPad: joystick + swipe + touch actions</div></div>
+    <div class="panel"><span class="eyebrow">A NEW WORLD BEGINS</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>One village. Three fighting styles. Your skill decides the battle.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick + right-side drag + hold ATTACK</div></div>
   </div>
   <div id="error" class="error" hidden>Unable to start 3D graphics. Please use an up-to-date browser with WebGL enabled and a network connection.</div>
   <script type="module" src="./src/main.js"></script>
