@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {STYLE_ORDER,LOADOUTS,nextStyle,xpToLevel,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,defaultSave,validSave} from '../src/rules.js';
+test('style selection rotates through three combat disciplines',()=>{assert.equal(nextStyle('melee'),'magic');assert.equal(nextStyle('magic'),'ranged');assert.equal(nextStyle('ranged'),'melee');});
+test('each weapon supplies four distinct usable skills',()=>{for(const style of STYLE_ORDER)for(const w of Object.values(LOADOUTS[style])){assert.equal(w.abilities.length,4);assert.equal(new Set(w.abilities.map(a=>a.name)).size,4);assert.ok(w.abilities.every(a=>a.cooldown>0));}});
+test('each style can have multiple independent weapon kits',()=>{for(const style of STYLE_ORDER)assert.ok(Object.keys(LOADOUTS[style]).length>=2);});
+test('xp level thresholds are monotonic and vitality determines health',()=>{assert.equal(levelFromXp(0).level,1);assert.equal(levelFromXp(xpToLevel(1)).level,2);assert.ok(levelFromXp(1000).level>2);assert.equal(maxHealth(1),100);assert.equal(maxHealth(10),172);});
+test('damage shields always reduce incoming damage',()=>{assert.ok(damageAfterArmour(20,true)<damageAfterArmour(20,false));});
+test('melee target selection requires facing and reach',()=>{const p={x:0,z:0},h={x:0,z:-1};const enemies=[{x:0,z:-2,dead:false,hp:30},{x:0,z:2,dead:false,hp:30},{x:0,z:-7,dead:false,hp:30}];assert.equal(meleeTarget(p,h,enemies,3),enemies[0]);assert.equal(meleeTarget(p,h,enemies,1),null);});
+test('corrupted saves cannot inject unexpected gear or negative XP',()=>{const d=validSave({xp:{melee:-10,magic:250,ranged:NaN},gear:{melee:'adminSword'},coins:-300});assert.equal(d.xp.melee,0);assert.equal(d.xp.magic,250);assert.equal(d.gear.melee,'sword');assert.equal(d.coins,0);assert.deepEqual(Object.keys(d),Object.keys(defaultSave()));});
