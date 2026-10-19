@@ -5,6 +5,7 @@ import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
 import { createOakrestScenery, enrichHero, enrichEnemy } from './visual-world.js';
+import { createCombatVisuals } from './combat-visuals.js';
 
 const $=id=>document.getElementById(id);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
@@ -77,9 +78,10 @@ block(scene,6,4.6,19,4.9,.3,4,MAT.wood);const wellRoof=put(scene,new THREE.ConeG
 for(let i=0;i<13;i++){const x=(random()-.5)*85,z=(random()-.5)*90;if(Math.abs(x)<5&&z<40&&z>-60)continue;const m=cylinder(scene,x,.13,z,.25,.26,MAT.stone);m.scale.y=.6;}
 // A landmark to help new players know which way to leave the village.
 for(const x of [-4,4])block(scene,x,2.35,-9,.7,4.7,.7,MAT.wood);block(scene,0,4.7,-9,8.6,.6,.8,MAT.woodLight);
-const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));
+const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));block(scene,0,3.9,-9.1,2.45,.10,.05,MAT.gold);
 function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2.65,z,1.75,.7,.16,MAT.woodLight);}sign(5,12);
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
+const visuals=createCombatVisuals(THREE,scene);
 
 function createHero(){const g=new THREE.Group();const base=mat(playerColours.melee);const skin=mat('#dfad81');block(g,0,1.25,0,.86,1.18,.48,base);block(g,0,1.36,-.27,.65,.75,.08,MAT.woodLight);ball(g,0,2.13,0,.39,.43,.37,skin);const hair=ball(g,0,2.4,.01,.4,.21,.38,mat('#3b2f2a'));
 const leftLeg=new THREE.Group(),rightLeg=new THREE.Group(),leftArm=new THREE.Group(),rightArm=new THREE.Group();leftLeg.position.set(-.23,.77,0);rightLeg.position.set(.23,.77,0);leftArm.position.set(-.59,1.76,0);rightArm.position.set(.59,1.76,0);for(const leg of [leftLeg,rightLeg]){block(leg,0,-.32,0,.31,.72,.36,MAT.wood);block(leg,0,-.69,-.1,.33,.24,.58,MAT.black);g.add(leg);}for(const arm of [leftArm,rightArm]){block(arm,0,-.35,0,.24,.75,.28,base);g.add(arm);}const hand=ball(rightArm,0,-.76,0,.17,.16,.17,skin);const weapon=new THREE.Group();weapon.position.set(.05,-.78,-.16);rightArm.add(weapon);
@@ -286,7 +288,14 @@ function renderBook(){
 }
 function getWeapon(){return LOADOUTS[style][data.gear[style]];}
 function save(){try{localStorage.setItem('oakrest-v1',JSON.stringify(data));}catch{}}
-function toast(message){const el=document.createElement('div');el.className='toast';el.innerHTML=message;$('notifications').prepend(el);setTimeout(()=>el.remove(),3100);}
+function toast(message){
+ const el=document.createElement('div');el.className='toast';
+ if(message.includes('LEVEL '))el.classList.add('level-up');
+ else if(message.includes('LOOT'))el.classList.add('loot');
+ else if(message.includes('DEFEATED'))el.classList.add('defeat');
+ el.innerHTML=message;$('notifications').prepend(el);
+ setTimeout(()=>el.remove(),3100);
+}
 function floating(text,color,pos){const el=document.createElement('div');el.className='damage-pop';el.textContent=text;el.style.color=color;$('floating').append(el);floaters.push({el,pos:pos.clone(),age:0});}
 function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);const d={type,x,z,startX:x,startZ:z,group:g,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
   if(type==='dummy'){d.max=1200;d.hp=1200;cylinder(g,0,1.2,0,.32,2.4,MAT.wood);block(g,0,1.73,0,1.5,.28,.3,MAT.woodLight);ball(g,0,2.58,0,.38,.42,.38,MAT.woodLight);block(g,0,1.9,-.34,.5,.5,.06,MAT.gold);}
@@ -294,7 +303,11 @@ function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);con
   if(type==='boar'){d.max=90;d.hp=90;ball(g,0,.72,0,.95,.68,1.25,mat('#865f44'));ball(g,0,.65,-1.04,.53,.4,.43,mat('#bd8f78'));for(const xx of [-.33,.33]){ball(g,xx,.94,-.99,.095,.11,.08,MAT.black);block(g,xx,.23,.55,.27,.44,.3,MAT.wood);}}
   if(type==='bandit'){d.max=125;d.hp=125;block(g,0,1.08,0,.8,1.3,.51,mat('#714c48'));ball(g,0,2.02,0,.37,.4,.37,mat('#c89770'));for(const xx of [-.28,.28])block(g,xx,.35,0,.26,.7,.34,MAT.wood);block(g,.6,1.23,-.25,.17,1,.2,MAT.stone);}
   enrichEnemy({THREE,type,g,block,ball,mat,MAT});
- const plate=new THREE.Group();plate.position.y=type==='dummy'?3.15:type==='mossling'?1.5:2.55;g.add(plate);const bg=block(plate,0,0,0,1.4,.13,.05,MAT.black);const bar=block(plate,0,.01,.05,1.36,.095,.04,mat('#d97266'));d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);return d;
+ const plate=new THREE.Group();plate.position.y=type==='dummy'?3.15:type==='mossling'?1.5:2.55;g.add(plate);
+ const frame=block(plate,0,0,-.05,1.55,.24,.07,MAT.gold);
+ const bg=block(plate,0,0,0,1.40,.14,.06,MAT.black);
+ const bar=block(plate,0,.01,.06,1.36,.10,.05,mat(type==='mossling'?'#9ddc9b':type==='boar'?'#e9af81':'#f18c7b'));
+d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);return d;
 }
 makeEnemy('dummy',-6,-3);
 makeEnemy('mossling',-4,-21);makeEnemy('mossling',5,-24);makeEnemy('mossling',-8,-30);
@@ -312,6 +325,7 @@ function refreshSkills(){
  });
  $('weapon-name').textContent=getWeapon().title;refreshStyles();updateHpUI();
  $('touch-attack').title=weaponDisplay(getWeapon());
+ document.documentElement.dataset.combatStyle=style;
  const swap=$('touch-swap'),upcoming=nextStyle(style);
  swap.querySelector('small').textContent=upcoming.toUpperCase();swap.setAttribute('aria-label',`Switch to ${upcoming}`);
 }
@@ -323,7 +337,7 @@ function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=ball(s
 function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.coins+=type==='bandit'?13:type==='boar'?7:4;data.defeated++;awardTrainingGear(data);const material=grantMonsterMaterial(data.inventory,type,random());if(material)toast('<b>LOOT</b> · '+material);if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
 function hitEnemy(e,damage,ability){if(!e||e.dead||e.hp<=0)return;const amount=Math.round(damage*(1+Math.min(24,levelFromXp(data.xp[style]).level-1)*.025)*outgoingMultiplier(data.armour[style],style));e.hp-=amount;e.hitFlashUntil=now()+.16;
  floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));
- if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);gainXp(e.type);}}
+ if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);gainXp(e.type);}}
 function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return enemies.filter(e=>!e.dead&&e.hp>0).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
 function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},enemies,reach,isTouch?.12:.25);}
 function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWeapon().reach){
@@ -332,10 +346,19 @@ function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWea
   if(target)dir=new THREE.Vector3(target.x-hero.position.x,0,target.z-hero.position.z).normalize();
  }
  dir.applyAxisAngle(new THREE.Vector3(0,1,0),spread);
- const mesh=ball(scene,hero.position.x+dir.x*.9,1.3,hero.position.z+dir.z*.9,.16,.16,.33,new THREE.MeshBasicMaterial({color:colour}));
+ const mesh=ball(scene,hero.position.x+dir.x*.9,1.3,hero.position.z+dir.z*.9,
+ style==='magic'?.24:.13,style==='magic'?.24:.13,style==='magic'?.3:.48,
+ new THREE.MeshBasicMaterial({color:colour}));
+ visuals.projectile(mesh,colour,style);
  projectiles.push({mesh,dir,speed,damage,opts,life:Math.max(1.4,maxRange/Math.max(1,speed)+.1),age:0,distance:0,maxDistance:Math.max(.1,maxRange-.9),origin:hero.position.clone(),style,particle:false});
 }
-function slashEffect(reach=3){const p=hero.position.clone().add(forward().multiplyScalar(Math.min(2,reach*.68)));p.y=1.25;sparks(p,STYLE_COLOURS[style],7);}
+function slashEffect(reach=3){
+ const heading=forward();
+ const p=hero.position.clone().add(heading.clone().multiplyScalar(Math.min(2,reach*.68)));
+ p.y=1.25;
+ sparks(p,STYLE_COLOURS[style],7);
+ visuals.arc(hero.position,heading,reach,STYLE_COLOURS[style],comboStage);
+}
 function doBasic(){
  const t=now();if(!started||hp<=0||t<switchUntil||!basicAttackReady(t,attackUntil,!!pendingBasic))return;
  const w=getWeapon();
@@ -487,8 +510,9 @@ function updateEnemy(e,dt,t){
 function animate(dt,t){elapsed+=dt;resolveBasicAttack(t);if(holdingAttack || keys.has('j') || keys.has('enter'))doBasic();const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));if(turn)yaw+=turn*dt*2.35*lookSensitivity;const movement=new THREE.Vector3(),front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;const h=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x;movement.addScaledVector(front,v).addScaledVector(side,h);let moving=movement.length()>.04;if(moving&&hp>0){movement.normalize().multiplyScalar(dt*(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility);const nx=hero.position.x+movement.x,nz=hero.position.z+movement.z;if(!collides(nx,hero.position.z))hero.position.x=nx;if(!collides(hero.position.x,nz))hero.position.z=nz;}hero.rotation.y=-yaw;const swing=moving?Math.sin(elapsed*10)*.45:0;hero.userData.leftLeg.rotation.x=swing;hero.userData.rightLeg.rotation.x=-swing;hero.userData.leftArm.rotation.x=-swing*.6;hero.userData.rightArm.rotation.x=THREE.MathUtils.lerp(hero.userData.rightArm.rotation.x,t<recoilUntil?-1.12:swing*.3,dt*12);hero.position.y=moving?Math.sin(elapsed*20)*.045:0;
 const back=front.clone().multiplyScalar(-6.5);const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));const ideal=look.clone().add(back).add(new THREE.Vector3(0,2.15+Math.sin(pitch)*3,0));cameraJolt=Math.max(0,cameraJolt-dt*.85);ideal.y+=cameraJolt*Math.sin(elapsed*95);camera.position.lerp(ideal,1-Math.pow(.005,dt));camera.lookAt(look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0)));
 for(const e of enemies)updateEnemy(e,dt,t);
-for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);p.mesh.material.dispose();projectiles.splice(i,1);}}
-for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
+visuals.update(dt);
+ for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
 let aim=null,aimScore=-Infinity;for(const e of enemies){if(e.dead||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent={dummy:'Training Dummy',mossling:'Mossling',boar:'Field Boar',bandit:'Forest Bandit'}[aim.type];$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}

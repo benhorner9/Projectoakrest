@@ -78,3 +78,6 @@ Ranged basic attacks and projectile abilities can no longer travel past their eq
 
 ## Visual polish pass 1 — world, lighting and character silhouettes
 Procedural low-poly environment upgrade using instanced grass, roadside pebbles, wildflowers, larger rocks, creek, market cart, crops, barrels, crates, directional lighting, sunset sky dome and ambient motes. Cabins have additional foundation, timber frames, roofs and warm windows. Player gains cloak, belt, armour plate, bracers and boots; mosslings, boars and bandits gain readable unique detailing. Materials stay entirely code-generated, with no external textures or large file downloads. The sky and ambient particles animate independently of the core simulation and don't block touch controls.
+
+## Visual polish pass 1 — combat and presentation
+Added transient slash-arc and impact-ring meshes, per-projectile glow and cleanup; target bars now have more contrast and colour-coded foes. UI uses a cohesive forest/brass visual theme across HP, XP, quest, skills, ability cluster, joystick, progression menu, notifications, introductory screen and camera controls. Fight effects are short-lived, cleanup meshes to avoid memory leaks, and respect iPad touch hit areas. Reduced motion users get simpler HUD animation.

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./src/styles.css" />
   <link rel="stylesheet" href="./src/mobile-combat.css" />
   <link rel="stylesheet" href="./src/progression.css" />
+  <link rel="stylesheet" href="./src/visual-polish.css" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <script type="importmap">
   { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js" } }
@@ -18,7 +19,7 @@
   <div id="game"></div>
   <div id="hud">
     <header class="topbar">
-      <div class="brand"><span class="rune">◇</span><div><b>OAKREST</b><small>VISUAL POLISH · 0.8</small></div></div>
+      <div class="brand"><span class="rune">✥</span><div><b>OAKREST</b><small>THE GREENWOOD FRONTIER</small></div></div>
       <div class="location"><span class="dot"></span><span id="area">Oakrest Village</span></div>
       <button id="help-button" class="top-button" type="button" aria-label="Controls and camera settings" aria-expanded="false">⚙</button>
     </header>
@@ -78,7 +79,7 @@
 
   </div>
   <div id="intro" class="overlay">
-    <div class="panel"><span class="eyebrow">A NEW WORLD BEGINS</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>One village. Three fighting styles. Your skill decides the battle.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick to move + right thumb action buttons</div></div>
+    <div class="panel"><span class="intro-emblem">✥</span><span class="eyebrow">THE GREENWOOD FRONTIER</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>Beyond the village gates, every path is a challenge.<br>Choose your weapon. Find your courage.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick to move + right thumb action buttons</div></div>
   </div>
   <div id="error" class="error" hidden>Unable to start 3D graphics. Please use an up-to-date browser with WebGL enabled and a network connection.</div>
   <script type="module" src="./src/main.js"></script>
