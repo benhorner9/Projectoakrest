@@ -118,6 +118,54 @@ export function equipSkill(data,style,weaponId,slot,id){
   for(let i=0;i<4;i++)if(i!==slot&&slots[i]===id&&id!==null)slots[i]=null;
   slots[slot]=id;return true;
 }
+
+export const SKILLS_OVERVIEW=[
+  {id:'melee',label:'Melee',icon:'⚔',description:'Swords, daggers and close combat'},
+  {id:'ranged',label:'Ranged',icon:'➶',description:'Bows, crossbows and ranged combat'},
+  {id:'magic',label:'Magic',icon:'✦',description:'Spells, staffs and magical combat'},
+  {id:'vitality',label:'Vitality',icon:'✚',description:'Health, armour and survival'}
+];
+export function starterInventory(){
+ return {weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller']};
+}
+export function awardTrainingGear(data){
+ if(!data.inventory||typeof data.inventory!=='object')data.inventory=starterInventory();
+ if(!data.inventory.weapons||typeof data.inventory.weapons!=='object')data.inventory.weapons={};
+ for(const style of STYLE_ORDER){
+  if(!Array.isArray(data.inventory.weapons[style]))data.inventory.weapons[style]=[];
+  const owned=new Set(data.inventory.weapons[style].filter(id=>Object.hasOwn(LOADOUTS[style],id)));
+  for(const [id,w] of Object.entries(LOADOUTS[style])){
+   if(canEquipWeapon(style,id,data.xp))owned.add(id);
+  }
+  data.inventory.weapons[style]=[...owned];
+ }
+ const ownedArmour=new Set((Array.isArray(data.inventory.armour)?data.inventory.armour:[]).filter(id=>Object.hasOwn(ARMOUR,id)));
+ for(const id of Object.keys(ARMOUR))if(canEquipArmour(id,data.xp))ownedArmour.add(id);
+ data.inventory.armour=[...ownedArmour];
+ return data.inventory;
+}
+export function ownsWeapon(data,style,id){return !!data.inventory?.weapons?.[style]?.includes(id);}
+export function ownsArmour(data,id){return !!data.inventory?.armour?.includes(id);}
+export function skillMilestones(skill){
+ const result=[];
+ if(skill==='vitality'){
+  result.push({level:2,type:'Progression',name:'+8 maximum health',detail:'Every Vitality level grants +8 maximum health.'});
+  for(const a of Object.values(ARMOUR))result.push({level:a.requiredVitality,type:'Wear',name:a.title,detail:a.description});
+ }else if(STYLE_ORDER.includes(skill)){
+  const seen=new Set();
+  for(const [id,w] of Object.entries(LOADOUTS[skill])){
+   result.push({level:w.requiredLevel,type:'Wield',name:w.title,detail:'Weapon level requirement'});
+   for(const a of skillCatalogue(skill,id)){
+    // A weapon-family ability can be used only after that weapon family is wieldable.
+    const level=Math.max(w.requiredLevel,a.requiredLevel);
+    const key=w.family+':'+a.id;
+    if(seen.has(key))continue;seen.add(key);
+    result.push({level,type:'Learn',name:a.name,detail:a.note});
+   }
+  }
+ }
+ return result.sort((a,b)=>a.level-b.level||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
+}
 export const XP_BY_MOB = {dummy:0,mossling:30,boar:46,bandit:75};
 export function nextStyle(style) { const i=STYLE_ORDER.indexOf(style); return STYLE_ORDER[(i+1)%STYLE_ORDER.length]; }
 export function xpToLevel(level) { return 65 + level*45; }
@@ -149,16 +197,25 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots};
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory()};
 }
 export function validSave(raw){
   const d=defaultSave();if(!raw||typeof raw!=='object')return d;
   for(const k of Object.keys(d.xp))if(Number.isFinite(raw.xp?.[k]))d.xp[k]=clamp(raw.xp[k],0,10000000);
   d.coins=clamp(Number(raw.coins)||0,0,10000000);
   d.defeated=clamp(Number(raw.defeated)||0,0,10000000);
+  // Sanitize ownership; a legacy save receives earned equipment for its existing levels.
+  if(raw.inventory?.weapons){
+   for(const style of STYLE_ORDER){
+    const owned=raw.inventory.weapons[style];
+    if(Array.isArray(owned))d.inventory.weapons[style]=owned.filter(id=>typeof id==='string'&&Object.hasOwn(LOADOUTS[style],id));
+   }
+  }
+  if(Array.isArray(raw.inventory?.armour))d.inventory.armour=raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id));
+  awardTrainingGear(d);
   for(const style of STYLE_ORDER){
-    if(canEquipWeapon(style,raw.gear?.[style],d.xp))d.gear[style]=raw.gear[style];
-    if(canEquipArmour(raw.armour?.[style],d.xp))d.armour[style]=raw.armour[style];
+    if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
+    if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];
     const level=levelFromXp(d.xp[style]).level;
     for(const [family,slots] of Object.entries(d.slots[style])){
       const incoming=raw.slots?.[style]?.[family];

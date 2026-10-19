@@ -1,37 +1,56 @@
 
-.loadout-actions{display:flex;gap:6px;flex-shrink:0}.loadout-actions button{background:#304238;border:1px solid #a49b73a6;color:#e9d5a3;border-radius:6px;padding:8px;font-size:10px;letter-spacing:.06em}
-.skill.empty{border-style:dashed;opacity:.76;background:#13221fae}.skill.empty .skill-icon{opacity:.75}.skill.empty .name{color:#e5d3ae}.skill.empty .key{opacity:.7}
-.progression-panel[hidden]{display:none}.progression-panel{position:absolute;inset:0;z-index:20;pointer-events:auto;display:flex;align-items:center;justify-content:center;padding:calc(18px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));background:#051916cb;backdrop-filter:blur(6px);text-shadow:none}
-.progression-card{width:min(690px,96vw);max-height:100%;display:flex;flex-direction:column;background:#102922f5;border:1px solid #bbaa7d;border-radius:14px;overflow:hidden;box-shadow:0 24px 50px #000a}
-.progression-header{display:flex;justify-content:space-between;align-items:center;padding:13px 18px 8px;border-bottom:1px solid #bbaa7d4a}.progression-header strong{font-size:16px;letter-spacing:.1em;color:#ecd4a7}.progression-header span{display:block;font-size:11px;color:#bdcdb9;margin-top:5px}
-.progression-header button{width:40px;height:40px;border-radius:7px;background:#33483e;border:1px solid #bbaa7d4a}
-.progression-tabs,.progression-styles{display:flex;gap:8px;padding:8px 14px}.progression-tabs button,.progression-styles button{flex:1;min-height:39px;border:1px solid #c6b08767;border-radius:7px;background:#233c34;font-size:12px}.progression-styles button{min-height:34px}.progression-tabs button.selected,.progression-styles button.selected{background:#69583b;border-color:#e4c181;color:#fff1d3}
-.progression-content{overflow:auto;overscroll-behavior:contain;padding:8px 15px 16px;min-height:0}.progression-content h3{font-size:13px;letter-spacing:.06em;color:#e7d2a7;margin:10px 0}.progression-content p{font-size:12px;line-height:1.5;color:#b6c5b9;margin:5px 0 13px}
-.book-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:9px 0 17px}
-.book-slots button{border:1px solid #908b6bb8;border-radius:8px;background:#223a32;min-height:73px;padding:7px 3px;font-size:11px;overflow-wrap:anywhere}
-.book-slots button.selected{border:2px solid #efcd8e;background:#685739}
-.book-slots button span{display:block;font-size:23px;margin-bottom:4px}
-.catalogue-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.catalogue-list button{min-height:69px;display:flex;align-items:flex-start;text-align:left;gap:10px;border:1px solid #c3a97972;background:#1d392f;border-radius:9px;padding:10px}
-.catalogue-list button:disabled{opacity:.5;background:#162722}
-.catalogue-list button.selected{border:2px solid #e8bd80}
-.catalogue-list button>span{font-size:23px;flex-shrink:0}
-.catalogue-list button strong{display:block;font-size:12px;color:#f5e3c3}
-.catalogue-list button small{display:block;margin-top:3px;font-size:10px;color:#c3d0c2;line-height:1.25}
-.catalogue-list button em{display:block;margin-top:4px;font-size:10px;color:#edca8b;font-style:normal}
-.inventory-group{margin:4px 0 14px}.inventory-group h3{margin-bottom:9px}.gear-stats{font-size:10px;color:#b8cabf}
-@media(max-width:600px){.progression-panel{padding:calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom))}.progression-card{max-height:100%}.progression-content{padding:5px 10px 10px}.catalogue-list button{padding:7px;gap:5px}.catalogue-list button>span{font-size:19px}.catalogue-list button strong{font-size:10px}.catalogue-list button small{font-size:9px}.book-slots button{min-height:60px;font-size:9px}.book-slots button span{font-size:18px}.progression-header{padding:7px 10px}.progression-header strong{font-size:13px}.progression-styles,.progression-tabs{padding:6px 9px}.progression-tabs button{min-height:33px}.progression-styles button{min-height:33px}}
-
-/* All-skill XP and current level overview in the existing progression menu. */
-.progression-styles[hidden]{display:none}
-.level-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:4px 0 14px}
-.level-card{background:#18382fe9;border:1px solid #bea97879;border-radius:11px;padding:14px;min-width:0}
-.level-card-title,.level-xp-numbers{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.level-card-title{margin-bottom:13px}.level-card-title strong{font-size:17px;color:#f5e4bf}.level-card-title span{font-size:13px;color:#ecc995;white-space:nowrap}
-.level-xp-track{height:12px;overflow:hidden;border-radius:8px;background:#0a1d18;border:1px solid #c9b67c60}
-.level-xp-fill{height:100%;background:#d6a176;border-radius:8px;transition:width .18s}
-.level-ranged .level-xp-fill{background:#86c89e}.level-magic .level-xp-fill{background:#97b0f0}.level-vitality .level-xp-fill{background:#dc878f}
-.level-xp-numbers{align-items:flex-start;margin:10px 0;font-size:11px;color:#d1ddce}
-.level-xp-numbers strong{color:#f0ca91;white-space:nowrap;text-align:right}
-.level-card small{display:block;font-size:10px;line-height:1.4;color:#b5c8b9}
-@media(max-width:600px){.level-overview{grid-template-columns:1fr;gap:8px}.level-card{padding:10px 12px}.level-card-title{margin-bottom:8px}.level-card-title strong{font-size:14px}.level-xp-numbers{font-size:10px;margin:7px 0}}
+.loadout-actions{display:flex;gap:5px;flex-shrink:0}
+.loadout-actions button{background:#304238;border:1px solid #a49b73a6;color:#e9d5a3;border-radius:7px;padding:8px;font-size:10px;letter-spacing:.04em}
+.skill.empty{border-style:dashed;opacity:.76;background:#13221fae}.skill.empty .skill-icon{opacity:.75}.skill.empty .name{color:#e5d3ae}
+.progression-panel[hidden],.skill-detail[hidden],.progression-styles[hidden]{display:none}
+.progression-panel{position:absolute;z-index:12;right:0;bottom:calc(100% + 9px);top:auto;width:min(390px,calc(100vw - 18px));max-height:min(460px,calc(100dvh - 95px));display:flex;pointer-events:auto;text-shadow:none;isolation:isolate}
+.progression-card{position:relative;width:100%;max-height:inherit;min-height:0;display:flex;flex-direction:column;border:1px solid #d3ba83a3;border-radius:12px;background:#0f2923f5;box-shadow:0 12px 28px #000a;overflow:hidden}
+.progression-header{display:flex;justify-content:space-between;align-items:center;gap:7px;padding:10px 12px 7px;border-bottom:1px solid #bbaa7d4a;flex-shrink:0}
+.progression-header strong{font-size:14px;letter-spacing:.11em;color:#f0d4a0}
+.progression-header span{display:block;margin-top:2px;font-size:10px;color:#bed1c2}
+.progression-header button{min-width:36px;min-height:36px;background:#30443a;border:1px solid #c9b58c70;border-radius:8px}
+.progression-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:7px 8px 5px;flex-shrink:0}
+.progression-tabs button,.progression-styles button{border:1px solid #aa97687c;background:#253c32;border-radius:7px;color:#e0ddcc;min-height:36px;font-size:9px;letter-spacing:.03em;font-weight:750;touch-action:manipulation}
+.progression-tabs button.selected,.progression-styles button.selected{border-color:#ead1a0;background:#6a5433;color:#fff4de}
+.progression-styles{display:flex;gap:5px;padding:3px 8px 6px;flex-shrink:0}.progression-styles button{flex:1;min-height:32px}
+.progression-content{overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:7px 10px 12px}
+.progression-content h3,.skill-detail h3{color:#edcd92;font-size:12px;margin:10px 0 6px}
+.progression-content p,.skill-detail p{font-size:11px;color:#c0cdbf;line-height:1.45;margin:4px 0 10px}
+.skills-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.level-card{display:block;text-align:left;padding:10px;background:#1c3c32;border:1px solid #ad9c73a3;border-radius:10px;color:#f2eddd;min-height:103px;touch-action:manipulation}
+.level-card:active{border-color:#f3db9d}
+.level-card-title{display:flex;justify-content:space-between;align-items:baseline;gap:4px;margin-bottom:11px}
+.level-card-title strong{font-size:12px}.level-card-title span{font-size:10px;color:#e4c384;white-space:nowrap}
+.level-xp-track{height:8px;background:#0b1a17;border:1px solid #a7a18c54;border-radius:9px;overflow:hidden}
+.level-xp-fill{height:100%;border-radius:9px;background:#e4a16f}
+.level-ranged .level-xp-fill{background:#8fcea5}.level-magic .level-xp-fill{background:#98acee}.level-vitality .level-xp-fill{background:#e5a3a1}
+.level-card small{display:block;margin-top:6px;font-size:10px;color:#e2dec7}
+.level-card .level-meta{color:#b1c6b9;font-size:9px}
+.book-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:9px 0}
+.book-slots button{background:#253c32;border:1px solid #948869;border-radius:8px;min-height:65px;font-size:9px;color:#f6e6c1;overflow-wrap:anywhere}
+.book-slots button.selected,.catalogue-list button.selected{border:2px solid #f0ca87;background:#594a31}
+.book-slots button span{display:block;font-size:23px}.book-slots button small{font-size:9px}
+.catalogue-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.catalogue-list button{min-height:75px;display:flex;text-align:left;align-items:flex-start;gap:6px;background:#1c392f;border:1px solid #b79f7969;border-radius:8px;padding:7px;color:#e2ddd1;touch-action:manipulation}
+.catalogue-list button:disabled{opacity:.48}.catalogue-list button>span{font-size:21px}
+.catalogue-list button strong{display:block;font-size:11px;color:#eed9af}
+.catalogue-list button small{display:block;font-size:9px;line-height:1.35;color:#b7cbbd;margin-top:3px}
+.catalogue-list button em{display:block;font-size:9px;color:#f0cc8f;font-style:normal;margin-top:5px}
+.book-clear{margin:12px 0 3px;background:#354539;color:#e6d6b1;border:1px solid #a99b70;border-radius:6px;padding:9px;font-size:10px}
+.inventory-footnote{margin-top:12px!important}
+.skill-detail{position:absolute;inset:0;z-index:3;background:#102720;display:flex;flex-direction:column;overflow:hidden}
+.skill-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:10px 11px;border-bottom:1px solid #e8c89855;flex-shrink:0}
+.skill-detail-heading button{background:#30473b;color:#f5e0ba;border:1px solid #c7ab7988;border-radius:6px;min-height:36px;padding:0 10px;font-size:11px}
+.skill-detail-heading strong{color:#f3d9a8;font-size:12px;text-align:right}
+.skill-detail-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:12px}
+.skill-detail-body .detail-xp{font-weight:800;color:#f7d494}
+.milestone{display:grid;grid-template-columns:42px 1fr auto;align-items:start;gap:7px;padding:9px 0;border-bottom:1px solid #b3a27b3a}
+.milestone-level{font-size:10px;font-weight:800;color:#efcd93}
+.milestone-content strong{display:block;font-size:11px;color:#f0e3c9}
+.milestone-content small{display:block;margin-top:3px;font-size:9px;line-height:1.4;color:#b8c9bb}
+.milestone-state{font-size:9px;color:#8bdaa0}.milestone.upcoming{opacity:.73}.milestone.upcoming .milestone-state{color:#e0ad83}
+.skill-detail .detail-footnote{margin-top:11px;font-size:9px;color:#a2b9aa}
+.touch-enabled .progression-panel{left:0;right:auto;top:calc(100% + 7px);bottom:auto;width:min(375px,calc(100vw - 26px));max-height:clamp(155px,calc(100dvh - 320px),370px)}
+.touch-enabled .combatbar .loadout-actions button{font-size:10px;min-height:34px}
+@media(max-height:620px){.touch-enabled .progression-panel{max-height:clamp(145px,calc(100dvh - 316px),270px)}.touch-enabled .progression-header{padding:6px 8px}.touch-enabled .progression-tabs{padding:4px 6px}.touch-enabled .progression-content{padding:4px 8px}}
+@media(max-width:430px){.skills-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.progression-tabs button{font-size:8px;min-height:35px}.level-card-title strong{font-size:11px}}

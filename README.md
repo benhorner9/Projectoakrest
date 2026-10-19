@@ -58,3 +58,8 @@ Touchscreen players have four weapon skills arranged in a right-thumb arc around
 ## 0.5 — Skill levels and attack-to-look
 - SKILLS → LEVELS shows Melee, Ranged, Magic, Vitality with current level, XP this level, remaining XP to the next level, progress and total XP. Displays MAX LEVEL at 99.
 - Holding ATTACK auto-attacks. Sliding the same right thumb left/right turns the camera while Attack and the left joystick continue; pointer capture retains the drag even outside the attack circle. Releasing stops auto-attack.
+
+## 0.6 — In-world character dropdown
+The previous full-screen build overlay was replaced by a compact non-modal menu directly attached to the character combat controls. It does not pause rendering or combat. MENU opens four tabs: **Equip** (weapons/armour by current style), **Inventory** (items actually owned, with equip shortcuts), **Skills** (Melee/Ranged/Magic/Vitality levels and progress) and **Abilities** (select and slot unlocked combat skills).
+Tap a skill in Skills to open a small detail sheet inside the menu with a level-by-level milestone list showing the abilities that can be learned and weapons/armour that can be worn. Back returns to the menu without covering the game.
+Prototype ownership rule: three basic weapons and Traveller Wraps start in inventory; other prototype training weapons and armour are awarded automatically at relevant level milestones. Existing saved XP automatically receives its earned gear, without wiping existing progress. True monster loot, trading, shops and crafting remain future work.

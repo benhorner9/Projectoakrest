@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,ARMOUR,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
+import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
 
@@ -68,109 +68,166 @@ let holdingAttack=false;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
 const forward=()=>new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
 const directions={ArrowUp:'w',ArrowDown:'s'};
-let bookStyle='melee',bookTab='skills',bookSlot=0;
-const progressPanel=$('progression-panel');
-function bookOpen(tab='skills'){bookStyle=style;bookTab=tab;bookSlot=0;progressPanel.hidden=false;$('equipment-picker').hidden=true;renderBook();}
-function bookClose(){progressPanel.hidden=true;}
+let bookStyle='melee',bookTab='skills',bookSlot=0,skillDetail=null;
+const progressPanel=$('progression-panel'),detailPanel=$('skill-detail');
+function bookOpen(tab='skills',toggle=false){
+ if(toggle&&!progressPanel.hidden&&bookTab===tab){bookClose();return;}
+ bookStyle=style;bookTab=tab;bookSlot=0;skillDetail=null;detailPanel.hidden=true;
+ progressPanel.hidden=false;$('equipment-picker').hidden=true;
+ $('loadout-button').setAttribute('aria-expanded','true');renderBook();
+}
+function bookClose(){skillDetail=null;detailPanel.hidden=true;progressPanel.hidden=true;$('loadout-button').setAttribute('aria-expanded','false');}
 $('close-progression').addEventListener('click',bookClose);
-$('progression-skills').addEventListener('click',()=>{bookTab='skills';renderBook();});
-$('progression-equipment').addEventListener('click',()=>{bookTab='equipment';renderBook();});
-$('progression-levels-tab').addEventListener('click',()=>{bookTab='levels';renderBook();});
-$('loadout-button').addEventListener('click',()=>bookOpen('skills'));
+const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills'};
+for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();});
+$('loadout-button').addEventListener('click',()=>bookOpen('skills',true));
+$('skill-detail-back').addEventListener('click',()=>{skillDetail=null;detailPanel.hidden=true;});
+function el(tag,text,parent,className){
+ const node=document.createElement(tag);if(text!==null&&text!==undefined)node.textContent=text;
+ if(className)node.className=className;if(parent)parent.append(node);return node;
+}
+function uiButton(parent,label,act,disabled=false){
+ const b=el('button',label,parent);b.type='button';b.disabled=disabled;if(act)b.addEventListener('click',act);return b;
+}
+const xpText=value=>Math.floor(value).toLocaleString('en-GB');
+function showSkillDetail(id){
+ const def=SKILLS_OVERVIEW.find(entry=>entry.id===id);if(!def)return;
+ skillDetail=id;
+ const info=xpProgress(data.xp[id]);detailPanel.hidden=false;
+ $('skill-detail-title').textContent=def.icon+' '+def.label+' · Level '+info.level;
+ const body=$('skill-detail-body');body.replaceChildren();
+ el('p',def.description,body,'detail-desc');
+ el('p',info.maxed?'MAX LEVEL':xpText(info.needed)+' XP needed for level '+(info.level+1),body,'detail-xp');
+ el('h3','What you learn or can wear',body);
+ const milestones=skillMilestones(id);
+ for(const entry of milestones){
+  const unlocked=info.level>=entry.level;
+  const row=el('div',null,body,'milestone '+(unlocked?'earned':'upcoming'));
+  el('span','LV '+entry.level,row,'milestone-level');
+  const item=el('div',null,row,'milestone-content');
+  el('strong',entry.name,item);
+  el('small',entry.type+' · '+entry.detail,item);
+  el('span',unlocked?'UNLOCKED':'LOCKED',row,'milestone-state');
+ }
+ el('p','Unlocking a weapon level grants its prototype training item to your inventory. Later versions will award equipment through drops, shops or crafting.',body,'detail-footnote');
+}
+function selectStyle(s){bookStyle=s;bookSlot=0;renderBook();}
+function chooseGear(kind,id,selectedStyle=bookStyle){
+ if(kind==='weapon'){
+  if(!canEquipWeapon(selectedStyle,id,data.xp)||!ownsWeapon(data,selectedStyle,id))return;
+  data.gear[selectedStyle]=id;
+ }else{
+  if(!canEquipArmour(id,data.xp)||!ownsArmour(data,id))return;
+  data.armour[selectedStyle]=id;
+ }
+ save();if(style===selectedStyle){equipVisual(style,data.gear[style]);refreshSkills();}
+ renderBook();
+}
 function renderBook(){
-  if(progressPanel.hidden)return;
-  const combatLevel=levelFromXp(data.xp[bookStyle]).level,vitalLevel=levelFromXp(data.xp.vitality).level;
-  $('progression-levels').textContent=`${bookStyle.toUpperCase()} ${combatLevel} · VITALITY ${vitalLevel} · Armoured in ${defenceFor(data.armour[bookStyle]).title}`;
-  for(const tab of ['skills','equipment','levels'])$(tab==='levels'?'progression-levels-tab':'progression-'+tab).classList.toggle('selected',tab===bookTab);
-  const tabs=$('progression-styles');tabs.hidden=bookTab==='levels';tabs.replaceChildren();
+ if(progressPanel.hidden)return;
+ const combatLevel=levelFromXp(data.xp[bookStyle]).level;
+ $('progression-levels').textContent=bookStyle.toUpperCase()+' '+combatLevel+' · '+data.coins+' COINS';
+ for(const [tab,id] of Object.entries(bookTabs))$(id).classList.toggle('selected',tab===bookTab);
+ const styles=$('progression-styles');styles.replaceChildren();
+ styles.hidden=bookTab==='skills'||bookTab==='inventory';
+ if(!styles.hidden)for(const s of STYLE_ORDER){
+  const b=uiButton(styles,s.toUpperCase()+' '+levelFromXp(data.xp[s]).level,()=>selectStyle(s));
+  b.classList.toggle('selected',s===bookStyle);
+ }
+ const host=$('progression-content');host.replaceChildren();
+ const weaponId=data.gear[bookStyle];
+ if(bookTab==='skills'){
+  el('p','Tap a skill to see abilities and equipment unlocked at each level.',host);
+  const grid=el('div',null,host,'skills-grid');
+  for(const skill of SKILLS_OVERVIEW){
+   const info=xpProgress(data.xp[skill.id]);
+   const card=uiButton(grid,'',()=>showSkillDetail(skill.id));card.className='level-card level-'+skill.id;
+   const top=el('div',null,card,'level-card-title');
+   el('strong',skill.icon+' '+skill.label,top);
+   el('span','Level '+info.level,top);
+   const track=el('div',null,card,'level-xp-track');
+   const fill=el('div',null,track,'level-xp-fill');fill.style.width=(info.progress*100).toFixed(1)+'%';
+   el('small',info.maxed?'MAX LEVEL':xpText(info.needed)+' XP to next level',card);
+   el('small','Total XP '+xpText(info.totalXp)+'  ·  View unlocks ›',card,'level-meta');
+  }
+ }else if(bookTab==='abilities'){
+  el('p','Select a slot, then choose an unlocked ability. Each weapon family remembers its four slots.',host);
+  const slots=el('div',null,host,'book-slots'),current=equippedSkills(data,bookStyle,weaponId);
+  for(let i=0;i<4;i++){
+   const b=uiButton(slots,'',()=>{bookSlot=i;renderBook();});
+   b.classList.toggle('selected',i===bookSlot);
+   el('span',current[i]?.icon||'+',b);
+   el('small',current[i]?.name||'Slot '+(i+1),b);
+  }
+  el('h3','Available and upcoming abilities',host);
+  const list=el('div',null,host,'catalogue-list');
+  for(const a of skillCatalogue(bookStyle,weaponId)){
+   const level=levelFromXp(data.xp[bookStyle]).level,ready=level>=a.requiredLevel;
+   const b=uiButton(list,'',()=>{
+    if(equipSkill(data,bookStyle,weaponId,bookSlot,a.id)){
+     save();renderBook();if(bookStyle===style)refreshSkills();
+    }
+   },!ready);
+   b.classList.toggle('selected',current[bookSlot]?.id===a.id);
+   el('span',a.icon,b);const desc=el('div',null,b);
+   el('strong',a.name,desc);el('small',a.note,desc);
+   el('em',(ready?'UNLOCKED':'LEVEL '+a.requiredLevel+' REQUIRED')+' · '+a.cooldown+'s cooldown',desc);
+  }
+  const clear=uiButton(host,'CLEAR SELECTED SLOT',()=>{
+   if(equipSkill(data,bookStyle,weaponId,bookSlot,null)){
+    save();renderBook();if(bookStyle===style)refreshSkills();
+   }
+  },!current[bookSlot]);clear.className='book-clear';
+ }else if(bookTab==='equip'){
+  el('h3','Equipped for '+bookStyle.toUpperCase(),host);
+  const ownWeapon=LOADOUTS[bookStyle][data.gear[bookStyle]],ownArmour=defenceFor(data.armour[bookStyle]);
+  el('p','Weapon: '+ownWeapon.title+'  ·  Armour: '+ownArmour.title,host);
+  el('h3','Your weapons',host);
+  const weapons=el('div',null,host,'catalogue-list');
+  for(const [id,w] of Object.entries(LOADOUTS[bookStyle])){
+   const unlocked=canEquipWeapon(bookStyle,id,data.xp),owned=ownsWeapon(data,bookStyle,id);
+   const b=uiButton(weapons,'',()=>chooseGear('weapon',id),!unlocked||!owned);
+   b.classList.toggle('selected',data.gear[bookStyle]===id);
+   el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
+   el('small','Melee'===bookStyle?'':bookStyle.toUpperCase(),d);
+   el('em',!unlocked?'LEVEL '+w.requiredLevel+' REQUIRED':!owned?'NOT OWNED':data.gear[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
+  }
+  el('h3','Your armour',host);
+  const armourGrid=el('div',null,host,'catalogue-list');
+  for(const [id,a] of Object.entries(ARMOUR)){
+   const unlocked=canEquipArmour(id,data.xp),owned=ownsArmour(data,id);
+   const b=uiButton(armourGrid,'',()=>chooseGear('armour',id),!unlocked||!owned);
+   b.classList.toggle('selected',data.armour[bookStyle]===id);
+   el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);const d=el('div',null,b);
+   el('strong',a.title,d);el('small',a.description,d);
+   el('em',!unlocked?'VITALITY '+a.requiredVitality+' REQUIRED':!owned?'NOT OWNED':data.armour[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
+  }
+ }else if(bookTab==='inventory'){
+  el('h3','Owned equipment',host);el('p','Your level rewards are stored here. Select an item to equip it to the matching combat style.',host);
+  el('h3','Weapons',host);
+  const weapons=el('div',null,host,'catalogue-list');
   for(const s of STYLE_ORDER){
-    const b=document.createElement('button');b.type='button';b.textContent=s.toUpperCase()+' '+levelFromXp(data.xp[s]).level;
-    b.classList.toggle('selected',s===bookStyle);b.addEventListener('click',()=>{bookStyle=s;bookSlot=0;renderBook();});tabs.append(b);
+   for(const id of data.inventory?.weapons?.[s]||[]){
+    const w=LOADOUTS[s]?.[id];if(!w)continue;
+    const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);});
+    b.classList.toggle('selected',data.gear[s]===id);
+    el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
+    el('small',s.toUpperCase()+' · Level '+w.requiredLevel,d);
+    el('em',data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
+   }
   }
-  const content=$('progression-content');content.replaceChildren();
-  const heading=(tag,text,host=content)=>{const x=document.createElement(tag);x.textContent=text;host.append(x);return x;};
-  const button=(parent,label,disabled,onClick)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=disabled;b.addEventListener('click',onClick);parent.append(b);return b;};
-  const weaponId=data.gear[bookStyle];
-  if(bookTab==='levels'){
-    heading('h3','All skills and experience');
-    heading('p','Your four trainable skills. Each shows current level, XP earned toward the next level and how much XP is still needed.');
-    const grid=document.createElement('div');grid.className='level-overview';content.append(grid);
-    const format=n=>Math.floor(n).toLocaleString('en-GB');
-    for(const [key,title,icon,desc] of [
-      ['melee','Melee','⚔','Swords, daggers and melee skills'],
-      ['ranged','Ranged','➶','Bows, crossbows and ranged skills'],
-      ['magic','Magic','✦','Staffs, wands and magic skills'],
-      ['vitality','Vitality','✚','Health and armour access']
-    ]){
-      const info=xpProgress(data.xp[key]);
-      const card=document.createElement('article');card.className='level-card level-'+key;grid.append(card);
-      const row=document.createElement('div');row.className='level-card-title';card.append(row);
-      heading('strong',icon+' '+title,row);heading('span','Level '+info.level,row);
-      const bar=document.createElement('div');bar.className='level-xp-track';bar.setAttribute('role','progressbar');
-      bar.setAttribute('aria-label',title+' experience');bar.setAttribute('aria-valuenow',String(Math.round(100*info.progress)));
-      bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax','100');card.append(bar);
-      const fill=document.createElement('div');fill.className='level-xp-fill';fill.style.width=(info.progress*100).toFixed(1)+'%';bar.append(fill);
-      const progress=document.createElement('div');progress.className='level-xp-numbers';card.append(progress);
-      heading('span',info.maxed?'MAX LEVEL':format(info.current)+' / '+format(info.required)+' XP this level',progress);
-      heading('strong',info.maxed?'COMPLETE':format(info.needed)+' XP to Level '+(info.level+1),progress);
-      heading('small',desc+' · Total XP: '+format(info.totalXp),card);
-    }
-  }else if(bookTab==='skills'){
-    heading('h3','Assign your 4 active abilities');
-    heading('p','Tap a slot, then an unlocked ability below. Each weapon family keeps its own setup.');
-    const slots=document.createElement('div');slots.className='book-slots';content.append(slots);
-    const current=equippedSkills(data,bookStyle,weaponId);
-    for(let i=0;i<4;i++){
-      const b=button(slots,'',false,()=>{bookSlot=i;renderBook();});b.classList.toggle('selected',bookSlot===i);
-      const icon=document.createElement('span');icon.textContent=current[i]?.icon||'+';b.append(icon);
-      const label=document.createElement('div');label.textContent=current[i]?.name||`Slot ${i+1} · Empty`;b.append(label);
-    }
-    heading('h3','Your ability library');
-    const list=document.createElement('div');list.className='catalogue-list';content.append(list);
-    for(const a of skillCatalogue(bookStyle,weaponId)){
-      const ready=combatLevel>=a.requiredLevel;
-      const b=button(list,'',!ready,()=>{
-        if(equipSkill(data,bookStyle,weaponId,bookSlot,a.id)){save();renderBook();if(bookStyle===style)refreshSkills();}
-      });
-      b.classList.toggle('selected',current[bookSlot]?.id===a.id);
-      const icon=document.createElement('span');icon.textContent=a.icon;b.append(icon);
-      const detail=document.createElement('div');b.append(detail);
-      heading('strong',a.name,detail);heading('small',a.note,detail);
-      heading('em',ready?`UNLOCKED · LEVEL ${a.requiredLevel}`:`LOCKED · LEVEL ${a.requiredLevel} ${bookStyle.toUpperCase()}`,detail);
-    }
-    const clear=button(content,'CLEAR SELECTED SLOT',!current[bookSlot],()=>{
-      if(equipSkill(data,bookStyle,weaponId,bookSlot,null)){save();renderBook();if(bookStyle===style)refreshSkills();}
-    });clear.className='book-clear';
-  }else{
-    heading('p','Weapons require their own combat level. Armour requires Vitality, and protects you differently depending on its weight.');
-    const weapons=document.createElement('div');weapons.className='inventory-group';content.append(weapons);
-    heading('h3','Weapons',weapons);
-    const weaponList=document.createElement('div');weaponList.className='catalogue-list';weapons.append(weaponList);
-    for(const [id,w] of Object.entries(LOADOUTS[bookStyle])){
-      const ready=canEquipWeapon(bookStyle,id,data.xp);
-      const b=button(weaponList,'',!ready,()=>{
-        data.gear[bookStyle]=id;save();renderBook();
-        if(bookStyle===style){equipVisual(style,id);refreshSkills();}
-      });
-      b.classList.toggle('selected',id===data.gear[bookStyle]);
-      const ico=document.createElement('span');ico.textContent=w.icon;b.append(ico);
-      const txt=document.createElement('div');b.append(txt);
-      heading('strong',w.title,txt);heading('small',`Basic power ${w.basic} · ${w.family} skills`,txt);
-      heading('em',ready?`LEVEL ${w.requiredLevel} · ${id===data.gear[bookStyle]?'EQUIPPED':'AVAILABLE'}`:`LOCKED · ${bookStyle.toUpperCase()} LEVEL ${w.requiredLevel}`,txt);
-    }
-    const armourSection=document.createElement('div');armourSection.className='inventory-group';content.append(armourSection);
-    heading('h3','Armour sets',armourSection);
-    const armourList=document.createElement('div');armourList.className='catalogue-list';armourSection.append(armourList);
-    for(const [id,a] of Object.entries(ARMOUR)){
-      const ready=canEquipArmour(id,data.xp);
-      const b=button(armourList,'',!ready,()=>{data.armour[bookStyle]=id;save();renderBook();if(bookStyle===style)refreshSkills();});
-      b.classList.toggle('selected',id===data.armour[bookStyle]);
-      const ico=document.createElement('span');ico.textContent=id==='plate'?'⬡':id==='leather'?'◈':'✧';b.append(ico);
-      const txt=document.createElement('div');b.append(txt);
-      heading('strong',a.title,txt);heading('small',a.description,txt);
-      heading('em',ready?`VITALITY ${a.requiredVitality} · ${id===data.armour[bookStyle]?'EQUIPPED':'AVAILABLE'}`:`LOCKED · VITALITY ${a.requiredVitality}`,txt);
-    }
+  el('h3','Armour',host);
+  const armour=el('div',null,host,'catalogue-list');
+  for(const id of data.inventory?.armour||[]){
+   const a=ARMOUR[id];if(!a)continue;
+   const b=uiButton(armour,'',()=>chooseGear('armour',id,style));
+   el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);
+   const d=el('div',null,b);el('strong',a.title,d);
+   el('small','Vitality '+a.requiredVitality+' · '+a.description,d);
+   el('em',data.armour[style]===id?'EQUIPPED':'EQUIP TO '+style.toUpperCase(),d);
   }
+  el('p','Coins: '+data.coins+' · Consumables and loot drops arrive in a later build.',host,'inventory-footnote');
+ }
 }
 function getWeapon(){return LOADOUTS[style][data.gear[style]];}
 function save(){try{localStorage.setItem('oakrest-v1',JSON.stringify(data));}catch{}}
@@ -195,18 +252,18 @@ function refreshSkills(){
   const b=document.createElement('button');b.className='skill';b.type='button';b.title=a?`${a.note} Cooldown: ${a.cooldown}s`:'Open SKILLS to equip an ability';
   b.classList.toggle('empty',!a);
   b.innerHTML=`<span class="key">${'QERF'[i]}</span><span class="skill-icon">${a?.icon||'+'}</span><span class="name">${a?.name||'EMPTY'}</span><span class="cooldown"></span>`;
-  b.addEventListener('click',()=>a?useAbility(i):bookOpen('skills'));host.append(b);
+  b.addEventListener('click',()=>a?useAbility(i):bookOpen('abilities'));host.append(b);
  });
  $('weapon-name').textContent=getWeapon().title;refreshStyles();updateHpUI();
  const swap=$('touch-swap'),upcoming=nextStyle(style);
  swap.querySelector('small').textContent=upcoming.toUpperCase();swap.setAttribute('aria-label',`Switch to ${upcoming}`);
 }
 function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.53;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
-function gearMenu(){bookOpen('equipment');}
+function gearMenu(){bookOpen('equip',true);}
 $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=.045;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
 function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=ball(scene,pos.x,pos.y,pos.z,.07,.07,.07,new THREE.MeshBasicMaterial({color}));const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
-function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check your skill book and equipment.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.coins+=type==='bandit'?13:type==='boar'?7:4;data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
+function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.coins+=type==='bandit'?13:type==='boar'?7:4;data.defeated++;awardTrainingGear(data);if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
 function hitEnemy(e,damage,ability){if(!e||e.dead||e.hp<=0)return;const amount=Math.round(damage*(1+Math.min(24,levelFromXp(data.xp[style]).level-1)*.025)*outgoingMultiplier(data.armour[style],style));e.hp-=amount;floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);gainXp(e.type);}}
 function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return enemies.filter(e=>!e.dead&&e.hp>0).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
 function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},enemies,reach,.25);}
