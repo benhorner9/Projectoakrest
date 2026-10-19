@@ -62,3 +62,6 @@
 #damage-flash{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;box-shadow:inset 0 0 75px 25px #df4444}
 #damage-flash.hit{animation:oakrest-impact .27s ease-out forwards}
 @keyframes oakrest-impact{0%{opacity:.26}100%{opacity:0}}
+
+/* Show damage, attack cycle, and reach to support gear comparison. */
+.catalogue-list button small{white-space:normal}

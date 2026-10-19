@@ -59,3 +59,12 @@
 .touch-enabled .loadout-actions{display:flex;gap:4px;flex-shrink:0}
 .touch-enabled .loadout-actions button{min-height:34px;padding:0 7px;color:#e7d6ac;background:#304238;border:1px solid #b6a77b7a;border-radius:6px;font-size:10px}
 .touch-enabled .weaponline #weapon-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Attack timing feedback: circular fill and exact recovery timer, never touch-blocking. */
+.touch-enabled .touch-actions #touch-attack{position:absolute;isolation:isolate;overflow:visible}
+.touch-enabled .touch-actions #touch-attack::after{content:'';position:absolute;inset:-7px;border-radius:50%;pointer-events:none;
+ background:conic-gradient(#e7c188 var(--attack-deg,360deg),#304740 var(--attack-deg,360deg));
+ -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),black calc(100% - 4px));
+ mask:radial-gradient(farthest-side,transparent calc(100% - 5px),black calc(100% - 4px))}
+.touch-enabled .touch-actions #touch-attack .attack-timer{font-size:10px;line-height:1.1;color:#f9e2b0;font-weight:750;white-space:nowrap}
+.touch-enabled .touch-actions #touch-attack.recovering{filter:saturate(.76)}

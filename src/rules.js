@@ -3,13 +3,13 @@ export const STYLE_ORDER = ['melee', 'magic', 'ranged'];
 export const STYLE_COLOURS = { melee:'#db9a72', magic:'#9cacf6', ranged:'#9edbb1' };
 export const LOADOUTS = {
   melee: {
-    sword: { title:'Iron Longsword', icon:'⚔', reach:2.9, basic:15, interval:0.68, abilities:[
+    sword: { title:'Iron Longsword', icon:'⚔', reach:3.1, basic:19, interval:0.95, windup:0.26, abilities:[
       { name:'Heavy Slash', icon:'⚔', kind:'hit', damage:30, reach:3, cooldown:5, note:'A strong forward strike.' },
       { name:'Cleave', icon:'◈', kind:'sweep', damage:19, reach:3.2, cooldown:7, note:'Hit nearby enemies in an arc.' },
       { name:'Guard Break', icon:'⬡', kind:'hit', damage:14, reach:3, cooldown:9, stun:1.3, note:'Stagger an enemy.' },
       { name:'Counterguard', icon:'✣', kind:'shield', duration:4, cooldown:13, note:'Reduce the next incoming hits.' },
     ]},
-    daggers: { title:'Twin Daggers', icon:'⌁', reach:2.3, basic:9, interval:0.34, abilities:[
+    daggers: { title:'Twin Daggers', icon:'⌁', reach:2.1, basic:9, interval:0.40, windup:0.09, abilities:[
       { name:'Quick Slice', icon:'⌁', kind:'hit', damage:15, reach:2.5, bleed:4, cooldown:4, note:'Fast slash that causes bleeding.' },
       { name:'Twin Strike', icon:'✕', kind:'hit', damage:24, reach:2.5, cooldown:6, note:'Strike twice in quick succession.' },
       { name:'Shadow Step', icon:'»', kind:'dash', distance:5, cooldown:9, note:'Dash quickly toward the target.' },
@@ -17,13 +17,13 @@ export const LOADOUTS = {
     ]},
   },
   magic: {
-    frost: { title:'Frostwood Staff', icon:'✦', reach:18, basic:11, interval:0.8, abilities:[
+    frost: { title:'Frostwood Staff', icon:'✦', reach:18, basic:12, interval:0.92, windup:0.24, abilities:[
       { name:'Ice Shard', icon:'❄', kind:'bolt', damage:25, speed:19, cooldown:4, slow:2.8, note:'A slowing frost projectile.' },
       { name:'Frost Nova', icon:'✺', kind:'nova', damage:13, reach:5.5, cooldown:9, slow:3.5, note:'Freeze the ground around you.' },
       { name:'Frozen Binding', icon:'◇', kind:'bolt', damage:8, speed:15, cooldown:13, root:2, swapLock:3, note:'Root the enemy; blocks style switches in PvP later.' },
       { name:'Ice Barrier', icon:'⬡', kind:'shield', duration:5, cooldown:16, note:'Take less damage for a short time.' },
     ]},
-    ember: { title:'Ember Wand', icon:'✧', reach:17, basic:13, interval:0.72, abilities:[
+    ember: { title:'Ember Wand', icon:'✧', reach:17, basic:13, interval:0.75, windup:0.18, abilities:[
       { name:'Firebolt', icon:'✧', kind:'bolt', damage:29, speed:22, cooldown:4, note:'Launch a fiery projectile.' },
       { name:'Flame Wave', icon:'≋', kind:'sweep', damage:21, reach:6.5, cooldown:8, note:'A close-range wave of fire.' },
       { name:'Blink', icon:'»', kind:'dash', distance:6, cooldown:12, note:'Quickly surge forward.' },
@@ -31,13 +31,13 @@ export const LOADOUTS = {
     ]},
   },
   ranged: {
-    bow: { title:'Oak Longbow', icon:'➶', reach:22, basic:13, interval:0.72, abilities:[
+    bow: { title:'Oak Longbow', icon:'➶', reach:30, basic:22, interval:1.40, windup:0.46, abilities:[
       { name:'Piercing Arrow', icon:'➶', kind:'bolt', damage:29, speed:28, cooldown:5, note:'Fire a powerful straight arrow.' },
       { name:'Rapid Shot', icon:'≡', kind:'burst', damage:11, speed:26, count:3, cooldown:8, note:'Release three arrows in quick succession.' },
       { name:'Pinning Shot', icon:'⊙', kind:'bolt', damage:13, speed:25, root:1.6, cooldown:10, note:'Temporarily root your target.' },
       { name:'Retreating Shot', icon:'«', kind:'retreat', damage:15, cooldown:12, note:'Fire as you leap backwards.' },
     ]},
-    crossbow: { title:'Light Crossbow', icon:'➴', reach:23, basic:18, interval:1.05, abilities:[
+    crossbow: { title:'Heavy Crossbow', icon:'➴', reach:12, basic:39, interval:2.05, windup:0.67, abilities:[
       { name:'Crack Shot', icon:'➴', kind:'bolt', damage:35, speed:32, cooldown:6, note:'A heavy hitting crossbow bolt.' },
       { name:'Scattershot', icon:'✷', kind:'sweep', damage:22, reach:9, cooldown:8, note:'A spread of close-range bolts.' },
       { name:'Snare Bolt', icon:'⊗', kind:'bolt', damage:12, speed:27, slow:4, cooldown:10, note:'Slow your enemy.' },
@@ -62,6 +62,18 @@ for(const [style,otherFamily,forgedFirst,forgedSecond] of [
       basic:Math.round(w.basic*boost)};
   }
 }
+// Extra starter weapon choices: genuinely different basic-attack pacing and reach.
+// Abilities reuse existing family kits for now; the cooldown/speed pass targets basics.
+LOADOUTS.melee.greatsword={
+  ...LOADOUTS.melee.sword,
+  title:'Heavy Greatsword',icon:'🗡',reach:3.7,basic:39,interval:1.70,windup:0.55,
+  requiredLevel:7,family:'greatsword'
+};
+LOADOUTS.ranged.shortbow={
+  ...LOADOUTS.ranged.bow,
+  title:'Hunter Shortbow',icon:'➹',reach:16,basic:13,interval:0.68,windup:0.17,
+  requiredLevel:3,family:'shortbow'
+};
 export const ARMOUR={
   traveller:{title:'Traveller Wraps',requiredVitality:1,physical:.06,magical:.15,mobility:1.05,bonusStyle:'magic',bonusPower:.05,
     description:'Quick movement, light protection and a little extra spell power.'},

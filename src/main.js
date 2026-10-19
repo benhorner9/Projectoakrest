@@ -3,6 +3,7 @@ import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxH
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
+import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
 
 const $=id=>document.getElementById(id);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
@@ -62,6 +63,7 @@ function equipVisual(style,weaponId){const group=hero.userData.weapon;group.clea
 }
 let data=defaultSave();try{data=validSave(JSON.parse(localStorage.getItem('oakrest-v1')));}catch{}
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
+let pendingBasic=null,lastAttackInterval=0.95;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
 let savedLookSpeed=1;try{savedLookSpeed=localStorage.getItem('oakrest-look-speed') ?? 1;}catch{}
 let lookSensitivity=cameraSensitivity(savedLookSpeed);
@@ -191,7 +193,7 @@ function renderBook(){
    const b=uiButton(weapons,'',()=>chooseGear('weapon',id),!unlocked||!owned);
    b.classList.toggle('selected',data.gear[bookStyle]===id);
    el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
-   el('small','Melee'===bookStyle?'':bookStyle.toUpperCase(),d);
+   el('small',weaponDisplay(w),d);
    el('em',!unlocked?'LEVEL '+w.requiredLevel+' REQUIRED':!owned?'NOT OWNED':data.gear[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
   el('h3','Your armour',host);
@@ -214,7 +216,7 @@ function renderBook(){
     const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);});
     b.classList.toggle('selected',data.gear[s]===id);
     el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
-    el('small',s.toUpperCase()+' · Level '+w.requiredLevel,d);
+    el('small',s.toUpperCase()+' · LV '+w.requiredLevel+' · '+weaponDisplay(w),d);
     el('em',data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
    }
   }
@@ -266,10 +268,11 @@ function refreshSkills(){
   b.addEventListener('click',()=>a?useAbility(i):bookOpen('abilities'));host.append(b);
  });
  $('weapon-name').textContent=getWeapon().title;refreshStyles();updateHpUI();
+ $('touch-attack').title=weaponDisplay(getWeapon());
  const swap=$('touch-swap'),upcoming=nextStyle(style);
  swap.querySelector('small').textContent=upcoming.toUpperCase();swap.setAttribute('aria-label',`Switch to ${upcoming}`);
 }
-function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.53;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
+function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if(pendingBasic&&!instant)return;if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.53;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
 function gearMenu(){bookOpen('equip',true);}
 $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=.045;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
@@ -280,28 +283,50 @@ function hitEnemy(e,damage,ability){if(!e||e.dead||e.hp<=0)return;const amount=M
  if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);gainXp(e.type);}}
 function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return enemies.filter(e=>!e.dead&&e.hp>0).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
 function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},enemies,reach,isTouch?.12:.25);}
-function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0){
- let dir=forward();if(isTouch){const target=combatAim(hero.position,{x:dir.x,z:dir.z},enemies,25,.24);if(target)dir=new THREE.Vector3(target.x-hero.position.x,0,target.z-hero.position.z).normalize();}
+function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWeapon().reach){
+ let dir=forward();
+ if(isTouch){const target=combatAim(hero.position,{x:dir.x,z:dir.z},enemies,maxRange,.24);
+  if(target)dir=new THREE.Vector3(target.x-hero.position.x,0,target.z-hero.position.z).normalize();
+ }
  dir.applyAxisAngle(new THREE.Vector3(0,1,0),spread);
- const mesh=ball(scene,hero.position.x+dir.x*.9,1.3,hero.position.z+dir.z*.9,.16,.16,.33,new THREE.MeshBasicMaterial({color:colour}));projectiles.push({mesh,dir,speed,damage,opts,life:1.4,age:0,origin:hero.position.clone(),style,particle:false});}
+ const mesh=ball(scene,hero.position.x+dir.x*.9,1.3,hero.position.z+dir.z*.9,.16,.16,.33,new THREE.MeshBasicMaterial({color:colour}));
+ projectiles.push({mesh,dir,speed,damage,opts,life:Math.max(1.4,maxRange/Math.max(1,speed)+.1),age:0,distance:0,maxDistance:Math.max(.1,maxRange-.9),origin:hero.position.clone(),style,particle:false});
+}
 function slashEffect(reach=3){const p=hero.position.clone().add(forward().multiplyScalar(Math.min(2,reach*.68)));p.y=1.25;sparks(p,STYLE_COLOURS[style],7);}
 function doBasic(){
- if(!started||hp<=0||now()<attackUntil||now()<switchUntil)return;
- const w=getWeapon(),t=now();attackUntil=t+w.interval;recoilUntil=t+.24;
+ const t=now();if(!started||hp<=0||t<switchUntil||!basicAttackReady(t,attackUntil,!!pendingBasic))return;
+ const w=getWeapon();
+ attackUntil=t+w.interval;lastAttackInterval=w.interval;
+ const windup=Math.min(w.interval*.70,w.windup||w.interval*.25);
+ pendingBasic={style,weapon:data.gear[style],impactAt:t+windup,interval:w.interval};
+ recoilUntil=t+Math.max(windup+.13,w.interval*.56);
  if(style==='melee'){
-  comboStage=t-lastMeleeAttack<w.interval*1.8?(comboStage+1)%3:0;lastMeleeAttack=t;
-  hero.userData.rightArm.rotation.x=comboStage===1?-.8:-1.45;
+  comboStage=t-lastMeleeAttack<w.interval*1.8?(comboStage+1)%3:0;
+  lastMeleeAttack=t;pendingBasic.combo=comboStage;
+ }else comboStage=0;
+ // The hit or projectile is deliberately delayed until the wind-up completes.
+ hero.userData.rightArm.rotation.x=style==='melee'?-.54:-1.07;
+}
+function resolveBasicAttack(t){
+ if(!pendingBasic||t<pendingBasic.impactAt)return;
+ const attack=pendingBasic;pendingBasic=null;
+ if(!started||hp<=0||style!==attack.style)return;
+ const w=LOADOUTS[attack.style][attack.weapon];
+ if(!w)return;
+ hero.userData.rightArm.rotation.x=-1.5;
+ if(attack.style==='melee'){
   slashEffect(w.reach);const target=nearTarget(w.reach);
-  if(target)hitEnemy(target,Math.round(w.basic*(comboStage===2?1.21:comboStage===1?1.09:1)),slotFamily(style,data.gear.melee)==='daggers'?{bleed:1.5}:{});
-  else if(isTouch)floating('MISS','#cdd6c4',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));
+  if(target)hitEnemy(target,Math.round(w.basic*(attack.combo===2?1.21:attack.combo===1?1.09:1)),slotFamily(style,attack.weapon)==='daggers'?{bleed:1.5}:{});
  }else{
-  comboStage=0;hero.userData.rightArm.rotation.x=style==='ranged'?-1.12:-1.7;
   sparks(hero.position.clone().add(forward().multiplyScalar(1.1)).add(new THREE.Vector3(0,1.2,0)),STYLE_COLOURS[style],3);
-  shoot(w.basic,style==='magic'?20:29,style==='magic'?'#b6d9ef':'#e4c292');
+  // Bows are distinguished by launch speed and maximum travel; heavy crossbow recovers slowly.
+  const velocity=attack.style==='magic'?(slotFamily(style,attack.weapon)==='ember'?24:21):
+    slotFamily(style,attack.weapon)==='shortbow'?27:slotFamily(style,attack.weapon)==='crossbow'?34:36;
+  shoot(w.basic,velocity,attack.style==='magic'?'#b6d9ef':'#e4c292',{},0,w.reach);
  }
 }
 function shiftHero(dist){let f=forward();const steps=8;for(let i=0;i<steps;i++){const nx=hero.position.x+f.x*dist/steps,nz=hero.position.z+f.z*dist/steps;if(!collides(nx,nz)){hero.position.x=nx;hero.position.z=nz;}else break;}addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
-function useAbility(index){if(!started||hp<=0||now()<switchUntil)return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=`${style}.${slotFamily(style,data.gear[style])}.${a.id}`;if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);
+function useAbility(index){if(!started||hp<=0||now()<switchUntil||pendingBasic)return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=`${style}.${slotFamily(style,data.gear[style])}.${a.id}`;if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);
   if(a.kind==='hit'||a.kind==='execute'){const t=nearTarget(a.reach);if(t)hitEnemy(t,a.damage+(a.kind==='execute'&&t.bleedUntil>now()?20:0),a);slashEffect(a.reach);}
   else if(a.kind==='sweep'){for(const e of enemiesNear(a.reach,-.1))hitEnemy(e,a.damage,a);addRing(hero.position.clone(),STYLE_COLOURS[style],a.reach,.46);}
   else if(a.kind==='nova'){for(const e of enemies){if(!e.dead&&e.group.position.distanceTo(hero.position)<a.reach)hitEnemy(e,a.damage,a);}addRing(hero.position.clone(),'#92d8ec',a.reach,.65);}
@@ -314,7 +339,7 @@ function useAbility(index){if(!started||hp<=0||now()<switchUntil)return;const a=
   else if(a.kind==='retreat'){shoot(a.damage,26,'#f2d79a');shiftHero(-4);}
   sparks(hero.position.clone().add(new THREE.Vector3(0,1.15,0)),STYLE_COLOURS[style],5);
 }
-function dodge(){if(!started||hp<=0||now()<dodgeUntil)return;dodgeUntil=now()+2;floating('DODGE','#a2f3ce',hero.position.clone().add(new THREE.Vector3(0,2.9,0)));dodgeMovingUntil=now()+.22;const move=new THREE.Vector3((Number(keys.has('d'))-Number(keys.has('a')))+joystick.x,0,(Number(keys.has('s'))-Number(keys.has('w')))-joystick.y);const axis=forward(),right=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const dir=axis.multiplyScalar(-move.z).add(right.multiplyScalar(move.x));if(dir.length()<.15)dir.copy(forward());dir.normalize();for(let i=0;i<8;i++){const nx=hero.position.x+dir.x*.5,nz=hero.position.z+dir.z*.5;if(collides(nx,nz))break;hero.position.set(nx,0,nz);}addRing(hero.position.clone(),'#fff1b8',2,.4);}
+function dodge(){if(!started||hp<=0||now()<dodgeUntil)return;pendingBasic=null;dodgeUntil=now()+2;floating('DODGE','#a2f3ce',hero.position.clone().add(new THREE.Vector3(0,2.9,0)));dodgeMovingUntil=now()+.22;const move=new THREE.Vector3((Number(keys.has('d'))-Number(keys.has('a')))+joystick.x,0,(Number(keys.has('s'))-Number(keys.has('w')))-joystick.y);const axis=forward(),right=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const dir=axis.multiplyScalar(-move.z).add(right.multiplyScalar(move.x));if(dir.length()<.15)dir.copy(forward());dir.normalize();for(let i=0;i<8;i++){const nx=hero.position.x+dir.x*.5,nz=hero.position.z+dir.z*.5;if(collides(nx,nz))break;hero.position.set(nx,0,nz);}addRing(hero.position.clone(),'#fff1b8',2,.4);}
 function collides(x,z){if(Math.abs(x)>70||Math.abs(z)>70)return true;for(const c of [[-14,12],[14,8],[-14,28],[14,27]])if(Math.abs(x-c[0])<4.8&&Math.abs(z-c[1])<3.8)return true;if(Math.hypot(x-6,z-19)<2.6)return true;return false;}
 // Attack telegraphs are visible ground geometry and use a frozen target/direction.
 // Moving out of the red shape before it resolves avoids damage.
@@ -416,16 +441,21 @@ function updateEnemy(e,dt,t){
   e.x+=x/l*.5*dt;e.z+=z/l*.5*dt;e.group.position.set(e.x,0,e.z);
  }
 }
-function animate(dt,t){elapsed+=dt;if(holdingAttack || keys.has('j') || keys.has('enter'))doBasic();const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));if(turn)yaw+=turn*dt*2.35*lookSensitivity;const movement=new THREE.Vector3(),front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;const h=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x;movement.addScaledVector(front,v).addScaledVector(side,h);let moving=movement.length()>.04;if(moving&&hp>0){movement.normalize().multiplyScalar(dt*(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility);const nx=hero.position.x+movement.x,nz=hero.position.z+movement.z;if(!collides(nx,hero.position.z))hero.position.x=nx;if(!collides(hero.position.x,nz))hero.position.z=nz;}hero.rotation.y=-yaw;const swing=moving?Math.sin(elapsed*10)*.45:0;hero.userData.leftLeg.rotation.x=swing;hero.userData.rightLeg.rotation.x=-swing;hero.userData.leftArm.rotation.x=-swing*.6;hero.userData.rightArm.rotation.x=THREE.MathUtils.lerp(hero.userData.rightArm.rotation.x,elapsed<recoilUntil?-1.12:swing*.3,dt*12);hero.position.y=moving?Math.sin(elapsed*20)*.045:0;
+function animate(dt,t){elapsed+=dt;resolveBasicAttack(t);if(holdingAttack || keys.has('j') || keys.has('enter'))doBasic();const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));if(turn)yaw+=turn*dt*2.35*lookSensitivity;const movement=new THREE.Vector3(),front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;const h=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x;movement.addScaledVector(front,v).addScaledVector(side,h);let moving=movement.length()>.04;if(moving&&hp>0){movement.normalize().multiplyScalar(dt*(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility);const nx=hero.position.x+movement.x,nz=hero.position.z+movement.z;if(!collides(nx,hero.position.z))hero.position.x=nx;if(!collides(hero.position.x,nz))hero.position.z=nz;}hero.rotation.y=-yaw;const swing=moving?Math.sin(elapsed*10)*.45:0;hero.userData.leftLeg.rotation.x=swing;hero.userData.rightLeg.rotation.x=-swing;hero.userData.leftArm.rotation.x=-swing*.6;hero.userData.rightArm.rotation.x=THREE.MathUtils.lerp(hero.userData.rightArm.rotation.x,t<recoilUntil?-1.12:swing*.3,dt*12);hero.position.y=moving?Math.sin(elapsed*20)*.045:0;
 const back=front.clone().multiplyScalar(-6.5);const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));const ideal=look.clone().add(back).add(new THREE.Vector3(0,2.15+Math.sin(pitch)*3,0));cameraJolt=Math.max(0,cameraJolt-dt*.85);ideal.y+=cameraJolt*Math.sin(elapsed*95);camera.position.lerp(ideal,1-Math.pow(.005,dt));camera.lookAt(look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0)));
 for(const e of enemies)updateEnemy(e,dt,t);
-for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{p.mesh.position.addScaledVector(p.dir,dt*p.speed);p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life){scene.remove(p.mesh);p.mesh.material.dispose();projectiles.splice(i,1);}}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);p.mesh.material.dispose();projectiles.splice(i,1);}}
 for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
 let aim=null,aimScore=-Infinity;for(const e of enemies){if(e.dead||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent={dummy:'Training Dummy',mossling:'Mossling',boar:'Field Boar',bandit:'Forest Bandit'}[aim.type];$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
 const z=hero.position.z;$('area').textContent=z< -42?'Forest Road':z< -12?'Oakrest Outskirts':'Oakrest Village';
-const remainingDodge=Math.max(0,dodgeUntil-t);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
+const timer=attackCooldown(attackUntil,lastAttackInterval,t);
+ const attackButton=$('touch-attack'),attackTimer=$('attack-timer');
+ attackButton.style.setProperty('--attack-deg',(timer.progress*360).toFixed(1)+'deg');
+ attackButton.classList.toggle('recovering',!timer.ready);
+ if(attackTimer)attackTimer.textContent=timer.ready?'READY':timer.remaining.toFixed(1)+'s';
+ const remainingDodge=Math.max(0,dodgeUntil-t);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
  for(const [i,b] of [...$('skills').children].entries()){const ability=equippedSkills(data,style,data.gear[style])[i];const until=ability?cooldowns.get(`${style}.${slotFamily(style,data.gear[style])}.${ability.id}`)||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);
@@ -436,7 +466,7 @@ canvas.addEventListener('mousedown',e=>{if(!started)return;if(!isTouch&&document
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 let touchLook=null;canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;if(e.clientX<innerWidth*.37)return;touchLook={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!touchLook||touchLook.id!==e.pointerId)return;cameraMove(e.clientX-touchLook.x,e.clientY-touchLook.y);touchLook.x=e.clientX;touchLook.y=e.clientY;});const endTouch=e=>{if(touchLook?.id===e.pointerId)touchLook=null;};canvas.addEventListener('pointerup',endTouch);canvas.addEventListener('pointercancel',endTouch);
 const joy=$('joystick'),stick=$('stick');let joyId=null;joy.addEventListener('pointerdown',e=>{joyId=e.pointerId;joy.setPointerCapture(e.pointerId);updateStick(e);});joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)updateStick(e);});function updateStick(e){const r=joy.getBoundingClientRect(),m=stickFromOffset(e.clientX-r.left-r.width/2,e.clientY-r.top-r.height/2,r.width*.34);joystick.x=m.x;joystick.y=m.y;stick.style.transform=`translate(${m.knobX}px,${m.knobY}px)`;}function releaseStick(e){if(e.pointerId!==joyId)return;joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';}joy.addEventListener('pointerup',releaseStick);joy.addEventListener('pointercancel',releaseStick);joy.addEventListener('lostpointercapture',releaseStick);
-$('touch-attack').addEventListener('pointerdown',e=>{e.preventDefault();doBasic();});$('touch-dodge').addEventListener('pointerdown',e=>{e.preventDefault();dodge();});
+$('touch-dodge').addEventListener('pointerdown',e=>{e.preventDefault();dodge();});
 // The camera zone works without pointer lock and can be used simultaneously with the left stick.
 const lookZone=$('touch-look-zone');let lookPointer=null;
 lookZone.addEventListener('pointerdown',e=>{

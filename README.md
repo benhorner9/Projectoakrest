@@ -70,3 +70,8 @@ Prototype ownership rule: three basic weapons and Traveller Wraps start in inven
 - Enemy hits trigger a short red edge flash; dodge cooldown is shown on the button; 3 monster types have individual warning timings.
 - Existing enemy victories still give coins and XP and can also award Moss Fibre, Boar Hide or Bandit Tokens in the Inventory menu. Materials are saved with existing character progress but cannot yet be crafted into anything.
 - All changes stay in the existing starter village and do not change combat/armour level requirements.
+
+## 0.7 — Real weapon attack speed, wind-up, range and recoveries
+Basic attacks now have a weapon-defined start-to-start interval, visible wind-up (impact occurs after the wind-up), and a real recovery clock. Rapid taps cannot bypass the timer; holding ATTACK repeats only when ready. Dodging during wind-up cancels the unreleased hit without refunding its attack recovery. Swapping styles waits for the current wind-up to finish; overall recovery remains shared across styles.
+Starter comparison: Twin Daggers 9 dmg / 0.40s / 2.1 range; Iron Longsword 19 / 0.95s / 3.1; Heavy Greatsword 39 / 1.70s / 3.7 (level 7); Hunter Shortbow 13 / 0.68s / 16 (level 3); Oak Longbow 22 / 1.40s / 30; Heavy Crossbow 39 / 2.05s / 12. Frost and Ember magic retain their own rates.
+Ranged basic attacks and projectile abilities can no longer travel past their equipped weapon's defined range. The mobile Attack button now displays remaining recovery time and a circular progress ring. The Equip and Inventory views list basic damage, seconds per attack, and reach.
