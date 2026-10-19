@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
+import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
-import { ENEMY_PATTERNS, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
+import { ENEMY_PATTERNS, ENEMY_COMBAT, enemyBehaviour, enemyThreatTier, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
 import { createOakrestScenery, enrichHero, enrichEnemy } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
@@ -178,7 +178,7 @@ function chooseGear(kind,id,selectedStyle=bookStyle){
 function renderBook(){
  if(progressPanel.hidden)return;
  const combatLevel=levelFromXp(data.xp[bookStyle]).level;
- $('progression-levels').textContent=bookStyle.toUpperCase()+' '+combatLevel+' · '+data.coins+' COINS';
+ $('progression-levels').textContent='COMBAT LV '+combatLevelFromXp(data.xp)+' · '+bookStyle.toUpperCase()+' '+combatLevel+' · '+data.coins+' COINS';
  for(const [tab,id] of Object.entries(bookTabs))$(id).classList.toggle('selected',tab===bookTab);
  const styles=$('progression-styles');styles.replaceChildren();
  styles.hidden=bookTab==='skills'||bookTab==='inventory';
@@ -189,7 +189,7 @@ function renderBook(){
  const host=$('progression-content');host.replaceChildren();
  const weaponId=data.gear[bookStyle];
  if(bookTab==='skills'){
-  el('p','Tap a skill to see abilities and equipment unlocked at each level.',host);
+  el('p','Overall Combat Level '+combatLevelFromXp(data.xp)+' · Based on your strongest attack style, Vitality and smaller contributions from other styles. Tap a skill to see its unlocks.',host);
   const grid=el('div',null,host,'skills-grid');
   for(const skill of SKILLS_OVERVIEW){
    const info=xpProgress(data.xp[skill.id]);
@@ -369,7 +369,7 @@ function updateLoot(dt,t){
  }
 }
 
-function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);const d={type,x,z,startX:x,startZ:z,group:g,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
+function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);const d={type,x,z,startX:x,startZ:z,group:g,level:ENEMY_COMBAT[type].level,aggro:false,retreating:false,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
   if(type==='dummy'){d.max=1200;d.hp=1200;cylinder(g,0,1.2,0,.32,2.4,MAT.wood);block(g,0,1.73,0,1.5,.28,.3,MAT.woodLight);ball(g,0,2.58,0,.38,.42,.38,MAT.woodLight);block(g,0,1.9,-.34,.5,.5,.06,MAT.gold);}
   if(type==='mossling'){d.max=57;d.hp=57;ball(g,0,.55,0,.79,.54,.75,mat('#609b59'));for(const xx of [-.29,.29]){ball(g,xx,.72,-.65,.13,.13,.13,MAT.black);}}
   if(type==='boar'){d.max=90;d.hp=90;ball(g,0,.72,0,.95,.68,1.25,mat('#865f44'));ball(g,0,.65,-1.04,.53,.4,.43,mat('#bd8f78'));for(const xx of [-.33,.33]){ball(g,xx,.94,-.99,.095,.11,.08,MAT.black);block(g,xx,.23,.55,.27,.44,.3,MAT.wood);}}
@@ -379,13 +379,17 @@ function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);con
  const frame=block(plate,0,0,-.05,1.55,.24,.07,MAT.gold);
  const bg=block(plate,0,0,0,1.40,.14,.06,MAT.black);
  const bar=block(plate,0,.01,.06,1.36,.10,.05,mat(type==='mossling'?'#9ddc9b':type==='boar'?'#e9af81':'#f18c7b'));
-d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);return d;
+d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);
+ const label=document.createElement('span');
+ label.className='enemy-world-label';label.textContent='Lv '+d.level+' · '+ENEMY_COMBAT[type].name;
+ label.hidden=true;d.levelLabel=label;$('enemy-level-layer').append(label);
+ return d;
 }
 makeEnemy('dummy',-6,-3);
 makeEnemy('mossling',-4,-21);makeEnemy('mossling',5,-24);makeEnemy('mossling',-8,-30);
 makeEnemy('boar',4,-33);makeEnemy('boar',10,-39);
 makeEnemy('bandit',-5,-49);
-function updateHpUI(){const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
+function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
 function refreshStyles(){const host=$('styles');host.innerHTML='';for(const st of STYLE_ORDER){const b=document.createElement('button');b.className=`style ${st===style?'active':''}`;b.style.borderColor=st===style?STYLE_COLOURS[st]:'';b.innerHTML=`<span class="symbol">${{melee:'⚔',magic:'✦',ranged:'➶'}[st]}</span>${st.toUpperCase()} <small>${levelFromXp(data.xp[st]).level}</small>`;b.addEventListener('click',()=>setStyle(st));host.append(b);}}
 function refreshSkills(){
  const host=$('skills');host.innerHTML='';
@@ -408,8 +412,12 @@ function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeom
 function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=ball(scene,pos.x,pos.y,pos.z,.07,.07,.07,new THREE.MeshBasicMaterial({color}));const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
 function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
 function hitEnemy(e,damage,ability){if(!e||e.dead||e.hp<=0)return;const amount=Math.round(damage*(1+Math.min(24,levelFromXp(data.xp[style]).level-1)*.025)*outgoingMultiplier(data.armour[style],style));e.hp-=amount;e.hitFlashUntil=now()+.16;
+ if(e.type!=='dummy'&&!e.retreating){
+  const cfg=ENEMY_COMBAT[e.type],heroHome=Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ);
+  if(heroHome<=cfg.leash)e.aggro=true;
+ }
  floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));
- if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type);}}
+ if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type);}}
 function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return enemies.filter(e=>!e.dead&&e.hp>0).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
 function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},enemies,reach,isTouch?.12:.25);}
 function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWeapon().reach){
@@ -523,10 +531,30 @@ function applyEnemyDamage(e,spec,t){
   setTimeout(()=>{hero.position.set(0,0,11);hp=maxHealth(levelFromXp(data.xp.vitality).level);updateHpUI();},2100);
  }
 }
+function disengageEnemy(e,t){
+ // Never carry a queued hit or charge across the leash boundary.
+ cancelEnemyWarning(e);e.charge=null;e.aggro=false;e.retreating=true;
+ e.hp=e.max;e.bleedUntil=0;e.nextBleed=0;e.slowUntil=0;
+ e.stunUntil=0;e.rootUntil=0;e.swapLockedUntil=0;e.attackWindup=0;
+ e.lastAttack=t;
+}
+function returnEnemyHome(e,dt,t){
+ const dx=e.startX-e.x,dz=e.startZ-e.z,dist=Math.hypot(dx,dz);
+ if(dist<.15){e.x=e.startX;e.z=e.startZ;e.group.position.set(e.x,0,e.z);e.retreating=false;return;}
+ const step=Math.min(dist,ENEMY_COMBAT[e.type].returnSpeed*dt);
+ const nx=e.x+dx/dist*step,nz=e.z+dz/dist*step;
+ // Enemy pathing cannot permanently trap an evading creature on scenery.
+ if(!collides(nx,nz)){e.x=nx;e.z=nz;}
+ else {e.x+=dx/dist*step;e.z+=dz/dist*step;}
+ e.group.position.set(e.x,0,e.z);
+ e.group.rotation.y=dampAngle(e.group.rotation.y,Math.atan2(-dx,-dz),10,dt);
+}
 function updateEnemy(e,dt,t){
  if(e.dead){
+  e.levelLabel.hidden=true;
   if(t>=e.respawn){
-   e.dead=false;e.hp=e.max;e.bleedUntil=0;e.rootUntil=0;e.stunUntil=0;e.lastAttack=t;
+   e.dead=false;e.hp=e.max;e.bleedUntil=0;e.rootUntil=0;e.stunUntil=0;
+   e.lastAttack=t;e.aggro=false;e.retreating=false;
    e.group.visible=true;e.group.position.set(e.startX,0,e.startZ);e.x=e.startX;e.z=e.startZ;
   }
   return;
@@ -534,14 +562,24 @@ function updateEnemy(e,dt,t){
  if(e.bleedUntil>t&&t>=e.nextBleed){e.nextBleed=t+1;hitEnemy(e,3,null);}
  if(e.dead)return;
  e.bar.scale.x=clamp(e.hp/e.max,.001,1);e.bar.position.x=-.68*(1-e.hp/e.max);e.plate.lookAt(camera.position);
- const hitFlash=e.hitFlashUntil>t;
- e.group.scale.setScalar(hitFlash?1.12:1);
+ e.group.scale.setScalar(e.hitFlashUntil>t?1.12:1);
  if(e.type==='dummy')return;
  const bob=e.warning?-.04:Math.sin(t*(e.type==='boar'?5.4:3.9)+e.startX)*.028;
  e.group.position.y=damp(e.group.position.y,bob,9,dt);
  const spec=ENEMY_PATTERNS[e.type];
+ const playerPos={x:hero.position.x,z:hero.position.z};
+ const state=enemyBehaviour(e.type,e,playerPos,e.aggro);
+ if(state==='retreat' || hp<=0){
+  if(!e.retreating)disengageEnemy(e,t);
+  returnEnemyHome(e,dt,t);return;
+ }
+ if(e.retreating||state==='return'){
+  // Once leashed, the mob must reach its home before it can acquire again.
+  e.aggro=false;returnEnemyHome(e,dt,t);return;
+ }
+ if(state==='idle'){return;}
+ if(state==='acquire'){e.aggro=true;e.lastAttack=Math.min(e.lastAttack,t-spec.cooldown+.25);}
  const dx=hero.position.x-e.x,dz=hero.position.z-e.z,dist=Math.hypot(dx,dz);
- const active=dist<14&&hp>0;
  if((e.stunUntil>t||e.rootUntil>t)&&e.warning)cancelEnemyWarning(e);
  if(e.stunUntil>t&&e.charge)e.charge=null;
  if(e.warning){
@@ -556,9 +594,10 @@ function updateEnemy(e,dt,t){
   return;
  }
  if(e.charge){
-  if(t>=e.charge.end||!active){e.charge=null;return;}
+  if(t>=e.charge.end){e.charge=null;return;}
   const dir=e.charge.direction,step=spec.chargeSpeed*dt,nx=e.x+dir.x*step,nz=e.z+dir.z*step;
-  if(collides(nx,nz)){e.charge=null;return;}
+  const homeDistance=Math.hypot(nx-e.startX,nz-e.startZ);
+  if(homeDistance>ENEMY_COMBAT[e.type].leash||collides(nx,nz)){e.charge=null;disengageEnemy(e,t);return;}
   e.x=nx;e.z=nz;e.group.position.set(nx,0,nz);
   if(!e.charge.hit&&Math.hypot(hero.position.x-e.x,hero.position.z-e.z)<1.4){
    e.charge.hit=true;applyEnemyDamage(e,spec,t);
@@ -566,19 +605,36 @@ function updateEnemy(e,dt,t){
   return;
  }
  const ready=t-e.lastAttack>=spec.cooldown;
- if(active&&dist<=spec.engage&&ready&&e.stunUntil<t&&e.rootUntil<t){
+ if(dist<=spec.engage&&ready&&e.stunUntil<t&&e.rootUntil<t){
   startEnemyWarning(e,t);return;
  }
- if(active&&dist>Math.min(spec.engage*.82,2.9)&&e.stunUntil<t&&e.rootUntil<t){
+ if(dist>Math.min(spec.engage*.82,2.9)&&e.stunUntil<t&&e.rootUntil<t){
   const speed=(e.type==='bandit'?2.5:e.type==='boar'?2.2:1.75)*(e.slowUntil>t?.42:1);
-  const step=Math.min(speed*dt,dist-2.2);
-  if(step>0){const nx=e.x+dx/dist*step,nz=e.z+dz/dist*step;
+  const step=Math.min(speed*dt,Math.max(0,dist-2.2));
+  if(step>0){
+   const nx=e.x+dx/dist*step,nz=e.z+dz/dist*step;
+   if(Math.hypot(nx-e.startX,nz-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,t);return;}
    if(!collides(nx,nz)){e.x=nx;e.z=nz;e.group.position.set(nx,0,nz);}
   }
-  e.group.rotation.y=Math.atan2(-dx,-dz);
- }else if(!active&&Math.hypot(e.x-e.startX,e.z-e.startZ)>1.3){
-  const x=e.startX-e.x,z=e.startZ-e.z,l=Math.hypot(x,z);
-  e.x+=x/l*.5*dt;e.z+=z/l*.5*dt;e.group.position.set(e.x,0,e.z);
+  e.group.rotation.y=dampAngle(e.group.rotation.y,Math.atan2(-dx,-dz),10,dt);
+ }
+}
+function updateEnemyLevelLabels(){
+ const playerLevel=combatLevelFromXp(data.xp);
+ camera.updateMatrixWorld();
+ for(const e of enemies){
+  const label=e.levelLabel,dist=Math.hypot(hero.position.x-e.x,hero.position.z-e.z);
+  if(e.dead||!started||dist>17){label.hidden=true;continue;}
+  const pos=new THREE.Vector3(e.x,(e.type==='dummy'?3.78:e.type==='mossling'?2.15:3.24)+e.group.position.y,e.z);
+  pos.project(camera);
+  if(pos.z< -1||pos.z>1||Math.abs(pos.x)>1.05||Math.abs(pos.y)>1.05){
+   label.hidden=true;continue;
+  }
+  label.hidden=false;
+  label.style.left=((pos.x+1)*50).toFixed(2)+'%';
+  label.style.top=((1-pos.y)*50).toFixed(2)+'%';
+  label.dataset.threat=enemyThreatTier(e.level,playerLevel);
+  label.classList.toggle('is-aggro',e.aggro);
  }
 }
 function animate(dt,t){
@@ -614,13 +670,14 @@ function animate(dt,t){
  const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0));
  cameraFocus.lerp(cameraAim,1-Math.exp(-13*dt));camera.lookAt(cameraFocus);
  for(const e of enemies)updateEnemy(e,dt,t);
+ updateEnemyLevelLabels();
  updateLoot(dt,t);
 for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
 let aim=null,aimScore=-Infinity;for(const e of enemies){if(e.dead||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
-$('targetbox').hidden=!aim;if(aim){$('target-name').textContent={dummy:'Training Dummy',mossling:'Mossling',boar:'Field Boar',bandit:'Forest Bandit'}[aim.type];$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
+$('targetbox').hidden=!aim;if(aim){$('target-name').textContent=ENEMY_COMBAT[aim.type].name+' · Combat Lv '+aim.level;$('target-name').dataset.threat=enemyThreatTier(aim.level,combatLevelFromXp(data.xp));$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
 const z=hero.position.z;$('area').textContent=z< -42?'Forest Road':z< -12?'Oakrest Outskirts':'Oakrest Village';
 const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  const attackButton=$('touch-attack'),attackTimer=$('attack-timer');

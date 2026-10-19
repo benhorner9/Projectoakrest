@@ -31,12 +31,14 @@
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
     </section>
     <section class="vitals">
+      <div class="combat-level-badge" aria-label="Your overall Combat Level">COMBAT LV <strong id="combat-level-value">1</strong></div>
       <div class="vital-line"><strong id="health-label">100 / 100 HP</strong><span id="level-label">VITALITY 1</span></div>
       <div class="bar health"><div id="hp-fill"></div></div>
       <div class="bar xp"><div id="xp-fill"></div></div>
       <div class="stat-line"><span id="style-level">MELEE LEVEL 1</span><span id="coins">0 COINS</span></div>
     </section>
     <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Train with a weapon, then defeat 3 creatures outside the village.</div><div id="quest-progress">0 / 3 defeated</div></aside>
+    <div id="enemy-level-layer" aria-hidden="true"></div>
     <div class="targetbox" id="targetbox" hidden><div id="target-name">Field Boar</div><div class="bar enemy-health"><div id="target-hp"></div></div></div>
     <div class="reticle" aria-hidden="true"><i></i><i></i></div>
     <div id="notifications" aria-live="polite"></div>

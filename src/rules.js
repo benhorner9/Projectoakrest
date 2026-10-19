@@ -205,6 +205,13 @@ export function xpProgress(totalXp){
  const current=maxed?0:remaining;
  return {level,totalXp:xp,current,required,needed:maxed?0:required-current,progress:maxed?1:Math.min(1,current/required),maxed};
 }
+/** Derived overall strength: one primary attack style, Vitality and limited hybrid credit.
+ *  Caps at 99 and never grants XP itself. */
+export function combatLevelFromXp(xp){
+ const attacks=['melee','ranged','magic'].map(key=>levelFromXp(Math.max(0,Number(xp?.[key])||0)).level).sort((a,b)=>b-a);
+ const vitality=levelFromXp(Math.max(0,Number(xp?.vitality)||0)).level;
+ return Math.max(1,Math.min(99,Math.floor(attacks[0]*.65+vitality*.25+(attacks[1]+attacks[2])*.05+1e-9)));
+}
 export function maxHealth(vitalityLevel) { return 100 + (vitalityLevel-1)*8; }
 export function damageAfterArmour(damage,shield=false,armourId='traveller',type='physical') { const armour=defenceFor(armourId);const mitigation=type==='magical'?armour.magical:armour.physical;return Math.max(1,Math.round(damage*(1-mitigation)*(shield?.42:1))); }
 export function meleeTarget(origin,heading,enemies,reach,minDot=0.24) {

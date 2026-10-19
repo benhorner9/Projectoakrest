@@ -4,6 +4,30 @@ export const ENEMY_PATTERNS={
  boar:{kind:'charge',windup:.86,cooldown:3.8,engage:6.2,damage:12,length:6.0,width:1.2,chargeSpeed:10,description:'Boar charge'},
  bandit:{kind:'cleave',windup:.76,cooldown:3.25,engage:3.25,damage:16,radius:3.25,halfAngle:.69,description:'Bandit cleave'}
 };
+/** Levels and cautious, spawn-bound aggro behaviour for the starter creatures. */
+export const ENEMY_COMBAT={
+ dummy:{level:1,name:'Training Dummy',sight:0,leash:0,disengage:0,returnSpeed:0},
+ mossling:{level:2,name:'Mossling',sight:5.8,leash:10,disengage:9,returnSpeed:3.6},
+ boar:{level:5,name:'Field Boar',sight:6.9,leash:12,disengage:10,returnSpeed:4.2},
+ bandit:{level:8,name:'Forest Bandit',sight:7.8,leash:14,disengage:12,returnSpeed:4.4}
+};
+export function enemyThreatTier(enemyLevel,playerCombatLevel){
+ const gap=enemyLevel-playerCombatLevel;
+ return gap>=3?'danger':gap<=-3?'easy':'even';
+}
+/** Pure state transition: starts pursuit close to spawn and forcibly leashes it. */
+export function enemyBehaviour(type,monster,player,engaged=false){
+ const spec=ENEMY_COMBAT[type];
+ if(!spec||type==='dummy')return 'idle';
+ const home=Math.hypot(monster.x-monster.startX,monster.z-monster.startZ);
+ const heroHome=Math.hypot(player.x-monster.startX,player.z-monster.startZ);
+ const playerDistance=Math.hypot(player.x-monster.x,player.z-monster.z);
+ if(home>spec.leash || engaged&&(playerDistance>spec.disengage||heroHome>spec.leash))
+   return 'retreat';
+ if(engaged)return 'pursue';
+ if(home>.35)return 'return';
+ return playerDistance<=spec.sight&&heroHome<=spec.leash?'acquire':'idle';
+}
 export function isThreatened(kind,warning,target){
  const dx=target.x-warning.x,dz=target.z-warning.z;
  if(kind==='pounce')return Math.hypot(dx,dz)<=warning.radius;

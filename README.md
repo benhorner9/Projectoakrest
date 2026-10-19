@@ -89,3 +89,8 @@ Added transient slash-arc and impact-ring meshes, per-projectile glow and cleanu
 - Migrating an existing save preserves earned milestone equipment. After migration, new equipment is obtained from loot instead of appearing automatically at level-up.
 
 Inventory items discovered ahead of their gear requirements now visibly show their level lock and cannot be equipped until the appropriate skill is trained. On portrait phones, the pickup prompt sits above the action pad rather than colliding with the ability buttons.
+
+## Combat levels and bounded enemy aggression
+- Overall Combat Level is now derived (1–99) from strongest Melee/Ranged/Magic skill (65%), Vitality (25%) and the two other offensive skills (5% each). It isn't a separately trainable skill. Shown in the HP HUD and character menu; updates immediately when XP is gained.
+- Starter NPC levels: training dummy 1, mossling 2, field boar 5, forest bandit 8. Each gets a world-space level/name label close to the player and its level in the target HUD. Colours indicate relative danger.
+- Each enemy has its own detection range, chase/abandon range and absolute leash radius from spawn. When the player flees too far the mob cancels queued damage and charges, resets HP and returns quickly to its spawn before it can re-aggro. No more endless trains of mobs after you leave their area.

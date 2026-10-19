@@ -94,3 +94,21 @@
 @media(max-width:500px) and (orientation:portrait){
  .touch-enabled .loot-prompt{left:51%;top:39%;bottom:auto;max-width:75vw}
 }
+
+/* Persistent, readable levels: player combat badge + projected 3D mob labels. */
+.vitals{position:absolute}
+.combat-level-badge{position:absolute;right:7px;top:-17px;background:linear-gradient(120deg,#735e3c,#3b3d2e);border:1px solid #f1d39abb;
+ box-shadow:0 3px 11px #031c149c;letter-spacing:.08em;border-radius:7px;padding:3px 9px;color:#f6e5c0;font-size:10px;font-weight:800;white-space:nowrap;text-shadow:0 1px 2px #102116}
+.combat-level-badge strong{font-size:14px;color:#fff2cf;margin-left:3px}
+#enemy-level-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.enemy-world-label[hidden]{display:none!important}
+.enemy-world-label{position:absolute;transform:translate(-50%,-100%);font-size:11px;line-height:1;white-space:nowrap;
+ background:#183429e9;border:1px solid #d3c49bba;border-radius:20px;padding:6px 9px;box-shadow:0 3px 10px #06180dc9;
+ color:#f4e0b5;font-weight:800;letter-spacing:.02em;text-shadow:0 1px 2px #07140d}
+.enemy-world-label[data-threat="easy"]{border-color:#a5d6a6;color:#c3edbc}
+.enemy-world-label[data-threat="danger"]{border-color:#ef8e86;color:#ffd0c0}
+.enemy-world-label.is-aggro{box-shadow:0 0 0 2px #dd8a668c,0 4px 12px #1c0b09b0}
+#target-name[data-threat="danger"]{color:#ffb9a7}
+#target-name[data-threat="easy"]{color:#bfe7b8}
+@media(max-width:600px){.enemy-world-label{font-size:10px;padding:5px 7px}
+ .combat-level-badge{top:-13px;font-size:9px;padding:3px 6px}.combat-level-badge strong{font-size:12px}}
