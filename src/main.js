@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,ARMOUR,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
-import { stickFromOffset, cameraKeyDirection, cameraSensitivity } from './controls.js';
+import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,ARMOUR,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
+import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
 
 const $=id=>document.getElementById(id);
@@ -75,13 +75,14 @@ function bookClose(){progressPanel.hidden=true;}
 $('close-progression').addEventListener('click',bookClose);
 $('progression-skills').addEventListener('click',()=>{bookTab='skills';renderBook();});
 $('progression-equipment').addEventListener('click',()=>{bookTab='equipment';renderBook();});
+$('progression-levels-tab').addEventListener('click',()=>{bookTab='levels';renderBook();});
 $('loadout-button').addEventListener('click',()=>bookOpen('skills'));
 function renderBook(){
   if(progressPanel.hidden)return;
   const combatLevel=levelFromXp(data.xp[bookStyle]).level,vitalLevel=levelFromXp(data.xp.vitality).level;
   $('progression-levels').textContent=`${bookStyle.toUpperCase()} ${combatLevel} · VITALITY ${vitalLevel} · Armoured in ${defenceFor(data.armour[bookStyle]).title}`;
-  for(const tab of ['skills','equipment'])$('progression-'+tab).classList.toggle('selected',tab===bookTab);
-  const tabs=$('progression-styles');tabs.replaceChildren();
+  for(const tab of ['skills','equipment','levels'])$(tab==='levels'?'progression-levels-tab':'progression-'+tab).classList.toggle('selected',tab===bookTab);
+  const tabs=$('progression-styles');tabs.hidden=bookTab==='levels';tabs.replaceChildren();
   for(const s of STYLE_ORDER){
     const b=document.createElement('button');b.type='button';b.textContent=s.toUpperCase()+' '+levelFromXp(data.xp[s]).level;
     b.classList.toggle('selected',s===bookStyle);b.addEventListener('click',()=>{bookStyle=s;bookSlot=0;renderBook();});tabs.append(b);
@@ -90,7 +91,31 @@ function renderBook(){
   const heading=(tag,text,host=content)=>{const x=document.createElement(tag);x.textContent=text;host.append(x);return x;};
   const button=(parent,label,disabled,onClick)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=disabled;b.addEventListener('click',onClick);parent.append(b);return b;};
   const weaponId=data.gear[bookStyle];
-  if(bookTab==='skills'){
+  if(bookTab==='levels'){
+    heading('h3','All skills and experience');
+    heading('p','Your four trainable skills. Each shows current level, XP earned toward the next level and how much XP is still needed.');
+    const grid=document.createElement('div');grid.className='level-overview';content.append(grid);
+    const format=n=>Math.floor(n).toLocaleString('en-GB');
+    for(const [key,title,icon,desc] of [
+      ['melee','Melee','⚔','Swords, daggers and melee skills'],
+      ['ranged','Ranged','➶','Bows, crossbows and ranged skills'],
+      ['magic','Magic','✦','Staffs, wands and magic skills'],
+      ['vitality','Vitality','✚','Health and armour access']
+    ]){
+      const info=xpProgress(data.xp[key]);
+      const card=document.createElement('article');card.className='level-card level-'+key;grid.append(card);
+      const row=document.createElement('div');row.className='level-card-title';card.append(row);
+      heading('strong',icon+' '+title,row);heading('span','Level '+info.level,row);
+      const bar=document.createElement('div');bar.className='level-xp-track';bar.setAttribute('role','progressbar');
+      bar.setAttribute('aria-label',title+' experience');bar.setAttribute('aria-valuenow',String(Math.round(100*info.progress)));
+      bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax','100');card.append(bar);
+      const fill=document.createElement('div');fill.className='level-xp-fill';fill.style.width=(info.progress*100).toFixed(1)+'%';bar.append(fill);
+      const progress=document.createElement('div');progress.className='level-xp-numbers';card.append(progress);
+      heading('span',info.maxed?'MAX LEVEL':format(info.current)+' / '+format(info.required)+' XP this level',progress);
+      heading('strong',info.maxed?'COMPLETE':format(info.needed)+' XP to Level '+(info.level+1),progress);
+      heading('small',desc+' · Total XP: '+format(info.totalXp),card);
+    }
+  }else if(bookTab==='skills'){
     heading('h3','Assign your 4 active abilities');
     heading('p','Tap a slot, then an unlocked ability below. Each weapon family keeps its own setup.');
     const slots=document.createElement('div');slots.className='book-slots';content.append(slots);
@@ -242,11 +267,19 @@ function releaseLook(e){if(lookPointer?.id===e.pointerId)lookPointer=null;}
 for(const ev of ['pointerup','pointercancel','lostpointercapture'])lookZone.addEventListener(ev,releaseLook);
 
 // Holding ATTACK repeats at each weapon's existing rate; releasing/canceling stops instantly.
-const attackButton=$('touch-attack');let attackId=null;
+const attackButton=$('touch-attack');let attackId=null,attackX=0;
 attackButton.addEventListener('pointerdown',e=>{
   if(!started || attackId!==null)return;e.preventDefault();
-  attackId=e.pointerId;holdingAttack=true;
+  attackId=e.pointerId;attackX=e.clientX;holdingAttack=true;doBasic();
   attackButton.classList.add('held');attackButton.setPointerCapture?.(e.pointerId);
+});
+// Pointer capture retains this right-thumb gesture even after sliding beyond ATTACK.
+// Auto-attacks continue while horizontal drag turns the camera; vertical drag does not tilt.
+attackButton.addEventListener('pointermove',e=>{
+  if(e.pointerId!==attackId || !holdingAttack || (e.pointerType!=='touch'&&e.pointerType!=='pen'))return;
+  e.preventDefault();
+  const dx=attackDragDelta(e.clientX-attackX);attackX=e.clientX;
+  if(dx)cameraMove(dx,0,true);
 });
 function releaseAttack(e){if(e.pointerId!==attackId)return;attackId=null;holdingAttack=false;attackButton.classList.remove('held');}
 for(const ev of ['pointerup','pointercancel','lostpointercapture'])attackButton.addEventListener(ev,releaseAttack);

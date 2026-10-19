@@ -1,0 +1,29 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { xpProgress,xpToLevel } from '../src/rules.js';
+import { attackDragDelta } from '../src/controls.js';
+import { readFileSync } from 'node:fs';
+test('all skill XP overview numbers are accurate',()=>{
+ const zero=xpProgress(0);assert.equal(zero.level,1);assert.equal(zero.required,xpToLevel(1));assert.equal(zero.needed,xpToLevel(1));
+ const part=xpProgress(47);assert.equal(part.current,47);assert.equal(part.needed,xpToLevel(1)-47);
+ const second=xpProgress(xpToLevel(1)+13);assert.equal(second.level,2);assert.equal(second.current,13);assert.equal(second.needed,xpToLevel(2)-13);
+});
+test('maximum skill level does not show a future level',()=>{
+ const maximum=xpProgress(99999999);assert.equal(maximum.level,99);assert.equal(maximum.maxed,true);assert.equal(maximum.needed,0);assert.equal(maximum.progress,1);
+});
+test('attack-drag ignores small finger jitter and huge pointer jumps',()=>{
+ assert.equal(attackDragDelta(.4),0);assert.equal(attackDragDelta(24),24);assert.equal(attackDragDelta(-25),-25);assert.equal(attackDragDelta(900),48);assert.equal(attackDragDelta(-900),-48);assert.equal(attackDragDelta(NaN),0);
+});
+test('Levels menu has all four skills and XP needed',()=>{
+ const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+ for(const key of ['melee','ranged','magic','vitality'])assert.ok(source.includes("['"+key+"'"));
+ assert.ok(source.includes('xpProgress(data.xp[key])'));
+ assert.ok(source.includes("format(info.needed)+' XP to Level '"));
+});
+test('Attack drag turns horizontally without releasing auto-attack',()=>{
+ const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+ assert.ok(source.includes("attackButton.addEventListener('pointermove'"));
+ assert.ok(source.includes('e.pointerId!==attackId || !holdingAttack'));
+ assert.ok(source.includes('cameraMove(dx,0,true)'));
+ assert.ok(source.includes('attackButton.setPointerCapture'));
+});

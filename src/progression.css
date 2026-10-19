@@ -21,3 +21,17 @@
 .catalogue-list button em{display:block;margin-top:4px;font-size:10px;color:#edca8b;font-style:normal}
 .inventory-group{margin:4px 0 14px}.inventory-group h3{margin-bottom:9px}.gear-stats{font-size:10px;color:#b8cabf}
 @media(max-width:600px){.progression-panel{padding:calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom))}.progression-card{max-height:100%}.progression-content{padding:5px 10px 10px}.catalogue-list button{padding:7px;gap:5px}.catalogue-list button>span{font-size:19px}.catalogue-list button strong{font-size:10px}.catalogue-list button small{font-size:9px}.book-slots button{min-height:60px;font-size:9px}.book-slots button span{font-size:18px}.progression-header{padding:7px 10px}.progression-header strong{font-size:13px}.progression-styles,.progression-tabs{padding:6px 9px}.progression-tabs button{min-height:33px}.progression-styles button{min-height:33px}}
+
+/* All-skill XP and current level overview in the existing progression menu. */
+.progression-styles[hidden]{display:none}
+.level-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:4px 0 14px}
+.level-card{background:#18382fe9;border:1px solid #bea97879;border-radius:11px;padding:14px;min-width:0}
+.level-card-title,.level-xp-numbers{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.level-card-title{margin-bottom:13px}.level-card-title strong{font-size:17px;color:#f5e4bf}.level-card-title span{font-size:13px;color:#ecc995;white-space:nowrap}
+.level-xp-track{height:12px;overflow:hidden;border-radius:8px;background:#0a1d18;border:1px solid #c9b67c60}
+.level-xp-fill{height:100%;background:#d6a176;border-radius:8px;transition:width .18s}
+.level-ranged .level-xp-fill{background:#86c89e}.level-magic .level-xp-fill{background:#97b0f0}.level-vitality .level-xp-fill{background:#dc878f}
+.level-xp-numbers{align-items:flex-start;margin:10px 0;font-size:11px;color:#d1ddce}
+.level-xp-numbers strong{color:#f0ca91;white-space:nowrap;text-align:right}
+.level-card small{display:block;font-size:10px;line-height:1.4;color:#b5c8b9}
+@media(max-width:600px){.level-overview{grid-template-columns:1fr;gap:8px}.level-card{padding:10px 12px}.level-card-title{margin-bottom:8px}.level-card-title strong{font-size:14px}.level-xp-numbers{font-size:10px;margin:7px 0}}

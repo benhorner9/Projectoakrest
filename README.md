@@ -54,3 +54,7 @@ Touchscreen players have four weapon skills arranged in a right-thumb arc around
 - Armour requires Vitality 1/3/6. Cloth favours mobility/magic, leather protects against physical attacks and benefits ranged combat, plate favours physical defence/melee at the cost of mobility. Each style remembers its armour separately.
 - The touch Swap button is now closer to Attack and reacts on the touch press, so the left thumb can keep steering.
 - These are test progression gates and starter gear. Loot drops, shops and a complete item economy come later; your existing XP and coins stay saved.
+
+## 0.5 — Skill levels and attack-to-look
+- SKILLS → LEVELS shows Melee, Ranged, Magic, Vitality with current level, XP this level, remaining XP to the next level, progress and total XP. Displays MAX LEVEL at 99.
+- Holding ATTACK auto-attacks. Sliding the same right thumb left/right turns the camera while Attack and the left joystick continue; pointer capture retains the drag even outside the attack circle. Releasing stops auto-attack.
