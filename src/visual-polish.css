@@ -88,3 +88,9 @@
 .touch-enabled .loot-prompt{bottom:24%;left:52%}
 @media(max-height:620px){.touch-enabled .loot-prompt{left:51%;bottom:calc(55px + env(safe-area-inset-bottom))}.loot-prompt-inner{font-size:10px}}
 @media(max-width:500px){.loot-prompt{max-width:64vw}.loot-prompt-inner{gap:4px;padding:4px 5px}.loot-prompt .loot-spark{font-size:13px}#loot-pickup{min-width:66px;font-size:9px;padding:2px 5px}}
+
+/* Keep the pickup within the centre viewing area on portrait phones,
+   away from the lower-right ability cluster and left-hand joystick. */
+@media(max-width:500px) and (orientation:portrait){
+ .touch-enabled .loot-prompt{left:51%;top:39%;bottom:auto;max-width:75vw}
+}

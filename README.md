@@ -87,3 +87,5 @@ Added transient slash-arc and impact-ring meshes, per-projectile glow and cleanu
 - Mosslings, boars and bandits drop visible hovering coin pouches and occasionally materials or equipment on death. Coins/materials are only credited when picked up. XP and quest progression still happen on kill. Walk within 3.3 world units and use the **PICK UP** touch button or **G** on desktop.
 - Ground drops are saved in local character storage and restored on reload (up to 36 oldest-first). Equipment stays in inventory even if its level requirement is not met; duplicates convert to 8 coins.
 - Migrating an existing save preserves earned milestone equipment. After migration, new equipment is obtained from loot instead of appearing automatically at level-up.
+
+Inventory items discovered ahead of their gear requirements now visibly show their level lock and cannot be equipped until the appropriate skill is trained. On portrait phones, the pickup prompt sits above the action pad rather than colliding with the ability buttons.

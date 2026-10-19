@@ -261,22 +261,24 @@ function renderBook(){
   for(const s of STYLE_ORDER){
    for(const id of data.inventory?.weapons?.[s]||[]){
     const w=LOADOUTS[s]?.[id];if(!w)continue;
-    const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);});
+    const ready=canEquipWeapon(s,id,data.xp);
+    const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);},!ready);
     b.classList.toggle('selected',data.gear[s]===id);
     el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
     el('small',s.toUpperCase()+' · LV '+w.requiredLevel+' · '+weaponDisplay(w),d);
-    el('em',data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
+    el('em',!ready?'LV '+w.requiredLevel+' REQUIRED':data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
    }
   }
   el('h3','Armour',host);
   const armour=el('div',null,host,'catalogue-list');
   for(const id of data.inventory?.armour||[]){
    const a=ARMOUR[id];if(!a)continue;
-   const b=uiButton(armour,'',()=>chooseGear('armour',id,style));
+   const ready=canEquipArmour(id,data.xp);
+   const b=uiButton(armour,'',()=>chooseGear('armour',id,style),!ready);
    el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);
    const d=el('div',null,b);el('strong',a.title,d);
    el('small','Vitality '+a.requiredVitality+' · '+a.description,d);
-   el('em',data.armour[style]===id?'EQUIPPED':'EQUIP TO '+style.toUpperCase(),d);
+   el('em',!ready?'VITALITY '+a.requiredVitality+' REQUIRED':data.armour[style]===id?'EQUIPPED':'EQUIP TO '+style.toUpperCase(),d);
   }
   el('h3','Materials',host);
   const materials=el('div',null,host,'catalogue-list');
