@@ -126,7 +126,7 @@ export const SKILLS_OVERVIEW=[
   {id:'vitality',label:'Vitality',icon:'✚',description:'Health, armour and survival'}
 ];
 export function starterInventory(){
- return {weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller']};
+ return {weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller'],materials:{}};
 }
 export function awardTrainingGear(data){
  if(!data.inventory||typeof data.inventory!=='object')data.inventory=starterInventory();
@@ -212,6 +212,9 @@ export function validSave(raw){
    }
   }
   if(Array.isArray(raw.inventory?.armour))d.inventory.armour=raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id));
+  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token']){
+    const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
+  }
   awardTrainingGear(d);
   for(const style of STYLE_ORDER){
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];

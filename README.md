@@ -63,3 +63,10 @@ Touchscreen players have four weapon skills arranged in a right-thumb arc around
 The previous full-screen build overlay was replaced by a compact non-modal menu directly attached to the character combat controls. It does not pause rendering or combat. MENU opens four tabs: **Equip** (weapons/armour by current style), **Inventory** (items actually owned, with equip shortcuts), **Skills** (Melee/Ranged/Magic/Vitality levels and progress) and **Abilities** (select and slot unlocked combat skills).
 Tap a skill in Skills to open a small detail sheet inside the menu with a level-by-level milestone list showing the abilities that can be learned and weapons/armour that can be worn. Back returns to the menu without covering the game.
 Prototype ownership rule: three basic weapons and Traveller Wraps start in inventory; other prototype training weapons and armour are awarded automatically at relevant level milestones. Existing saved XP automatically receives its earned gear, without wiping existing progress. True monster loot, trading, shops and crafting remain future work.
+
+## Combat 2.0 starter-village refinement
+- Mosslings mark a small pounce area; boars mark a straight charge lane then rush; bandits warn before a directional cleave. Their warning shapes lock in place at windup, so sidestepping or dodging works. Stuns interrupt warnings.
+- Melee attacks have a short three-strike animation/damage rhythm and enemies briefly react to hits; ranged and magic get distinct launch effects. Touch projectile fire gets a small cone of aim forgiveness, never omnidirectional auto-targeting.
+- Enemy hits trigger a short red edge flash; dodge cooldown is shown on the button; 3 monster types have individual warning timings.
+- Existing enemy victories still give coins and XP and can also award Moss Fibre, Boar Hide or Bandit Tokens in the Inventory menu. Materials are saved with existing character progress but cannot yet be crafted into anything.
+- All changes stay in the existing starter village and do not change combat/armour level requirements.
