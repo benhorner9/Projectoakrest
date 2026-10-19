@@ -1,0 +1,55 @@
+
+/* Touch-first MOBA inspired combat layout — keep the same game actions and cooldowns. */
+.touch-enabled .combatbar{position:absolute;top:185px;bottom:auto;left:max(14px,env(safe-area-inset-left));transform:none;width:min(310px,calc(100vw - 28px));padding:8px 10px 6px;z-index:3;background:#10231fe6}
+.touch-enabled .combatbar .style{min-height:37px;font-size:10px;gap:4px;padding:5px 2px}
+.touch-enabled .combatbar .style .symbol{font-size:17px}
+.touch-enabled .combatbar .weaponline{margin:5px 0 0;font-size:11px;gap:6px}
+.touch-enabled .combatbar #gear-button{min-height:30px;white-space:nowrap;font-size:10px;padding:0 4px}
+.touch-enabled .combatbar .bottom-hint{display:none}
+.touch-enabled .combatbar .equipment-picker{top:100%;bottom:auto;margin:7px 0 0;z-index:10;flex-wrap:wrap}
+.touch-enabled .joystick{left:max(14px,env(safe-area-inset-left));bottom:calc(20px + env(safe-area-inset-bottom));width:120px;height:120px;z-index:5}
+.touch-enabled .joystick #stick{left:39px;top:39px;width:42px;height:42px}
+.touch-enabled .touch-look-zone{top:14%;left:43%;bottom:17%;z-index:1}
+.touch-enabled .touch-actions{position:absolute;display:block;right:max(11px,env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));width:min(320px,78vw);height:min(308px,75vw);gap:0;z-index:5;pointer-events:none;isolation:isolate}
+.touch-enabled .touch-actions .touch-skill-dock,.touch-enabled .touch-actions #skills{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.touch-enabled .touch-actions button{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;touch-action:none;box-shadow:0 4px 13px #071b1ab3;text-shadow:0 1px 2px #0b1719b3}
+.touch-enabled .touch-actions .skill{position:absolute;width:60px;height:60px;min-width:60px;min-height:60px;padding:5px 3px;border-radius:50%;display:flex;gap:0;justify-content:center;align-items:center;background:#20382fe9;border:2px solid #c3aa70ad;overflow:hidden}
+.touch-enabled .touch-actions .skill .key{display:none}
+.touch-enabled .touch-actions .skill .skill-icon{font-size:22px;line-height:1.25}
+.touch-enabled .touch-actions .skill .name{font-size:9px;line-height:1.1;max-width:52px;max-height:21px;overflow:hidden;text-align:center;overflow-wrap:anywhere}
+.touch-enabled .touch-actions .skill .cooldown{font-size:16px}
+.touch-enabled .touch-actions .skill:nth-child(1){left:25%;top:63%}
+.touch-enabled .touch-actions .skill:nth-child(2){left:34%;top:35%}
+.touch-enabled .touch-actions .skill:nth-child(3){left:59%;top:15%}
+.touch-enabled .touch-actions .skill:nth-child(4){left:85%;top:31%}
+.touch-enabled .touch-actions #touch-attack{left:74%;top:61%;width:92px;height:92px;min-width:92px;min-height:92px;border:3px solid #f3d9a5;background:linear-gradient(160deg,#936b41eb,#5b3d2fd9);font-size:30px;gap:2px}
+.touch-enabled .touch-actions #touch-attack.held{transform:translate(-50%,-50%) scale(.96);background:#b9804e}
+.touch-enabled .touch-actions #touch-swap{left:44%;top:89%;width:63px;height:63px;min-width:63px;min-height:63px;border:2px solid #a6c4edb8;background:#24465be9;font-size:23px;gap:0}
+.touch-enabled .touch-actions #touch-dodge{left:88%;top:89%;width:63px;height:63px;min-width:63px;min-height:63px;border:2px solid #b8c8a5b8;background:#284536ea;font-size:24px;gap:0}
+.touch-enabled .touch-actions #touch-swap small,.touch-enabled .touch-actions #touch-dodge small{font-size:9px}
+.touch-enabled .touch-actions #touch-attack small{font-size:11px}
+@media (max-width:750px){
+ .touch-enabled .combatbar{top:169px;width:min(275px,calc(100vw - 28px))}
+ .touch-enabled .joystick{width:102px;height:102px;bottom:calc(14px + env(safe-area-inset-bottom))}
+ .touch-enabled .joystick #stick{left:33px;top:33px;width:36px;height:36px}
+ .touch-enabled .touch-actions .skill{width:54px;height:54px;min-width:54px;min-height:54px}
+ .touch-enabled .touch-actions #touch-attack{width:79px;height:79px;min-width:79px;min-height:79px}
+ .touch-enabled .touch-actions #touch-swap,.touch-enabled .touch-actions #touch-dodge{width:56px;height:56px;min-width:56px;min-height:56px}
+ .touch-enabled .touch-actions .skill .skill-icon{font-size:20px}
+ .touch-enabled .touch-actions .skill .name{font-size:8px}
+}
+@media (max-height:620px){
+ .touch-enabled .combatbar{top:146px;width:min(242px,38vw)}
+ .touch-enabled .combatbar .style{min-height:31px;font-size:9px}
+ .touch-enabled .combatbar .weaponline{font-size:10px}
+ .touch-enabled .joystick{width:90px;height:90px;bottom:calc(12px + env(safe-area-inset-bottom))}
+ .touch-enabled .joystick #stick{left:29px;top:29px;width:32px;height:32px}
+ .touch-enabled .touch-actions{width:min(268px,44vw);height:min(250px,72vh);bottom:calc(8px + env(safe-area-inset-bottom))}
+ .touch-enabled .touch-actions .skill{width:47px;height:47px;min-width:47px;min-height:47px}
+ .touch-enabled .touch-actions .skill .skill-icon{font-size:18px}
+ .touch-enabled .touch-actions .skill .name{font-size:7px}
+ .touch-enabled .touch-actions #touch-attack{width:70px;height:70px;min-width:70px;min-height:70px;font-size:24px}
+ .touch-enabled .touch-actions #touch-attack small{font-size:9px}
+ .touch-enabled .touch-actions #touch-swap,.touch-enabled .touch-actions #touch-dodge{width:52px;height:52px;min-width:52px;min-height:52px;font-size:20px}
+ .touch-enabled .touch-look-zone{top:18%;left:41%;bottom:12%}
+}
