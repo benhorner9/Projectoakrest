@@ -4,6 +4,7 @@ import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
+import { createOakrestScenery, enrichHero, enrichEnemy } from './visual-world.js';
 
 const $=id=>document.getElementById(id);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
@@ -15,15 +16,15 @@ if(isTouch) $('touch-skill-dock').appendChild($('skills'));
 const now=()=>performance.now()/1000;
 const rand=(seed)=>{let s=seed;return ()=>{s=(s*16807)%2147483647;return (s-1)/2147483646;};};
 const random=rand(27184);
-const scene=new THREE.Scene();scene.background=new THREE.Color('#92b4a5');scene.fog=new THREE.Fog('#92b4a5',38,105);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#a9c8b7');scene.fog=new THREE.Fog('#a9c8b7',48,130);
 let renderer;
-try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.45:1.85));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;$('game').appendChild(renderer.domElement); }
+try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.45:1.85));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;$('game').appendChild(renderer.domElement); }
 catch(err){$('error').hidden=false;throw err;}
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,150);
-const sun=new THREE.DirectionalLight('#ffe0ab',2.25);sun.position.set(-26,45,20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;sun.shadow.normalBias=.045;scene.add(sun);
-scene.add(new THREE.AmbientLight('#c5d8f0',1.1));
-const hemi=new THREE.HemisphereLight('#d3f3ee','#6c6a41',.75);scene.add(hemi);
-const MAT={ground:new THREE.MeshLambertMaterial({color:'#73966b'}),road:new THREE.MeshLambertMaterial({color:'#bcb09a'}),wood:new THREE.MeshLambertMaterial({color:'#79543a'}),woodLight:new THREE.MeshLambertMaterial({color:'#ac7951'}),stone:new THREE.MeshLambertMaterial({color:'#a1a399'}),roof:new THREE.MeshLambertMaterial({color:'#775c56'}),roof2:new THREE.MeshLambertMaterial({color:'#57685a'}),grass:new THREE.MeshLambertMaterial({color:'#547a53'}),leaves:new THREE.MeshLambertMaterial({color:'#436949'}),leaves2:new THREE.MeshLambertMaterial({color:'#648456'}),gold:new THREE.MeshLambertMaterial({color:'#e4bd72'}),black:new THREE.MeshLambertMaterial({color:'#171f1f'}),eye:new THREE.MeshBasicMaterial({color:'#edead6'}),water:new THREE.MeshLambertMaterial({color:'#759e9b'})};
+const sun=new THREE.DirectionalLight('#ffdfad',2.1);sun.position.set(-26,45,20);sun.castShadow=true;sun.shadow.mapSize.set(isTouch?1024:2048,isTouch?1024:2048);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;sun.shadow.normalBias=.045;scene.add(sun);
+scene.add(new THREE.AmbientLight('#dae5da',.78));
+const hemi=new THREE.HemisphereLight('#e1ecdf','#6f6c48',.98);scene.add(hemi);
+const MAT={ground:new THREE.MeshLambertMaterial({color:'#73956e',flatShading:true}),road:new THREE.MeshLambertMaterial({color:'#baa889',flatShading:true}),wood:new THREE.MeshLambertMaterial({color:'#79543a'}),woodLight:new THREE.MeshLambertMaterial({color:'#ac7951'}),stone:new THREE.MeshLambertMaterial({color:'#a1a399'}),roof:new THREE.MeshLambertMaterial({color:'#775c56'}),roof2:new THREE.MeshLambertMaterial({color:'#57685a'}),grass:new THREE.MeshLambertMaterial({color:'#547a53'}),leaves:new THREE.MeshLambertMaterial({color:'#436949'}),leaves2:new THREE.MeshLambertMaterial({color:'#648456'}),gold:new THREE.MeshLambertMaterial({color:'#e4bd72'}),black:new THREE.MeshLambertMaterial({color:'#171f1f'}),eye:new THREE.MeshBasicMaterial({color:'#edead6'}),water:new THREE.MeshLambertMaterial({color:'#759e9b'})};
 const playerColours={melee:'#ae6954',magic:'#597ba0',ranged:'#627e51'};
 const boxGeom=new THREE.BoxGeometry(1,1,1), ballGeom=new THREE.SphereGeometry(1,9,7);
 function mat(color){return new THREE.MeshLambertMaterial({color});}
@@ -35,9 +36,37 @@ const ground=put(scene,new THREE.PlaneGeometry(160,160),MAT.ground,0,-.065,0,1,1
 const road=put(scene,new THREE.PlaneGeometry(8,125),MAT.road,0,-.044,-9,1,1,1,false);road.rotation.x=-Math.PI/2;
 function patch(x,z,w,d,color){const p=put(scene,new THREE.PlaneGeometry(w,d),mat(color),x,-.035,z,1,1,1,false);p.rotation.x=-Math.PI/2;return p;}
 for(let i=0;i<65;i++){const x=(random()-.5)*130,z=(random()-.5)*130;if(Math.abs(x)<6 && z>-60 && z<50)continue;patch(x,z,1+random()*4,.5+random()*3,random()>.5?'#789e6f':'#6b9167');}
-function tree(x,z,height=1){const g=new THREE.Group();g.position.set(x,0,z);cylinder(g,0,1.25*height,0,.23*height,2.5*height,MAT.wood);const leaf=random()>.5?MAT.leaves:MAT.leaves2;for(let t=0;t<3;t++)put(g,new THREE.ConeGeometry((1.8-t*.34)*height,2.5*height,7),leaf,0,(2.7+t*.85)*height,0);scene.add(g);}
+function tree(x,z,height=1){
+ const g=new THREE.Group();g.position.set(x,0,z);
+ cylinder(g,0,1.25*height,0,.23*height,2.5*height,MAT.wood);
+ const leaf=random()>.5?MAT.leaves:MAT.leaves2;
+ for(let t=0;t<3;t++){
+  const layer=put(g,new THREE.ConeGeometry((1.75-t*.31)*height,2.35*height,7),leaf,0,(2.7+t*.82)*height,0);
+  layer.rotation.y=random()*.42;
+ }
+ for(let j=0;j<3;j++){
+  const ang=j*2.09;
+  ball(g,Math.cos(ang)*.95*height,2.7*height,Math.sin(ang)*.8*height,.45*height,.58*height,.4*height,MAT.leaves2);
+ }
+ scene.add(g);
+}
 for(let i=0;i<90;i++){let x=(random()-.5)*112,z=(random()-.5)*112;if(Math.abs(x)<11&&z>-38&&z<35)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
-function cottage(x,z,roofmat=MAT.roof){const g=new THREE.Group();g.position.set(x,0,z);block(g,0,2.2,0,8,4.4,6,MAT.stone);const r=put(g,new THREE.ConeGeometry(5.8,3,4),roofmat,0,5.4,0);r.rotation.y=Math.PI/4;block(g,-.8,1.4,3.02,1.35,2.8,.1,MAT.wood);block(g,2.2,2.55,3.05,1.3,1.1,.14,MAT.water);block(g,2.2,2.55,3.15,.15,1.2,.14,MAT.wood);block(g,2.2,2.55,3.15,1.35,.13,.14,MAT.wood);scene.add(g);}
+function cottage(x,z,roofmat=MAT.roof){const g=new THREE.Group();g.position.set(x,0,z);block(g,0,2.2,0,8,4.4,6,MAT.stone);const r=put(g,new THREE.ConeGeometry(5.8,3,4),roofmat,0,5.4,0);r.rotation.y=Math.PI/4;block(g,-.8,1.4,3.02,1.35,2.8,.1,MAT.wood);block(g,2.2,2.55,3.05,1.3,1.1,.14,MAT.water);block(g,2.2,2.55,3.15,.15,1.2,.14,MAT.wood);block(g,2.2,2.55,3.15,1.35,.13,.14,MAT.wood);
+ const trim=mat('#654b36'),warm=mat('#d8af78'),foundation=mat('#78877a');
+ for(const side of [-1,1]){
+  block(g,side*3.72,2.0,3.1,.22,4.05,.20,trim);
+  block(g,side*3.65,.45,0,.25,.65,6.1,foundation);
+ }
+ block(g,0,4.1,3.08,7.7,.22,.21,trim);
+ block(g,0,.28,3.1,7.7,.52,.24,foundation);
+ const chimney=block(g,-2.45,5.9,-.5,1.12,2.1,1.08,foundation);
+ block(g,-2.45,6.95,-.5,1.42,.22,1.38,trim);
+ block(g,-.8,2.55,3.11,.13,2.7,.15,trim);
+ block(g,-.8,1.30,3.14,.7,.13,.18,warm);
+ block(g,2.2,2.55,3.22,1.4,.10,.05,warm);
+ block(g,2.2,2.55,3.24,.10,1.14,.05,warm);
+ for(const zsign of [-1,1]){block(g,zsign*3.75,3.8,0,.11,.45,5.8,trim);}
+ scene.add(g);}
 cottage(-14,12);cottage(14,8,MAT.roof2);cottage(-14,28,MAT.roof2);cottage(14,27);
 function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}}
 fence(-8,37,9);fence(7,37,7);fence(-8,-8,3);fence(5,-8,4);
@@ -50,16 +79,29 @@ for(let i=0;i<13;i++){const x=(random()-.5)*85,z=(random()-.5)*90;if(Math.abs(x)
 for(const x of [-4,4])block(scene,x,2.35,-9,.7,4.7,.7,MAT.wood);block(scene,0,4.7,-9,8.6,.6,.8,MAT.woodLight);
 const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));
 function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2.65,z,1.75,.7,.16,MAT.woodLight);}sign(5,12);
+const scenery=createOakrestScenery({THREE,scene,random,MAT});
 
 function createHero(){const g=new THREE.Group();const base=mat(playerColours.melee);const skin=mat('#dfad81');block(g,0,1.25,0,.86,1.18,.48,base);block(g,0,1.36,-.27,.65,.75,.08,MAT.woodLight);ball(g,0,2.13,0,.39,.43,.37,skin);const hair=ball(g,0,2.4,.01,.4,.21,.38,mat('#3b2f2a'));
-const leftLeg=new THREE.Group(),rightLeg=new THREE.Group(),leftArm=new THREE.Group(),rightArm=new THREE.Group();leftLeg.position.set(-.23,.77,0);rightLeg.position.set(.23,.77,0);leftArm.position.set(-.59,1.76,0);rightArm.position.set(.59,1.76,0);for(const leg of [leftLeg,rightLeg]){block(leg,0,-.32,0,.31,.72,.36,MAT.wood);block(leg,0,-.69,-.1,.33,.24,.58,MAT.black);g.add(leg);}for(const arm of [leftArm,rightArm]){block(arm,0,-.35,0,.24,.75,.28,base);g.add(arm);}const hand=ball(rightArm,0,-.76,0,.17,.16,.17,skin);const weapon=new THREE.Group();weapon.position.set(.05,-.78,-.16);rightArm.add(weapon);g.userData={body:base,leftLeg,rightLeg,leftArm,rightArm,weapon};return g;}
+const leftLeg=new THREE.Group(),rightLeg=new THREE.Group(),leftArm=new THREE.Group(),rightArm=new THREE.Group();leftLeg.position.set(-.23,.77,0);rightLeg.position.set(.23,.77,0);leftArm.position.set(-.59,1.76,0);rightArm.position.set(.59,1.76,0);for(const leg of [leftLeg,rightLeg]){block(leg,0,-.32,0,.31,.72,.36,MAT.wood);block(leg,0,-.69,-.1,.33,.24,.58,MAT.black);g.add(leg);}for(const arm of [leftArm,rightArm]){block(arm,0,-.35,0,.24,.75,.28,base);g.add(arm);}const hand=ball(rightArm,0,-.76,0,.17,.16,.17,skin);const weapon=new THREE.Group();weapon.position.set(.05,-.78,-.16);rightArm.add(weapon);
+ const costume=enrichHero({THREE,g,block,ball,mat,MAT,leftLeg,rightLeg,leftArm,rightArm});
+ g.userData={body:base,leftLeg,rightLeg,leftArm,rightArm,weapon,...costume};return g;}
 const hero=createHero();hero.position.set(0,0,11);scene.add(hero);
-function equipVisual(style,weaponId){const group=hero.userData.weapon;group.clear();hero.userData.body.color.set(playerColours[style]);const family=slotFamily(style,weaponId);let handle,blade;if(style==='melee'){
+function equipVisual(style,weaponId){const group=hero.userData.weapon;group.clear();hero.userData.body.color.set(playerColours[style]);
+ hero.userData.cloth.color.set(style==='melee'?'#54483b':style==='magic'?'#34485d':'#4b6040');
+ hero.userData.chestPlate.visible=data.armour[style]==='plate';
+ hero.userData.cape.visible=data.armour[style]!=='plate';
+ const family=slotFamily(style,weaponId);let handle,blade;if(style==='melee'){
   if(family==='daggers'){for(const x of [-.12,.15]){block(group,x,-.15,-.38,.08,.11,.62,MAT.wood);block(group,x,-.15,-.94,.12,.09,.7,MAT.stone);} }
-  else{block(group,0,-.12,-.55,.1,.13,1.2,MAT.wood);block(group,0,-.12,-1.36,.17,.1,.97,MAT.stone);block(group,0,-.12,-.84,.53,.13,.1,MAT.gold);}
+  else{
+  const heavy=family==='greatsword';
+  block(group,0,-.12,-.56,.13,.16,heavy?1.5:1.2,MAT.wood);
+  block(group,0,-.12,heavy?-1.66:-1.36,heavy?.34:.17,.13,heavy?1.56:.97,MAT.stone);
+  block(group,0,-.12,-.84,heavy?.83:.53,.13,.12,MAT.gold);
+  if(heavy)block(group,0,-.12,-2.42,.17,.12,.22,MAT.gold);
+ }
 }else if(style==='magic'){
   block(group,0,.1,-.56,.12,.13,1.7,MAT.wood);ball(group,0,.1,-1.5,.24,.25,.25,mat(family==='frost'?'#8ecfe7':'#fd9858'));
-}else{block(group,0,-.1,-.67,.09,.1,1.52,MAT.wood);if(family==='bow'){const bow=put(group,new THREE.TorusGeometry(.68,.065,4,12,Math.PI),MAT.woodLight,0,-.09,-.64);bow.rotation.y=Math.PI/2;block(group,.15,-.09,-.65,.03,.03,1.15,MAT.stone);}else{block(group,0,-.1,-1,.38,.17,.55,MAT.woodLight);block(group,0,-.07,-1.3,.05,.04,.42,MAT.stone);}}
+}else{block(group,0,-.1,-.67,.09,.1,1.52,MAT.wood);if(family==='bow'||family==='shortbow'){const bow=put(group,new THREE.TorusGeometry(family==='shortbow'?.52:.68,.065,4,12,Math.PI),MAT.woodLight,0,-.09,-.64);bow.rotation.y=Math.PI/2;block(group,.15,-.09,-.65,.03,.03,1.15,MAT.stone);}else{block(group,0,-.1,-1,.38,.17,.55,MAT.woodLight);block(group,0,-.07,-1.3,.05,.04,.42,MAT.stone);}}
 }
 let data=defaultSave();try{data=validSave(JSON.parse(localStorage.getItem('oakrest-v1')));}catch{}
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
@@ -251,7 +293,8 @@ function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);con
   if(type==='mossling'){d.max=57;d.hp=57;ball(g,0,.55,0,.79,.54,.75,mat('#609b59'));for(const xx of [-.29,.29]){ball(g,xx,.72,-.65,.13,.13,.13,MAT.black);}}
   if(type==='boar'){d.max=90;d.hp=90;ball(g,0,.72,0,.95,.68,1.25,mat('#865f44'));ball(g,0,.65,-1.04,.53,.4,.43,mat('#bd8f78'));for(const xx of [-.33,.33]){ball(g,xx,.94,-.99,.095,.11,.08,MAT.black);block(g,xx,.23,.55,.27,.44,.3,MAT.wood);}}
   if(type==='bandit'){d.max=125;d.hp=125;block(g,0,1.08,0,.8,1.3,.51,mat('#714c48'));ball(g,0,2.02,0,.37,.4,.37,mat('#c89770'));for(const xx of [-.28,.28])block(g,xx,.35,0,.26,.7,.34,MAT.wood);block(g,.6,1.23,-.25,.17,1,.2,MAT.stone);}
-  const plate=new THREE.Group();plate.position.y=type==='dummy'?3.15:type==='mossling'?1.5:2.55;g.add(plate);const bg=block(plate,0,0,0,1.4,.13,.05,MAT.black);const bar=block(plate,0,.01,.05,1.36,.095,.04,mat('#d97266'));d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);return d;
+  enrichEnemy({THREE,type,g,block,ball,mat,MAT});
+ const plate=new THREE.Group();plate.position.y=type==='dummy'?3.15:type==='mossling'?1.5:2.55;g.add(plate);const bg=block(plate,0,0,0,1.4,.13,.05,MAT.black);const bar=block(plate,0,.01,.05,1.36,.095,.04,mat('#d97266'));d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);return d;
 }
 makeEnemy('dummy',-6,-3);
 makeEnemy('mossling',-4,-21);makeEnemy('mossling',5,-24);makeEnemy('mossling',-8,-30);
@@ -530,4 +573,4 @@ document.addEventListener('visibilitychange',()=>{
 document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.code==='Escape'){closeControls();bookClose();}if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
 $('begin').addEventListener('click',()=>{started=true;$('intro').classList.add('hidden');if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});toast('<b>Welcome to Oakrest!</b> One skill is ready. Level up to unlock more in your SKILLS book.');});
 equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
-let last=performance.now();function loop(time){requestAnimationFrame(loop);const dt=Math.min(.05,(time-last)/1000);last=time;const t=now();if(started)animate(dt,t);renderer.render(scene,camera);}requestAnimationFrame(loop);setInterval(save,6000);
+let last=performance.now();function loop(time){requestAnimationFrame(loop);const dt=Math.min(.05,(time-last)/1000);last=time;const t=now();if(started)animate(dt,t);scenery.update(t,camera);renderer.render(scene,camera);}requestAnimationFrame(loop);setInterval(save,6000);
