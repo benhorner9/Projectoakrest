@@ -46,3 +46,11 @@ Safari pinch, double-tap and multi-thumb page zoom are suppressed on the fullscr
 
 ## 0.3: MOBA-style mobile combat arc
 Touchscreen players have four weapon skills arranged in a right-thumb arc around the large hold-to-attack button. SWAP cycles to the labelled next combat style and DODGE remains beside it. The three-style selector and weapon picker are compacted beneath the health bar; the left movement joystick stays near the bottom-left. Desktop mouse and keyboard controls retain their conventional skill bar.
+
+## 0.4 — Ability progression, armour and equipment requirements
+- Each combat style initially has one weapon ability slotted. Weapon abilities unlock at style levels 1, 3, 5, 8; universal style choices at levels 2 and 6.
+- Tap **SKILLS** to choose from unlocked abilities and assign four positions per weapon family. Unassigned buttons are marked empty; the game saves builds locally.
+- Weapons have minimum combat-style levels (starter 1, alternate family 4, upgraded weapon 6, upgraded alternate 9).
+- Armour requires Vitality 1/3/6. Cloth favours mobility/magic, leather protects against physical attacks and benefits ranged combat, plate favours physical defence/melee at the cost of mobility. Each style remembers its armour separately.
+- The touch Swap button is now closer to Attack and reacts on the touch press, so the left thumb can keep steering.
+- These are test progression gates and starter gear. Loot drops, shops and a complete item economy come later; your existing XP and coins stay saved.

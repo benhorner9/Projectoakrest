@@ -45,12 +45,85 @@ export const LOADOUTS = {
     ]},
   },
 };
+// Distinct weapon families and better gear require actual training in that discipline.
+for(const [style,otherFamily,forgedFirst,forgedSecond] of [
+  ['melee','daggers',['forged_sword','Forged Longsword'],['honed_daggers','Honed Daggers']],
+  ['magic','ember',['runic_frost','Runic Frost Staff'],['inferno_wand','Inferno Wand']],
+  ['ranged','crossbow',['reinforced_bow','Reinforced Longbow'],['hunter_crossbow','Hunter Crossbow']],
+]){
+  const base=Object.keys(LOADOUTS[style])[0];
+  LOADOUTS[style][base].requiredLevel=1;LOADOUTS[style][base].family=base;
+  LOADOUTS[style][otherFamily].requiredLevel=4;LOADOUTS[style][otherFamily].family=otherFamily;
+  for(const [source,config,requirement,boost] of [
+    [base,forgedFirst,6,1.30],[otherFamily,forgedSecond,9,1.34]
+  ]){
+    const w=LOADOUTS[style][source];
+    LOADOUTS[style][config[0]]={...w, title:config[1],family:source,requiredLevel:requirement,
+      basic:Math.round(w.basic*boost)};
+  }
+}
+export const ARMOUR={
+  traveller:{title:'Traveller Wraps',requiredVitality:1,physical:.06,magical:.15,mobility:1.05,bonusStyle:'magic',bonusPower:.05,
+    description:'Quick movement, light protection and a little extra spell power.'},
+  leather:{title:'Hardened Leather',requiredVitality:3,physical:.17,magical:.10,mobility:1.01,bonusStyle:'ranged',bonusPower:.06,
+    description:'Balanced protection and a slight ranged damage bonus.'},
+  plate:{title:'Forged Plate',requiredVitality:6,physical:.30,magical:.04,mobility:.90,bonusStyle:'melee',bonusPower:.07,
+    description:'Strong physical protection and melee power, but reduced movement speed.'}
+};
+export const SHARED_ABILITIES={
+  melee:[
+    {name:'Battle Rush',icon:'»',kind:'dash',distance:3.5,cooldown:10,requiredLevel:2,note:'Advance quickly into melee range.'},
+    {name:'Second Wind',icon:'✚',kind:'heal',heal:22,cooldown:20,requiredLevel:6,note:'Recover some health.'}
+  ],
+  magic:[
+    {name:'Arcane Bolt',icon:'✧',kind:'bolt',damage:17,speed:24,cooldown:5,requiredLevel:2,note:'A reliable magic projectile.'},
+    {name:'Phase Step',icon:'»',kind:'dashback',distance:4,cooldown:12,requiredLevel:6,note:'Step away from danger.'}
+  ],
+  ranged:[
+    {name:'Evasive Roll',icon:'«',kind:'dashback',distance:4,cooldown:9,requiredLevel:2,note:'Retreat from close threats.'},
+    {name:'Focus Shot',icon:'➶',kind:'bolt',damage:33,speed:29,cooldown:9,requiredLevel:6,note:'Concentrate for a precise hit.'}
+  ]
+};
+export const SKILL_LEVELS=[1,3,5,8];
+export function skillCatalogue(style,weaponId){
+  const w=LOADOUTS[style]?.[weaponId];if(!w)return[];
+  return [
+    ...w.abilities.map((ability,index)=>({...ability,id:`w${index}`,requiredLevel:SKILL_LEVELS[index]})),
+    ...SHARED_ABILITIES[style].map((ability,index)=>({...ability,id:`s${index}`}))
+  ];
+}
+export function canEquipWeapon(style,weaponId,xp){const w=LOADOUTS[style]?.[weaponId];return !!w&&levelFromXp(xp?.[style]||0).level>=w.requiredLevel;}
+export function canEquipArmour(id,xp){return !!ARMOUR[id]&&levelFromXp(xp?.vitality||0).level>=ARMOUR[id].requiredVitality;}
+export function defenceFor(id){return ARMOUR[id]||ARMOUR.traveller;}
+export function outgoingMultiplier(armourId,style){const a=defenceFor(armourId);return a.bonusStyle===style?1+a.bonusPower:1;}
+export function slotFamily(style,weaponId){return LOADOUTS[style]?.[weaponId]?.family||weaponId;}
+export function equippedSkills(data,style,weaponId){
+  const family=slotFamily(style,weaponId),selected=data.slots?.[style]?.[family]||[];
+  const level=levelFromXp(data.xp?.[style]||0).level;
+  const catalog=skillCatalogue(style,weaponId);
+  return [0,1,2,3].map(i=>{
+    const id=selected[i],skill=catalog.find(a=>a.id===id);
+    return skill&&level>=skill.requiredLevel?skill:null;
+  });
+}
+export function equipSkill(data,style,weaponId,slot,id){
+  if(!Number.isInteger(slot)||slot<0||slot>3||!data.slots?.[style])return false;
+  const family=slotFamily(style,weaponId),slots=data.slots[style]?.[family];
+  if(!Array.isArray(slots))return false;
+  if(id!==null){
+    const skill=skillCatalogue(style,weaponId).find(a=>a.id===id);
+    if(!skill||levelFromXp(data.xp?.[style]||0).level<skill.requiredLevel)return false;
+  }
+  // Each unlocked skill may occupy only one hotbar position.
+  for(let i=0;i<4;i++)if(i!==slot&&slots[i]===id&&id!==null)slots[i]=null;
+  slots[slot]=id;return true;
+}
 export const XP_BY_MOB = {dummy:0,mossling:30,boar:46,bandit:75};
 export function nextStyle(style) { const i=STYLE_ORDER.indexOf(style); return STYLE_ORDER[(i+1)%STYLE_ORDER.length]; }
 export function xpToLevel(level) { return 65 + level*45; }
 export function levelFromXp(xp) { let level=1; while(level<99 && xp>=xpToLevel(level)){xp-=xpToLevel(level);level++;} return {level,progress:xp/xpToLevel(level),remaining:xp}; }
 export function maxHealth(vitalityLevel) { return 100 + (vitalityLevel-1)*8; }
-export function damageAfterArmour(damage,shield=false) { return Math.max(1, Math.round(damage*(shield ? 0.42:1))); }
+export function damageAfterArmour(damage,shield=false,armourId='traveller',type='physical') { const armour=defenceFor(armourId);const mitigation=type==='magical'?armour.magical:armour.physical;return Math.max(1,Math.round(damage*(1-mitigation)*(shield?.42:1))); }
 export function meleeTarget(origin,heading,enemies,reach,minDot=0.24) {
   return enemies.filter(e=>!e.dead && e.hp>0).map(e=>{
     const dx=e.x-origin.x, dz=e.z-origin.z, dist=Math.hypot(dx,dz);
@@ -59,5 +132,35 @@ export function meleeTarget(origin,heading,enemies,reach,minDot=0.24) {
   }).filter(e=>e.dist<=reach && e.dot>=minDot).sort((a,b)=>a.dist-b.dist)[0]?.enemy || null;
 }
 export function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
-export function defaultSave(){return { xp:{melee:0,magic:0,ranged:0,vitality:0}, coins:0, defeated:0, gear:{melee:'sword',magic:'frost',ranged:'bow'} }; }
-export function validSave(raw){ const d=defaultSave(); if(!raw||typeof raw!=='object')return d; for(const k of Object.keys(d.xp))if(Number.isFinite(raw.xp?.[k]))d.xp[k]=clamp(raw.xp[k],0,10000000); d.coins=clamp(Number(raw.coins)||0,0,10000000); d.defeated=clamp(Number(raw.defeated)||0,0,10000000); for(const style of STYLE_ORDER)if(raw.gear?.[style] in LOADOUTS[style])d.gear[style]=raw.gear[style]; return d; }
+export function defaultSave(){
+  const gear={melee:'sword',magic:'frost',ranged:'bow'};
+  const armour={melee:'traveller',magic:'traveller',ranged:'traveller'};
+  const slots={};
+  for(const style of STYLE_ORDER){
+    slots[style]={};
+    for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
+  }
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots};
+}
+export function validSave(raw){
+  const d=defaultSave();if(!raw||typeof raw!=='object')return d;
+  for(const k of Object.keys(d.xp))if(Number.isFinite(raw.xp?.[k]))d.xp[k]=clamp(raw.xp[k],0,10000000);
+  d.coins=clamp(Number(raw.coins)||0,0,10000000);
+  d.defeated=clamp(Number(raw.defeated)||0,0,10000000);
+  for(const style of STYLE_ORDER){
+    if(canEquipWeapon(style,raw.gear?.[style],d.xp))d.gear[style]=raw.gear[style];
+    if(canEquipArmour(raw.armour?.[style],d.xp))d.armour[style]=raw.armour[style];
+    const level=levelFromXp(d.xp[style]).level;
+    for(const [family,slots] of Object.entries(d.slots[style])){
+      const incoming=raw.slots?.[style]?.[family];
+      if(!Array.isArray(incoming))continue;const validIds=new Set(skillCatalogue(style,family).filter(a=>a.requiredLevel<=level).map(a=>a.id));
+      const seen=new Set();
+      d.slots[style]=d.slots[style]||{};
+      d.slots[style][family]=[0,1,2,3].map(i=>{
+        const id=incoming[i];if(typeof id!=='string'||!validIds.has(id)||seen.has(id))return null;
+        seen.add(id);return id;
+      });
+    }
+  }
+  return d;
+}

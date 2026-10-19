@@ -53,3 +53,9 @@
  .touch-enabled .touch-actions #touch-swap,.touch-enabled .touch-actions #touch-dodge{width:52px;height:52px;min-width:52px;min-height:52px;font-size:20px}
  .touch-enabled .touch-look-zone{top:18%;left:41%;bottom:12%}
 }
+
+/* Bring combat style switching inside the right thumb's natural reach. */
+.touch-enabled .touch-actions #touch-swap{left:57%;top:89%;z-index:6}
+.touch-enabled .loadout-actions{display:flex;gap:4px;flex-shrink:0}
+.touch-enabled .loadout-actions button{min-height:34px;padding:0 7px;color:#e7d6ac;background:#304238;border:1px solid #b6a77b7a;border-radius:6px;font-size:10px}
+.touch-enabled .weaponline #weapon-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
