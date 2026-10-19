@@ -6,6 +6,7 @@ import { ENEMY_PATTERNS, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMa
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
 import { createOakrestScenery, enrichHero, enrichEnemy } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
+import { damp, dampAngle, smoothMotion } from './motion.js';
 
 const $=id=>document.getElementById(id);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
@@ -114,6 +115,8 @@ let lookSensitivity=cameraSensitivity(savedLookSpeed);
 let holdingAttack=false;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
 let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
+let motion={x:0,z:0},stride=0,visualHeading=0;
+const cameraFocus=new THREE.Vector3(0,1.6,7.8);
 const forward=()=>new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
 const directions={ArrowUp:'w',ArrowDown:'s'};
 let bookStyle='melee',bookTab='skills',bookSlot=0,skillDetail=null;
@@ -465,6 +468,8 @@ function updateEnemy(e,dt,t){
  const hitFlash=e.hitFlashUntil>t;
  e.group.scale.setScalar(hitFlash?1.12:1);
  if(e.type==='dummy')return;
+ const bob=e.warning?-.04:Math.sin(t*(e.type==='boar'?5.4:3.9)+e.startX)*.028;
+ e.group.position.y=damp(e.group.position.y,bob,9,dt);
  const spec=ENEMY_PATTERNS[e.type];
  const dx=hero.position.x-e.x,dz=hero.position.z-e.z,dist=Math.hypot(dx,dz);
  const active=dist<14&&hp>0;
@@ -507,9 +512,39 @@ function updateEnemy(e,dt,t){
   e.x+=x/l*.5*dt;e.z+=z/l*.5*dt;e.group.position.set(e.x,0,e.z);
  }
 }
-function animate(dt,t){elapsed+=dt;resolveBasicAttack(t);if(holdingAttack || keys.has('j') || keys.has('enter'))doBasic();const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));if(turn)yaw+=turn*dt*2.35*lookSensitivity;const movement=new THREE.Vector3(),front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;const h=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x;movement.addScaledVector(front,v).addScaledVector(side,h);let moving=movement.length()>.04;if(moving&&hp>0){movement.normalize().multiplyScalar(dt*(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility);const nx=hero.position.x+movement.x,nz=hero.position.z+movement.z;if(!collides(nx,hero.position.z))hero.position.x=nx;if(!collides(hero.position.x,nz))hero.position.z=nz;}hero.rotation.y=-yaw;const swing=moving?Math.sin(elapsed*10)*.45:0;hero.userData.leftLeg.rotation.x=swing;hero.userData.rightLeg.rotation.x=-swing;hero.userData.leftArm.rotation.x=-swing*.6;hero.userData.rightArm.rotation.x=THREE.MathUtils.lerp(hero.userData.rightArm.rotation.x,t<recoilUntil?-1.12:swing*.3,dt*12);hero.position.y=moving?Math.sin(elapsed*20)*.045:0;
-const back=front.clone().multiplyScalar(-6.5);const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));const ideal=look.clone().add(back).add(new THREE.Vector3(0,2.15+Math.sin(pitch)*3,0));cameraJolt=Math.max(0,cameraJolt-dt*.85);ideal.y+=cameraJolt*Math.sin(elapsed*95);camera.position.lerp(ideal,1-Math.pow(.005,dt));camera.lookAt(look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0)));
-for(const e of enemies)updateEnemy(e,dt,t);
+function animate(dt,t){
+ elapsed+=dt;resolveBasicAttack(t);
+ if(holdingAttack||keys.has('j')||keys.has('enter'))doBasic();
+ const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));
+ if(turn)yaw+=turn*dt*2.35*lookSensitivity;
+ const front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
+ const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;
+ const h=(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x;
+ const input=new THREE.Vector3().addScaledVector(front,v).addScaledVector(side,h);
+ const speed=(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility;
+ motion=smoothMotion(motion,hp>0?input.x:0,hp>0?input.z:0,speed,dt);
+ const nx=hero.position.x+motion.x*dt,nz=hero.position.z+motion.z*dt;
+ if(!collides(nx,hero.position.z))hero.position.x=nx;else motion.x=0;
+ if(!collides(hero.position.x,nz))hero.position.z=nz;else motion.z=0;
+ const gait=Math.hypot(motion.x,motion.z),strideStrength=Math.min(1,gait/4.7);
+ stride+=gait*dt*1.95;
+ const swing=Math.sin(stride)*.54*strideStrength;
+ visualHeading=dampAngle(visualHeading,-yaw,19,dt);hero.rotation.y=visualHeading;
+ hero.userData.leftLeg.rotation.x=damp(hero.userData.leftLeg.rotation.x,swing,16,dt);
+ hero.userData.rightLeg.rotation.x=damp(hero.userData.rightLeg.rotation.x,-swing,16,dt);
+ hero.userData.leftArm.rotation.x=damp(hero.userData.leftArm.rotation.x,-swing*.52,11,dt);
+ const attacking=t<recoilUntil,armTarget=attacking?-1.12:Math.sin(stride)*.18*strideStrength;
+ hero.userData.rightArm.rotation.x=damp(hero.userData.rightArm.rotation.x,armTarget,attacking?19:12,dt);
+ hero.userData.cape.rotation.x=damp(hero.userData.cape.rotation.x,-.08+strideStrength*.12,5,dt);
+ hero.position.y=damp(hero.position.y,strideStrength*Math.sin(stride*2)*.032,8,dt);
+ const back=front.clone().multiplyScalar(-6.5);
+ const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
+ const ideal=look.clone().add(back).add(new THREE.Vector3(0,2.15+Math.sin(pitch)*3,0));
+ cameraJolt=Math.max(0,cameraJolt-dt*.85);ideal.y+=cameraJolt*Math.sin(elapsed*95);
+ camera.position.lerp(ideal,1-Math.exp(-8.5*dt));
+ const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0));
+ cameraFocus.lerp(cameraAim,1-Math.exp(-13*dt));camera.lookAt(cameraFocus);
+ for(const e of enemies)updateEnemy(e,dt,t);
 for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
