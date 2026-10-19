@@ -81,3 +81,9 @@ Procedural low-poly environment upgrade using instanced grass, roadside pebbles,
 
 ## Visual polish pass 1 — combat and presentation
 Added transient slash-arc and impact-ring meshes, per-projectile glow and cleanup; target bars now have more contrast and colour-coded foes. UI uses a cohesive forest/brass visual theme across HP, XP, quest, skills, ability cluster, joystick, progression menu, notifications, introductory screen and camera controls. Fight effects are short-lived, cleanup meshes to avoid memory leaks, and respect iPad touch hit areas. Reduced motion users get simpler HUD animation.
+
+## 0.9 — Smoother controls and physical monster drops
+- Movement is damped at a frame-independent rate: softer starts/stops, eased visual facing, stride-driven walk animations, more natural camera follow and slight enemy idle sway. Joystick and attack direction stay responsive.
+- Mosslings, boars and bandits drop visible hovering coin pouches and occasionally materials or equipment on death. Coins/materials are only credited when picked up. XP and quest progression still happen on kill. Walk within 3.3 world units and use the **PICK UP** touch button or **G** on desktop.
+- Ground drops are saved in local character storage and restored on reload (up to 36 oldest-first). Equipment stays in inventory even if its level requirement is not met; duplicates convert to 8 coins.
+- Migrating an existing save preserves earned milestone equipment. After migration, new equipment is obtained from loot instead of appearing automatically at level-up.

@@ -75,3 +75,16 @@
 @media(prefers-reduced-motion:reduce){
  .skill,.style,.toast,.damage-pop{animation:none!important;transition:none!important}
 }
+
+/* Nearby pickup is compact, intentionally away from both thumb controls. */
+.loot-prompt[hidden]{display:none}
+.loot-prompt{position:absolute;left:50%;bottom:23%;transform:translateX(-50%);z-index:6;pointer-events:none;max-width:min(285px,68vw);filter:drop-shadow(0 5px 13px #061a12b3)}
+.loot-prompt-inner{display:flex;align-items:center;gap:7px;border:1px solid #e3c795b4;border-radius:12px;background:linear-gradient(145deg,#1c3e32ef,#122b27f7);padding:6px 7px 6px 11px;white-space:nowrap;color:#f4e1b8;font-size:12px}
+.loot-prompt .loot-spark{color:#ebd083;font-size:18px;text-shadow:0 0 9px #ebc786}
+#loot-label{overflow:hidden;text-overflow:ellipsis;font-weight:750}
+#loot-pickup{flex-shrink:0;pointer-events:auto;touch-action:manipulation;min-height:43px;min-width:73px;background:linear-gradient(#d7c18a,#ac8859);border:1px solid #f6dc9b;border-radius:9px;color:#1b2e26;font-weight:850;font-size:11px;box-shadow:inset 0 1px 0 #fff9}
+#loot-pickup small{display:inline-block;margin-left:3px;opacity:.6;font-size:10px}
+.touch-enabled #loot-pickup small{display:none}
+.touch-enabled .loot-prompt{bottom:24%;left:52%}
+@media(max-height:620px){.touch-enabled .loot-prompt{left:51%;bottom:calc(55px + env(safe-area-inset-bottom))}.loot-prompt-inner{font-size:10px}}
+@media(max-width:500px){.loot-prompt{max-width:64vw}.loot-prompt-inner{gap:4px;padding:4px 5px}.loot-prompt .loot-spark{font-size:13px}#loot-pickup{min-width:66px;font-size:9px;padding:2px 5px}}

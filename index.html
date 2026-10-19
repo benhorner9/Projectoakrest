@@ -25,8 +25,8 @@
     </header>
     <section id="controls-panel" class="controls-panel" hidden aria-label="Controls and camera settings">
       <div class="settings-heading"><strong>CONTROLS & CAMERA</strong><button id="close-controls" type="button" aria-label="Close controls">✕</button></div>
-      <p class="touch-help">Left thumb: move. Hold ATTACK and slide it horizontally to steer the camera while continuing to attack. Open MENU → SKILLS to see XP and tap each skill for level unlocks.</p>
-      <p class="desktop-help">WASD move · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · Tab switch · Space dodge.</p>
+      <p class="touch-help">Left thumb: move. Hold ATTACK and slide to turn the camera. Move near glowing monster drops and tap PICK UP. Open MENU → INVENTORY to see your collected items.</p>
+      <p class="desktop-help">WASD move · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
       <label for="look-speed">Camera speed <output id="look-speed-value">1.0×</output></label>
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
     </section>
@@ -74,6 +74,11 @@
         <button id="touch-attack" type="button" aria-label="Hold to attack at weapon speed and slide sideways to turn camera">⚔<small>ATTACK</small><span id="attack-timer" class="attack-timer">READY</span></button>
       </div>
     </div>
+    <section id="loot-prompt" class="loot-prompt" hidden aria-label="Nearby dropped item">
+      <div class="loot-prompt-inner"><span class="loot-spark">✧</span><span id="loot-label">Coins</span>
+        <button id="loot-pickup" type="button" aria-label="Pick up nearby item">PICK UP <small>G</small></button>
+      </div>
+    </section>
     <div id="floating"></div>
     <div id="damage-flash" aria-hidden="true"></div>
 

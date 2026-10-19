@@ -7,6 +7,7 @@ import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } fro
 import { createOakrestScenery, enrichHero, enrichEnemy } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
+import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 
 const $=id=>document.getElementById(id);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
@@ -254,7 +255,7 @@ function renderBook(){
    el('em',!unlocked?'VITALITY '+a.requiredVitality+' REQUIRED':!owned?'NOT OWNED':data.armour[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
  }else if(bookTab==='inventory'){
-  el('h3','Owned equipment',host);el('p','Your level rewards are stored here. Select an item to equip it to the matching combat style.',host);
+  el('h3','Owned equipment',host);el('p','Collect glowing drops from defeated creatures. Picked-up gear stays here, even if your level is too low to equip it.',host);
   el('h3','Weapons',host);
   const weapons=el('div',null,host,'catalogue-list');
   for(const s of STYLE_ORDER){
@@ -300,6 +301,72 @@ function toast(message){
  setTimeout(()=>el.remove(),3100);
 }
 function floating(text,color,pos){const el=document.createElement('div');el.className='damage-pop';el.textContent=text;el.style.color=color;$('floating').append(el);floaters.push({el,pos:pos.clone(),age:0});}
+// Persisted ground pickups are separate from combat XP and existing local inventory.
+const lootModels=new Map();let lootCounter=0,lastLootId=null;
+function makeLootModel(drop){
+ const group=new THREE.Group();group.position.set(drop.x,0,drop.z);
+ const colour=drop.kind==='coins'?'#edc774':drop.kind==='material'?'#8ecfa7':'#b8b6f3';
+ const glow=new THREE.MeshBasicMaterial({color:colour,transparent:true,opacity:.75,depthWrite:false});
+ const halo=new THREE.Mesh(new THREE.RingGeometry(.36,.53,20),new THREE.MeshBasicMaterial({color:colour,transparent:true,opacity:.46,side:THREE.DoubleSide,depthWrite:false}));
+ halo.rotation.x=-Math.PI/2;halo.position.y=.065;group.add(halo);
+ const coreGeo=drop.kind==='coins'?new THREE.CylinderGeometry(.26,.26,.10,8):
+   drop.kind==='material'?new THREE.IcosahedronGeometry(.29,0):new THREE.OctahedronGeometry(.35,0);
+ const core=new THREE.Mesh(coreGeo,new THREE.MeshLambertMaterial({color:colour,emissive:colour,emissiveIntensity:.22,flatShading:true}));
+ core.position.y=.62;core.rotation.x=drop.kind==='coins'?Math.PI/2:0;
+ group.add(core);
+ const aura=new THREE.Mesh(new THREE.SphereGeometry(.38,9,7),glow);
+ aura.position.y=.62;group.add(aura);
+ scene.add(group);lootModels.set(drop.id,{group,core,aura,halo,phase:random()*6.28});
+}
+function discardLootModel(id){
+ const m=lootModels.get(id);if(!m)return;
+ scene.remove(m.group);m.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
+ lootModels.delete(id);
+}
+for(const drop of data.groundLoot||[])makeLootModel(drop);
+function addGroundLoot(drop){
+ if(data.groundLoot.length>=MAX_GROUND_LOOT){
+  const oldest=data.groundLoot.shift();if(oldest)discardLootModel(oldest.id);
+ }
+ data.groundLoot.push(drop);makeLootModel(drop);
+}
+function spawnMonsterLoot(enemy){
+ // Every enemy awards a tangible coin pouch, with independent material/gear rolls.
+ const prefix=String(Date.now())+'-'+(++lootCounter)+'-'+Math.floor(random()*1e6);
+ const created=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,()=>prefix+'-'+(++lootCounter));
+ for(const d of created)addGroundLoot(d);
+ save();
+}
+function pickupNearby(){
+ if(!started||hp<=0)return;
+ const nearest=closestDrop(data.groundLoot,hero.position.x,hero.position.z,3.3);
+ if(!nearest||!collectDrop(data,nearest))return;
+ data.groundLoot=data.groundLoot.filter(d=>d.id!==nearest.id);discardLootModel(nearest.id);
+ const text=lootName(nearest);
+ toast('<b>PICKED UP</b> · '+text);
+ floating('+'+text,'#e9d39d',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));
+ updateHpUI();if(!progressPanel.hidden)renderBook();save();updateLoot(0,now());
+}
+const lootPanel=$('loot-prompt'),lootButton=$('loot-pickup');
+lootButton.addEventListener('click',e=>{e.preventDefault();pickupNearby();});
+function updateLoot(dt,t){
+ let nearest=null;
+ if(started&&hp>0)nearest=closestDrop(data.groundLoot,hero.position.x,hero.position.z,3.3);
+ if(nearest?.id!==lastLootId){
+  lastLootId=nearest?.id||null;
+  lootPanel.hidden=!nearest;
+  if(nearest)$('loot-label').textContent=lootName(nearest);
+ }
+ if(!nearest)lootPanel.hidden=true;
+ for(const m of lootModels.values()){
+  const bob=Math.sin(t*2.4+m.phase);
+  m.core.position.y=.61+bob*.115;
+  m.aura.position.y=m.core.position.y;
+  m.core.rotation.y+=dt*.85;
+  m.halo.material.opacity=.29+(.5+bob*.5)*.22;
+ }
+}
+
 function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);const d={type,x,z,startX:x,startZ:z,group:g,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
   if(type==='dummy'){d.max=1200;d.hp=1200;cylinder(g,0,1.2,0,.32,2.4,MAT.wood);block(g,0,1.73,0,1.5,.28,.3,MAT.woodLight);ball(g,0,2.58,0,.38,.42,.38,MAT.woodLight);block(g,0,1.9,-.34,.5,.5,.06,MAT.gold);}
   if(type==='mossling'){d.max=57;d.hp=57;ball(g,0,.55,0,.79,.54,.75,mat('#609b59'));for(const xx of [-.29,.29]){ball(g,xx,.72,-.65,.13,.13,.13,MAT.black);}}
@@ -337,10 +404,10 @@ function gearMenu(){bookOpen('equip',true);}
 $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=.045;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
 function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=ball(scene,pos.x,pos.y,pos.z,.07,.07,.07,new THREE.MeshBasicMaterial({color}));const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
-function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.coins+=type==='bandit'?13:type==='boar'?7:4;data.defeated++;awardTrainingGear(data);const material=grantMonsterMaterial(data.inventory,type,random());if(material)toast('<b>LOOT</b> · '+material);if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
+function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
 function hitEnemy(e,damage,ability){if(!e||e.dead||e.hp<=0)return;const amount=Math.round(damage*(1+Math.min(24,levelFromXp(data.xp[style]).level-1)*.025)*outgoingMultiplier(data.armour[style],style));e.hp-=amount;e.hitFlashUntil=now()+.16;
  floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));
- if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);gainXp(e.type);}}
+ if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type);}}
 function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return enemies.filter(e=>!e.dead&&e.hp>0).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
 function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},enemies,reach,isTouch?.12:.25);}
 function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWeapon().reach){
@@ -545,6 +612,7 @@ function animate(dt,t){
  const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0));
  cameraFocus.lerp(cameraAim,1-Math.exp(-13*dt));camera.lookAt(cameraFocus);
  for(const e of enemies)updateEnemy(e,dt,t);
+ updateLoot(dt,t);
 for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
@@ -629,7 +697,7 @@ addEventListener('blur',()=>{
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
-document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.code==='Escape'){closeControls();bookClose();}if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
+document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.code==='Escape'){closeControls();bookClose();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
 $('begin').addEventListener('click',()=>{started=true;$('intro').classList.add('hidden');if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});toast('<b>Welcome to Oakrest!</b> One skill is ready. Level up to unlock more in your SKILLS book.');});
 equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now();function loop(time){requestAnimationFrame(loop);const dt=Math.min(.05,(time-last)/1000);last=time;const t=now();if(started)animate(dt,t);scenery.update(t,camera);renderer.render(scene,camera);}requestAnimationFrame(loop);setInterval(save,6000);

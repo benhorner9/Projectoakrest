@@ -178,6 +178,20 @@ export function skillMilestones(skill){
  }
  return result.sort((a,b)=>a.level-b.level||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
 }
+export function validGroundLoot(list){
+ if(!Array.isArray(list))return [];
+ const out=[],seen=new Set();
+ for(const d of list.slice(-36)){
+  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>70||Math.abs(d.z)>70||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
+  if(d.kind==='coins'&&d.itemId!=='coins')continue;
+  if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token'].includes(d.itemId))continue;
+  if(d.kind==='armour'&&(!Object.hasOwn(ARMOUR,d.itemId)||d.amount!==1))continue;
+  if(d.kind==='weapon'&&(!STYLE_ORDER.includes(d.style)||!Object.hasOwn(LOADOUTS[d.style],d.itemId)||d.amount!==1))continue;
+  if(!['coins','material','armour','weapon'].includes(d.kind))continue;
+  seen.add(d.id);out.push({...d});
+ }
+ return out;
+}
 export const XP_BY_MOB = {dummy:0,mossling:30,boar:46,bandit:75};
 export function nextStyle(style) { const i=STYLE_ORDER.indexOf(style); return STYLE_ORDER[(i+1)%STYLE_ORDER.length]; }
 export function xpToLevel(level) { return 65 + level*45; }
@@ -209,7 +223,7 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory()};
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),groundLoot:[],lootVersion:1};
 }
 export function validSave(raw){
   const d=defaultSave();if(!raw||typeof raw!=='object')return d;
@@ -227,7 +241,10 @@ export function validSave(raw){
   if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token']){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
   }
-  awardTrainingGear(d);
+  // The previous prototype granted gear at level milestones. Preserve that legacy gear
+  // exactly once on migration; in this build new gear is earned from physical drops.
+  if(raw.lootVersion!==1)awardTrainingGear(d);
+  d.groundLoot=validGroundLoot(raw.groundLoot);
   for(const style of STYLE_ORDER){
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
     if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];
