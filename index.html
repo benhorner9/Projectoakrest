@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#122a24" />
+  <meta name="description" content="Project Oakrest: an early playable third-person tribrid action RPG combat prototype." />
+  <title>Project Oakrest — Combat Prototype</title>
+  <link rel="stylesheet" href="./src/styles.css" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="hud">
+    <header class="topbar">
+      <div class="brand"><span class="rune">◇</span><div><b>OAKREST</b><small>COMBAT PROTOTYPE · 0.1</small></div></div>
+      <div class="location"><span class="dot"></span><span id="area">Oakrest Village</span></div>
+      <button id="help-button" class="top-button" aria-label="Show controls">?</button>
+    </header>
+    <section class="vitals">
+      <div class="vital-line"><strong id="health-label">100 / 100 HP</strong><span id="level-label">VITALITY 1</span></div>
+      <div class="bar health"><div id="hp-fill"></div></div>
+      <div class="bar xp"><div id="xp-fill"></div></div>
+      <div class="stat-line"><span id="style-level">MELEE LEVEL 1</span><span id="coins">0 COINS</span></div>
+    </section>
+    <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Train with a weapon, then defeat 3 creatures outside the village.</div><div id="quest-progress">0 / 3 defeated</div></aside>
+    <div class="targetbox" id="targetbox" hidden><div id="target-name">Field Boar</div><div class="bar enemy-health"><div id="target-hp"></div></div></div>
+    <div class="reticle" aria-hidden="true"><i></i><i></i></div>
+    <div id="notifications" aria-live="polite"></div>
+    <footer class="combatbar">
+      <div class="equipment-picker" id="equipment-picker" hidden></div>
+      <div class="styles" id="styles"></div>
+      <div class="weaponline"><span id="weapon-name">Iron Longsword</span><button id="gear-button">CHANGE WEAPON ▾</button></div>
+      <div class="skills" id="skills"></div>
+      <div class="bottom-hint">Left click to attack · Q E R F abilities · TAB switch style · SHIFT dodge · ESC release mouse</div>
+    </footer>
+    <div id="touch-controls" class="touch-controls">
+      <div id="joystick" class="joystick"><div id="stick"></div></div>
+      <div class="touch-actions"><button id="touch-dodge">DODGE</button><button id="touch-attack">ATTACK</button></div>
+      <div class="touch-tip">Swipe the right side to turn the camera</div>
+    </div>
+    <div id="floating"></div>
+  </div>
+  <div id="intro" class="overlay">
+    <div class="panel"><span class="eyebrow">A NEW WORLD BEGINS</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>One village. Three fighting styles. Your skill decides the battle.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><div class="intro-hint">Desktop: WASD + mouse · iPad: joystick + swipe + touch actions</div></div>
+  </div>
+  <div id="error" class="error" hidden>Unable to start 3D graphics. Please use an up-to-date browser with WebGL enabled and a network connection.</div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
