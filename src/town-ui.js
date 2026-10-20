@@ -2,7 +2,7 @@ import {LOADOUTS,ARMOUR,STYLE_ORDER,levelFromXp} from './rules.js';
 import {SHOP_STOCK,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
 
 /** One accessible overlay for all town services, without server/API dependencies. */
-export function setupTownUI({getData,onChange,onEquipmentChange,notify,onOpen}){
+export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,onOpen}){
   const $=id=>document.getElementById(id);
   const panel=$('town-panel'),prompt=$('town-interact'),body=$('town-content');
   const node=(tag,value,parent,cls)=>{
@@ -104,7 +104,7 @@ export function setupTownUI({getData,onChange,onEquipmentChange,notify,onOpen}){
     }
   }
   $('town-interact-button').addEventListener('click',()=>{
-    if(lastPosition)interact({...lastPosition,allowed:true,time:Date.now()/1000});
+    if(lastPosition)interact({...lastPosition,allowed:true,time:getTime()});
   });
   return {interact,update,close,isOpen:()=>!panel.hidden};
 }
