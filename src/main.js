@@ -398,6 +398,7 @@ function updateOpeningArea(){
  openingWorld.realm.visible=area==='realm';
  scene.background.set(area==='realm'?'#3b445e':area==='tutorial'?'#9fbf9f':'#a9c8b7');
  scene.fog.color.set(scene.background);
+ $('area').textContent=area==='tutorial'?'The First Steps':area==='realm'?'Portal Realm':'Oakrest Village';
  hero.position.set(START_POINTS[area].x,terrainHeight(START_POINTS[area].x,START_POINTS[area].z),START_POINTS[area].z);
  yaw=0;motion={x:0,z:0};queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;
  for(const e of enemies){e.levelLabel.hidden=true; if(e.onboardingDummy){e.group.visible=area==='tutorial';e.hp=e.max;}else e.group.visible=area==='world';}
