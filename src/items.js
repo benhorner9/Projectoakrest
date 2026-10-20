@@ -18,6 +18,8 @@ for(const style of STYLE_ORDER){
   add('weapon.'+style+'.'+id,'weapon',weapon.title,{kind:'weapon',style,itemId:id},styleColours[style],shape,{description:style+' · '+(weapon.family||id)});
  }
 }
+// Wood from the starter grove is gathered through skilling, not monster drops.
+add('material.softwood-logs','material','Softwood Logs',{kind:'material',itemId:'softwood-logs'},'#aa8660','logs',{dropAllowed:false});
 // This scroll already exists as a persisted onboarding balance, not as a general monster drop.
 catalogue.push(Object.freeze({id:'scroll.teleport',kind:'scroll',title:'Teleportation Scroll',legacy:Object.freeze({kind:'scroll',itemId:'teleport'}),accent:'#9bcfe6',shape:'scroll',dropAllowed:false}));
 export const ITEM_CATALOG=Object.freeze(catalogue);
@@ -40,6 +42,7 @@ const shapes={
  blade:'<path d="M31 7L39 15L36 38L31 43L26 38L23 15Z" fill="#b7d2d6" stroke="#ecf7f0" stroke-width="2"/><path d="M15 42L47 42M32 44V56" stroke="#bd8f52" stroke-width="6" stroke-linecap="round"/><circle cx="32" cy="41" r="4" fill="#e2bd7b"/>',
  staff:'<path d="M20 55L39 12" stroke="#86653f" stroke-width="7" stroke-linecap="round"/><path d="M41 5L53 17L41 29L29 17Z" fill="#87bfd8" stroke="#e3f8ff" stroke-width="3"/><path d="M33 17H49M41 9V25" stroke="#e7ffff" stroke-width="2"/>',
  bow:'<path d="M26 8Q52 30 26 54Q40 32 26 8Z" fill="#8e6242" stroke="#dbb77a" stroke-width="4"/><path d="M26 8L26 54M9 33H49M43 28L51 33L43 38" fill="none" stroke="#e9e1ca" stroke-width="2.5"/>',
+ logs:'<rect x="14" y="13" width="13" height="38" rx="6" fill="#805a38" stroke="#e0be8a" stroke-width="2"/><rect x="30" y="10" width="14" height="42" rx="7" fill="#926e41" stroke="#e8cca0" stroke-width="2"/><path d="M18 18V46M37 14V47" stroke="#d1af78" stroke-width="2"/>',
  scroll:'<path d="M17 13H48V50H17Z" fill="#e0cb97" stroke="#f7edca" stroke-width="3"/><path d="M14 13H51M14 50H51" stroke="#c6a26a" stroke-width="7" stroke-linecap="round"/><path d="M25 25L40 25M25 32L43 32M25 39H38" stroke="#7c8da8" stroke-width="2.5"/>'
 };
 /** Generated SVG art remains local, stable and distinct for every registered item. */
