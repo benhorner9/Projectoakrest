@@ -1,5 +1,8 @@
 .DS_Store
-node_modules/
+node_modules
 dist/
 .vercel/
 .env*
+
+# Full-resolution captures remain local; reviewed JPEG evidence is versioned.
+qa/*.png

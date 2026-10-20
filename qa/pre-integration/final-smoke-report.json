@@ -1,0 +1,23 @@
+{
+  "checks": [
+    {
+      "name": "desktop ranged shot connects over sloping terrain",
+      "status": "pass",
+      "detail": {
+        "before": 57,
+        "after": 35
+      }
+    },
+    {
+      "name": "portrait settings button fully visible and functional",
+      "status": "pass",
+      "detail": {
+        "x": 336,
+        "y": 14,
+        "width": 42,
+        "height": 42
+      }
+    }
+  ],
+  "errors": []
+}

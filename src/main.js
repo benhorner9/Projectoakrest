@@ -13,7 +13,7 @@ import { createActor,equipActor,applyCharacterAppearance,animateActor,createCrea
 import { readCharacters,createCharacter } from './characters.js';
 import { setupCharacterCreator } from './character-creator.js';
 import { cottageModel,treeModel,addLandmarks,batchScenery } from './environment.js';
-import { segmentHit,dodgeDirection,weaponComparison } from './gameplay-math.js';
+import { segmentHit,dodgeDirection,weaponComparison,projectileAim } from './gameplay-math.js';
 import { createAudio } from './audio.js';
 import { createOpeningLocations,START_POINTS } from './opening-world.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
@@ -510,11 +510,8 @@ function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style
 function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return activeEnemies().filter(e=>!e.dead&&e.hp>0&&!e.retreating).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
 function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},activeEnemies().filter(e=>!e.retreating),reach,isTouch?.35:.40);}
 function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWeapon().reach){
- let dir=forward(),aimTarget=null;
- if(isTouch){const target=combatAim(hero.position,{x:dir.x,z:dir.z},activeEnemies().filter(e=>!e.retreating),maxRange,.24);
-  if(target){aimTarget=target;dir=new THREE.Vector3(target.x-hero.position.x,0,target.z-hero.position.z).normalize();}
- }
- dir.applyAxisAngle(new THREE.Vector3(0,1,0),spread);const horizontal=Math.max(.1,aimTarget?Math.hypot(aimTarget.x-hero.position.x,aimTarget.z-hero.position.z):maxRange);dir.y=aimTarget?(terrainHeight(aimTarget.x,aimTarget.z)+(aimTarget.type==='mossling'?.75:1.25)-hero.position.y-1.3)/horizontal:0;
+ const aim=projectileAim(hero.position,forward(),activeEnemies(),maxRange,isTouch,terrainHeight);
+ const dir=new THREE.Vector3(aim.x,aim.y,aim.z).applyAxisAngle(new THREE.Vector3(0,1,0),spread);
  const mesh=ball(scene,hero.position.x+dir.x*.9,hero.position.y+1.3+dir.y*.9,hero.position.z+dir.z*.9,
  style==='magic'?.24:.13,style==='magic'?.24:.13,style==='magic'?.3:.48,
  new THREE.MeshBasicMaterial({color:colour}));
@@ -721,7 +718,8 @@ function updateEnemyLevelLabels(){
   e.plate.visible=!e.dead&&started&&dist<17;if(e.dead||!started||dist>17){label.hidden=true;continue;}
   const pos=new THREE.Vector3(e.x,(e.type==='dummy'?3.78:e.type==='mossling'?2.15:3.24)+e.group.position.y,e.z);
   pos.project(camera);
-  if(pos.z< -1||pos.z>1||Math.abs(pos.x)>1.05||Math.abs(pos.y)>1.05){
+  const screenX=(pos.x+1)*innerWidth*.5,screenY=(1-pos.y)*innerHeight*.5;
+  if(pos.z< -1||pos.z>1||screenX<80||screenX>innerWidth-80||screenY<24||screenY>innerHeight-24){
    label.hidden=true;continue;
   }
   label.hidden=false;

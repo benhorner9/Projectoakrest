@@ -1,0 +1,1 @@
+PASS: Legacy saves, newly-created empty-inventory characters, 3D preview and reload tested in Chromium.

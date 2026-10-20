@@ -1,0 +1,5 @@
+
+> project-oakrest@0.1.0 build
+> node scripts/build.mjs
+
+Static Oakrest build: dist/ (engine included, no runtime CDN).
