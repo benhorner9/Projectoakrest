@@ -8,7 +8,7 @@ import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } fro
 import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
-import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera } from './terrain.js';
+import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit } from './terrain.js';
 import { createActor,equipActor,animateActor,createCreature,animateCreature } from './actors.js';
 import { cottageModel,treeModel,addLandmarks,batchScenery } from './environment.js';
 import { segmentHit,dodgeDirection,weaponComparison } from './gameplay-math.js';
@@ -44,11 +44,11 @@ function block(parent,x,y,z,sx,sy,sz,m){return put(parent,boxGeom,m,x,y,z,sx,sy,
 function ball(parent,x,y,z,sx,sy,sz,m){return put(parent,ballGeom,m,x,y,z,sx,sy,sz);}
 function cylinder(parent,x,y,z,r,h,m){return put(parent,new THREE.CylinderGeometry(r,r,h,8),m,x,y,z);}
 const ground=createTerrain(THREE,scene);
-let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));}
+let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));addWorldObstacle({x,z,r:.3*height,height:3.3*height});}
 for(let i=0;i<90;i++){let x=(random()-.5)*112,z=(random()-.5)*112;if(Math.abs(x)<11&&z>-38&&z<35)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
 let houseIndex=0;function cottage(x,z){scene.add(cottageModel(x,z,houseIndex++));}
 cottage(-14,12);cottage(14,8,MAT.roof2);cottage(-14,28,MAT.roof2);cottage(14,27);
-function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}}
+function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}addWorldObstacle({x:x+len-1,z,hx:len-1+.14,hz:.14,height:1.4});}
 fence(-8,37,9);fence(7,37,7);fence(-8,-8,3);fence(5,-8,4);
 // Village well and a training dummy establish scale and orientation.
 cylinder(scene,6,.7,19,2.1,1.3,MAT.stone);cylinder(scene,6,1.38,19,1.5,.18,MAT.woodLight);
@@ -625,7 +625,7 @@ function animate(dt,t){
  for(const e of enemies)updateEnemy(e,dt,t);
  updateEnemyLevelLabels();
  updateLoot(dt,t);
-for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of enemies){if(e.dead||e.hp<=0||e.retreating)continue;const center={x:e.x,y:terrainHeight(e.x,e.z)+(e.type==='mossling'?.75:1.25),z:e.z};const hit=segmentHit(start,p.mesh.position,center,e.type==='dummy'?.7:.8);if(hit!==null&&hit<best){best=hit;closest=e;}}if(closest){hitEnemy(closest,p.damage,p.opts,p.source);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);p.life=0;}}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of enemies){if(e.dead||e.hp<=0||e.retreating)continue;const center={x:e.x,y:terrainHeight(e.x,e.z)+(e.type==='mossling'?.75:1.25),z:e.z};const hit=segmentHit(start,p.mesh.position,center,e.type==='dummy'?.7:.8);if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position);if(worldHit!==null&&worldHit<=best){sparks(start.clone().lerp(p.mesh.position,worldHit),STYLE_COLOURS[p.style],4);p.life=0;}else if(closest){hitEnemy(closest,p.damage,p.opts,p.source);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);p.life=0;}}
  if(p.age>p.life||(!p.particle&&(p.distance>=p.maxDistance||p.mesh.position.y<terrainHeight(p.mesh.position.x,p.mesh.position.z)))){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
