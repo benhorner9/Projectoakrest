@@ -1,3 +1,4 @@
+import {segmentBox,segmentCylinder} from './combat-physics.js';
 /** One continuous height field for geometry, actors, loot and telegraphs. */
 const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 export function terrainHeight(x,z){
@@ -23,7 +24,7 @@ function footprintsOverlap(o,x,z,r=0){
  const dx=Math.max(0,Math.abs(x-o.x)-o.hx),dz=Math.max(0,Math.abs(z-o.z)-o.hz);
  return r===0?(dx===0&&dz===0):dx*dx+dz*dz<r*r;
 }
-function allSolids(){return [...OBSTACLES,...worldObstacles];}
+function allSolids(){return OBSTACLES.concat(worldObstacles);}
 export function blocked(x,z,radius=0){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(radius)||radius<0)return true;
  if(Math.abs(x)+radius>120||Math.abs(z)+radius>120)return true;
@@ -35,26 +36,41 @@ export function moveOnGround(pos,dx,dz,radius=.42){
  if(!Number.isFinite(dx)||!Number.isFinite(dz))return {x,z,y:terrainHeight(x,z)};
  const n=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.2));
  for(let i=0;i<n;i++){
-  if(!blocked(x+dx/n,z,radius))x+=dx/n;
-  if(!blocked(x,z+dz/n,radius))z+=dz/n;
+  if(!blocked(x+dx/n,z,radius)&&terrainNormal(x+dx/n,z).y>=.70)x+=dx/n;
+  if(!blocked(x,z+dz/n,radius)&&terrainNormal(x,z+dz/n).y>=.70)z+=dz/n;
  }
  return {x,z,y:terrainHeight(x,z)};
 }
 // Swept collision: a magic bolt or arrow must stop at terrain, walls or tree trunks.
 export function segmentWorldHit(a,b,radius=.1){
- const distance=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);
- if(!Number.isFinite(distance)||distance===0)return null;
- const steps=Math.max(1,Math.ceil(distance/.2));
- const solids=allSolids();
+ if(![a.x,a.y,a.z,b.x,b.y,b.z,radius].every(Number.isFinite)||radius<0)return 0;
+ let first=null;
+ const test=o=>{
+  const base=terrainHeight(o.x,o.z);
+  const t=o.r?segmentCylinder(a,b,o,o.r+radius,base-radius,base+o.height+radius):
+   segmentBox(a,b,{x:o.x-o.hx-radius,y:base-radius,z:o.z-o.hz-radius},{x:o.x+o.hx+radius,y:base+o.height+radius,z:o.z+o.hz+radius});
+  if(t!==null&&(first===null||t<first))first=t;
+ };
+ for(const o of OBSTACLES)test(o);for(const o of worldObstacles)test(o);
+ const distance=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z),steps=Math.max(1,Math.ceil(distance/.1));
  for(let i=0;i<=steps;i++){
-  const t=i/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t,z=a.z+(b.z-a.z)*t;
-  if(y<=terrainHeight(x,z)+radius)return t;
-  for(const o of solids){
-   const base=terrainHeight(o.x,o.z);
-   if(y>=base-radius&&y<=base+o.height+radius&&footprintsOverlap(o,x,z,radius))return t;
+  const t=i/steps;if(first!==null&&t>first)break;
+  const x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t,y=a.y+(b.y-a.y)*t;
+  if(y<=terrainHeight(x,z)+radius){
+   let lo=Math.max(0,(i-1)/steps),hi=t;
+   for(let n=0;n<8;n++){const m=(lo+hi)/2,mx=a.x+(b.x-a.x)*m,mz=a.z+(b.z-a.z)*m;
+    if(a.y+(b.y-a.y)*m<=terrainHeight(mx,mz)+radius)hi=m;else lo=m;}
+   first=first===null?hi:Math.min(first,hi);break;
   }
  }
- return null;
+ return first;
+}
+export function groundSegmentClear(a,b,radius=.42){
+ const length=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.max(1,Math.ceil(length/.15));
+ for(let i=0;i<=steps;i++){const t=i/steps,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+  if(blocked(x,z,radius)||terrainNormal(x,z).y<.70)return false;
+ }
+ return true;
 }
 export function safeCamera(focus,desired){
  let result={...desired};

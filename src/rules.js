@@ -25,7 +25,7 @@ export const LOADOUTS = {
       { name:'Ice Barrier', icon:'⬡', kind:'shield', duration:5, cooldown:16, note:'Take less damage for a short time.' },
     ]},
     ember: { title:'Ember Wand', icon:'✧', reach:17, basic:13, interval:0.75, windup:0.18, abilities:[
-      { name:'Firebolt', icon:'✧', kind:'bolt', damage:29, speed:22, cooldown:4, note:'Launch a fiery projectile.' },
+      { name:'Firebolt', icon:'✧', kind:'bolt', explosion:2.1, damage:29, speed:22, cooldown:4, note:'Launch a fiery projectile.' },
       { name:'Flame Wave', icon:'≋', kind:'sweep', damage:21, reach:6.5, cooldown:8, note:'A close-range wave of fire.' },
       { name:'Blink', icon:'»', kind:'dash', distance:6, cooldown:12, note:'Quickly surge forward.' },
       { name:'Warmth', icon:'✚', kind:'heal', heal:30, cooldown:18, note:'Restore a little health.' },
