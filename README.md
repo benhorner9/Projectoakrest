@@ -94,3 +94,13 @@ Inventory items discovered ahead of their gear requirements now visibly show the
 - Overall Combat Level is now derived (1–99) from strongest Melee/Ranged/Magic skill (65%), Vitality (25%) and the two other offensive skills (5% each). It isn't a separately trainable skill. Shown in the HP HUD and character menu; updates immediately when XP is gained.
 - Starter NPC levels: training dummy 1, mossling 2, field boar 5, forest bandit 8. Each gets a world-space level/name label close to the player and its level in the target HUD. Colours indicate relative danger.
 - Each enemy has its own detection range, chase/abandon range and absolute leash radius from spawn. When the player flees too far the mob cancels queued damage and charges, resets HP and returns quickly to its spawn before it can re-aggro. No more endless trains of mobs after you leave their area.
+
+## Character creation and browser-local character slots (development)
+- On the first visit with no existing save, the game opens character creation. Choose a name, Male/Female, six hairstyles, hair colour, skin tone, clothing design and clothing colour; inspect the avatar in a live 3D preview.
+- Up to three independently saved characters per browser and game environment. Choose **CHARACTERS** on the title screen to load another character or create an additional one. Names are unique within this browser's three slots.
+- Newly created characters begin at Level 1 with zero coins, an empty inventory, no weapons and no armour. Clothing choices are cosmetic and give no protection. Unarmed Melee is available for the current prototype; Magic and Ranged require equipment.
+- The original `oakrest-v1` save is preserved, and a **Continue Original Save** option remains available. New characters are stored separately as `oakrest-character-save-<id>`, with a small roster and active-character pointer. At `/oakrest-dev` all keys are namespaced to protect public progress.
+- Saves are browser-local only: different devices or browsers do not yet share characters, and clearing browser storage deletes local characters. Accounts and online persistence come later.
+- The dedicated tutorial and Portal Realm onboarding are **not part of this block**; the current starter village remains the temporary gameplay entry point.
+- QA: `npm test`, `npm run check`, `npm run build`, `node tests/browser-smoke.cjs`. Browser testing in CI is Chromium emulation, not physical iPad testing.
+- Deployment note: commit this code to the GitHub development branch and deploy it through the shared-hosting pipeline for `playcellbound.com/oakrest-dev`; no Vercel deployment is required or intended for this workflow.
