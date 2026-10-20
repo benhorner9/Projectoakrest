@@ -1,0 +1,20 @@
+#town-interact[hidden],#town-panel[hidden]{display:none!important}
+#town-interact{position:fixed;z-index:82;bottom:max(150px,20vh);left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;width:max-content;max-width:85vw;padding:10px 14px;border:1px solid #dfc9959c;border-radius:12px;background:#18302df2;color:#f0e6cb;font-size:13px;text-align:center;pointer-events:auto}
+#town-interact-button,#town-close,.town-actions button{border:1px solid #d5bc86;background:#c9ad77;color:#20322e;font-size:12px;font-weight:800;border-radius:8px;padding:10px 13px;min-height:44px;cursor:pointer}
+#town-panel{position:fixed;z-index:95;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#071a19b8;pointer-events:auto;color:#efebdb;text-shadow:none}
+.town-card{width:min(560px,100%);max-height:min(78vh,650px);display:flex;flex-direction:column;padding:18px;border-radius:16px;background:#172c2af9;border:1px solid #dfc99588;box-shadow:0 15px 80px #081713da}
+.town-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #cbb58b55;padding-bottom:10px}
+.town-header h2{margin:0;color:#e9cc8f;font-size:18px;letter-spacing:.02em}
+#town-close{min-width:44px}
+#town-content{overflow-y:auto;overscroll-behavior:contain;padding:8px 1px 4px;font-size:13px;line-height:1.55}
+#town-content h3{font-size:13px;letter-spacing:.08em;color:#e2c98f;margin:17px 0 7px;text-transform:uppercase}
+#town-content p{margin:9px 0;color:#d6d8cd}
+.town-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #c6b58d28}
+.town-row strong{display:block;font-size:13px}
+.town-row small{display:block;color:#c0d4c6}
+.town-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.town-actions button{min-height:38px;padding:8px 11px}
+.town-actions button:disabled{opacity:.45;cursor:not-allowed}
+.town-notice{padding:10px;border-radius:9px;background:#304e4380}
+@media (max-width:750px){#town-interact{bottom:135px;font-size:11px;padding:8px 10px}#town-panel{padding:8px}.town-card{max-height:calc(100dvh - 20px);padding:12px}#town-content{font-size:12px}.town-row{padding:7px 0}.town-header h2{font-size:16px}}
+@media (max-height:500px){#town-interact{bottom:100px}.town-card{max-height:94dvh}}

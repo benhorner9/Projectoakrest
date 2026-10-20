@@ -26,7 +26,7 @@ function footprintsOverlap(o,x,z,r=0){
 function allSolids(){return [...OBSTACLES,...worldObstacles];}
 export function blocked(x,z,radius=0){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(radius)||radius<0)return true;
- if(Math.abs(x)+radius>70||Math.abs(z)+radius>70)return true;
+ if(Math.abs(x)+radius>120||Math.abs(z)+radius>120)return true;
  return OBSTACLES.some(o=>footprintsOverlap(o,x,z,radius))||
    worldObstacles.some(o=>footprintsOverlap(o,x,z,radius));
 }
@@ -64,7 +64,7 @@ export function safeCamera(focus,desired){
  }result.y=Math.max(result.y,terrainHeight(result.x,result.z)+.65);return result;
 }
 export function createTerrain(THREE,scene){
- const geo=new THREE.PlaneGeometry(160,160,160,160);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
+ const geo=new THREE.PlaneGeometry(260,260,208,208);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
  const meadow=new THREE.Color('#6b8956'),forest=new THREE.Color('#466c50'),dirt=new THREE.Color('#b3a080'),stone=new THREE.Color('#879087');
  for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),y=terrainHeight(x,z);p.setY(i,y-.055);const c=meadow.clone().lerp(forest,smooth((-z-15)/50)*.52);const n=(Math.sin(x*1.7+z*.9)*Math.sin(z*.73)+1)*.5;c.multiplyScalar(.92+n*.14);const d=Math.abs(x-roadCentre(z));c.lerp(dirt,1-smooth((d-2.5)/2));if(y>3.5)c.lerp(stone,(y-3.5)*.12);colors.push(c.r,c.g,c.b);}
  geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));mesh.receiveShadow=true;scene.add(mesh);return mesh;

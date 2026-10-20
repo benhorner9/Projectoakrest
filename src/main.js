@@ -17,6 +17,9 @@ import { cottageModel,treeModel,addLandmarks,batchScenery } from './environment.
 import { segmentHit,dodgeDirection,weaponComparison } from './gameplay-math.js';
 import { createAudio } from './audio.js';
 import { createOpeningLocations,START_POINTS } from './opening-world.js';
+import { buildOakrestTown } from './town-world.js';
+import {setupTownUI} from './town-ui.js';
+import {isOakrestSafe,townInteraction} from './town-services.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
@@ -56,11 +59,11 @@ function ball(parent,x,y,z,sx,sy,sz,m){return put(parent,ballGeom,m,x,y,z,sx,sy,
 function cylinder(parent,x,y,z,r,h,m){return put(parent,new THREE.CylinderGeometry(r,r,h,8),m,x,y,z);}
 const ground=createTerrain(THREE,scene);
 let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));addWorldObstacle({x,z,r:.3*height,height:3.3*height});}
-for(let i=0;i<90;i++){let x=(random()-.5)*112,z=(random()-.5)*112;if(Math.abs(x)<11&&z>-38&&z<35)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
+for(let i=0;i<155;i++){let x=(random()-.5)*178,z=(random()-.5)*230;if(Math.abs(x)<45&&z>-30&&z<72)continue;if(Math.abs(x)<9&&z< -12)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
 let houseIndex=0;function cottage(x,z){scene.add(cottageModel(x,z,houseIndex++));}
 cottage(-14,12);cottage(14,8,MAT.roof2);cottage(-14,28,MAT.roof2);cottage(14,27);
 function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}addWorldObstacle({x:x+len-1,z,hx:len-1+.14,hz:.14,height:1.4});}
-fence(-8,37,9);fence(7,37,7);fence(-8,-8,3);fence(5,-8,4);
+fence(-40,67,12);fence(17,67,12);fence(-8,-8,3);fence(5,-8,4);
 // Village well and a training dummy establish scale and orientation.
 cylinder(scene,6,.7,19,2.1,1.3,MAT.stone);cylinder(scene,6,1.38,19,1.5,.18,MAT.woodLight);
 for(let x of [4,8])block(scene,x,2.6,19,.3,3.8,.3,MAT.wood);
@@ -72,6 +75,7 @@ const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));block(scene,0,3.9,
 function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2.65,z,1.75,.7,.16,MAT.woodLight);}sign(5,12);
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
 groundScenery(THREE,scene,[ground]);addLandmarks(scene);batchScenery(scene);
+const expandedTown=buildOakrestTown(scene);
 const visuals=createCombatVisuals(THREE,scene);
 
 function createHero(){return createActor();}
@@ -218,6 +222,13 @@ function renderBook(){
    el('small',info.maxed?'MAX LEVEL':xpText(info.needed)+' XP to next level',card);
    el('small','Total XP '+xpText(info.totalXp)+'  ·  View unlocks ›',card,'level-meta');
   }
+  const wcXp=data.professions?.woodcuttingXp||0,learned=data.professions?.woodcuttingLearned===true;
+  const woodCard=el('div',null,grid,'level-card level-woodcutting');
+  const woodTop=el('div',null,woodCard,'level-card-title');
+  el('strong','🌲 Woodcutting',woodTop);
+  el('span',learned?'Level '+levelFromXp(wcXp).level:'LOCKED',woodTop);
+  el('small',learned?'Oakrest beginner practice '+wcXp+' / 710 XP':'Learn at Oakrest Forester’s Lodge',woodCard);
+  el('small','Other gathering and crafting skills have their own towns and trainers.',woodCard,'level-meta');
  }else if(bookTab==='abilities'){
   el('p','Select a slot, then choose an unlocked ability. Each weapon family remembers its four slots.',host);
   const slots=el('div',null,host,'book-slots'),current=equippedSkills(data,bookStyle,weaponId);
@@ -311,7 +322,12 @@ function renderBook(){
     const tile=el('div',null,materials,'material-tile');
     addItemIcon(tile,'material.'+mat.id);el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
   }
-  if(!anyMaterial)el('p','Defeat creatures outside the village to collect materials.',host);
+  const softwood=data.inventory?.materials?.['softwood-logs']||0;
+  if(softwood){
+   anyMaterial=true;const wood=el('div',null,materials,'material-tile');
+   addItemIcon(wood,'material.softwood-logs');el('strong','Softwood Logs',wood);el('small','Owned ×'+softwood,wood);
+  }
+  if(!anyMaterial)el('p','Gather resources in the town grove or defeat creatures beyond the greenbelt.',host);
   el('p','Coins: '+data.coins+' · Crafting with these materials will arrive later.',host,'inventory-footnote');
  }
 }
@@ -327,7 +343,7 @@ function useCharacter(profile,loaded){
  updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
  $('character-name-label').hidden=!profile;$('character-name-label').textContent=profile?.name||'';
  $('begin').textContent=profile?'PLAY AS '+profile.name.toUpperCase():'CONTINUE ORIGINAL ADVENTURE';
- $('quest-text').textContent=data.defeated>=3?'Master all three styles and defeat the bandit on the forest road.':'Practice on the straw dummy by the gate. Follow the road to the mosslings; step out of red warnings. Defeat 3 creatures and collect their drops.';
+ $('quest-text').textContent=data.defeated>=3?'Master all three styles and defeat the bandit on the forest road.':'Explore the Bank, General Store and Forester\'s Lodge. Then follow the protected greenbelt to the monsters in the Greenwood.';
  questCompleted=data.defeated>=3;updateHpUI();
 }
 function toast(message){
@@ -421,13 +437,21 @@ d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);
  return d;
 }
 makeEnemy('dummy',-6,-3);
-makeEnemy('mossling',-4,-21);makeEnemy('mossling',5,-24);makeEnemy('mossling',-8,-30);
-makeEnemy('boar',4,-33);makeEnemy('boar',10,-39);
-makeEnemy('bandit',-5,-49);
+// First hostile encounters are a journey beyond the safe town and approach.
+makeEnemy('mossling',-4,-55);makeEnemy('mossling',6,-62);makeEnemy('mossling',-9,-70);
+makeEnemy('boar',5,-77);makeEnemy('boar',11,-83);
+makeEnemy('bandit',-6,-98);
 // The existing Greenwood is one physical world layer. The tutorial and Portal
 // Realm are separate scenes in the same renderer, with independent visibility.
 const worldLayer=scene.children.filter(obj=>obj!==hero&&!obj.isLight);
 const openingWorld=createOpeningLocations(scene);
+const townUI=setupTownUI({
+ getData:()=>data,getTime:now,
+ onChange:()=>{save();updateHpUI();if(!progressPanel.hidden)renderBook();},
+ onEquipmentChange:()=>{equipVisual(style,data.gear[style]);refreshSkills();},
+ notify:message=>toast(message),
+ onOpen:()=>{bookClose();$('controls-panel').hidden=true;document.exitPointerLock?.();}
+});
 const practiceDummy=makeEnemy('dummy',0,-7);
 practiceDummy.onboardingDummy=true;
 openingWorld.training.add(practiceDummy.group);
@@ -691,6 +715,11 @@ function updateEnemy(e,dt,t){
  animateCreature(e.group,e.type,t,dt,e.charge?10:e.aggro?2:0,e.warning?e.attackWindup:0,e.hitFlashUntil>t,0);
  if(e.type==='dummy')return;
  e.group.position.y=terrainHeight(e.x,e.z);
+ // No monster may continue a chase or strike while the hero is protected by town patrols.
+ if(isOakrestSafe(hero.position.x,hero.position.z)){
+  if(e.aggro||e.retreating){if(!e.retreating)disengageEnemy(e,t);returnEnemyHome(e,dt,t);}
+  return;
+ }
  const spec=ENEMY_PATTERNS[e.type];
  const playerPos={x:hero.position.x,z:hero.position.z};
  const state=enemyBehaviour(e.type,e,playerPos,e.aggro);
@@ -772,8 +801,8 @@ function animate(dt,t){
  const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));
  if(turn)yaw+=turn*dt*2.35*lookSensitivity;
  const front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
- const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y-(isGameplayMenuOpen()?0:padState?.moveY||0);
- const h=(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x+(isGameplayMenuOpen()?0:padState?.moveX||0);
+ const v=isGameplayMenuOpen()?0:(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y-(padState?.moveY||0);
+ const h=isGameplayMenuOpen()?0:(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x+(padState?.moveX||0);
  const input=new THREE.Vector3().addScaledVector(front,v).addScaledVector(side,h);
  const speed=(keys.has('shift')||Math.hypot(padState?.moveX||0,padState?.moveY||0)>.88?6.3:5)*defenceFor(data.armour[style]).mobility;
  motion=smoothMotion(motion,hp>0?input.x:0,hp>0?input.z:0,speed,dt);
@@ -810,8 +839,8 @@ visuals.update(dt);
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
 let aim=null,aimScore=-Infinity;for(const e of activeEnemies()){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent=ENEMY_COMBAT[aim.type].name+' · Combat Lv '+aim.level;$('target-name').dataset.threat=enemyThreatTier(aim.level,combatLevelFromXp(data.xp));$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
-if(data.onboarding?.area!=='realm'&&hp>0&&hero.position.z> -7&&t-lastHurt>8&&!activeEnemies().some(e=>e.aggro)){const max=maxHealth(levelFromXp(data.xp.vitality).level);if(hp<max){hp=Math.min(max,hp+max*.025*dt);updateHpUI();}}
-const z=hero.position.z;$('area').textContent=data.onboarding?.area==='tutorial'?'The First Steps':data.onboarding?.area==='realm'?'Portal Realm':z< -42?'Forest Road':z< -12?'Oakrest Outskirts':'Oakrest Village';updatePortalInteraction();openingWorld.update(data.onboarding?.area||'world',t);
+if(data.onboarding?.area!=='realm'&&hp>0&&isOakrestSafe(hero.position.x,hero.position.z)&&t-lastHurt>8&&!activeEnemies().some(e=>e.aggro)){const max=maxHealth(levelFromXp(data.xp.vitality).level);if(hp<max){hp=Math.min(max,hp+max*.025*dt);updateHpUI();}}
+const z=hero.position.z;$('area').textContent=data.onboarding?.area==='tutorial'?'The First Steps':data.onboarding?.area==='realm'?'Portal Realm':z< -80?'Deep Greenwood':z< -47?'Forest Road':z< -13?'Oakrest Greenbelt':'Oakrest Town';updatePortalInteraction();townUI.update({x:hero.position.x,z:hero.position.z,allowed:started&&hp>0&&(data.onboarding?.area||'world')==='world'});openingWorld.update(data.onboarding?.area||'world',t);
 const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  const attackButton=$('touch-attack'),attackTimer=$('attack-timer');
  attackButton.style.setProperty('--attack-deg',(timer.progress*360).toFixed(1)+'deg');
@@ -896,10 +925,10 @@ $('camera-reset').addEventListener('click',()=>{
  saveCameraSettings();refreshCameraControls();toast('Camera settings reset');
 });
 function isGameplayMenuOpen(){
- return !progressPanel.hidden||!$('controls-panel').hidden||!$('character-creator').hidden;
+ return !progressPanel.hidden||!$('controls-panel').hidden||!$('character-creator').hidden||townUI.isOpen();
 }
 function focusGamepadMenu(direction){
- const parent=!$('controls-panel').hidden?$('controls-panel'):progressPanel;
+ const parent=townUI.isOpen()?$('town-panel'):!$('controls-panel').hidden?$('controls-panel'):progressPanel;
  const fields=[...parent.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled)')]
   .filter(el=>el.getClientRects().length>0);
  if(!fields.length)return;
@@ -938,7 +967,7 @@ function pollGamepad(dt){
    if(edges.swap)setStyle(nextStyle(style));
    if(edges.previousStyle)setStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+STYLE_ORDER.length-1)%STYLE_ORDER.length]);
    if(edges.nextStyle)setStyle(nextStyle(style));
-   if(edges.interact){if(data.onboarding?.area==='realm')enterCityPortal();else pickupNearby();}
+   if(edges.interact){if(data.onboarding?.area==='realm')enterCityPortal();else if(!townUI.interact({x:hero.position.x,z:hero.position.z,allowed:started&&hp>0&&(data.onboarding?.area||'world')==='world',time:now()}))pickupNearby();}
    edges.abilities.forEach((hit,index)=>{if(hit)useAbility(index);});
    if(Math.abs(current.lookX)+Math.abs(current.lookY)>.005)cameraMove(current.lookX*dt*320,current.lookY*dt*320,true);
   }
@@ -962,7 +991,7 @@ addEventListener('blur',()=>{
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
-document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
+document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
 function startGameplay(){
  if(started)return;
  if(!activeCharacter&&!legacySave)return;
@@ -971,7 +1000,7 @@ function startGameplay(){
  if(!saveWritable)toast('Browser storage is unavailable. Your progress cannot be saved.');
  toast(data.onboarding?.area==='tutorial'
   ?'<b>Welcome to The First Steps!</b> Hit the training dummy with all three combat styles.'
-  :'<b>Welcome to Oakrest!</b> Practice on the straw dummy by the gate. Red warnings show where an enemy will strike.');
+  :'<b>Welcome to Oakrest!</b> Visit the bank, general store and Forester\'s Lodge before venturing beyond the safe greenbelt.');
 }
 const characterUI=setupCharacterCreator({
  listProfiles:()=>profiles,getCurrentId:()=>activeCharacter?.id,

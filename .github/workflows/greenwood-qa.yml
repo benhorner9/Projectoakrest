@@ -2,9 +2,9 @@ name: Oakrest Greenwood QA
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, overhaul/greenwood-gameplay-visuals]
   push:
-    branches: [overhaul/greenwood-gameplay-visuals]
+    branches: [overhaul/greenwood-gameplay-visuals, feature/oakrest-town-and-specialist-training]
 
 permissions:
   contents: read
@@ -35,6 +35,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser smoke test
         run: node tests/browser-smoke.cjs
+      - name: Town bank, shop and specialist skilling in Chromium
+        run: node tests/browser-town.cjs
       - name: iPad-size dev-path character start regression
         run: node tests/browser-ipad-creator.cjs
       - name: iPad-size controller and camera regression

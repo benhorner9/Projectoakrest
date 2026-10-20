@@ -10,7 +10,8 @@ test.afterEach(()=>clearWorldObstacles());
 test('character body has a radius at solid houses and world bounds',()=>{
  assert.equal(blocked(-14,16.1,0),false);
  assert.equal(blocked(-14,16.1,.42),true);
- assert.equal(blocked(69.8,0,.42),true);
+ assert.equal(blocked(69.8,0,.42),false,'expanded world is navigable beyond the old edge');
+ assert.equal(blocked(119.8,0,.42),true);
  assert.equal(blocked(0,11,.42),false);
 });
 

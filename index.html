@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="./src/opening.css" />
   <link rel="stylesheet" href="./src/items.css" />
   <link rel="stylesheet" href="./src/camera-controller.css" />
+  <link rel="stylesheet" href="./src/town.css" />
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
@@ -30,7 +31,7 @@
     <section id="controls-panel" class="controls-panel" hidden aria-label="Controls and camera settings">
       <div class="settings-heading"><strong>CONTROLS & CAMERA</strong><button id="close-controls" type="button" aria-label="Close controls">✕</button></div>
       <p class="touch-help">Left thumb: move. Hold ATTACK and slide to turn the camera. Move near glowing monster drops and tap PICK UP. Open MENU → INVENTORY to see your collected items.</p>
-      <p class="desktop-help">WASD move · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
+      <p class="desktop-help">WASD move · T interact with townsfolk · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
       <label for="look-speed">Camera speed <output id="look-speed-value">1.0×</output></label>
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
       <div class="camera-tune-grid">
@@ -58,7 +59,7 @@
       <div class="bar xp"><div id="xp-fill"></div></div>
       <div class="stat-line"><span id="style-level">MELEE LEVEL 1</span><span id="coins">0 COINS</span></div>
     </section>
-    <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Practice on the straw dummy by the gate. Follow the road to the mosslings; step out of red warnings. Defeat 3 creatures and collect their drops.</div><div id="quest-progress">0 / 3 defeated</div></aside>
+    <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Explore the Oakrest Bank, General Store and Forester's Lodge. Travel beyond the safe greenbelt to fight your first monsters.</div><div id="quest-progress">0 / 3 defeated</div></aside>
     <div id="enemy-level-layer" aria-hidden="true"></div>
     <div class="targetbox" id="targetbox" hidden><div id="target-name">Field Boar</div><div class="bar enemy-health"><div id="target-hp"></div></div></div>
     <div class="reticle" aria-hidden="true"><i></i><i></i></div>
@@ -113,6 +114,16 @@
       <span id="opening-interact-description"></span>
       <button type="button" id="opening-interact-button">ENTER PORTAL</button>
     </div>
+    <section id="town-interact" hidden aria-label="Nearby town service">
+      <span id="town-interact-description">Nearby service</span>
+      <button id="town-interact-button" type="button">INTERACT</button>
+    </section>
+    <section id="town-panel" hidden role="dialog" aria-modal="true" aria-label="Oakrest town service">
+      <div class="town-card">
+        <div class="town-header"><h2 id="town-title">Town service</h2><button id="town-close" type="button" aria-label="Close town service">✕</button></div>
+        <div id="town-content"></div>
+      </div>
+    </section>
     <div id="floating"></div>
     <div id="damage-flash" aria-hidden="true"></div>
 

@@ -8,7 +8,7 @@ import {makeWorldItemModel} from '../src/item-visuals.js';
 import {createActor,equipActor,applyEquipmentVariant} from '../src/actors.js';
 test('every existing gear and resource has a stable canonical item ID',()=>{
  const expected=1+Object.keys(MATERIAL_DROPS).length+Object.keys(ARMOUR).length+
-  STYLE_ORDER.reduce((count,style)=>count+Object.keys(LOADOUTS[style]).length,0)+1;
+  STYLE_ORDER.reduce((count,style)=>count+Object.keys(LOADOUTS[style]).length,0)+1+1; // additional starter grove log
  assert.equal(ITEM_CATALOG.length,expected);
  const ids=new Set(ITEM_CATALOG.map(item=>item.id));
  assert.equal(ids.size,expected);
