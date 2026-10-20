@@ -1,6 +1,7 @@
 /** Central, stable item identity and art definitions. Legacy saves keep their existing kind/itemId/style format. */
 import {LOADOUTS,ARMOUR,STYLE_ORDER} from './rules.js';
 import {MATERIAL_DROPS} from './combat-feel.js';
+import {SLOT_ITEMS} from './equipment-slots.js';
 const catalogue=[];
 const add=(id,kind,title,legacy,accent,shape,extra={})=>{
  catalogue.push(Object.freeze({id,kind,title,legacy:Object.freeze({...legacy}),accent,shape,dropAllowed:true,...extra}));
@@ -17,6 +18,12 @@ for(const style of STYLE_ORDER){
   const shape=style==='magic'?'staff':style==='ranged'?'bow':'blade';
   add('weapon.'+style+'.'+id,'weapon',weapon.title,{kind:'weapon',style,itemId:id},styleColours[style],shape,{description:style+' · '+(weapon.family||id)});
  }
+}
+// Starter-town slot equipment has unique icons and is purchased rather than randomly dropped.
+for(const item of Object.values(SLOT_ITEMS)){
+ add('slot.'+item.id,'slot',item.title,{kind:'slot',itemId:item.id},
+  {melee:'#dfb07a',magic:'#a0b6ef',ranged:'#b4cf9b'}[item.style],
+  item.shape,{description:item.description,dropAllowed:false});
 }
 // Wood from the starter grove is gathered through skilling, not monster drops.
 add('material.softwood-logs','material','Softwood Logs',{kind:'material',itemId:'softwood-logs'},'#aa8660','logs',{dropAllowed:false});
@@ -42,6 +49,14 @@ const shapes={
  blade:'<path d="M31 7L39 15L36 38L31 43L26 38L23 15Z" fill="#b7d2d6" stroke="#ecf7f0" stroke-width="2"/><path d="M15 42L47 42M32 44V56" stroke="#bd8f52" stroke-width="6" stroke-linecap="round"/><circle cx="32" cy="41" r="4" fill="#e2bd7b"/>',
  staff:'<path d="M20 55L39 12" stroke="#86653f" stroke-width="7" stroke-linecap="round"/><path d="M41 5L53 17L41 29L29 17Z" fill="#87bfd8" stroke="#e3f8ff" stroke-width="3"/><path d="M33 17H49M41 9V25" stroke="#e7ffff" stroke-width="2"/>',
  bow:'<path d="M26 8Q52 30 26 54Q40 32 26 8Z" fill="#8e6242" stroke="#dbb77a" stroke-width="4"/><path d="M26 8L26 54M9 33H49M43 28L51 33L43 38" fill="none" stroke="#e9e1ca" stroke-width="2.5"/>',
+ helm:'<path d="M13 32Q14 11 32 10Q50 11 51 32L46 47H18Z" fill="#b2b7bd" stroke="#efebcd" stroke-width="3"/><path d="M13 34H51M30 20V47" stroke="#5a6873" stroke-width="4"/>',
+ legs:'<path d="M18 9H46L43 55H34L32 29L29 55H20Z" fill="#6d8491" stroke="#dde3d6" stroke-width="3"/><path d="M19 24H44" stroke="#bbac84" stroke-width="3"/>',
+ shield:'<path d="M32 6L53 14V35Q49 50 32 59Q15 50 11 35V14Z" fill="#667b83" stroke="#dfd1ad" stroke-width="3"/><path d="M32 14V50M19 30H45" stroke="#f3e4b7" stroke-width="5"/>',
+ boots:'<path d="M12 12H27V41L35 50V56H7V46L12 37ZM37 12H51V40L58 49V56H32V47L37 38Z" fill="#765b48" stroke="#ddc49c" stroke-width="2"/>',
+ arrows:'<path d="M17 53L48 13M11 42L18 53L31 50M40 12L51 10L49 21" stroke="#e7dfc4" stroke-width="4" fill="none"/><path d="M23 53L53 23" stroke="#b4c29b" stroke-width="3"/>',
+ amulet:'<path d="M19 11Q31 42 46 11" fill="none" stroke="#d1c398" stroke-width="5"/><path d="M32 31L44 43L32 58L20 43Z" fill="#a2c7dd" stroke="#fff1c6" stroke-width="3"/>',
+ ring:'<circle cx="32" cy="35" r="17" fill="none" stroke="#e9c982" stroke-width="9"/><circle cx="32" cy="14" r="7" fill="#92c7c6" stroke="#e6f0d7" stroke-width="2"/>',
+ orb:'<circle cx="32" cy="29" r="18" fill="#87bddd" stroke="#e9eacb" stroke-width="4"/><path d="M15 53L32 42L49 53M32 42V60" stroke="#d3b37e" stroke-width="4"/>',
  logs:'<rect x="14" y="13" width="13" height="38" rx="6" fill="#805a38" stroke="#e0be8a" stroke-width="2"/><rect x="30" y="10" width="14" height="42" rx="7" fill="#926e41" stroke="#e8cca0" stroke-width="2"/><path d="M18 18V46M37 14V47" stroke="#d1af78" stroke-width="2"/>',
  scroll:'<path d="M17 13H48V50H17Z" fill="#e0cb97" stroke="#f7edca" stroke-width="3"/><path d="M14 13H51M14 50H51" stroke="#c6a26a" stroke-width="7" stroke-linecap="round"/><path d="M25 25L40 25M25 32L43 32M25 39H38" stroke="#7c8da8" stroke-width="2.5"/>'
 };

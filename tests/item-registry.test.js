@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {LOADOUTS,ARMOUR,STYLE_ORDER,freshCharacterSave,validSave} from '../src/rules.js';
 import {MATERIAL_DROPS} from '../src/combat-feel.js';
+import {SLOT_ITEMS} from '../src/equipment-slots.js';
 import {ITEM_CATALOG,ITEMS_BY_ID,itemIconSvg,itemIconUrl,itemFromDrop,itemIdFromLegacy,DROPPABLE_ITEMS} from '../src/items.js';
 import {makeWorldItemModel} from '../src/item-visuals.js';
 import {createActor,equipActor,applyEquipmentVariant} from '../src/actors.js';
 test('every existing gear and resource has a stable canonical item ID',()=>{
  const expected=1+Object.keys(MATERIAL_DROPS).length+Object.keys(ARMOUR).length+
-  STYLE_ORDER.reduce((count,style)=>count+Object.keys(LOADOUTS[style]).length,0)+1+1; // additional starter grove log
+  STYLE_ORDER.reduce((count,style)=>count+Object.keys(LOADOUTS[style]).length,0)+Object.keys(SLOT_ITEMS).length+1+1; // additional starter grove log
  assert.equal(ITEM_CATALOG.length,expected);
  const ids=new Set(ITEM_CATALOG.map(item=>item.id));
  assert.equal(ids.size,expected);

@@ -1,0 +1,38 @@
+/* Compact four-column fantasy RPG backpack and nine-slot equipment paper doll. */
+.oak-inventory-heading{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin:4px 2px 7px}
+.oak-inventory-heading strong{font-size:13px;letter-spacing:.09em;color:#f2d39e}
+.oak-inventory-heading span{font-size:10px;color:#b9cbbb}
+.progression-content .oak-inventory-hint{font-size:10px;margin:5px 1px 10px;line-height:1.4}
+.oak-inventory-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:7px;border:1px solid #a28c61b3;border-radius:8px;background:linear-gradient(135deg,#26362b,#182d26);margin-bottom:8px}
+.oak-inventory-item,.oak-inventory-empty{aspect-ratio:1;min-width:0;min-height:54px;position:relative;border:1px solid #7c836765;border-radius:5px;background:#12251e;box-shadow:inset 0 0 9px #0006;display:flex;align-items:center;justify-content:center;padding:3px}
+.oak-inventory-item{cursor:pointer;touch-action:manipulation}
+.oak-inventory-item:active,.oak-inventory-item:focus-visible{border-color:#f3d596;background:#3b4634;outline:2px solid #e0bf76;outline-offset:0}
+.oak-item-icon{width:80%;height:80%;max-width:47px;max-height:47px;object-fit:contain;pointer-events:none}
+.oak-item-quantity{position:absolute;bottom:2px;right:4px;color:#fff0ba;text-shadow:0 1px 4px #000;font-size:11px;font-weight:800}
+.oak-gear-paperdoll{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:". helm ." "amulet . arrows" "weapon chest offhand" ". legs ." "boots . ring";gap:5px;max-width:276px;margin:4px auto 12px;padding:10px 15px;border-radius:12px;background:radial-gradient(ellipse,#344338 0%,#172c26 79%);border:1px solid #bba57585}
+.oak-gear-slot{height:67px;min-width:0;padding:3px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid #a08c61ac;border-radius:7px;background:#11241e;box-shadow:inset 0 0 9px #060c07a6;color:#ead6a9}
+.oak-gear-slot:disabled{opacity:.72;cursor:default}
+.oak-gear-slot:focus-visible{outline:2px solid #f3d79c}
+.oak-gear-slot .oak-item-icon{height:39px;width:39px;flex-shrink:1}
+.oak-slot-label{font-size:9px;letter-spacing:.05em;font-weight:700}
+.oak-slot-empty-mark{font-size:21px;color:#a4a88f;line-height:1}
+.oak-gear-helm{grid-area:helm}.oak-gear-amulet{grid-area:amulet}.oak-gear-arrows{grid-area:arrows}
+.oak-gear-chest{grid-area:chest}.oak-gear-legs{grid-area:legs}.oak-gear-weapon{grid-area:weapon}
+.oak-gear-offhand{grid-area:offhand}.oak-gear-boots{grid-area:boots}.oak-gear-ring{grid-area:ring}
+.oak-gear-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-bottom:6px}
+.oak-gear-choice{display:flex;align-items:center;text-align:left;gap:4px;min-height:53px;min-width:0;padding:5px;border:1px solid #8c957278;background:#254036;border-radius:7px;color:#f0e2bf}
+.oak-gear-choice .oak-item-icon{width:37px;height:37px;flex-shrink:0}
+.oak-gear-choice span{font-size:10px;line-height:1.2;overflow-wrap:anywhere}
+.oak-examine-head{display:flex;align-items:center;gap:12px;padding:6px 4px;border-bottom:1px solid #ad9d765c}
+.oak-examine-head .oak-item-icon{min-width:58px;width:58px;height:58px}
+.oak-examine-head strong{display:block;color:#f5d79f;font-size:16px}
+.oak-examine-head small{display:block;color:#b2c9b2;font-size:10px;margin-top:4px;letter-spacing:.1em}
+.skill-detail-body .oak-examine-description{font-size:12px;line-height:1.55;margin:10px 0 14px}
+.oak-examine-stats{border:1px solid #8d947963;border-radius:8px;background:#1d3830;padding:4px 10px}
+.oak-examine-stats div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #b0a07831;font-size:11px;line-height:1.4}
+.oak-examine-stats div:last-child{border-bottom:0}
+.oak-examine-stats span{color:#bdcfc2}.oak-examine-stats strong{color:#f1ddb6;text-align:right}
+.oak-examine-action{display:block;width:100%;min-height:43px;margin-top:13px;border:1px solid #e9d3a2;border-radius:8px;background:#6b5635;color:#fff0d0;font-size:12px;font-weight:800;letter-spacing:.08em}
+.oak-examine-action:disabled{opacity:.49}
+@media(max-width:390px){.oak-gear-paperdoll{max-width:242px;padding:7px}.oak-gear-slot{height:57px}.oak-inventory-grid{gap:4px}.oak-inventory-item,.oak-inventory-empty{min-height:49px}}
+@media(prefers-reduced-motion:reduce){.oak-inventory-item,.oak-gear-slot,.oak-examine-action{transition:none}}

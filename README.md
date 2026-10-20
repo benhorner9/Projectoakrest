@@ -125,3 +125,11 @@ Inventory items discovered ahead of their gear requirements now visibly show the
 - Run `npm run check`, `npm test`, `npm run build` and `node tests/browser-smoke.cjs`. New tests cover the full item catalogue, unique artwork, physical models, legacy save compatibility, edited tables, 1% independent odds with no pity, invalid entries and local UI save/reload.
 - Not yet covered: new metal/robe/leather tier catalogues, custom boss items, merchant/bank screens, server-authoritative drop editing and distribution across players. These are future content/online features.
 - **Hosting:** no Vercel delivery is requested. The shared-host `playcellbound.com/oakrest-dev` deployment must be independently verified; GitHub CI success is not proof it is live. Production branch stays untouched.
+
+## Equipment, inventory and Oakrest starter sets (development)
+- Equip now shows a nine-position layout: Helm, Ammy, Arrows, Chest, Legs, Weapon, Off hand, Boots and Ring. Each of Melee, Ranged and Magic has its own independently saved loadout. Weapon and chest armour continue to use the established combat systems.
+- Inventory has a four-column, 28-cell minimum grid. Every owned item can be tapped to **Examine** its function, requirements, combat stats and equip/use action; additional rows appear rather than silently hiding collected items.
+- The Oakrest General Store offers a Recruit Melee Set, Scout Ranged Set and Apprentice Magic Set at 110 coins each. Each set includes a level-one weapon, chest armour and six other slot items. Missing pieces are charged pro rata if part of a set is already owned or in the bank. Existing individual starter weapons remain for sale.
+- New slot equipment provides real modest attack/defence bonuses applied in combat, persists in character saves and can be stored in the Oakrest Bank once unequipped.
+- Beginner **Bronze Arrows** are a reusable quiver granting a small ranged damage bonus. Consumable ammunition and individual arrow expenditure are not yet implemented; the Examine screen says so.
+- This is a development branch stacked on the starter-town changes. It has not been merged or deployed to the public game.
