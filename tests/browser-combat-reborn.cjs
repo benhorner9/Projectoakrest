@@ -42,13 +42,13 @@ let browser,server;
    for(const style of ['melee','ranged','magic'])for(const [id,w] of Object.entries(LOADOUTS[style])){
     oakrestQA.step(22);oakrestQA.style(style);oakrestQA.step(1);oakrestQA.equip('weapon',id);
     for(const ability of skillCatalogue(style,id)){
-     oakrestQA.teleport(-6,-.8);oakrestQA.aim(-6,1.25,-3);oakrestQA.step(22);oakrestQA.slot(0,ability.id);
-     const before=oakrestQA.state();oakrestQA.ability(0);const queued=oakrestQA.state().pendingAbility;oakrestQA.step(1);
+     oakrestQA.teleport(-6,-.8);oakrestQA.aim(-6,1.25,-3);oakrestQA.step(22);const slot=checks.length%4;oakrestQA.slot(slot,ability.id);
+     const before=oakrestQA.state();oakrestQA.ability(slot);const queued=oakrestQA.state().pendingAbility;oakrestQA.step(1);
      const after=oakrestQA.state(),hurt=after.enemies[0].hp!==before.enemies[0].hp;
      const damaging=['hit','execute','sweep','nova','bolt','burst','retreat'].includes(ability.kind);
      if(!queued||damaging&&!hurt)throw Error(style+'/'+id+'/'+ability.name+' failed '+JSON.stringify({before:before.enemies[0],after:after.enemies[0]}));
      if(ability.root&&after.enemies[0].rootUntil<=after.time)throw Error('root missing');
-     const clocks=JSON.stringify(after.cooldowns);oakrestQA.ability(0);if(JSON.stringify(oakrestQA.state().cooldowns)!==clocks)throw Error('cooldown bypass');
+     const clocks=JSON.stringify(after.cooldowns);oakrestQA.ability(slot);if(JSON.stringify(oakrestQA.state().cooldowns)!==clocks)throw Error('cooldown bypass');
      checks.push(style+'/'+id+'/'+ability.name);
     }
    }return {abilities:checks.length};
@@ -76,6 +76,34 @@ let browser,server;
    oakrestQA.dodge();oakrestQA.step(.4);const s=oakrestQA.state();
    return {before,after,hero:s.hero,blocked:blocked(s.hero.x,s.hero.z,.42)};
   });assert.equal(result.before,result.after);assert.equal(result.blocked,false);assert.ok(result.hero.z>-1.4);return result;
+ });
+ await scenario('H simultaneous touch and layout',async page=>{
+  if(engine!=='chromium')return {unavailable:'CDP touch dispatch is Chromium-only'};
+  const context=page.context(),cdp=await context.newCDPSession(page);
+  const ids=['joystick','touch-attack','touch-dodge','touch-swap'];
+  const boxes={};for(const id of ids)boxes[id]=await page.locator('#'+id).boundingBox();
+  const joy=boxes.joystick,attack=boxes['touch-attack'],swap=boxes['touch-swap'];
+  const first={x:joy.x+joy.width/2,y:joy.y+joy.height*.2,id:1},second={x:attack.x+attack.width/2,y:attack.y+attack.height/2,id:2};
+  const before=await page.evaluate(()=>oakrestQA.state());
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[first,second]});
+  await page.evaluate(()=>oakrestQA.step(.2));
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[first,{...second,x:second.x-30}]});
+  await page.evaluate(()=>oakrestQA.step(.2));
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[first,{...second,x:second.x-30},{x:swap.x+swap.width/2,y:swap.y+swap.height/2,id:3}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.evaluate(()=>oakrestQA.step(1));
+  const after=await page.evaluate(()=>oakrestQA.state());assert.ok(after.hero.z<before.hero.z);assert.notEqual(after.yaw,before.yaw);assert.equal(after.style,'magic');
+  await page.locator('#loadout-button').click();await page.locator('#close-progression').click();await page.keyboard.down('w');await page.evaluate(()=>oakrestQA.step(.3));await page.keyboard.up('w');
+  const layouts=[];for(const [width,height] of [[1366,1024],[1024,1366],[844,390],[390,844]]){
+   await page.setViewportSize({width,height});
+   const targets=await page.evaluate(()=>['joystick','touch-attack','touch-swap','touch-dodge',...Array.from({length:4},(_,i)=>'skill-'+i)].map(id=>{
+    const el=id.startsWith('skill-')?document.querySelectorAll('#skills .skill')[Number(id.slice(6))]:document.getElementById(id),r=el.getBoundingClientRect();
+    return {id,x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom};
+   }));
+   assert.ok(targets.every(r=>r.x>=0&&r.y>=0&&r.right<=width&&r.bottom<=height),JSON.stringify({width,height,targets}));
+   for(let i=0;i<targets.length;i++)for(let j=0;j<i;j++){const a=targets[i],b=targets[j];assert.ok(a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y,'touch targets overlap: '+a.id+'/'+b.id+' at '+width+'x'+height);}
+   layouts.push({width,height,targets});
+  }
+  return {multitouch:true,menusReleaseInput:true,layouts};
  });
  await scenario('G repeated combat, death, reload and render stability',async page=>{
   const result=await page.evaluate(()=>{

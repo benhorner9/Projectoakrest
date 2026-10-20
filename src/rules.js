@@ -12,7 +12,7 @@ export const LOADOUTS = {
     ]},
     daggers: { title:'Twin Daggers', icon:'⌁', reach:2.1, basic:9, interval:0.40, windup:0.09, abilities:[
       { name:'Quick Slice', icon:'⌁', kind:'hit', damage:15, reach:2.5, bleed:4, cooldown:4, note:'Fast slash that causes bleeding.' },
-      { name:'Twin Strike', icon:'✕', kind:'hit', damage:24, reach:2.5, cooldown:6, note:'Strike twice in quick succession.' },
+      { name:'Twin Strike', icon:'✕', kind:'hit', strikes:2, damage:24, reach:2.5, cooldown:6, note:'Strike twice in quick succession.' },
       { name:'Shadow Step', icon:'»', kind:'dash', distance:5, cooldown:9, note:'Dash quickly toward the target.' },
       { name:'Open Wound', icon:'✦', kind:'execute', damage:23, reach:2.6, cooldown:10, note:'Bonus damage if the target is bleeding.' },
     ]},
@@ -68,7 +68,7 @@ for(const [style,otherFamily,forgedFirst,forgedSecond] of [
 LOADOUTS.melee.greatsword={
   ...LOADOUTS.melee.sword,
   title:'Heavy Greatsword',icon:'🗡',reach:3.7,basic:39,interval:1.70,windup:0.55,
-  requiredLevel:7,family:'greatsword'
+  requiredLevel:7,family:'greatsword',abilities:LOADOUTS.melee.sword.abilities.map((a,i)=>({...a,...(i===0?{damage:55,reach:3.7,cooldown:6}:i===1?{damage:32,reach:3.7,cooldown:8}:i===2?{damage:22,reach:3.5}:{} )}))
 };
 LOADOUTS.ranged.shortbow={
   ...LOADOUTS.ranged.bow,

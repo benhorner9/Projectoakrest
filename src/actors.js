@@ -122,5 +122,5 @@ export function createCreature(type){const g=new THREE.Group(),body=pivot(g,0,0,
  else{tube(body,'#685438',0,1.3,0,.16,.18,2.6);const sack=ball(body,'#b79c65',0,1.75,0,.48,.62,.3);block(body,'#624b32',0,1.76,0,1.9,.14,.16);ball(body,'#baa778',0,2.62,0,.32,.35,.29);for(const s of [-1,1])block(body,'#493e2e',s*.10,2.64,-.28,.07,.06,.025);const target=mesh(body,new THREE.TorusGeometry(.27,.05,5,20),'#835c47',0,1.78,-.3);ball(body,'#835c47',0,1.78,-.32,.08,.08,.02);}
  return g;
 }
-export function animateCreature(g,type,t,dt,speed,warning,hit,death){const u=g.userData;if(u.rig){animateActor(g,{t,dt,stride:t*speed*2,speed,attack:warning?{start:warning-.76,impactAt:warning,interval:1.2}:null,dead:death>0});return;}
+export function animateCreature(g,type,t,dt,speed,warning,hit,death){const u=g.userData;if(u.rig){animateActor(g,{t,dt,stride:t*speed*2,speed,attack:warning?{start:warning-.76,impactAt:warning,interval:1.2}:null,hit,dead:death>0});return;}
  const b=u.body;b.position.y=Math.sin(t*(speed?9:2.5))*(speed?.055:.018);b.rotation.x=damp(b.rotation.x,warning?-.22:0,12,dt);b.rotation.z=damp(b.rotation.z,death?1.5:hit?.14:0,18,dt);u.legs.forEach((l,i)=>l.rotation.x=Math.sin(t*9+i*Math.PI)*Math.min(.5,speed*.16));if(type==='mossling'){b.scale.y=1+Math.sin(t*3)*.025-(warning?.12:0);b.scale.x=1+(warning?.08:0);}}

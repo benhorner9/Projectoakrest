@@ -77,7 +77,7 @@ for(let x of [4,8])block(scene,x,2.6,19,.3,3.8,.3,MAT.wood);
 block(scene,6,4.6,19,4.9,.3,4,MAT.wood);const wellRoof=put(scene,new THREE.ConeGeometry(3.6,2,4),MAT.roof,6,5.25,19);wellRoof.rotation.y=Math.PI/4;
 for(let i=0;i<13;i++){const x=(random()-.5)*85,z=(random()-.5)*90;if(Math.abs(x)<5&&z<40&&z>-60)continue;const m=cylinder(scene,x,.13,z,.25,.26,MAT.stone);m.scale.y=.6;}
 // A landmark to help new players know which way to leave the village.
-for(const x of [-4,4])block(scene,x,2.35,-9,.7,4.7,.7,MAT.wood);block(scene,0,4.7,-9,8.6,.6,.8,MAT.woodLight);
+for(const x of [-4,4]){block(scene,x,2.35,-9,.7,4.7,.7,MAT.wood);addWorldObstacle({x,z:-9,hx:.35,hz:.35,height:4.7});}block(scene,0,4.7,-9,8.6,.6,.8,MAT.woodLight);
 const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));block(scene,0,3.9,-9.1,2.45,.10,.05,MAT.gold);
 function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2.65,z,1.75,.7,.16,MAT.woodLight);}sign(5,12);
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
@@ -130,7 +130,7 @@ let lookSensitivity=cameraSettings.sensitivity;
 camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
 function saveCameraSettings(){try{localStorage.setItem(cameraStorageKey,JSON.stringify(cameraSettings));}catch{}}
 let padState=null,padPrevious=null,padName='';
-let holdingAttack=false;
+let holdingAttack=false;let activeSkillCache=[];let nextLabelUpdate=0;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
 let respawnAt=0,lastHurt=-100;let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
 let motion={x:0,z:0},stride=0,visualHeading=0;
@@ -486,7 +486,7 @@ function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data
 function refreshStyles(){const host=$('styles');host.innerHTML='';for(const st of STYLE_ORDER){const b=document.createElement('button');b.className=`style ${st===style?'active':''}`;b.style.borderColor=st===style?STYLE_COLOURS[st]:'';b.innerHTML=`<span class="symbol">${{melee:'⚔',magic:'✦',ranged:'➶'}[st]}</span>${st.toUpperCase()} <small>${levelFromXp(data.xp[st]).level}</small>`;b.addEventListener('click',()=>setStyle(st));host.append(b);}}
 function refreshSkills(){
  const host=$('skills');host.innerHTML='';
- equippedSkills(data,style,data.gear[style]).forEach((a,i)=>{
+ activeSkillCache=equippedSkills(data,style,data.gear[style]);activeSkillCache.forEach((a,i)=>{
   const b=document.createElement('button');b.className='skill';b.type='button';b.title=a?`${a.note} Cooldown: ${a.cooldown}s`:'Open SKILLS to equip an ability';
   b.classList.toggle('empty',!a);
   b.innerHTML=`<span class="key">${'QERF'[i]}</span><span class="skill-icon">${a?.icon||'+'}</span><span class="name">${a?.name||'EMPTY'}</span><span class="cooldown"></span>`;
@@ -527,12 +527,13 @@ function beginStrike(damage,reach,ability={},family=slotFamily(style,data.gear[s
  if(ability.kind==='hit'||ability.kind==='execute'){profile.halfAngle=Math.min(.48,profile.halfAngle);profile.multi=false;}
  const origin=hero.position.clone();origin.y+=1.1;
  const strike={origin,yaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set()};
+ if(ability.strikes===2){strike.damage=damage/2;activeStrikes.push({...strike,start:now()+profile.duration+.035,previous:0,hits:new Set(),reverse:!strike.reverse,visualPending:true});}
  activeStrikes.push(strike);visuals.sweep(strike,STYLE_COLOURS[style]);
  if(attackAnimation){attackAnimation.contactDuration=profile.duration;attackAnimation.halfAngle=profile.halfAngle;attackAnimation.reverse=strike.reverse;}
 }
 function updateStrikes(t){
  for(let i=activeStrikes.length-1;i>=0;i--){
-  const strike=activeStrikes[i],progress=clamp((t-strike.start)/strike.profile.duration,0,1);
+  const strike=activeStrikes[i];if(t<strike.start)continue;if(strike.visualPending){visuals.sweep(strike,STYLE_COLOURS[strike.source.style]);strike.visualPending=false;}const progress=clamp((t-strike.start)/strike.profile.duration,0,1);
   for(const e of activeEnemies()){
    if(e.dead||e.retreating||strike.hits.has(e)||(!strike.profile.multi&&strike.hits.size))continue;
    const centre=enemyCentre(e);
@@ -615,7 +616,7 @@ function resolveBasicAttack(t){
  if(!w)return;
  hero.userData.rightArm.rotation.x=-1.5;
  if(attack.style==='melee'){
-  beginStrike(Math.round(w.basic*(attack.combo===2?1.21:attack.combo===1?1.09:1)),w.reach,slotFamily(style,attack.weapon)==='daggers'?{bleed:1.5}:{},slotFamily(style,attack.weapon));
+  beginStrike(Math.round(w.basic*(attack.combo===2?1.21:attack.combo===1?1.09:1)),w.reach,slotFamily(style,attack.weapon)==='daggers'?{bleed:1.5}:slotFamily(style,attack.weapon)==='greatsword'?{stun:.22}:{},slotFamily(style,attack.weapon));
  }else{
   sparks(hero.position.clone().add(forward().multiplyScalar(1.1)).add(new THREE.Vector3(0,1.2,0)),STYLE_COLOURS[style],3);
   // Bows are distinguished by launch speed and maximum travel; heavy crossbow recovers slowly.
@@ -625,7 +626,7 @@ function resolveBasicAttack(t){
  }
 }
 function shiftHero(dist){const f=forward();dodgeTravel={dir:{x:f.x*Math.sign(dist),z:f.z*Math.sign(dist)},speed:Math.abs(dist)/.32,start:now(),end:now()+.32};addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
-function useAbility(index){if(isGameplayMenuOpen())return;if(!started||hp<=0||dodgeTravel||pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic||(data.onboarding?.area!=='tutorial'&&!ownsWeapon(data,style,data.gear[style])))return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),a);if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
+function useAbility(index){if(isGameplayMenuOpen())return;if(!started||hp<=0||dodgeTravel||pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic||(data.onboarding?.area!=='tutorial'&&!ownsWeapon(data,style,data.gear[style])))return;const a=activeSkillCache[index];if(!a)return;const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),a);if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(slotFamily(style,data.gear[style])==='greatsword'?.6:.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
 function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;const {a,style:castStyle}=pendingAbility;pendingAbility=null;if(hp<=0||style!==castStyle)return;audio.play(style==='magic'?'magic':'attack');
   if(a.kind==='hit'||a.kind==='execute'){beginStrike(a.damage,a.reach,a);}
   else if(a.kind==='sweep'){
@@ -675,7 +676,7 @@ function startEnemyWarning(e,t){
   mesh.position.set(e.x,.029,e.z);
  }
  mesh.updateMatrixWorld();const pos=mesh.geometry.attributes.position,world=new THREE.Vector3();for(let i=0;i<pos.count;i++){world.fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld);world.y=terrainHeight(world.x,world.z)+.055;mesh.worldToLocal(world);pos.setXYZ(i,world.x,world.y,world.z);}mesh.geometry.computeBoundingSphere();
- e.warning=warning;e.warningMesh=mesh;e.aiState='windup';e.attackWindup=t+spec.windup;e.lastAttack=t;audio.play('warning');
+ e.attackYaw=Math.atan2(-dir.x,-dir.z);e.warning=warning;e.warningMesh=mesh;e.aiState='windup';e.attackWindup=t+spec.windup;e.lastAttack=t;audio.play('warning');
  scene.add(mesh);
 }
 function applyEnemyDamage(e,spec,t){
@@ -756,7 +757,7 @@ function updateEnemy(e,dt,t){
  if(e.stunUntil>t){cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.aiState='disabled';return;}
  if(e.rootUntil>t){e.charge=null;e.pounce=null;if(e.warning&&spec.kind!=='cleave')cancelEnemyWarning(e);}
  if(e.warning){
-  const warning=e.warning;
+  e.group.rotation.y=dampAngle(e.group.rotation.y,e.attackYaw,14,dt);const warning=e.warning;
   e.warningMesh.material.opacity=.23+.20*(1-Math.max(0,e.attackWindup-t)/spec.windup);
   if(t>=e.attackWindup){
    cancelEnemyWarning(e);
@@ -769,7 +770,7 @@ function updateEnemy(e,dt,t){
   return;
  }
  if(e.pounce){
-  e.aiState='attack';const p=e.pounce,dx=p.x-e.x,dz=p.z-e.z,d=Math.hypot(dx,dz),step=Math.min(d,11*dt);
+  e.aiState='attack';const p=e.pounce,dx=p.x-e.x,dz=p.z-e.z,d=Math.hypot(dx,dz),step=Math.min(d,11*dt);e.group.rotation.y=dampAngle(e.group.rotation.y,Math.atan2(-dx,-dz),14,dt);
   const moved=moveOnGround(e,dx/Math.max(.001,d)*step,dz/Math.max(.001,d)*step,.42);
   e.x=moved.x;e.z=moved.z;e.group.position.set(e.x,moved.y+Math.sin(Math.PI*clamp(1-(p.end-t)/.28,0,1))*.65,e.z);
   if(t>=p.end||d<.1){
@@ -792,7 +793,7 @@ function updateEnemy(e,dt,t){
  }
 
  const ready=t-e.lastAttack>=spec.cooldown;e.aiState=e.rootUntil>t?'disabled':ready?'engage':'recover';
- if(e.type==='bandit'&&!ready&&dist<4.5&&dist>2&&e.stunUntil<t&&e.rootUntil<t){const sign=e.startX<0?1:-1,n=moveOnGround({x:e.x,z:e.z},-dz/Math.max(.1,dist)*dt*.65*sign,dx/Math.max(.1,dist)*dt*.65*sign);if(Math.hypot(n.x-e.startX,n.z-e.startZ)<ENEMY_COMBAT.bandit.leash){e.x=n.x;e.z=n.z;e.group.position.set(n.x,n.y,n.z);}}
+ if(e.type==='bandit'&&!ready&&dist<4.5&&dist>2&&e.stunUntil<t&&e.rootUntil<t){e.aiState='reposition';const sign=e.startX<0?1:-1,n=moveOnGround({x:e.x,z:e.z},-dz/Math.max(.1,dist)*dt*.65*sign,dx/Math.max(.1,dist)*dt*.65*sign);if(Math.hypot(n.x-e.startX,n.z-e.startZ)<ENEMY_COMBAT.bandit.leash){e.x=n.x;e.z=n.z;e.group.position.set(n.x,n.y,n.z);}}
 
  if(dist<=spec.engage&&ready&&e.stunUntil<t&&e.rootUntil<t&&clearCombatLine(enemyCentre(e),{x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z})){
   startEnemyWarning(e,t);return;
@@ -878,7 +879,7 @@ function animate(dt,t){
     if(Math.hypot(moved.x-e.startX,moved.z-e.startZ)<=ENEMY_COMBAT[e.type].leash){e.x=moved.x;e.z=moved.z;e.group.position.set(e.x,moved.y,e.z);}}
   }
  }
- updateEnemyLevelLabels();
+ if(t>=nextLabelUpdate){updateEnemyLevelLabels();nextLabelUpdate=t+.05;}
  updateLoot(dt,t);
 for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of activeEnemies()){if(e.dead||e.hp<=0||e.retreating)continue;const center=enemyCentre(e);const hit=movingSphereHit(start,p.mesh.position,e.previousCentre||center,center,enemyRadius(e)+(p.style==='magic'?.18:.04));if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position,p.style==='magic'?.18:.04);if(worldHit!==null&&worldHit<=best){const impact=start.clone().lerp(p.mesh.position,worldHit);sparks(impact,STYLE_COLOURS[p.style],4);if(p.opts.explosion){areaImpact(impact,p.opts.explosion,p.damage*.45,{},p.source);audio.play('explosion');}p.life=0;}else if(closest){p.mesh.position.lerpVectors(start,p.mesh.position,best);if(p.opts.waveId===undefined||closest.lastWave!==p.opts.waveId){hitEnemy(closest,p.damage,p.opts,p.source);closest.lastWave=p.opts.waveId;}sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);if(p.opts.explosion){areaImpact(p.mesh.position,p.opts.explosion,p.damage*.45,{},p.source,closest);audio.play('explosion');}p.life=0;}}
  if(p.age>p.life||(!p.particle&&(p.distance>=p.maxDistance||p.mesh.position.y<terrainHeight(p.mesh.position.x,p.mesh.position.z)))){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
@@ -895,7 +896,7 @@ const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  attackButton.classList.toggle('recovering',!timer.ready);$('weapon-cycle').textContent=timer.ready?'ATTACK READY':timer.remaining.toFixed(1)+'s recovery';
  if(attackTimer)attackTimer.textContent=timer.ready?'READY':timer.remaining.toFixed(1)+'s';
  const remainingDodge=Math.max(0,dodgeUntil-t);$('touch-dodge').classList.toggle('unavailable',remainingDodge>0);$('touch-swap').classList.toggle('queued',!!queuedStyle);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
- for(const [i,b] of [...$('skills').children].entries()){const ability=equippedSkills(data,style,data.gear[style])[i];const until=ability?cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability))||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);const unavailable=!!ability&&(remaining>0||t<attackUntil||!!dodgeTravel||t<switchUntil);b.classList.toggle('unavailable',unavailable);b.setAttribute('aria-disabled',String(unavailable));b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
+ for(const [i,b] of [...$('skills').children].entries()){const ability=activeSkillCache[i];const until=ability?cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability))||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);const unavailable=!!ability&&(remaining>0||t<attackUntil||!!dodgeTravel||t<switchUntil);b.classList.toggle('unavailable',unavailable);b.setAttribute('aria-disabled',String(unavailable));b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);
 const canvas=renderer.domElement;
