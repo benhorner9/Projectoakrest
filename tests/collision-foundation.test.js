@@ -35,7 +35,7 @@ test('fences block movement but still permit following clear paths',()=>{
  addWorldObstacle({x:0,z:25,hx:4,hz:.2,height:1.4});
  const blockedAt=moveOnGround({x:0,z:28},0,-7);
  assert.ok(blockedAt.z>25.5);
- const open=moveOnGround({x:6,z:28},0,-7);
+ const open=moveOnGround({x:-6,z:28},0,-7);
  assert.ok(open.z<22);
 });
 
