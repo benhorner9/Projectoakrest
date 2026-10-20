@@ -124,6 +124,13 @@ $('close-progression').addEventListener('click',bookClose);
 const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills'};
 for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();});
 $('loadout-button').addEventListener('click',()=>bookOpen('skills',true));
+if(devDropEditor){
+ setupDropEditor({
+  storage:localStorage,key:dropStorageKey,
+  button:$('drop-editor-open'),modal:$('drop-editor'),
+  onApply:(saved)=>{activeDropTables=saved;}
+ });
+}
 $('skill-detail-back').addEventListener('click',()=>{skillDetail=null;detailPanel.hidden=true;});
 function el(tag,text,parent,className){
  const node=document.createElement(tag);if(text!==null&&text!==undefined)node.textContent=text;
