@@ -13,7 +13,7 @@ let browser;
   const page=await browser.newPage({viewport:{width:1024,height:768},hasTouch:true});
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
-   localStorage.setItem('oakrest-v1',JSON.stringify({
+   if(!localStorage.getItem('oakrest-v1'))localStorage.setItem('oakrest-v1',JSON.stringify({
     lootVersion:1,xp:{melee:0,ranged:0,magic:0,vitality:0},coins:120,
     gear:{melee:'sword',ranged:'bow',magic:'frost'},
     armour:{melee:'traveller',ranged:'traveller',magic:'traveller'},
