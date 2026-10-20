@@ -36,6 +36,17 @@ async function checkCharactersButton(viewport) {
   await page.locator('#creator-close').click();
   assert.equal(await page.locator('#character-creator').isHidden(),true,'Close returns to title');
   assert.ok(await page.locator('#begin').isVisible(),'Enter Oakrest remains accessible');
+  await page.locator('#begin').click();
+  assert.equal(await page.locator('#intro').isHidden(),true,'title dismissed into game');
+  await page.locator('#help-button').click();
+  assert.ok(await page.locator('#character-switch').isVisible(),'Characters accessible in settings while playing');
+  await Promise.all([
+   page.waitForURL(url=>url.searchParams.get('characters')==='1',{timeout:12000}),
+   page.locator('#character-switch').click()
+  ]);
+  await page.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
+  assert.ok(await page.locator('#character-creator').isVisible(),'safe reload reopens character selector');
+  assert.ok(await page.locator('#creator-slots').getByText('Original Oakrest Save').isVisible());
   assert.deepEqual(errors,[]);
   console.log('PASS: Characters button opens and closes on iPad-size touch layout');
  }finally{await context.close();}
