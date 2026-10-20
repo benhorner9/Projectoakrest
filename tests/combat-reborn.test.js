@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {segmentSphere,movingSphereHit,segmentBox,segmentCylinder,sweptStrikeHit,MELEE_PROFILES,groundPath,abilityCooldownKey,dodgeInvulnerable,DODGE} from '../src/combat-physics.js';
-import {segmentWorldHit,addWorldObstacle,clearWorldObstacles,groundSegmentClear,moveOnGround,terrainHeight,blocked} from '../src/terrain.js';
+import {segmentWorldHit,addWorldObstacle,clearWorldObstacles,groundSegmentClear,moveOnGround,terrainHeight,blocked,setCollisionArea} from '../src/terrain.js';
 test.afterEach(()=>clearWorldObstacles());
 const v=(x,z,y=1)=>({x,y,z});
 test('projectile first contact occurs before the target centre and orders cover correctly',()=>{
@@ -79,4 +79,11 @@ test('invulnerability is limited to the active dodge window',()=>{
  assert.equal(dodgeInvulnerable(10+DODGE.startup+.001,10),true);
  assert.equal(dodgeInvulnerable(10+DODGE.startup+DODGE.active+.001,10),false);
  assert.equal(dodgeInvulnerable(11,10),false);
+});
+
+test('hidden world scenery never blocks tutorial or portal courtyard',()=>{
+ assert.equal(blocked(-14,12,.42),true);
+ setCollisionArea('tutorial');assert.equal(blocked(-14,12,.42),false);
+ addWorldObstacle({x:20,z:0,r:1,height:3,area:'tutorial'});assert.equal(blocked(20,0),true);
+ setCollisionArea('world');assert.equal(blocked(20,0),false);
 });

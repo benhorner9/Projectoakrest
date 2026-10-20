@@ -10,7 +10,7 @@ import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } fro
 import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
-import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit,groundSegmentClear } from './terrain.js';
+import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit,groundSegmentClear,setCollisionArea } from './terrain.js';
 import { createActor,equipActor,applyEquipmentVariant,applyCharacterAppearance,animateActor,createCreature,animateCreature } from './actors.js';
 import { readCharacters,createCharacter } from './characters.js';
 import { setupCharacterCreator } from './character-creator.js';
@@ -409,7 +409,7 @@ const activeEnemies=()=>data.onboarding?.area==='tutorial'?[practiceDummy]:
  data.onboarding?.area==='realm'?[]:enemies.filter(e=>!e.onboardingDummy);
 const firstCity={name:'Oakrest',id:'oakrest'};
 function updateOpeningArea(){
- const area=data.onboarding?.area||'world';
+ const area=data.onboarding?.area||'world';setCollisionArea(area);activeStrikes.length=0;
  for(const p of projectiles){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);}projectiles.length=0;
  for(const o of worldLayer)o.visible=area==='world';
  openingWorld.training.visible=area==='tutorial';
@@ -794,9 +794,9 @@ function updateEnemy(e,dt,t){
  if(dist<=spec.engage&&ready&&e.stunUntil<t&&e.rootUntil<t&&clearCombatLine(enemyCentre(e),{x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z})){
   startEnemyWarning(e,t);return;
  }
- if(dist>Math.min(spec.engage*.82,2.9)&&e.stunUntil<t&&e.rootUntil<t){
+ if((dist>Math.min(spec.engage*.82,2.9)||!clearCombatLine(enemyCentre(e),{x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z}))&&e.stunUntil<t&&e.rootUntil<t){
   const speed=(e.type==='bandit'?2.5:e.type==='boar'?2.2:1.75)*(e.slowUntil>t?.42:1);
-  const step=Math.min(speed*dt,Math.max(0,dist-2.2));
+  const step=Math.min(speed*dt,Math.max(0,dist-.8));
   if(step>0){
    const nx=e.x+dx/dist*step,nz=e.z+dz/dist*step;
    if(Math.hypot(nx-e.startX,nz-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,t);return;}
@@ -877,7 +877,7 @@ function animate(dt,t){
 for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of activeEnemies()){if(e.dead||e.hp<=0||e.retreating)continue;const center=enemyCentre(e);const hit=movingSphereHit(start,p.mesh.position,e.previousCentre||center,center,enemyRadius(e)+(p.style==='magic'?.18:.04));if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position,p.style==='magic'?.18:.04);if(worldHit!==null&&worldHit<=best){sparks(start.clone().lerp(p.mesh.position,worldHit),STYLE_COLOURS[p.style],4);p.life=0;}else if(closest){p.mesh.position.lerpVectors(start,p.mesh.position,best);if(p.opts.waveId===undefined||closest.lastWave!==p.opts.waveId){hitEnemy(closest,p.damage,p.opts,p.source);closest.lastWave=p.opts.waveId;}sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);if(p.opts.explosion)areaImpact(p.mesh.position,p.opts.explosion,p.damage*.45,{},p.source);p.life=0;}}
  if(p.age>p.life||(!p.particle&&(p.distance>=p.maxDistance||p.mesh.position.y<terrainHeight(p.mesh.position.x,p.mesh.position.z)))){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
- for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
+ for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.7));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
 let aim=null,aimScore=-Infinity;for(const e of activeEnemies()){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent=ENEMY_COMBAT[aim.type].name+' · Combat Lv '+aim.level;$('target-name').dataset.threat=enemyThreatTier(aim.level,combatLevelFromXp(data.xp));$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
@@ -1097,8 +1097,10 @@ window.oakrestDiagnostics=()=>({...stats,quality,version:'combat-reborn-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
  state:()=>({data:structuredClone(data),style,hp,cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
- aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);pitch=clamp((1.65-(y-hero.position.y))/(Math.max(3,distance)*.65)-.1,-.45,.85);},
+ aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
+ receiveDamage(amount){applyEnemyDamage(null,{damage:amount},now());},
+ spawn(type,x,z){if(!['mossling','boar','bandit','dummy'].includes(type)||enemies.length>=24||blocked(x,z,.8))return false;makeEnemy(type,x,z);return true;},
  equip:(kind,id,s=style)=>chooseGear(kind,id,s),slot:(index,id)=>{equipSkill(data,style,data.gear[style],index,id);refreshSkills();},
  step(seconds){for(let i=0;i<Math.round(seconds*60);i++){gameTime+=1/60;animate(1/60,gameTime);}},damage(amount){hp=Math.max(1,hp-amount);updateHpUI();}
 };

@@ -49,6 +49,9 @@ jobs:
       - name: iPad-size controller and camera regression
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-controller.cjs
+      - name: Combat Reborn real simulation scenarios
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-combat-reborn.cjs
       - name: Preserve browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
