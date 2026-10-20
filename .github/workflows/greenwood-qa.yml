@@ -1,0 +1,37 @@
+name: Oakrest Greenwood QA
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [overhaul/greenwood-gameplay-visuals]
+
+permissions:
+  contents: read
+
+jobs:
+  regression-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate source
+        run: npm run check
+      - name: Regression tests
+        run: npm test
+      - name: Production asset build
+        run: npm run build
+      - name: Install Chromium and dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Browser smoke test
+        run: node tests/browser-smoke.cjs
