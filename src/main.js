@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { storageKey } from './storage-key.js';
 import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
@@ -15,6 +16,7 @@ import { createAudio } from './audio.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 
 const $=id=>document.getElementById(id);
+const oakrestKey=key=>storageKey(key,location.pathname);
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
 document.documentElement.classList.toggle('touch-enabled',isTouch);
 // Suppress Safari page zoom while keeping gameplay multitouch working.
@@ -25,10 +27,10 @@ let gameTime=0;const now=()=>gameTime;const audio=createAudio();
 const rand=(seed)=>{let s=seed;return ()=>{s=(s*16807)%2147483647;return (s-1)/2147483646;};};
 const random=rand(27184);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#a9c8b7');scene.fog=new THREE.Fog('#a9c8b7',32,105);
-let renderer,quality='balanced';try{quality=localStorage.getItem('oakrest-quality')||'balanced';}catch{}if(!['low','balanced','high'].includes(quality))quality='balanced';
+let renderer,quality='balanced';try{quality=localStorage.getItem(oakrestKey('oakrest-quality'))||'balanced';}catch{}if(!['low','balanced','high'].includes(quality))quality='balanced';
 try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.45:1.85));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;$('game').appendChild(renderer.domElement); }
 catch(err){$('error').hidden=false;throw err;}
-function applyQuality(value){quality=value;renderer.setPixelRatio(Math.min(devicePixelRatio,{low:1,balanced:1.35,high:1.8}[quality]));renderer.shadowMap.enabled=quality!=='low';renderer.setSize(innerWidth,innerHeight);try{localStorage.setItem('oakrest-quality',quality);}catch{}}applyQuality(quality);$('quality').value=quality;$('quality').addEventListener('change',e=>applyQuality(e.target.value));$('sound-enabled').addEventListener('change',e=>{audio.setEnabled(e.target.checked);audio.unlock();});
+function applyQuality(value){quality=value;renderer.setPixelRatio(Math.min(devicePixelRatio,{low:1,balanced:1.35,high:1.8}[quality]));renderer.shadowMap.enabled=quality!=='low';renderer.setSize(innerWidth,innerHeight);try{localStorage.setItem(oakrestKey('oakrest-quality'),quality);}catch{}}applyQuality(quality);$('quality').value=quality;$('quality').addEventListener('change',e=>applyQuality(e.target.value));$('sound-enabled').addEventListener('change',e=>{audio.setEnabled(e.target.checked);audio.unlock();});
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,150);
 const sun=new THREE.DirectionalLight('#ffdfad',2.1);sun.position.set(-26,45,20);sun.castShadow=true;sun.shadow.mapSize.set(isTouch?1024:2048,isTouch?1024:2048);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;sun.shadow.normalBias=.045;scene.add(sun);
 scene.add(new THREE.AmbientLight('#dae5da',.40));
@@ -64,11 +66,11 @@ const visuals=createCombatVisuals(THREE,scene);
 function createHero(){return createActor();}
 const hero=createHero();hero.position.set(0,terrainHeight(0,11),11);scene.add(hero);
 function equipVisual(style,weaponId){equipActor(hero,style,slotFamily(style,weaponId),data.armour[style]);}
-let data=defaultSave(),saveWritable=true;try{const raw=localStorage.getItem('oakrest-v1');if(raw){if(!localStorage.getItem('oakrest-before-greenwood'))localStorage.setItem('oakrest-before-greenwood',raw);data=validSave(JSON.parse(raw));}}catch{saveWritable=false;}
+let data=defaultSave(),saveWritable=true;try{const raw=localStorage.getItem(oakrestKey('oakrest-v1'));if(raw){if(!localStorage.getItem(oakrestKey('oakrest-before-greenwood')))localStorage.setItem(oakrestKey('oakrest-before-greenwood'),raw);data=validSave(JSON.parse(raw));}}catch{saveWritable=false;}
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,lastAttackInterval=0.95,dodgeTravel=null;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
-let savedLookSpeed=1;try{savedLookSpeed=localStorage.getItem('oakrest-look-speed') ?? 1;}catch{}
+let savedLookSpeed=1;try{savedLookSpeed=localStorage.getItem(oakrestKey('oakrest-look-speed')) ?? 1;}catch{}
 let lookSensitivity=cameraSensitivity(savedLookSpeed);
 let holdingAttack=false;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
@@ -251,7 +253,7 @@ function renderBook(){
  }
 }
 function getWeapon(){return LOADOUTS[style][data.gear[style]];}
-function save(){if(!saveWritable)return;try{localStorage.setItem('oakrest-v1',JSON.stringify(data));}catch{}}
+function save(){if(!saveWritable)return;try{localStorage.setItem(oakrestKey('oakrest-v1'),JSON.stringify(data));}catch{}}
 function toast(message){
  const el=document.createElement('div');el.className='toast';
  if(message.includes('LEVEL '))el.classList.add('level-up');
@@ -692,7 +694,7 @@ $('look-speed-value').textContent=`${lookSensitivity.toFixed(1)}×`;
 speedInput.addEventListener('input',e=>{
   lookSensitivity=cameraSensitivity(e.target.value);
   $('look-speed-value').textContent=`${lookSensitivity.toFixed(1)}×`;
-  try{localStorage.setItem('oakrest-look-speed',String(lookSensitivity));}catch{}
+  try{localStorage.setItem(oakrestKey('oakrest-look-speed'),String(lookSensitivity));}catch{}
 });
 function closeControls(){$('controls-panel').hidden=true;$('help-button').setAttribute('aria-expanded','false');}
 $('help-button').addEventListener('click',()=>{
