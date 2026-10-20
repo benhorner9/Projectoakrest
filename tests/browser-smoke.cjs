@@ -71,9 +71,30 @@ let browser;
     assert.equal(fresh.save.inventory.armour.length,0,'fresh characters start without armour');
     await freshPage.locator('#begin').click();
     assert.ok(await freshPage.locator('#game canvas').count()===1);
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().area),'tutorial');
+    assert.equal(await freshPage.locator('#area').textContent(),'The First Steps');
+    // Training attacks must actually connect with the dummy, not just change a tab.
+    await freshPage.evaluate(()=>{oakrestQA.teleport(0,-4.7);oakrestQA.basic();oakrestQA.step(.35);});
+    assert.deepEqual(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.tutorial.hitStyles),['melee']);
+    for(const next of ['magic','ranged']){
+      await freshPage.evaluate(next=>{oakrestQA.step(1);oakrestQA.style(next);oakrestQA.step(1);oakrestQA.basic();oakrestQA.step(1.2);},next);
+    }
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.tutorial.hitStyles.length),3);
+    await freshPage.locator('#opening-action').click();
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.tutorial.skillsRead),true);
+    await freshPage.locator('#opening-action').click();
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.teleportScrolls),1);
+    await freshPage.locator('#opening-action').click();
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().area),'realm');
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.teleportScrolls),0);
+    await freshPage.evaluate(()=>oakrestQA.teleport(0,-9));
+    await freshPage.locator('#opening-interact-button').click();
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().area),'world');
+    assert.deepEqual(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.activatedPortals),['oakrest']);
     await freshPage.reload({waitUntil:'domcontentloaded'});
     await freshPage.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
     assert.equal(await freshPage.locator('#character-name-label').textContent(),'Forest Walker');
+    assert.equal(await freshPage.evaluate(()=>oakrestQA.state().area),'world','completed onboarding persists across reload');
     assert.deepEqual(freshErrors,[],'new character opens without JavaScript errors');
     await freshContext.close();
     console.log('PASS: Legacy saves, newly-created empty-inventory characters, 3D preview and reload tested in Chromium.');
