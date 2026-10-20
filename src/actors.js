@@ -11,11 +11,22 @@ function tube(g,c,x,y,z,rt,rb,h,metal=false){const key=[rt,rb,h].join();if(!geom
 function pivot(parent,x,y,z){const p=new THREE.Group();p.position.set(x,y,z);parent.add(p);return p;}
 function taperedBlade(g,length,width){const shape=new THREE.Shape();shape.moveTo(-width/2,0);shape.lineTo(-width*.4,-length*.78);shape.lineTo(0,-length);shape.lineTo(width*.4,-length*.78);shape.lineTo(width/2,0);shape.closePath();const geo=new THREE.ExtrudeGeometry(shape,{depth:.055,bevelEnabled:true,bevelSize:.018,bevelThickness:.018,bevelSegments:1,steps:1});geo.rotateX(Math.PI/2);mesh(g,geo,'#b4c9cc',0,0,-.2,1,1,1,true);}
 export function createActor(bandit=false){
- const g=new THREE.Group(),rig=pivot(g,0,0,0),skin=bandit?'#b88b69':'#d6aa83',body=material(bandit?'#6a4d4e':'#607b7c').clone(),cloth=material('#34574e').clone();
+ const g=new THREE.Group(),rig=pivot(g,0,0,0),skin=material(bandit?'#b88b69':'#d6aa83').clone(),body=material(bandit?'#6a4d4e':'#607b7c').clone(),cloth=material('#34574e').clone();
  const torso=tube(rig,body,0,1.43,0,.43,.31,.82);torso.scale.z=.62;
+ const trimMat=material('#c9b28a').clone();
+ const outfitTrims=[
+  block(rig,trimMat,0,1.46,-.275,.085,.56,.028),
+  block(rig,trimMat,-.12,1.44,-.28,.045,.52,.03),
+  block(rig,trimMat,.12,1.44,-.28,.045,.52,.03)
+ ];
  ball(rig,body,0,1.12,0,.36,.23,.25);
  const neck=tube(rig,skin,0,1.94,0,.14,.16,.22);
- const head=pivot(rig,0,2.15,0);ball(head,skin,0,0,0,.275,.34,.26);ball(head,'#40332a',0,.17,.055,.285,.23,.27);
+ const head=pivot(rig,0,2.15,0);ball(head,skin,0,0,0,.275,.34,.26);
+ const hairMat=material('#40332a').clone();
+ const hair=ball(head,hairMat,0,.17,.055,.285,.23,.27);
+ const hairBack=ball(head,hairMat,0,-.15,.19,.24,.38,.13);hairBack.visible=false;
+ const hairTail=ball(head,hairMat,.12,-.18,.30,.11,.32,.11);hairTail.visible=false;
+ const hairCurls=[[-.20,.24,-.06],[0,.32,-.09],[.20,.24,-.06]].map(([x,y,z])=>{const curl=ball(head,hairMat,x,y,z,.11,.12,.12);curl.visible=false;return curl;});
  for(const s of [-1,1]){ball(head,skin,s*.27,-.01,.01,.065,.11,.07);ball(head,'#26332e',s*.105,.015,-.237,.03,.037,.02);block(head,'#493a2c',s*.11,.09,-.235,.10,.025,.03);}
  ball(head,skin,0,-.035,-.27,.055,.075,.07);
  block(rig,'#493d30',0,1.02,0,.71,.14,.49);block(rig,'#c8ab70',0,1.03,-.27,.15,.15,.05,true);
@@ -26,9 +37,33 @@ export function createActor(bandit=false){
  function leg(s){const p=pivot(rig,s*.19,1,0);tube(p,'#484b41',0,-.23,0,.145,.12,.46);const knee=pivot(p,0,-.46,0);ball(knee,'#7c7160',0,0,-.02,.14,.15,.14);tube(knee,'#45453b',0,-.19,0,.12,.10,.38);ball(knee,'#3b3831',0,-.38,-.09,.15,.14,.25);return {p,knee};}
  function arm(s){const p=pivot(rig,s*.43,1.77,0);ball(p,body,0,-.02,0,.19,.23,.19);tube(p,body,0,-.22,0,.13,.105,.39);const elbow=pivot(p,0,-.40,0);ball(elbow,skin,0,0,0,.105,.11,.10);tube(elbow,'#675440',0,-.16,0,.12,.10,.30);ball(elbow,skin,0,-.33,0,.115,.135,.105);const hand=pivot(elbow,0,-.34,-.06);pauldrons.push(ball(p,material('#839a9b',true),0,.035,0,.23,.18,.24));return {p,elbow,hand};}
  const ll=leg(-1),rl=leg(1),la=arm(-1),ra=arm(1);
- g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,owned:[],family:'sword'};
+ g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,skinMaterial:skin,hairMat,hair,hairBack,hairTail,hairCurls,torso,outfitTrims,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,owned:[],family:'sword'};
  if(bandit){ball(head,'#383e40',0,.16,.06,.33,.26,.31);block(head,'#5d5148',0,-.15,-.245,.45,.19,.05);}
  return g;
+}
+/** Apply a player's personal, non-equipment appearance to the existing rig. */
+export function applyCharacterAppearance(g,appearance={}){
+ const u=g.userData;if(!u?.skinMaterial)return;
+ const styles=new Set(['short','swept','buzz','long','ponytail','curly']);
+ const outfits=new Set(['tunic','wanderer','scholar','traveller']);
+ const sex=appearance.sex==='female'?'female':'male',hairStyle=styles.has(appearance.hairstyle)?appearance.hairstyle:'short';
+ const outfit=outfits.has(appearance.outfit)?appearance.outfit:'tunic';
+ const hex=/^#[0-9a-f]{6}$/i;
+ const color=(value,defaultHex)=>hex.test(value||'')?value:defaultHex;
+ u.skinMaterial.color.set(color(appearance.skinTone,'#d6aa83'));
+ u.hairMat.color.set(color(appearance.hairColor,'#39271f'));
+ u.body.color.set(color(appearance.outfitColor,'#607b7c'));
+ u.cloth.color.set(color(appearance.outfitColor,'#607b7c')).multiplyScalar(.72);
+ u.torso.scale.x=sex==='female'?.90:1;
+ u.head.scale.setScalar(sex==='female'?.97:1);
+ u.hair.position.set(hairStyle==='swept'?.07:0,hairStyle==='buzz'?.19:.17,.055);
+ u.hair.scale.set(hairStyle==='swept'?.32:.285,hairStyle==='buzz'?.10:hairStyle==='ponytail'?.17:.23,.27);
+ u.hair.rotation.z=hairStyle==='swept'?.22:0;
+ u.hairBack.visible=hairStyle==='long';
+ u.hairTail.visible=hairStyle==='ponytail';
+ u.hairCurls.forEach(c=>c.visible=hairStyle==='curly');
+ u.outfitTrims.forEach((m,i)=>m.visible=outfit==='scholar'?i===0:outfit==='traveller'?i>0:outfit==='wanderer'?i===1:false);
+ u.cape.visible=outfit==='wanderer'&&!u.chestPlate.visible;
 }
 export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();u.owned=[];u.weapon.clear();u.offhand.clear();u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
  const w=u.weapon;function blade(group,heavy=false,dagger=false){block(group,'#54402f',0,0,.02,.105,.11,.38);block(group,'#c4a466',0,0,-.18,dagger?.26:heavy?.55:.40,.09,.10,true);taperedBlade(group,dagger?.52:heavy?1.45:1.03,dagger?.15:heavy?.30:.20);ball(group,'#c4a466',0,0,.24,.08,.08,.08);}
