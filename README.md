@@ -104,3 +104,14 @@ Inventory items discovered ahead of their gear requirements now visibly show the
 - The dedicated tutorial and Portal Realm onboarding are **not part of this block**; the current starter village remains the temporary gameplay entry point.
 - QA: `npm test`, `npm run check`, `npm run build`, `node tests/browser-smoke.cjs`. Browser testing in CI is Chromium emulation, not physical iPad testing.
 - Deployment note: commit this code to the GitHub development branch and deploy it through the shared-hosting pipeline for `playcellbound.com/oakrest-dev`; no Vercel deployment is required or intended for this workflow.
+
+## Part 3 — Opening Journey: tutorial and Portal Realm
+- New characters only enter the safe standalone **The First Steps** training ground. Older characters and legacy `oakrest-v1` saves continue from their existing world and are not reset.
+- Practise on a real training dummy using all **three** direct-action styles. Hits must connect to complete each style; Tab, 1/2/3, touch style buttons and SWAP work. The practice sword, staff and bow are temporary visual loadouts and never enter the player's inventory.
+- The Skills Instructor section gives an explicit overview of Health, Melee, Magic, Ranged, gathering, crafting and Inscription. Gathering/crafting systems remain future features, but the introduction has a fully working acknowledgement step.
+- Claim a single **Teleportation Scroll**; the item count is stored in onboarding progression and shown in Inventory. Using it consumes one and transfers the character to a separate, navigable 3D **Portal Realm**.
+- The realm shows one active gateway to **Oakrest**, with additional locked gateways. Approach the active gateway and use the on-screen interaction button (or E on desktop) to travel to the existing Oakrest starter settlement. This existing village is the provisional first-city arrival point until the main-city overhaul.
+- Tutorial progress, scroll balance, current world (tutorial/realm/world) and activated city portal are saved per character. Reloading during onboarding resumes the appropriate stage without granting free repeat scrolls.
+- Independent scenes are built from bundled Three.js without outside images, video assets or new infrastructure. Gameplay is functional on touch and desktop; iPad Safari requires manual device validation.
+- Validate with `npm test`, `npm run check`, `npm run build` and `node tests/browser-smoke.cjs`. Browser smoke covers real attack connections, skills, receiving/consuming the scroll, city portal interaction and saved completion.
+- No Vercel deployment is needed or intended. Shared-host deployment of `/oakrest-dev` is a separate step and **not confirmed** by a GitHub commit or CI green check.
