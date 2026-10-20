@@ -1,0 +1,180 @@
+{
+  "date": "2026-10-20",
+  "implementationCommit": "e645a5e929755eb3800cf05ead525c8d2568868e",
+  "mergeCommit": "830ba49aab063c46aa8e4079608d9d153c07807d",
+  "pr": 6,
+  "qaRun": 39499729082,
+  "unitTests": {
+    "passed": 141,
+    "failed": 0
+  },
+  "abilityCombinations": 84,
+  "browsers": [
+    "Chromium",
+    "WebKit"
+  ],
+  "scenarios": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H"
+  ],
+  "performance": {
+    "environment": "Linux headless Chromium with SwiftShader; not iPad hardware",
+    "samples": [
+      {
+        "label": "baseline",
+        "cpuMsPerSimulatedSecond": 85.25,
+        "medianFPS": 2.0690225937267246,
+        "medianP95ms": 483.39999999999964,
+        "samples": [
+          {
+            "fps": 2.083420142505938,
+            "p95": 483.39999999999964,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "greenwood-1"
+          },
+          {
+            "fps": 2.0834201425059367,
+            "p95": 483.40000000000146,
+            "drawCalls": 358,
+            "triangles": 189216,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "greenwood-1"
+          },
+          {
+            "fps": 2.0690225937267246,
+            "p95": 483.39999999999964,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "greenwood-1"
+          },
+          {
+            "fps": 2.0690225937267246,
+            "p95": 483.39999999999964,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "greenwood-1"
+          },
+          {
+            "fps": 2.0690225937267215,
+            "p95": 500,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "greenwood-1"
+          }
+        ]
+      },
+      {
+        "label": "combat-reborn",
+        "cpuMsPerSimulatedSecond": 115.89999999999418,
+        "medianFPS": 2.142887755539364,
+        "medianP95ms": 466.7000000000007,
+        "samples": [
+          {
+            "fps": 2.127750117026257,
+            "p95": 483.2999999999993,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "combat-reborn-1"
+          },
+          {
+            "fps": 2.127750117026257,
+            "p95": 483.2999999999993,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "combat-reborn-1"
+          },
+          {
+            "fps": 2.142979598834218,
+            "p95": 466.7000000000007,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "combat-reborn-1"
+          },
+          {
+            "fps": 2.142887755539364,
+            "p95": 466.7000000000007,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "combat-reborn-1"
+          },
+          {
+            "fps": 2.1429795988342217,
+            "p95": 466.7000000000007,
+            "drawCalls": 359,
+            "triangles": 189224,
+            "geometries": 147,
+            "textures": 1,
+            "effects": 0,
+            "quality": "balanced",
+            "version": "combat-reborn-1"
+          }
+        ]
+      }
+    ]
+  },
+  "deployment": {
+    "run": 39501225111,
+    "bridgeCommit": "f0a491a870582ac0b1531283e5863800ef8187e8",
+    "conclusion": "success",
+    "hostedFilesVerified": 52,
+    "hostedContactDamage": {
+      "melee": 19,
+      "ranged": 22,
+      "magic": 13
+    },
+    "publicHashesUnchanged": 27,
+    "publicMain": "ed8a1a1fd9a778779ae3c6e66f15400f5663a462"
+  },
+  "limitations": [
+    "Physical iPad unavailable",
+    "60 FPS target unverified",
+    "Long soak and subjective manual play outstanding"
+  ],
+  "artifacts": [
+    12300081389,
+    12300020769,
+    12299343284
+  ]
+}
