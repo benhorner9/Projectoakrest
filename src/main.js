@@ -81,15 +81,22 @@ let profiles=[],activeCharacter=null,legacySave=null,saveWritable=true,data=defa
 try{
  const raw=localStorage.getItem(oldSaveKey);
  if(raw){
-  if(!localStorage.getItem(oakrestKey('oakrest-before-greenwood')))localStorage.setItem(oakrestKey('oakrest-before-greenwood'),raw);
-  legacySave=validSave(JSON.parse(raw));data=legacySave;
+  // Corrupt legacy data must never prevent creating a new character.
+  // Keep its original bytes untouched, and preserve a backup if possible.
+  try{
+   if(!localStorage.getItem(oakrestKey('oakrest-before-greenwood')))
+    localStorage.setItem(oakrestKey('oakrest-before-greenwood'),raw);
+  }catch{}
+  try{legacySave=validSave(JSON.parse(raw));data=legacySave;}catch{legacySave=null;}
  }
  profiles=readCharacters(localStorage,rosterKey);
  const selected=localStorage.getItem(activeKey);
  const profile=profiles.find(p=>p.id===selected);
  if(profile){
   const saved=localStorage.getItem(saveKeyFor(profile.id));
-  if(saved){activeCharacter=profile;data=validSave(JSON.parse(saved));}
+  if(saved){
+   try{data=validSave(JSON.parse(saved));activeCharacter=profile;}catch{activeCharacter=null;}
+  }
  }
 }catch{saveWritable=false;}
 function equipVisual(style,weaponId){
@@ -876,6 +883,16 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
 document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
+function startGameplay(){
+ if(started)return;
+ if(!activeCharacter&&!legacySave)return;
+ started=true;audio.unlock();$('intro').classList.add('hidden');
+ if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});
+ if(!saveWritable)toast('Browser storage is unavailable. Your progress cannot be saved.');
+ toast(data.onboarding?.area==='tutorial'
+  ?'<b>Welcome to The First Steps!</b> Hit the training dummy with all three combat styles.'
+  :'<b>Welcome to Oakrest!</b> Practice on the straw dummy by the gate. Red warnings show where an enemy will strike.');
+}
 const characterUI=setupCharacterCreator({
  listProfiles:()=>profiles,getCurrentId:()=>activeCharacter?.id,
  legacyAvailable:()=>legacySave!==null,
@@ -889,23 +906,26 @@ const characterUI=setupCharacterCreator({
    localStorage.setItem(activeKey,profile.id);
   }catch{throw new Error('Could not save the character. Check available browser storage.');}
   profiles=updated;useCharacter(profile,fresh);save();
+  startGameplay(); // one tap: Create Character -> playable tutorial
  },
  onSelect(profile){
   const saved=localStorage.getItem(saveKeyFor(profile.id));
   if(!saved)throw new Error('Character progress could not be found. No saves were changed.');
   const loaded=validSave(JSON.parse(saved));localStorage.setItem(activeKey,profile.id);
   useCharacter(profile,loaded);
+  startGameplay();
  },
  onLegacy(){
   if(!legacySave)throw new Error('No earlier character was found.');
   localStorage.removeItem(activeKey);useCharacter(null,legacySave);
+  startGameplay();
  }
 });
 $('choose-character').addEventListener('click',()=>characterUI.show());
 if(activeCharacter)useCharacter(activeCharacter,data);
 else if(legacySave)useCharacter(null,legacySave);
 else characterUI.show();
-$('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){characterUI.show();return;}started=true;audio.unlock();$('intro').classList.add('hidden');if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});if(!saveWritable)toast('Your existing save could not be read or backed up. Saving is paused to protect it.');toast(data.onboarding?.area==='tutorial'?'<b>Welcome to The First Steps!</b> Hit the training dummy with all three combat styles.':'<b>Welcome to Oakrest!</b> Practice on the straw dummy by the gate. Red warnings show where an enemy will strike.');});
+$('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){characterUI.show();return;}startGameplay();});
 equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
 const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
