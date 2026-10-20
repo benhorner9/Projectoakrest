@@ -215,14 +215,14 @@ function renderBook(){
   },!current[bookSlot]);clear.className='book-clear';
  }else if(bookTab==='equip'){
   el('h3','Equipped for '+bookStyle.toUpperCase(),host);
-  const ownWeapon=ownsWeapon(data,bookStyle,data.gear[bookStyle])?LOADOUTS[bookStyle][data.gear[bookStyle]]:{title:bookStyle==='melee'?'Unarmed':'None'},ownArmour=ownsArmour(data,data.armour[bookStyle])?defenceFor(data.armour[bookStyle]):defenceFor('none');
+  const ownWeapon=ownsWeapon(data,bookStyle,data.gear[bookStyle])?LOADOUTS[bookStyle][data.gear[bookStyle]]:{title:bookStyle==='melee'?'Unarmed':'None',basic:bookStyle==='melee'?6:0,interval:bookStyle==='melee'?.88:0,reach:bookStyle==='melee'?1.55:0},ownArmour=ownsArmour(data,data.armour[bookStyle])?defenceFor(data.armour[bookStyle]):defenceFor('none');
   el('p','Weapon: '+ownWeapon.title+'  ·  Armour: '+ownArmour.title,host);
   el('h3','Your weapons',host);
   const weapons=el('div',null,host,'catalogue-list');
   for(const [id,w] of Object.entries(LOADOUTS[bookStyle])){
    const unlocked=canEquipWeapon(bookStyle,id,data.xp),owned=ownsWeapon(data,bookStyle,id);
    const b=uiButton(weapons,'',()=>chooseGear('weapon',id),!unlocked||!owned);
-   b.classList.toggle('selected',data.gear[bookStyle]===id);
+   b.classList.toggle('selected',data.gear[bookStyle]===id&&owned);
    el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
    el('small',weaponDisplay(w),d);if(id!==data.gear[bookStyle])el('small',weaponComparison(w,ownWeapon),d,'gear-comparison');
    el('em',!unlocked?'LEVEL '+w.requiredLevel+' REQUIRED':!owned?'NOT OWNED':data.gear[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
