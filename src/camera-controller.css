@@ -1,0 +1,17 @@
+/* Part 5: readable, scrollable camera/gamepad options for iPad and desktop. */
+.controls-panel{max-height:calc(100dvh - 72px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:thin}
+.controls-panel label{display:block;margin-top:11px}
+.controls-panel input[type=range]{width:100%;min-height:31px;touch-action:pan-x;accent-color:#ddc28a;pointer-events:auto}
+.controls-panel input[type=range]:focus-visible{outline:2px solid #f1d99f}
+.camera-tune-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;border-top:1px solid #c1ab8270;padding-top:9px;margin-top:11px}
+.camera-tune-grid label{font-size:12px;line-height:1.4}
+.camera-tune-grid output,.controls-panel label output{float:right;color:#ead9b5}
+.camera-check{display:flex!important;gap:10px;align-items:center;font-size:13px}
+.camera-check input{width:20px;height:20px;accent-color:#d5bc81;touch-action:manipulation}
+.camera-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.camera-actions button{flex:1;font-size:11px;letter-spacing:.025em;padding:9px 8px;min-height:42px}
+.gamepad-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #c1ab8270;margin-top:16px;padding-top:12px;font-size:13px}
+#gamepad-status{font-size:10px;line-height:1.3;max-width:65%;text-align:right;color:#c4ddc7;overflow-wrap:anywhere}
+.gamepad-help{font-size:11px;line-height:1.5;color:#c6d0c7}
+@media(max-width:520px){.camera-tune-grid{grid-template-columns:1fr}.controls-panel{max-height:calc(100dvh - 66px)}}
+@media(max-height:540px){.controls-panel{top:48px;max-height:calc(100dvh - 50px)}}
