@@ -20,8 +20,10 @@ let browser;
     await page.locator('#begin').click({timeout:15000});
     assert.equal(await page.locator('#game canvas').count(),1,'3D canvas must render');
     const before=await page.evaluate(()=>oakrestQA.state());
+    // Run the real movement simulation deterministically: software-rendered CI
+    // can be too slow to produce a requestAnimationFrame within 400ms.
     await page.keyboard.down('w');
-    await page.waitForTimeout(400);
+    await page.evaluate(()=>oakrestQA.step(.4));
     await page.keyboard.up('w');
     const after=await page.evaluate(()=>oakrestQA.state());
     assert.ok(after.hero.z<before.hero.z,'player movement should update');
