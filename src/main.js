@@ -222,6 +222,13 @@ function renderBook(){
    el('small',info.maxed?'MAX LEVEL':xpText(info.needed)+' XP to next level',card);
    el('small','Total XP '+xpText(info.totalXp)+'  ·  View unlocks ›',card,'level-meta');
   }
+  const wcXp=data.professions?.woodcuttingXp||0,learned=data.professions?.woodcuttingLearned===true;
+  const woodCard=el('div',null,grid,'level-card level-woodcutting');
+  const woodTop=el('div',null,woodCard,'level-card-title');
+  el('strong','🌲 Woodcutting',woodTop);
+  el('span',learned?'Level '+levelFromXp(wcXp).level:'LOCKED',woodTop);
+  el('small',learned?'Oakrest beginner practice '+wcXp+' / 710 XP':'Learn at Oakrest Forester’s Lodge',woodCard);
+  el('small','Other gathering and crafting skills have their own towns and trainers.',woodCard,'level-meta');
  }else if(bookTab==='abilities'){
   el('p','Select a slot, then choose an unlocked ability. Each weapon family remembers its four slots.',host);
   const slots=el('div',null,host,'book-slots'),current=equippedSkills(data,bookStyle,weaponId);
@@ -315,7 +322,12 @@ function renderBook(){
     const tile=el('div',null,materials,'material-tile');
     addItemIcon(tile,'material.'+mat.id);el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
   }
-  if(!anyMaterial)el('p','Defeat creatures outside the village to collect materials.',host);
+  const softwood=data.inventory?.materials?.['softwood-logs']||0;
+  if(softwood){
+   anyMaterial=true;const wood=el('div',null,materials,'material-tile');
+   addItemIcon(wood,'material.softwood-logs');el('strong','Softwood Logs',wood);el('small','Owned ×'+softwood,wood);
+  }
+  if(!anyMaterial)el('p','Gather resources in the town grove or defeat creatures beyond the greenbelt.',host);
   el('p','Coins: '+data.coins+' · Crafting with these materials will arrive later.',host,'inventory-footnote');
  }
 }
