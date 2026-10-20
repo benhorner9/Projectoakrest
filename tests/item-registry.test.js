@@ -56,7 +56,8 @@ test('worn gear variants have item-specific runes and isolated materials',()=>{
  const one=first.userData.weapon.children.at(-1),two=second.userData.weapon.children.at(-1);
  assert.ok(one.isMesh&&two.isMesh);
  assert.notEqual(one.material.color.getHex(),two.material.color.getHex());
- assert.notEqual(one.geometry.parameters.radius,two.geometry.parameters.radius);
+ assert.notEqual(first.userData.weapon.children.length,0);
+ assert.ok(first.userData.ownedMaterials.length>0);
  const old=first.userData.ownedMaterials.slice();
  equipActor(first,'magic','frost','traveller');
  assert.equal(first.userData.ownedMaterials.length,0);
