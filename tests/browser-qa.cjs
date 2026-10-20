@@ -6,6 +6,14 @@ const qa=(page,fn,arg)=>page.evaluate(fn,arg);
 (async()=>{try{
  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const context=await browser.newContext({viewport:{width:1366,height:1024},hasTouch:true,deviceScaleFactor:1});const page=await context.newPage();page.on('pageerror',e=>results.errors.push(e.message));
+ await page.addInitScript(()=>{
+  if(!localStorage.getItem('oakrest-v1'))localStorage.setItem('oakrest-v1',JSON.stringify({
+    xp:{melee:0,magic:0,ranged:0,vitality:0},lootVersion:1,
+    gear:{melee:'sword',magic:'frost',ranged:'bow'},
+    armour:{melee:'traveller',magic:'traveller',ranged:'traveller'},
+    inventory:{weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller'],materials:{}}
+  }));
+ });
  await page.goto('http://127.0.0.1:5173/?qa=1');await page.waitForFunction(()=>window.oakrestQA);await page.locator('#begin').click();await page.waitForTimeout(3500);
  record('game starts with local pinned engine',await page.locator('#game canvas').count());
  const before=await qa(page,()=>oakrestQA.state());await page.keyboard.down('w');await page.waitForTimeout(700);await page.keyboard.up('w');await page.waitForTimeout(200);const moved=await qa(page,()=>oakrestQA.state());assert.ok(moved.hero.z<before.hero.z);record('desktop movement in running touch build',moved.hero);
