@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { storageKey } from './storage-key.js';
-import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
+import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, ENEMY_COMBAT, enemyBehaviour, enemyThreatTier, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
@@ -9,7 +9,9 @@ import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
 import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit } from './terrain.js';
-import { createActor,equipActor,animateActor,createCreature,animateCreature } from './actors.js';
+import { createActor,equipActor,applyCharacterAppearance,animateActor,createCreature,animateCreature } from './actors.js';
+import { readCharacters,createCharacter } from './characters.js';
+import { setupCharacterCreator } from './character-creator.js';
 import { cottageModel,treeModel,addLandmarks,batchScenery } from './environment.js';
 import { segmentHit,dodgeDirection,weaponComparison } from './gameplay-math.js';
 import { createAudio } from './audio.js';
@@ -65,8 +67,29 @@ const visuals=createCombatVisuals(THREE,scene);
 
 function createHero(){return createActor();}
 const hero=createHero();hero.position.set(0,terrainHeight(0,11),11);scene.add(hero);
-function equipVisual(style,weaponId){equipActor(hero,style,slotFamily(style,weaponId),data.armour[style]);}
-let data=defaultSave(),saveWritable=true;try{const raw=localStorage.getItem(oakrestKey('oakrest-v1'));if(raw){if(!localStorage.getItem(oakrestKey('oakrest-before-greenwood')))localStorage.setItem(oakrestKey('oakrest-before-greenwood'),raw);data=validSave(JSON.parse(raw));}}catch{saveWritable=false;}
+const oldSaveKey=oakrestKey('oakrest-v1'),rosterKey=oakrestKey('oakrest-characters-v1'),activeKey=oakrestKey('oakrest-active-character');
+const saveKeyFor=id=>oakrestKey('oakrest-character-save-'+id);
+let profiles=[],activeCharacter=null,legacySave=null,saveWritable=true,data=defaultSave();
+try{
+ const raw=localStorage.getItem(oldSaveKey);
+ if(raw){
+  if(!localStorage.getItem(oakrestKey('oakrest-before-greenwood')))localStorage.setItem(oakrestKey('oakrest-before-greenwood'),raw);
+  legacySave=validSave(JSON.parse(raw));data=legacySave;
+ }
+ profiles=readCharacters(localStorage,rosterKey);
+ const selected=localStorage.getItem(activeKey);
+ const profile=profiles.find(p=>p.id===selected);
+ if(profile){
+  const saved=localStorage.getItem(saveKeyFor(profile.id));
+  if(saved){activeCharacter=profile;data=validSave(JSON.parse(saved));}
+ }
+}catch{saveWritable=false;}
+function equipVisual(style,weaponId){
+ const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
+ equipActor(hero,style,slotFamily(style,weaponId),protection);
+ if(!ownsWeapon(data,style,weaponId)){hero.userData.weapon.clear();hero.userData.offhand.clear();}
+ if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
+}
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,lastAttackInterval=0.95,dodgeTravel=null;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
@@ -192,7 +215,7 @@ function renderBook(){
   },!current[bookSlot]);clear.className='book-clear';
  }else if(bookTab==='equip'){
   el('h3','Equipped for '+bookStyle.toUpperCase(),host);
-  const ownWeapon=LOADOUTS[bookStyle][data.gear[bookStyle]],ownArmour=defenceFor(data.armour[bookStyle]);
+  const ownWeapon=ownsWeapon(data,bookStyle,data.gear[bookStyle])?LOADOUTS[bookStyle][data.gear[bookStyle]]:{title:bookStyle==='melee'?'Unarmed':'None'},ownArmour=ownsArmour(data,data.armour[bookStyle])?defenceFor(data.armour[bookStyle]):defenceFor('none');
   el('p','Weapon: '+ownWeapon.title+'  ·  Armour: '+ownArmour.title,host);
   el('h3','Your weapons',host);
   const weapons=el('div',null,host,'catalogue-list');
@@ -252,8 +275,18 @@ function renderBook(){
   el('p','Coins: '+data.coins+' · Crafting with these materials will arrive later.',host,'inventory-footnote');
  }
 }
-function getWeapon(){return LOADOUTS[style][data.gear[style]];}
-function save(){if(!saveWritable)return;try{localStorage.setItem(oakrestKey('oakrest-v1'),JSON.stringify(data));}catch{}}
+const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,windup:.25};
+function getWeapon(){if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
+function save(){if(!saveWritable)return;try{localStorage.setItem(activeCharacter?saveKeyFor(activeCharacter.id):oldSaveKey,JSON.stringify(data));}catch{saveWritable=false;}}
+function useCharacter(profile,loaded){
+ activeCharacter=profile;data=loaded;style='melee';hp=maxHealth(levelFromXp(data.xp.vitality).level);
+ hero.position.set(0,terrainHeight(0,11),11);
+ equipVisual(style,data.gear[style]);refreshSkills();
+ $('character-name-label').hidden=!profile;$('character-name-label').textContent=profile?.name||'';
+ $('begin').textContent=profile?'PLAY AS '+profile.name.toUpperCase():'CONTINUE ORIGINAL ADVENTURE';
+ $('quest-text').textContent=data.defeated>=3?'Master all three styles and defeat the bandit on the forest road.':'Practice on the straw dummy by the gate. Follow the road to the mosslings; step out of red warnings. Defeat 3 creatures and collect their drops.';
+ questCompleted=data.defeated>=3;updateHpUI();
+}
 function toast(message){
  const el=document.createElement('div');el.className='toast';
  if(message.includes('LEVEL '))el.classList.add('level-up');
@@ -397,6 +430,7 @@ function slashEffect(reach=3){
 }
 function doBasic(){
  const t=now();if(!started||hp<=0||dodgeTravel||pendingAbility||t<switchUntil||!basicAttackReady(t,attackUntil,!!pendingBasic))return;
+ if(style!=='melee'&&!ownsWeapon(data,style,data.gear[style])){toast('You need a weapon to use this combat style.');return;}
  const w=getWeapon();
  attackUntil=t+w.interval;lastAttackInterval=w.interval;
  const windup=Math.min(w.interval*.70,w.windup||w.interval*.25);
@@ -413,7 +447,7 @@ function resolveBasicAttack(t){
  if(!pendingBasic||t<pendingBasic.impactAt)return;
  const attack=pendingBasic;pendingBasic=null;
  if(!started||hp<=0||style!==attack.style)return;audio.play(style==='magic'?'magic':'attack',getWeapon().basic>25);
- const w=LOADOUTS[attack.style][attack.weapon];
+ const w=ownsWeapon(data,attack.style,attack.weapon)?LOADOUTS[attack.style][attack.weapon]:attack.style==='melee'?UNARMED:null;
  if(!w)return;
  hero.userData.rightArm.rotation.x=-1.5;
  if(attack.style==='melee'){
@@ -428,7 +462,7 @@ function resolveBasicAttack(t){
  }
 }
 function shiftHero(dist){const f=forward();dodgeTravel={dir:{x:f.x*Math.sign(dist),z:f.z*Math.sign(dist)},speed:Math.abs(dist)/.32,start:now(),end:now()+.32};addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
-function useAbility(index){if(!started||hp<=0||dodgeTravel||pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic)return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=`${style}.${slotFamily(style,data.gear[style])}.${a.id}`;if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
+function useAbility(index){if(!started||hp<=0||dodgeTravel||pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic||!ownsWeapon(data,style,data.gear[style]))return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=`${style}.${slotFamily(style,data.gear[style])}.${a.id}`;if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
 function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;const {a,style:castStyle}=pendingAbility;pendingAbility=null;if(hp<=0||style!==castStyle)return;audio.play(style==='magic'?'magic':'attack');
   if(a.kind==='hit'||a.kind==='execute'){const t=nearTarget(a.reach);if(t)hitEnemy(t,a.damage+(a.kind==='execute'&&t.bleedUntil>now()?20:0),a);slashEffect(a.reach);}
   else if(a.kind==='sweep'){for(const e of enemiesNear(a.reach,.10))hitEnemy(e,a.damage,a);addRing(hero.position.clone(),STYLE_COLOURS[style],a.reach,.46);}
@@ -712,7 +746,36 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
 document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
-$('begin').addEventListener('click',()=>{started=true;audio.unlock();$('intro').classList.add('hidden');if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});if(!saveWritable)toast('Your existing save could not be read or backed up. Saving is paused to protect it.');toast('<b>Welcome to Oakrest!</b> Practice on the straw dummy by the gate. Red ground warnings show where an enemy will strike.');});
+const characterUI=setupCharacterCreator({
+ listProfiles:()=>profiles,getCurrentId:()=>activeCharacter?.id,
+ legacyAvailable:()=>legacySave!==null,
+ onCreate(input){
+  if(!saveWritable)throw new Error('Browser storage is unavailable. Cannot save a new character.');
+  const profile=createCharacter(input,profiles,crypto.randomUUID());
+  const fresh=freshCharacterSave(),updated=[...profiles,profile];
+  try{
+   localStorage.setItem(saveKeyFor(profile.id),JSON.stringify(fresh));
+   localStorage.setItem(rosterKey,JSON.stringify(updated));
+   localStorage.setItem(activeKey,profile.id);
+  }catch{throw new Error('Could not save the character. Check available browser storage.');}
+  profiles=updated;useCharacter(profile,fresh);save();
+ },
+ onSelect(profile){
+  const saved=localStorage.getItem(saveKeyFor(profile.id));
+  if(!saved)throw new Error('Character progress could not be found. No saves were changed.');
+  const loaded=validSave(JSON.parse(saved));localStorage.setItem(activeKey,profile.id);
+  useCharacter(profile,loaded);
+ },
+ onLegacy(){
+  if(!legacySave)throw new Error('No earlier character was found.');
+  localStorage.removeItem(activeKey);useCharacter(null,legacySave);
+ }
+});
+$('choose-character').addEventListener('click',()=>characterUI.show());
+if(activeCharacter)useCharacter(activeCharacter,data);
+else if(legacySave)useCharacter(null,legacySave);
+else characterUI.show();
+$('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){characterUI.show();return;}started=true;audio.unlock();$('intro').classList.add('hidden');if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});if(!saveWritable)toast('Your existing save could not be read or backed up. Saving is paused to protect it.');toast('<b>Welcome to Oakrest!</b> Practice on the straw dummy by the gate. Red ground warnings show where an enemy will strike.');});
 equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
 const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
