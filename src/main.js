@@ -380,6 +380,87 @@ makeEnemy('dummy',-6,-3);
 makeEnemy('mossling',-4,-21);makeEnemy('mossling',5,-24);makeEnemy('mossling',-8,-30);
 makeEnemy('boar',4,-33);makeEnemy('boar',10,-39);
 makeEnemy('bandit',-5,-49);
+// The existing Greenwood is one physical world layer. The tutorial and Portal
+// Realm are separate scenes in the same renderer, with independent visibility.
+const worldLayer=scene.children.filter(obj=>obj!==hero&&!obj.isLight);
+const openingWorld=createOpeningLocations(scene);
+const practiceDummy=makeEnemy('dummy',0,-7);
+practiceDummy.onboardingDummy=true;
+openingWorld.training.add(practiceDummy.group);
+const activeEnemies=()=>data.onboarding?.area==='tutorial'?[practiceDummy]:
+ data.onboarding?.area==='realm'?[]:enemies.filter(e=>!e.onboardingDummy);
+const firstCity={name:'Oakrest',id:'oakrest'};
+function updateOpeningArea(){
+ const area=data.onboarding?.area||'world';
+ for(const o of worldLayer)o.visible=area==='world';
+ openingWorld.training.visible=area==='tutorial';
+ openingWorld.realm.visible=area==='realm';
+ scene.background.set(area==='realm'?'#3b445e':area==='tutorial'?'#9fbf9f':'#a9c8b7');
+ scene.fog.color.set(scene.background);
+ hero.position.set(START_POINTS[area].x,terrainHeight(START_POINTS[area].x,START_POINTS[area].z),START_POINTS[area].z);
+ yaw=0;motion={x:0,z:0};queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;
+ for(const e of enemies){e.levelLabel.hidden=true; if(e.onboardingDummy){e.group.visible=area==='tutorial';e.hp=e.max;}else e.group.visible=area==='world';}
+ for(const model of lootModels.values())model.group.visible=area==='world';
+ $('targetbox').hidden=true;
+ renderOpeningGuide();
+}
+function renderOpeningGuide(){
+ const o=data.onboarding,area=o?.area||'world';
+ const panel=$('opening-panel'),action=$('opening-action'),styles=$('opening-styles'),interact=$('opening-interact');
+ panel.hidden=area==='world';interact.hidden=true;action.hidden=true;styles.hidden=true;
+ if(area==='world')return;
+ if(area==='tutorial'){
+  const hits=o.tutorial.hitStyles,finished=hits.length===3;
+  $('opening-step').textContent='THE FIRST STEPS';
+  $('opening-progress').textContent=finished?'3 / 3':hits.length+' / 3';
+  if(!finished){
+   $('opening-title').textContent='Practise all three combat styles';
+   $('opening-instructions').textContent='Move towards the training dummy and hit it with Melee, Magic and Ranged. Use Tab, 1/2/3 or SWAP to change style. Practice weapons are loaned here and disappear when you leave.';
+   styles.hidden=false;styles.replaceChildren();
+   for(const s of STYLE_ORDER){const chip=document.createElement('span');chip.className='opening-style'+(hits.includes(s)?' done':'');chip.textContent=(hits.includes(s)?'✓ ':'○ ')+s.toUpperCase();styles.append(chip);}
+  }else if(!o.tutorial.skillsRead){
+   $('opening-title').textContent='Understanding your skills';
+   $('opening-instructions').textContent='Health, Melee, Magic and Ranged grow separately. Gathering and crafting skills—including Mining, Hunting, Blacksmithing and Inscription—will be taught here as they are implemented. Inscription will make spell and travel scrolls.';
+   action.hidden=false;action.textContent='I UNDERSTAND THE SKILLS';
+   action.onclick=()=>{o.tutorial.skillsRead=true;save();renderOpeningGuide();};
+  }else if(o.teleportScrolls<1){
+   $('opening-title').textContent='Training complete!';
+   $('opening-instructions').textContent='You have learned the basics. Accept your first Teleportation Scroll from your instructor. Your practice equipment stays here.';
+   action.hidden=false;action.textContent='RECEIVE TELEPORTATION SCROLL';
+   action.onclick=()=>{o.teleportScrolls=1;save();renderOpeningGuide();toast('Received: Teleportation Scroll ×1');};
+  }else{
+   $('opening-title').textContent='Your first journey';
+   $('opening-instructions').textContent='Use your Teleportation Scroll to travel to the Portal Realm. Only the portal to '+firstCity.name+' is open. The scroll is consumed when used.';
+   action.hidden=false;action.textContent='USE TELEPORTATION SCROLL (1)';
+   action.onclick=()=>useTravelScroll();
+  }
+ }else if(area==='realm'){
+  $('opening-step').textContent='THE PORTAL REALM';
+  $('opening-progress').textContent='FIRST DESTINATION';
+  $('opening-title').textContent='The gateway to '+firstCity.name;
+  $('opening-instructions').textContent='Walk into reach of the glowing gateway ahead. It is your only active destination. Other portals unlock when you activate them in cities you visit.';
+ }
+}
+function useTravelScroll(){
+ const o=data.onboarding;
+ if(!started||!o||o.teleportScrolls<1||o.area==='realm')return false;
+ if(o.area==='tutorial'&&(!o.tutorial.skillsRead||o.tutorial.hitStyles.length<3))return false;
+ o.teleportScrolls--;o.area='realm';style='melee';updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();save();
+ toast('You entered the Portal Realm');return true;
+}
+function enterCityPortal(){
+ const o=data.onboarding;
+ if(!started||o?.area!=='realm'||Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)>3.7)return false;
+ o.activatedPortals=['oakrest'];o.area='world';style='melee';updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
+ save();toast('Welcome to '+firstCity.name+'! Your adventure begins.');return true;
+}
+$('opening-interact-button').addEventListener('click',enterCityPortal);
+function updatePortalInteraction(){
+ const o=data.onboarding,interact=$('opening-interact');
+ if(!started||o?.area!=='realm'){interact.hidden=true;return;}
+ const near=Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)<=3.7;
+ interact.hidden=!near;if(near){$('opening-interact-description').textContent='Active gateway: '+firstCity.name;$('opening-interact-button').textContent='ENTER '+firstCity.name.toUpperCase()+' · E';}
+}
 function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
 function refreshStyles(){const host=$('styles');host.innerHTML='';for(const st of STYLE_ORDER){const b=document.createElement('button');b.className=`style ${st===style?'active':''}`;b.style.borderColor=st===style?STYLE_COLOURS[st]:'';b.innerHTML=`<span class="symbol">${{melee:'⚔',magic:'✦',ranged:'➶'}[st]}</span>${st.toUpperCase()} <small>${levelFromXp(data.xp[st]).level}</small>`;b.addEventListener('click',()=>setStyle(st));host.append(b);}}
 function refreshSkills(){
