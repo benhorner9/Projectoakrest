@@ -9,7 +9,7 @@ import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
 import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit } from './terrain.js';
-import { createActor,equipActor,applyCharacterAppearance,animateActor,createCreature,animateCreature } from './actors.js';
+import { createActor,equipActor,applyEquipmentVariant,applyCharacterAppearance,animateActor,createCreature,animateCreature } from './actors.js';
 import { readCharacters,createCharacter } from './characters.js';
 import { setupCharacterCreator } from './character-creator.js';
 import { cottageModel,treeModel,addLandmarks,batchScenery } from './environment.js';
@@ -97,6 +97,7 @@ function equipVisual(style,weaponId){
  const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
  equipActor(hero,style,slotFamily(style,weaponId),protection);
  if(!practice&&!ownsWeapon(data,style,weaponId)){hero.userData.weapon.clear();hero.userData.offhand.clear();}
+ else applyEquipmentVariant(hero,style,weaponId);
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
 }
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
