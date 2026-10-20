@@ -70,7 +70,7 @@ let browser,server;
   oakrestQA.spawn('boar',0,-58);oakrestQA.spawn('bandit',0,-60);oakrestQA.teleport(0,-55);oakrestQA.step(1);
   const encounter=oakrestQA.state().enemies.filter(e=>e.aggro);if(encounter.length<2)throw Error('Multiple enemies did not engage');
   oakrestQA.teleport(0,11);oakrestQA.step(12);
-  const s=oakrestQA.state();if(s.enemies.some(e=>e.warning||e.aggro))throw Error('Leash retained attacks');
+  const s=oakrestQA.state();if(s.enemies.some(e=>e.warning||e.aggro))throw Error('Leash retained attacks');if(s.enemies.some(e=>e.type!=='dummy'&&(e.retreating||Math.hypot(e.x-e.startX,e.z-e.startZ)>.15)))throw Error('Enemy failed to complete return home');
   return {engaged:encounter.map(e=>({type:e.type,state:e.aiState})),returned:s.enemies.filter(e=>e.type!=='dummy').map(e=>({type:e.type,distance:Math.hypot(e.x-e.startX,e.z-e.startZ)}))};
  }));
  await scenario('F cover and continuous dodge',async page=>{

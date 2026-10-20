@@ -49,7 +49,7 @@ try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 catch(err){$('error').hidden=false;throw err;}
 function applyQuality(value){quality=value;renderer.setPixelRatio(Math.min(devicePixelRatio,{low:1,balanced:1.35,high:1.8}[quality]));renderer.shadowMap.enabled=quality!=='low';renderer.setSize(innerWidth,innerHeight);try{localStorage.setItem(oakrestKey('oakrest-quality'),quality);}catch{}}applyQuality(quality);$('quality').value=quality;$('quality').addEventListener('change',e=>applyQuality(e.target.value));$('sound-enabled').addEventListener('change',e=>{audio.setEnabled(e.target.checked);audio.unlock();});
 $('sound-enabled').checked=audio.enabled;
-const soundVolume=document.createElement('input');soundVolume.type='range';soundVolume.min='0';soundVolume.max='1';soundVolume.step='.05';soundVolume.value=audio.volume;soundVolume.setAttribute('aria-label','Combat sound volume');
+const soundVolume=document.createElement('input');soundVolume.id='combat-volume';soundVolume.type='range';soundVolume.min='0';soundVolume.max='1';soundVolume.step='.05';soundVolume.value=audio.volume;soundVolume.setAttribute('aria-label','Combat sound volume');
 soundVolume.addEventListener('input',()=>{audio.setVolume(soundVolume.value);audio.unlock();});
 $('sound-enabled').parentElement.append(soundVolume);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,150);
@@ -705,7 +705,7 @@ function navigateEnemy(e,goal,speed,dt,t){
   e.path=groundPath(position,goal,canTravel,{within:p=>Math.hypot(p.x-e.startX,p.z-e.startZ)<=cfg.leash});
   e.pathGoal={...goal};e.pathAt=t+.8;
  }
- while(e.path.length&&Math.hypot(e.path[0].x-e.x,e.path[0].z-e.z)<.18)e.path.shift();
+ while(e.path.length>1&&Math.hypot(e.path[0].x-e.x,e.path[0].z-e.z)<.18)e.path.shift();
  const target=e.path[0];if(!target){e.stuck=(e.stuck||0)+dt;return false;}
  const dx=target.x-e.x,dz=target.z-e.z,d=Math.hypot(dx,dz),step=Math.min(d,speed*dt);
  const moved=moveOnGround(position,dx/Math.max(.001,d)*step,dz/Math.max(.001,d)*step,radius);
@@ -886,7 +886,7 @@ for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.p
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.7));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
-let aim=null,aimScore=-Infinity;for(const e of activeEnemies()){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
+let aim=null,aimScore=-Infinity;for(const e of activeEnemies()){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30||!clearCombatLine(hero.position.clone().add(new THREE.Vector3(0,1.3,0)),enemyCentre(e)))continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent=ENEMY_COMBAT[aim.type].name+' · Combat Lv '+aim.level;$('target-name').dataset.threat=enemyThreatTier(aim.level,combatLevelFromXp(data.xp));$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
 if(data.onboarding?.area!=='realm'&&hp>0&&isOakrestSafe(hero.position.x,hero.position.z)&&t-lastHurt>8&&!activeEnemies().some(e=>e.aggro)){const max=maxHealth(levelFromXp(data.xp.vitality).level);if(hp<max){hp=Math.min(max,hp+max*.025*dt);updateHpUI();}}
 const z=hero.position.z;$('area').textContent=data.onboarding?.area==='tutorial'?'The First Steps':data.onboarding?.area==='realm'?'Portal Realm':z< -80?'Deep Greenwood':z< -47?'Forest Road':z< -13?'Oakrest Greenbelt':'Oakrest Town';updatePortalInteraction();townUI.update({x:hero.position.x,z:hero.position.z,allowed:started&&hp>0&&(data.onboarding?.area||'world')==='world'});openingWorld.update(data.onboarding?.area||'world',t);
@@ -1038,7 +1038,7 @@ addEventListener('blur',()=>{
   lookPointer=null;keys.clear();
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
+  if(document.hidden){keys.clear();holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
 document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
 function startGameplay(){

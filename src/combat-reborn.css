@@ -12,3 +12,5 @@
  .touch-enabled .touch-actions .skill .name{font-size:10px;max-width:57px}
 }
 @media (prefers-reduced-motion:reduce){.damage-flash,.damage-pop{animation-duration:.12s}}
+
+.sound-setting #combat-volume{width:120px!important;height:28px;flex:1;min-width:80px}
