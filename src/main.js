@@ -703,6 +703,7 @@ function updateEnemyLevelLabels(){
  const playerLevel=combatLevelFromXp(data.xp);
  camera.updateMatrixWorld();
  for(const e of enemies){
+  if(!activeEnemies().includes(e)){e.levelLabel.hidden=true;e.plate.visible=false;continue;}
   const label=e.levelLabel,dist=Math.hypot(hero.position.x-e.x,hero.position.z-e.z);
   e.plate.visible=!e.dead&&started&&dist<17;if(e.dead||!started||dist>17){label.hidden=true;continue;}
   const pos=new THREE.Vector3(e.x,(e.type==='dummy'?3.78:e.type==='mossling'?2.15:3.24)+e.group.position.y,e.z);
@@ -743,18 +744,18 @@ function animate(dt,t){
  camera.position.lerp(ideal,1-Math.exp(-10*dt));const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
  const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*4,0));
  cameraFocus.lerp(cameraAim,1-Math.exp(-13*dt));camera.lookAt(cameraFocus);
- for(const e of enemies)updateEnemy(e,dt,t);
+ for(const e of activeEnemies())updateEnemy(e,dt,t);
  updateEnemyLevelLabels();
  updateLoot(dt,t);
-for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of enemies){if(e.dead||e.hp<=0||e.retreating)continue;const center={x:e.x,y:terrainHeight(e.x,e.z)+(e.type==='mossling'?.75:1.25),z:e.z};const hit=segmentHit(start,p.mesh.position,center,e.type==='dummy'?.7:.8);if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position);if(worldHit!==null&&worldHit<=best){sparks(start.clone().lerp(p.mesh.position,worldHit),STYLE_COLOURS[p.style],4);p.life=0;}else if(closest){hitEnemy(closest,p.damage,p.opts,p.source);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);p.life=0;}}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of activeEnemies()){if(e.dead||e.hp<=0||e.retreating)continue;const center={x:e.x,y:terrainHeight(e.x,e.z)+(e.type==='mossling'?.75:1.25),z:e.z};const hit=segmentHit(start,p.mesh.position,center,e.type==='dummy'?.7:.8);if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position);if(worldHit!==null&&worldHit<=best){sparks(start.clone().lerp(p.mesh.position,worldHit),STYLE_COLOURS[p.style],4);p.life=0;}else if(closest){hitEnemy(closest,p.damage,p.opts,p.source);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);p.life=0;}}
  if(p.age>p.life||(!p.particle&&(p.distance>=p.maxDistance||p.mesh.position.y<terrainHeight(p.mesh.position.x,p.mesh.position.z)))){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
-let aim=null,aimScore=-Infinity;for(const e of enemies){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
+let aim=null,aimScore=-Infinity;for(const e of activeEnemies()){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent=ENEMY_COMBAT[aim.type].name+' · Combat Lv '+aim.level;$('target-name').dataset.threat=enemyThreatTier(aim.level,combatLevelFromXp(data.xp));$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
-if(hp>0&&hero.position.z> -7&&t-lastHurt>8&&!enemies.some(e=>e.aggro)){const max=maxHealth(levelFromXp(data.xp.vitality).level);if(hp<max){hp=Math.min(max,hp+max*.025*dt);updateHpUI();}}
-const z=hero.position.z;$('area').textContent=z< -42?'Forest Road':z< -12?'Oakrest Outskirts':'Oakrest Village';
+if(data.onboarding?.area!=='realm'&&hp>0&&hero.position.z> -7&&t-lastHurt>8&&!activeEnemies().some(e=>e.aggro)){const max=maxHealth(levelFromXp(data.xp.vitality).level);if(hp<max){hp=Math.min(max,hp+max*.025*dt);updateHpUI();}}
+const z=hero.position.z;$('area').textContent=data.onboarding?.area==='tutorial'?'The First Steps':data.onboarding?.area==='realm'?'Portal Realm':z< -42?'Forest Road':z< -12?'Oakrest Outskirts':'Oakrest Village';updatePortalInteraction();openingWorld.update(data.onboarding?.area||'world',t);
 const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  const attackButton=$('touch-attack'),attackTimer=$('attack-timer');
  attackButton.style.setProperty('--attack-deg',(timer.progress*360).toFixed(1)+'deg');
