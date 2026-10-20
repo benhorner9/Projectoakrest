@@ -12,6 +12,10 @@ test('release asset import version prevents stale iPad ES modules',()=>{
   const ref='./src/'+(path==='main.js'?'main.js':path);
   assert.ok(html.includes(ref+'?v='+version),'HTML must version '+ref);
  }
+ const characters=readFileSync('dist/characters.html','utf8');
+ assert.ok(characters.includes('./src/character-standalone.js?v='+version),'standalone char JS versioned');
+ assert.ok(characters.includes('./src/character-standalone.css?v='+version),'standalone char CSS versioned');
+ assert.ok(html.includes('href="./characters.html"'),'title has native Characters navigation');
  const main=readFileSync('dist/src/main.js','utf8');
  assert.ok(main.includes("from './character-creator.js?v="+version+"'"),'new character module is versioned');
  assert.ok(main.includes("from './characters.js?v="+version+"'"),'character storage module is versioned');
