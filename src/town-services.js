@@ -62,7 +62,8 @@ export function bankMaterials(data,id,direction){
   const dest=direction==='deposit'?bank.materials:inventory.materials;
   const amount=Math.min(src[id]||0,9999-(dest[id]||0));
   if(!Number.isSafeInteger(amount)||amount<=0)return 0;
-  src[id]-=amount;dest[id]=(dest[id]||0)+amount;
+  src[id]-=amount;if(src[id]===0)delete src[id];
+  dest[id]=(dest[id]||0)+amount;
   return amount;
 }
 export function bankEquipment(data,kind,id,direction,style=null){
