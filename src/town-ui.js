@@ -1,5 +1,6 @@
 import {LOADOUTS,ARMOUR,STYLE_ORDER,levelFromXp} from './rules.js';
-import {SHOP_STOCK,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
+import {SLOT_ITEMS} from './equipment-slots.js';
+import {SHOP_STOCK,missingStarterSetPieces,starterSetPrice,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
 
 /** One accessible overlay for all town services, without server/API dependencies. */
 export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,onOpen}){
@@ -59,11 +60,34 @@ export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,o
           else notify('Unequip armour in every style before banking');
         },bagged&&Object.values(data.armour).includes(id));
       }
+      for(const id of [...new Set([...(data.inventory.slotted||[]),...(bank.slotted||[])])]){
+        const item=SLOT_ITEMS[id];if(!item)continue;
+        const bagged=data.inventory.slotted.includes(id);
+        actions=row(item.title,item.slot.toUpperCase()+' · '+item.style.toUpperCase()+' · '+(bagged?'Bag':'Vault'));
+        button(actions,bagged?'STORE':'TAKE',()=>{
+          if(bankEquipment(data,'slot',id,bagged?'deposit':'withdraw'))changed('Equipment transferred',true);
+          else notify('Unequip this item before banking');
+        },bagged&&Object.values(data.equipment||{}).some(slots=>slots?.[item.slot]===id));
+      }
     }else if(service.id==='store'){
       node('p','Basic equipment for local adventurers. More powerful weapons and profession supplies belong to other settlements.',body);
       node('p','Coins on you: '+data.coins,body);
       const bank=townBank(data);
+      node('h3','Beginner combat sets',body);
+      node('p','Each set contains a weapon, chest armour and six matching slot items. Already-owned or banked pieces are deducted from the set price.',body);
       for(const stock of SHOP_STOCK){
+        if(stock.kind==='bundle'){
+          const missing=missingStarterSetPieces(data,stock.style),price=starterSetPrice(data,stock.style);
+          const actions=row(stock.label,(missing.length?price+' coins · '+missing.length+' pieces needed':'Complete set owned')+' · '+stock.style.toUpperCase());
+          button(actions,missing.length?'BUY SET':'OWNED',()=>{
+            const result=buyStarterStock(data,stock.id);
+            if(result.ok)changed('Purchased '+result.pieces+' pieces from '+stock.label,true);else notify(result.reason);
+          },!missing.length||data.coins<price);
+          continue;
+        }
+      }
+      node('h3','Individual essentials',body);
+      for(const stock of SHOP_STOCK.filter(x=>x.kind!=='bundle')){
         const bagged=stock.kind==='weapon'?data.inventory.weapons[stock.style].includes(stock.itemId):data.inventory.armour.includes(stock.itemId);
         const banked=stock.kind==='weapon'?bank.weapons[stock.style].includes(stock.itemId):bank.armour.includes(stock.itemId);
         const actions=row(stock.label,stock.price+' coins · '+(bagged?'Owned':banked?'Banked':'Available'));
