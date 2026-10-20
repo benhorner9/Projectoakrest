@@ -89,3 +89,10 @@ export function groundPath(start,goal,canTravel,{cell=1,maxNodes=700,within=()=>
  }
  return [];
 }
+
+/** Charge damage cannot extend beyond its frozen rectangular warning. */
+export function withinChargeLane(warning,target){
+ const dx=target.x-warning.x,dz=target.z-warning.z,dir=warning.direction;
+ const along=dx*dir.x+dz*dir.z,side=Math.abs(dx*dir.z-dz*dir.x);
+ return along>=0&&along<=warning.length&&side<=warning.width;
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {segmentSphere,movingSphereHit,segmentBox,segmentCylinder,sweptStrikeHit,MELEE_PROFILES,groundPath,abilityCooldownKey,dodgeInvulnerable,DODGE} from '../src/combat-physics.js';
+import {segmentSphere,movingSphereHit,segmentBox,segmentCylinder,sweptStrikeHit,MELEE_PROFILES,groundPath,abilityCooldownKey,dodgeInvulnerable,DODGE,withinChargeLane} from '../src/combat-physics.js';
 import {segmentWorldHit,addWorldObstacle,clearWorldObstacles,groundSegmentClear,moveOnGround,terrainHeight,blocked,setCollisionArea} from '../src/terrain.js';
 test.afterEach(()=>clearWorldObstacles());
 const v=(x,z,y=1)=>({x,y,z});
@@ -86,4 +86,13 @@ test('hidden world scenery never blocks tutorial or portal courtyard',()=>{
  setCollisionArea('tutorial');assert.equal(blocked(-14,12,.42),false);
  addWorldObstacle({x:20,z:0,r:1,height:3,area:'tutorial'});assert.equal(blocked(20,0),true);
  setCollisionArea('world');assert.equal(blocked(20,0),false);
+});
+
+test('boar body contact cannot damage beyond or behind its advertised charge lane',()=>{
+ const warning={x:0,z:0,direction:{x:0,z:-1},length:6,width:1.2};
+ assert.equal(withinChargeLane(warning,{x:0,z:-6}),true);
+ assert.equal(withinChargeLane(warning,{x:0,z:-6.01}),false);
+ assert.equal(withinChargeLane(warning,{x:0,z:.01}),false);
+ assert.equal(withinChargeLane(warning,{x:1.21,z:-3}),false);
+ assert.equal(withinChargeLane(warning,{x:1,z:-3}),true);
 });

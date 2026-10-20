@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {MELEE_PROFILES,sweptStrikeHit,movingSphereHit,abilityCooldownKey,groundPath,DODGE,dodgeInvulnerable} from './combat-physics.js';
+import {MELEE_PROFILES,sweptStrikeHit,movingSphereHit,abilityCooldownKey,groundPath,DODGE,dodgeInvulnerable,withinChargeLane} from './combat-physics.js';
 import { storageKey } from './storage-key.js';
 import {CAMERA_DEFAULTS,normalizeCameraSettings,readCameraSettings,firstStandardGamepad,gamepadEdges,cameraOrbitVector,frameDamping} from './control-config.js';
 import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor,equipPrimaryItem } from './rules.js';
@@ -762,7 +762,7 @@ function updateEnemy(e,dt,t){
   if(t>=e.attackWindup){
    cancelEnemyWarning(e);
    if(spec.kind==='charge'){
-    e.charge={direction:warning.direction,end:t+spec.length/spec.chargeSpeed,hit:false};
+    e.charge={direction:warning.direction,warning,end:t+spec.length/spec.chargeSpeed,hit:false};
    }else if(spec.kind==='pounce'){e.pounce={x:warning.x,z:warning.z,end:t+.28,warning};}
    else if(isThreatened(spec.kind,warning,hero.position)&&clearCombatLine(enemyCentre(e),{x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z}))applyEnemyDamage(e,spec,t);
    e.aiState='recover';
@@ -785,7 +785,7 @@ function updateEnemy(e,dt,t){
   if(Math.hypot(moved.x-e.startX,moved.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,t);return;}
   const travel=Math.hypot(moved.x-e.x,moved.z-e.z);
   e.x=moved.x;e.z=moved.z;e.group.position.set(e.x,moved.y,e.z);
-  if(!e.charge.hit&&segmentHit(old,enemyCentre(e),{x:hero.position.x,y:hero.position.y+1,z:hero.position.z},1.1)!==null&&clearCombatLine(enemyCentre(e),{x:hero.position.x,y:hero.position.y+1,z:hero.position.z})){
+  if(!e.charge.hit&&withinChargeLane(e.charge.warning,hero.position)&&segmentHit(old,enemyCentre(e),{x:hero.position.x,y:hero.position.y+1,z:hero.position.z},1.1)!==null&&clearCombatLine(enemyCentre(e),{x:hero.position.x,y:hero.position.y+1,z:hero.position.z})){
    e.charge.hit=true;applyEnemyDamage(e,spec,t);
   }
   if(travel<step*.7){e.charge=null;e.aiState='recover';}
