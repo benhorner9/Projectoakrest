@@ -120,7 +120,7 @@ function equipVisual(style,weaponId){
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
 }
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
-const activeStrikes=[];let dodgeStarted=-Infinity;
+const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
 let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,lastAttackInterval=0.95,dodgeTravel=null;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
 const cameraStorageKey=oakrestKey('oakrest-camera-settings-v1');
@@ -409,7 +409,7 @@ const activeEnemies=()=>data.onboarding?.area==='tutorial'?[practiceDummy]:
  data.onboarding?.area==='realm'?[]:enemies.filter(e=>!e.onboardingDummy);
 const firstCity={name:'Oakrest',id:'oakrest'};
 function updateOpeningArea(){
- const area=data.onboarding?.area||'world';setCollisionArea(area);activeStrikes.length=0;
+ const area=data.onboarding?.area||'world';setCollisionArea(area);activeStrikes.length=0;groundEffects.length=0;
  for(const p of projectiles){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);}projectiles.length=0;
  for(const o of worldLayer)o.visible=area==='world';
  openingWorld.training.visible=area==='tutorial';
@@ -490,7 +490,9 @@ function refreshSkills(){
   const b=document.createElement('button');b.className='skill';b.type='button';b.title=a?`${a.note} Cooldown: ${a.cooldown}s`:'Open SKILLS to equip an ability';
   b.classList.toggle('empty',!a);
   b.innerHTML=`<span class="key">${'QERF'[i]}</span><span class="skill-icon">${a?.icon||'+'}</span><span class="name">${a?.name||'EMPTY'}</span><span class="cooldown"></span>`;
-  b.addEventListener('click',()=>a?useAbility(i):bookOpen('abilities'));host.append(b);
+  let touchAt=-Infinity;
+  b.addEventListener('pointerdown',event=>{if(event.pointerType==='touch'||event.pointerType==='pen'){event.preventDefault();touchAt=now();a?useAbility(i):bookOpen('abilities');}});
+  b.addEventListener('click',()=>{if(now()-touchAt>.35)a?useAbility(i):bookOpen('abilities');});host.append(b);
  });
  $('weapon-name').textContent=getWeapon().title;refreshStyles();updateHpUI();
  $('touch-attack').title=weaponDisplay(getWeapon());
@@ -524,8 +526,9 @@ function beginStrike(damage,reach,ability={},family=slotFamily(style,data.gear[s
  if(ability.kind==='sweep'){profile.halfAngle=1.15;profile.multi=true;}
  if(ability.kind==='hit'||ability.kind==='execute'){profile.halfAngle=Math.min(.48,profile.halfAngle);profile.multi=false;}
  const origin=hero.position.clone();origin.y+=1.1;
- activeStrikes.push({origin,yaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set()});
- slashEffect(reach);
+ const strike={origin,yaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set()};
+ activeStrikes.push(strike);visuals.sweep(strike,STYLE_COLOURS[style]);
+ if(attackAnimation){attackAnimation.contactDuration=profile.duration;attackAnimation.halfAngle=profile.halfAngle;attackAnimation.reverse=strike.reverse;}
 }
 function updateStrikes(t){
  for(let i=activeStrikes.length-1;i>=0;i--){
@@ -541,8 +544,8 @@ function updateStrikes(t){
   strike.previous=progress;if(progress>=1)activeStrikes.splice(i,1);
  }
 }
-function areaImpact(origin,radius,damage,ability,source){
- for(const e of activeEnemies()){if(e.dead||e.retreating)continue;const c=enemyCentre(e);
+function areaImpact(origin,radius,damage,ability,source,exclude=null){
+ for(const e of activeEnemies()){if(e.dead||e.retreating||e===exclude)continue;const c=enemyCentre(e);
   if(Math.hypot(c.x-origin.x,c.y-origin.y,c.z-origin.z)<=radius&&clearCombatLine(origin,c))hitEnemy(e,damage,ability,source);
  }
  const ground=new THREE.Vector3(origin.x,terrainHeight(origin.x,origin.z),origin.z);
@@ -586,7 +589,7 @@ function slashEffect(reach=3){
  const heading=forward();
  const p=hero.position.clone().add(heading.clone().multiplyScalar(Math.min(2,reach*.68)));
  p.y=hero.position.y+1.25;
- sparks(p,STYLE_COLOURS[style],7);
+ // A miss has a weapon trail but no impact particles.
  visuals.arc(hero.position,heading,reach,STYLE_COLOURS[style],comboStage);
 }
 function doBasic(){
@@ -630,7 +633,7 @@ function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;
    else if(style==='ranged')[-.18,-.09,0,.09,.18].forEach(v=>shoot(a.damage,30,'#edd28f',a,v,a.reach));
    else [-.28,-.14,0,.14,.28].forEach(v=>shoot(a.damage,13,'#f6b070',{...a,waveId:now()},v,a.reach));
   }
-  else if(a.kind==='nova'){areaImpact(hero.position.clone().add(new THREE.Vector3(0,1.1,0)),a.reach,a.damage,a,sourceSnapshot());}
+  else if(a.kind==='nova'){const origin=hero.position.clone().add(new THREE.Vector3(0,1.1,0));areaImpact(origin,a.reach,a.damage,a,sourceSnapshot());if(groundEffects.length<8){groundEffects.push({origin,radius:a.reach,until:now()+3,source:sourceSnapshot()});visuals.field(origin,a.reach,3,'#92d8ec',(x,z)=>data.onboarding?.area==='tutorial'?0:terrainHeight(x,z));}}
   else if(a.kind==='bolt')shoot(a.damage,a.speed,style==='magic'?(slotFamily(style,data.gear[style])==='ember'?'#f6b070':'#a3d6f7'):'#edd28f',a);
   else if(a.kind==='burst')[-.09,0,.09].forEach(v=>shoot(a.damage,a.speed,'#eac993',a,v));
   else if(a.kind==='shield'){shieldUntil=now()+a.duration;addRing(hero.position.clone(),'#83c4ee',2.6,.65);toast(`${a.name} activated`);}
@@ -682,7 +685,7 @@ function applyEnemyDamage(e,spec,t){
  $('damage-flash').classList.remove('hit');void $('damage-flash').offsetWidth;$('damage-flash').classList.add('hit');
  floating('-'+harm,'#ff948d',hero.position.clone().add(new THREE.Vector3(0,2.8,0)));
  updateHpUI();
- if(hp<=0){activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;motion={x:0,z:0};
+ if(hp<=0){activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
   toast('<b>YOU WERE DEFEATED</b> · Respawning in Oakrest');
   respawnAt=t+2.1;
  }
@@ -853,7 +856,7 @@ function animate(dt,t){
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||activeStrikes.length||t<attackUntil;
  const heading=gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
  visualHeading=dampAngle(visualHeading,heading,19,dt);hero.rotation.y=visualHeading;
- animateActor(hero,{dt,t,stride,speed:gait,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
+ animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const ideal=look.clone().add(new THREE.Vector3(orbit.x,orbit.y,orbit.z));
@@ -862,6 +865,9 @@ function animate(dt,t){
  camera.position.lerp(ideal,frameDamping(cameraSettings.smoothing,dt));const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
  const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*4,0));
  cameraFocus.lerp(cameraAim,frameDamping(cameraSettings.smoothing+3,dt));camera.lookAt(cameraFocus);
+ for(let i=groundEffects.length-1;i>=0;i--){const field=groundEffects[i];if(t>=field.until){groundEffects.splice(i,1);continue;}
+  for(const e of activeEnemies())if(!e.dead&&!e.retreating&&Math.hypot(e.x-field.origin.x,e.z-field.origin.z)<=field.radius&&clearCombatLine(field.origin,enemyCentre(e)))e.slowUntil=Math.max(e.slowUntil,t+.15);
+ }
  for(const e of activeEnemies()){e.previousCentre=enemyCentre(e);updateEnemy(e,dt,t);}updateStrikes(t);
  const bodies=activeEnemies().filter(e=>!e.dead&&e.type!=='dummy');
  for(let i=0;i<bodies.length;i++){
@@ -874,7 +880,7 @@ function animate(dt,t){
  }
  updateEnemyLevelLabels();
  updateLoot(dt,t);
-for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of activeEnemies()){if(e.dead||e.hp<=0||e.retreating)continue;const center=enemyCentre(e);const hit=movingSphereHit(start,p.mesh.position,e.previousCentre||center,center,enemyRadius(e)+(p.style==='magic'?.18:.04));if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position,p.style==='magic'?.18:.04);if(worldHit!==null&&worldHit<=best){sparks(start.clone().lerp(p.mesh.position,worldHit),STYLE_COLOURS[p.style],4);p.life=0;}else if(closest){p.mesh.position.lerpVectors(start,p.mesh.position,best);if(p.opts.waveId===undefined||closest.lastWave!==p.opts.waveId){hitEnemy(closest,p.damage,p.opts,p.source);closest.lastWave=p.opts.waveId;}sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);if(p.opts.explosion)areaImpact(p.mesh.position,p.opts.explosion,p.damage*.45,{},p.source);p.life=0;}}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of activeEnemies()){if(e.dead||e.hp<=0||e.retreating)continue;const center=enemyCentre(e);const hit=movingSphereHit(start,p.mesh.position,e.previousCentre||center,center,enemyRadius(e)+(p.style==='magic'?.18:.04));if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position,p.style==='magic'?.18:.04);if(worldHit!==null&&worldHit<=best){const impact=start.clone().lerp(p.mesh.position,worldHit);sparks(impact,STYLE_COLOURS[p.style],4);if(p.opts.explosion){areaImpact(impact,p.opts.explosion,p.damage*.45,{},p.source);audio.play('explosion');}p.life=0;}else if(closest){p.mesh.position.lerpVectors(start,p.mesh.position,best);if(p.opts.waveId===undefined||closest.lastWave!==p.opts.waveId){hitEnemy(closest,p.damage,p.opts,p.source);closest.lastWave=p.opts.waveId;}sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);if(p.opts.explosion){areaImpact(p.mesh.position,p.opts.explosion,p.damage*.45,{},p.source,closest);audio.play('explosion');}p.life=0;}}
  if(p.age>p.life||(!p.particle&&(p.distance>=p.maxDistance||p.mesh.position.y<terrainHeight(p.mesh.position.x,p.mesh.position.z)))){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.7));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
@@ -888,8 +894,8 @@ const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  attackButton.style.setProperty('--attack-deg',(timer.progress*360).toFixed(1)+'deg');
  attackButton.classList.toggle('recovering',!timer.ready);$('weapon-cycle').textContent=timer.ready?'ATTACK READY':timer.remaining.toFixed(1)+'s recovery';
  if(attackTimer)attackTimer.textContent=timer.ready?'READY':timer.remaining.toFixed(1)+'s';
- const remainingDodge=Math.max(0,dodgeUntil-t);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
- for(const [i,b] of [...$('skills').children].entries()){const ability=equippedSkills(data,style,data.gear[style])[i];const until=ability?cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability))||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
+ const remainingDodge=Math.max(0,dodgeUntil-t);$('touch-dodge').classList.toggle('unavailable',remainingDodge>0);$('touch-swap').classList.toggle('queued',!!queuedStyle);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
+ for(const [i,b] of [...$('skills').children].entries()){const ability=equippedSkills(data,style,data.gear[style])[i];const until=ability?cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability))||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);const unavailable=!!ability&&(remaining>0||t<attackUntil||!!dodgeTravel||t<switchUntil);b.classList.toggle('unavailable',unavailable);b.setAttribute('aria-disabled',String(unavailable));b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);
 const canvas=renderer.domElement;
@@ -1033,7 +1039,7 @@ addEventListener('blur',()=>{
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
-document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
+document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
 function startGameplay(){
  if(started)return;
  if(!activeCharacter&&!legacySave)return;

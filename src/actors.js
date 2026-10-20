@@ -99,16 +99,19 @@ export function applyEquipmentVariant(g,style,itemId){
  const gemstone=new THREE.Mesh(geometry,gemMaterial);gemstone.position.set(.16,-.06,-.25-(seed%3)*.13);u.weapon.add(gemstone);
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;
- u.rig.rotation.z=damp(u.rig.rotation.z,dead?-1.5:-side*.06,12,dt);u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05,22,dt);
+ u.rig.rotation.z=damp(u.rig.rotation.z,dead?-1.5:hit?.13:-side*.06,12,dt);u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05,22,dt);
  let right=-.12+s*.25*strength,left=-.1-s*.30*strength,elbow=-.2;
  if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
  else if(['frost','ember'].includes(family)){right=.38+wind*.8+release*.3;left=.35+wind*.45;elbow=.35;}
  else {right+=wind*1.6+release*.32;elbow=.15+wind*.35;left=family==='greatsword'?right*.8:family==='daggers'?.25-wind*.4+release*.55:left;}
  u.rightArm.rotation.x=pose.phase==='release'&&pose.amount>.93?right:damp(u.rightArm.rotation.x,right,35,dt);u.leftArm.rotation.x=damp(u.leftArm.rotation.x,left,25,dt);
+ const contact=attack?.contactDuration?Math.max(0,Math.min(1,(t-attack.impactAt)/attack.contactDuration)):0;
+ const swing=attack?.halfAngle?(-attack.halfAngle+2*attack.halfAngle*contact)*(attack.reverse?-1:1):0;
+ u.rightArm.rotation.y=damp(u.rightArm.rotation.y,pose.phase==='release'?swing:0,35,dt);
  u.rightArm.rotation.z=damp(u.rightArm.rotation.z,pose.phase==='idle'?-.1:-wind*.7+release*.5,30,dt);
  u.rightElbow.rotation.x=damp(u.rightElbow.rotation.x,elbow,25,dt);u.leftElbow.rotation.x=damp(u.leftElbow.rotation.x,['bow','shortbow','crossbow'].includes(family)?.6:.25,20,dt);
  u.cape.rotation.x=damp(u.cape.rotation.x,.08+strength*.27+Math.sin(t*5)*.025,6,dt);

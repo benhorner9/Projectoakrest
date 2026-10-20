@@ -1,0 +1,14 @@
+/* Aim at the camera ray centre. Keep essential combat feedback readable. */
+.reticle{top:50%;left:50%;transform:translate(-50%,-50%);opacity:.85;width:12px;height:12px}
+.reticle i{top:5px;width:12px;height:2px;background:#f5efcf}
+.skill.unavailable:not(.cooling){filter:saturate(.35);opacity:.65}
+#touch-dodge.unavailable{filter:saturate(.25);opacity:.68}
+#touch-swap.queued{border-color:#f0d99f!important;box-shadow:0 0 0 3px #e7ca8140}
+.enemy-world-label{font-variant-numeric:tabular-nums}
+#weapon-cycle,#attack-timer,.cooldown{font-variant-numeric:tabular-nums}
+@media (min-width:1000px) and (pointer:coarse){
+ .touch-enabled .touch-actions{right:max(24px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));width:340px;height:320px}
+ .touch-enabled .touch-actions .skill{width:64px;height:64px;min-width:64px;min-height:64px}
+ .touch-enabled .touch-actions .skill .name{font-size:10px;max-width:57px}
+}
+@media (prefers-reduced-motion:reduce){.damage-flash,.damage-pop{animation-duration:.12s}}
