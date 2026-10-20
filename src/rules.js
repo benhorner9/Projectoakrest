@@ -110,6 +110,14 @@ export function skillCatalogue(style,weaponId){
 }
 export function canEquipWeapon(style,weaponId,xp){const w=LOADOUTS[style]?.[weaponId];return !!w&&levelFromXp(xp?.[style]||0).level>=w.requiredLevel;}
 export function canEquipArmour(id,xp){return !!ARMOUR[id]&&levelFromXp(xp?.vitality||0).level>=ARMOUR[id].requiredVitality;}
+export function equipPrimaryItem(data,kind,style,id){
+ if(!STYLE_ORDER.includes(style)||!['weapon','armour'].includes(kind))return false;
+ if(id!==null&&(kind==='weapon'?(!canEquipWeapon(style,id,data.xp)||!ownsWeapon(data,style,id)):
+   (!canEquipArmour(id,data.xp)||!ownsArmour(data,id))))return false;
+ // Tutorial weapons are loaned and must stay available to finish the three styles.
+ if(data.onboarding?.area==='tutorial'&&kind==='weapon'&&id===null)return false;
+ data[kind==='weapon'?'gear':'armour'][style]=id??'none';return true;
+}
 export const UNARMOURED={title:'Starter clothing',physical:0,magical:0,mobility:1,bonusStyle:null,bonusPower:0,description:'Ordinary clothes, with no armour protection.'};
 export function defenceFor(id){return id==='none'?UNARMOURED:ARMOUR[id]||ARMOUR.traveller;}
 export function outgoingMultiplier(armourId,style){const a=defenceFor(armourId);return a.bonusStyle===style?1+a.bonusPower:1;}
@@ -259,10 +267,10 @@ export function validSave(raw){
   if(raw.inventory?.weapons){
    for(const style of STYLE_ORDER){
     const owned=raw.inventory.weapons[style];
-    if(Array.isArray(owned))d.inventory.weapons[style]=owned.filter(id=>typeof id==='string'&&Object.hasOwn(LOADOUTS[style],id));
+    if(Array.isArray(owned))d.inventory.weapons[style]=[...new Set(owned.filter(id=>typeof id==='string'&&Object.hasOwn(LOADOUTS[style],id)))];
    }
   }
-  if(Array.isArray(raw.inventory?.armour))d.inventory.armour=raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id));
+  if(Array.isArray(raw.inventory?.armour))d.inventory.armour=[...new Set(raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id)))];
   if(Array.isArray(raw.inventory?.slotted))d.inventory.slotted=[...new Set(raw.inventory.slotted.filter(id=>Object.hasOwn(SLOT_ITEMS,id)))];
   if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
@@ -308,6 +316,8 @@ export function validSave(raw){
       const id=raw.equipment?.[style]?.[slot];
       if(canEquipSlotItem(d,style,id)&&SLOT_ITEMS[id].slot===slot)d.equipment[style][slot]=id;
     }
+    if(raw.gear?.[style]==='none'||(!ownsWeapon(d,style,d.gear[style])&&d.onboarding?.area!=='tutorial'))d.gear[style]='none';
+    if(raw.armour?.[style]==='none'||!ownsArmour(d,d.armour[style]))d.armour[style]='none';
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
     if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];
     const level=levelFromXp(d.xp[style]).level;

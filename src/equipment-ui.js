@@ -1,5 +1,5 @@
 import {STYLE_ORDER,LOADOUTS,ARMOUR,canEquipWeapon,canEquipArmour,ownsWeapon,ownsArmour} from './rules.js';
-import {EQUIPMENT_SLOTS,EXTRA_SLOTS,SLOT_ITEMS} from './equipment-slots.js';
+import {EQUIPMENT_SLOTS,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
 import {weaponDisplay} from './attack-rules.js';
 const node=(tag,text,parent,cls)=>{
@@ -42,6 +42,7 @@ export function renderInventoryGrid(host,data,examine){
   if(!entry){node('div',null,grid,'oak-inventory-empty').setAttribute('aria-hidden','true');continue;}
   const item=getItem(entry.canonical);if(!item)continue;
   const tile=button(grid,'Examine '+item.title,()=>examine(entry.canonical),'oak-inventory-item');
+  tile.dataset.kind=item.kind;
   tile.setAttribute('aria-label','Examine '+item.title+(entry.qty>1?', quantity '+entry.qty:''));
   icon(tile,entry.canonical);
   if(entry.qty>1)node('span',String(entry.qty),tile,'oak-item-quantity');
@@ -97,11 +98,11 @@ export function renderExamine(host,data,currentStyle,itemId,{onGear,onSlot,onTra
   const {style,itemId:id}=item.legacy,w=LOADOUTS[style]?.[id];
   fact('Slot','Weapon');fact('Style',style.toUpperCase());
   fact('Requires',style.toUpperCase()+' level '+w.requiredLevel);
-  fact('Basic attack',weaponDisplay(w));
+  fact('Basic attack',weaponDisplay(w));fact('Attack interval',w.interval+' seconds');fact('Range',w.reach+' metres');
   const owned=ownsWeapon(data,style,id),active=data.gear?.[style]===id;
   const ready=canEquipWeapon(style,id,data.xp);
-  const act=button(host,active?'Currently equipped':'Equip to '+style.toUpperCase(),()=>onGear('weapon',id,style),'oak-examine-action',!owned||!ready||active);
-  act.textContent=active?'EQUIPPED':!ready?'LEVEL '+w.requiredLevel+' REQUIRED':'EQUIP';
+  const act=button(host,active?'Unequip':'Equip to '+style.toUpperCase(),()=>onGear('weapon',active?null:id,style),'oak-examine-action',!owned||!ready||(active&&data.onboarding?.area==='tutorial'));
+  act.textContent=active?'UNEQUIP':!ready?'LEVEL '+w.requiredLevel+' REQUIRED':'EQUIP';
  }else if(item.kind==='armour'){
   const id=item.legacy.itemId,a=ARMOUR[id];
   fact('Slot','Chest');fact('Requires','Vitality level '+a.requiredVitality);
@@ -111,8 +112,8 @@ export function renderExamine(host,data,currentStyle,itemId,{onGear,onSlot,onTra
   if(a.bonusStyle)fact('Style bonus',a.bonusStyle+' damage +'+Math.round(a.bonusPower*100)+'%');
   fact('Equip to',currentStyle.toUpperCase());
   const ready=canEquipArmour(id,data.xp),active=data.armour?.[currentStyle]===id;
-  const act=button(host,active?'Currently equipped':'Equip chest armour',()=>onGear('armour',id,currentStyle),'oak-examine-action',!ready||!ownsArmour(data,id)||active);
-  act.textContent=active?'EQUIPPED':!ready?'VITALITY '+a.requiredVitality+' REQUIRED':'EQUIP';
+  const act=button(host,active?'Unequip':'Equip chest armour',()=>onGear('armour',active?null:id,currentStyle),'oak-examine-action',!ready||!ownsArmour(data,id));
+  act.textContent=active?'UNEQUIP':!ready?'VITALITY '+a.requiredVitality+' REQUIRED':'EQUIP';
  }else if(item.kind==='slot'){
   const id=item.legacy.itemId,def=SLOT_ITEMS[id],active=data.equipment?.[def.style]?.[def.slot]===id;
   fact('Slot',EQUIPMENT_SLOTS.find(s=>s.id===def.slot)?.label||def.slot);
@@ -121,7 +122,7 @@ export function renderExamine(host,data,currentStyle,itemId,{onGear,onSlot,onTra
   if(def.power)fact('Attack damage','+'+def.power+'%');
   if(def.guard)fact('Incoming damage','-'+def.guard+'%');
   if(def.slot==='arrows')fact('Ammunition','Reusable starter quiver');
-  const act=button(host,active?'Unequip':'Equip',()=>onSlot(def.style,def.slot,active?null:id),'oak-examine-action',!(data.inventory?.slotted||[]).includes(id));
+  const act=button(host,active?'Unequip':'Equip',()=>onSlot(def.style,def.slot,active?null:id),'oak-examine-action',!canEquipSlotItem(data,def.style,id));
   act.textContent=active?'UNEQUIP':'EQUIP';
  }else if(item.kind==='scroll'){
   const canTravel=data.onboarding?.teleportScrolls>0&&data.onboarding?.area!=='realm'&&

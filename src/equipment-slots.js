@@ -1,3 +1,4 @@
+import {levelFromXp} from './rules.js';
 /** Equipment beyond weapons and chest armour. All three combat styles have independent saved slots. */
 export const EQUIPMENT_SLOTS=Object.freeze([
   {id:'helm',label:'Helm'}, {id:'amulet',label:'Ammy'}, {id:'arrows',label:'Arrows'},
@@ -36,7 +37,7 @@ export function blankExtraSlots(){return Object.fromEntries(EXTRA_SLOTS.map(slot
 export function blankEquipment(){return {melee:blankExtraSlots(),magic:blankExtraSlots(),ranged:blankExtraSlots()};}
 export function canEquipSlotItem(data,style,id){
  const item=SLOT_ITEMS[id];
- return !!item&&item.style===style&&Number(data?.xp?.[style]||0)>=0&&
+ return !!item&&item.style===style&&levelFromXp(data?.xp?.[style]||0).level>=item.requiredLevel&&
   (data.inventory?.slotted||[]).includes(id);
 }
 export function equipSlotItem(data,style,slot,id){
