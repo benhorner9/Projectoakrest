@@ -1,0 +1,32 @@
+/* Unified item art in inventory, equipment, pickups, and the dev editor. */
+.item-icon{display:inline-block;width:38px;height:38px;min-width:38px;object-fit:contain;border-radius:6px;vertical-align:middle;image-rendering:auto}
+.loot-prompt-inner .item-icon{width:32px;height:32px;min-width:32px;margin-right:4px}
+.catalogue-list button>.item-icon,.material-tile>.item-icon{margin-right:7px}
+.material-tile{display:flex;align-items:center;gap:9px}
+.drop-editor[hidden]{display:none!important}
+.drop-editor{position:fixed;inset:0;z-index:3100;display:flex;justify-content:center;align-items:center;background:#071819e8;box-sizing:border-box;padding:14px;color:#f3f0dc}
+.drop-editor-shell{width:min(900px,100%);max-height:min(94vh,900px);overflow-y:auto;background:#1b302e;border:1px solid #c3b186a1;border-radius:14px;padding:clamp(13px,2vw,24px);box-shadow:0 18px 55px #051717bd;box-sizing:border-box}
+.drop-editor-shell header{display:flex;align-items:start;justify-content:space-between;border-bottom:1px solid #d4c09653;padding-bottom:10px;gap:12px}
+.drop-editor-shell header small{color:#e2c68f;letter-spacing:.14em}
+.drop-editor-shell header h2{font-size:clamp(20px,3vw,28px);margin:5px 0}
+.drop-editor-shell header p{font-size:12px;color:#aebfb8;line-height:1.4;margin:0}
+.drop-editor-shell button{font-size:13px;color:#e5ead8;background:#32514a;border:1px solid #acc2ad91;padding:10px 12px;border-radius:8px;min-height:42px}
+.drop-editor-shell button:disabled{opacity:.4}
+.drop-editor-shell #drop-editor-save{background:#cfb577;color:#162b29;font-weight:700}
+.drop-editor-toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:13px 0}
+.drop-editor-toolbar label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600}
+.drop-editor-toolbar select,.drop-editor-line select,.drop-editor-line input{color:#f4edd5;background:#122727;border:1px solid #aebfb482;border-radius:7px;font-size:15px;padding:8px;max-width:100%;min-height:41px}
+.drop-editor-toolbar select{min-width:170px}
+.drop-editor-rows{max-height:48vh;overflow-y:auto}
+.drop-editor-line{display:grid;grid-template-columns:38px minmax(150px,1fr) 105px 82px;gap:10px;align-items:center;padding:8px 3px;border-top:1px solid #bfc7a329}
+.drop-editor-percentage{display:flex;flex-direction:column;gap:3px;font-size:11px}
+.drop-editor-percentage input{width:100%;min-width:0;box-sizing:border-box}
+.drop-editor-hint{font-size:12px;line-height:1.45;color:#cad8c7}
+.drop-editor-shell footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+#drop-editor-error{display:block;font-size:12px;color:#edca88;min-height:20px;padding-top:5px}
+.item-catalogue{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:7px}
+.item-catalogue-tile{display:flex;align-items:center;gap:7px;min-width:0;border:1px solid #9cbaa257;padding:8px;border-radius:8px}
+.item-catalogue-tile div{min-width:0}.item-catalogue-tile strong,.item-catalogue-tile small{display:block;font-size:12px;overflow-wrap:anywhere}
+.item-catalogue-tile small{font-size:10px;color:#c3d1c3}
+.drop-editor-open{font-size:12px;min-height:40px;max-width:100%;padding:8px;background:#746039;color:#faf0d5;border:1px solid #d2b98d;border-radius:8px}
+@media(max-width:620px){.drop-editor{padding:6px}.drop-editor-shell{max-height:96vh;padding:10px}.drop-editor-line{grid-template-columns:35px minmax(105px,1fr) 75px;gap:6px}.drop-editor-line .drop-editor-remove{grid-column:2/span 2;min-height:32px;padding:5px}.drop-editor-line select{font-size:12px}.drop-editor-line input{font-size:13px}.drop-editor-shell footer button{flex:1 1 auto}.drop-editor-rows{max-height:50vh}}
