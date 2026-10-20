@@ -49,15 +49,15 @@ export function sweptStrikeHit(strike,from,to,previous,current,radius,worldHit=(
  const p=strike.profile,span=Math.max(0,to-from);
  const steps=Math.max(1,Math.ceil(span*p.halfAngle*2*strike.reach/.08));
  for(let i=0;i<=steps;i++){
+  const previousOrigin=strike.previousOrigin||strike.origin,blend=i/steps,origin={x:previousOrigin.x+(strike.origin.x-previousOrigin.x)*blend,y:previousOrigin.y+(strike.origin.y-previousOrigin.y)*blend,z:previousOrigin.z+(strike.origin.z-previousOrigin.z)*blend};
   const f=from+span*i/steps,angle=strike.yaw+(-p.halfAngle+2*p.halfAngle*f)*(strike.reverse?-1:1);
-  const tip={x:strike.origin.x+Math.sin(angle)*strike.reach,y:strike.origin.y,z:strike.origin.z-Math.cos(angle)*strike.reach};
-  const blend=steps?i/steps:1;
+  const tip={x:origin.x+Math.sin(angle)*strike.reach,y:origin.y,z:origin.z-Math.cos(angle)*strike.reach};
   const centre={x:previous.x+(current.x-previous.x)*blend,y:previous.y+(current.y-previous.y)*blend,z:previous.z+(current.z-previous.z)*blend};
   // A forward strike never wraps its capsule behind the wielder.
-  if((centre.x-strike.origin.x)*Math.sin(strike.yaw)-(centre.z-strike.origin.z)*Math.cos(strike.yaw)<0)continue;
-  const hit=segmentSphere(strike.origin,tip,centre,radius+p.width);
+  if((centre.x-origin.x)*Math.sin(strike.yaw)-(centre.z-origin.z)*Math.cos(strike.yaw)<0)continue;
+  const hit=segmentSphere(origin,tip,centre,radius+p.width);
   if(hit===null)continue;
-  const wall=worldHit(strike.origin,tip,p.width);
+  const wall=worldHit(origin,tip,p.width);
   if(wall===null||hit<wall)return hit;
  }
  return null;

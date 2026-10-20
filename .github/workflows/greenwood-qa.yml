@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -52,6 +53,9 @@ jobs:
       - name: Combat Reborn real simulation scenarios
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-combat-reborn.cjs
+      - name: Compare combat performance against starting dev
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-combat-performance.cjs
       - name: Preserve browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4

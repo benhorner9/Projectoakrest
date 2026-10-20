@@ -51,7 +51,13 @@ let browser,server;
      const clocks=JSON.stringify(after.cooldowns);oakrestQA.ability(slot);if(JSON.stringify(oakrestQA.state().cooldowns)!==clocks)throw Error('cooldown bypass');
      checks.push(style+'/'+id+'/'+ability.name);
     }
-   }return {abilities:checks.length};
+    }
+   oakrestQA.step(22);oakrestQA.style('magic');oakrestQA.step(1);oakrestQA.equip('weapon','frost');oakrestQA.slot(0,'w2');
+   const e=oakrestQA.state().enemies.find(e=>e.type==='mossling'),{terrainHeight}=await import('/src/terrain.js');
+   oakrestQA.teleport(e.x,e.z+3);oakrestQA.aim(e.x,terrainHeight(e.x,e.z)+.75,e.z);oakrestQA.step(.4);oakrestQA.ability(0);oakrestQA.step(.7);
+   const rooted=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(rooted.rootUntil<=oakrestQA.state().time)throw Error('Live mossling was not rooted');
+   oakrestQA.step(.5);const held=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(Math.hypot(held.x-rooted.x,held.z-rooted.z)>.01)throw Error('Root did not stop enemy simulation');
+   return {abilities:checks.length,liveEnemyRoot:true};
   });return result;
  });
  await scenario('D tribrid recovery',async page=>page.evaluate(()=>{

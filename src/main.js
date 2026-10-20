@@ -516,7 +516,7 @@ function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style
   if(heroHome<=cfg.leash)e.aggro=true;
  }
  floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));
- if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;e.bleedSource=source;}if(ability?.stun){e.stunUntil=now()+ability.stun;cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.lastAttack=now();}if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root){e.rootUntil=now()+ability.root;e.charge=null;e.pounce=null;}if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.aiState='dead';audio.play('death');if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.deathAt=now();addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type,source.style);}}
+ if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[source.style],4);visuals.impact(e.group.position,STYLE_COLOURS[source.style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;e.bleedSource=source;}if(ability?.stun){e.stunUntil=now()+ability.stun;cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.lastAttack=now();}if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root){e.rootUntil=now()+ability.root;e.charge=null;e.pounce=null;}if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.aiState='dead';audio.play('death');if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.deathAt=now();addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type,source.style);}}
 function enemyCentre(e){return {x:e.x,y:e.group.position.y+(e.type==='mossling'?.75:1.25),z:e.z};}
 function enemyRadius(e){return e.type==='mossling'?.6:e.type==='boar'?.8:.65;}
 function clearCombatLine(a,b,r=.05){return segmentWorldHit(a,b,r)===null;}
@@ -533,7 +533,7 @@ function beginStrike(damage,reach,ability={},family=slotFamily(style,data.gear[s
 }
 function updateStrikes(t){
  for(let i=activeStrikes.length-1;i>=0;i--){
-  const strike=activeStrikes[i];if(t<strike.start)continue;if(strike.visualPending){visuals.sweep(strike,STYLE_COLOURS[strike.source.style]);strike.visualPending=false;}const progress=clamp((t-strike.start)/strike.profile.duration,0,1);
+  const strike=activeStrikes[i];if(t<strike.start)continue;strike.previousOrigin={...strike.origin};strike.origin={x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z};if(strike.visualPending){visuals.sweep(strike,STYLE_COLOURS[strike.source.style]);strike.visualPending=false;}const progress=clamp((t-strike.start)/strike.profile.duration,0,1);
   for(const e of activeEnemies()){
    if(e.dead||e.retreating||strike.hits.has(e)||(!strike.profile.multi&&strike.hits.size))continue;
    const centre=enemyCentre(e);
@@ -855,7 +855,7 @@ function animate(dt,t){
  }
  const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||activeStrikes.length||t<attackUntil;
- const heading=gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
+ const heading=activeStrikes.length?-activeStrikes[0].yaw:gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
  visualHeading=dampAngle(visualHeading,heading,19,dt);hero.rotation.y=visualHeading;
  animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
