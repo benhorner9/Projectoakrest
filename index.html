@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./src/greenwood.css" />
   <link rel="stylesheet" href="./src/character-creator.css" />
   <link rel="stylesheet" href="./src/opening.css" />
+  <link rel="stylesheet" href="./src/items.css" />
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
@@ -33,6 +34,7 @@
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
       <label for="quality">Graphics quality</label><select id="quality"><option value="low">Performance</option><option value="balanced">Balanced</option><option value="high">High</option></select>
       <label class="sound-setting"><input id="sound-enabled" type="checkbox" checked /> Combat sounds</label>
+      <button id="drop-editor-open" class="drop-editor-open" type="button" hidden>EDIT MONSTER DROPS (DEV)</button>
       <output id="performance-stats" aria-label="Measured performance">Measuring performance…</output>
     </section>
     <section class="vitals"><div id="character-name-label" class="character-name-label" hidden></div>
@@ -126,6 +128,18 @@
         </section>
       </div>
     </div>
+  <section id="drop-editor" class="drop-editor" hidden aria-label="Monster drop table editor">
+    <div class="drop-editor-shell">
+      <header><div><small>OAKREST DEVELOPMENT TOOLS</small><h2 id="drop-editor-title">Monster drop tables</h2><p>Local development browser only — changes do not affect other players or production.</p></div><button id="drop-editor-close" type="button" aria-label="Close editor">✕</button></header>
+      <div class="drop-editor-toolbar">
+        <label>Monster <select id="drop-editor-monster"></select></label>
+        <button type="button" id="drop-editor-catalogue">VIEW ITEM CATALOGUE</button>
+      </div>
+      <div id="drop-editor-rows" class="drop-editor-rows"></div>
+      <output id="drop-editor-error" aria-live="polite"></output>
+      <footer><button type="button" id="drop-editor-add">+ ADD DROP</button><button type="button" id="drop-editor-reset">RESET THIS MONSTER</button><button id="drop-editor-save" type="button">SAVE DROP TABLES</button></footer>
+    </div>
+  </section>
   <div id="error" class="error" hidden>Unable to start 3D graphics. Please use an up-to-date browser with WebGL enabled and a network connection.</div>
   <script type="module" src="./src/main.js"></script>
 </body>
