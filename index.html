@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="./src/progression.css" />
   <link rel="stylesheet" href="./src/visual-polish.css" />
   <link rel="stylesheet" href="./src/greenwood.css" />
+  <link rel="stylesheet" href="./src/character-creator.css" />
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
@@ -89,8 +90,30 @@
 
   </div>
   <div id="intro" class="overlay">
-    <div class="panel"><span class="intro-emblem">✥</span><span class="eyebrow">THE GREENWOOD FRONTIER</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>Beyond the village gates, every path is a challenge.<br>Choose your weapon. Find your courage.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick to move + right thumb action buttons</div></div>
+    <div class="panel"><span class="intro-emblem">✥</span><span class="eyebrow">THE GREENWOOD FRONTIER</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>Beyond the village gates, every path is a challenge.<br>Choose your weapon. Find your courage.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><button type="button" id="choose-character" class="choose-character">CHARACTERS</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick to move + right thumb action buttons</div></div>
   </div>
+    <div id="character-creator" class="character-creator" hidden aria-label="Create or choose a character">
+      <div class="creator-shell">
+        <header class="creator-header"><div><small>THE GREENWOOD FRONTIER</small><h2>YOUR ADVENTURE BEGINS</h2><p>Create a character, or continue an existing adventure.</p></div><button type="button" id="creator-close" aria-label="Back to title">✕</button></header>
+        <section class="creator-saves" aria-label="Saved characters"><h3>Saved Characters <small>(this browser only)</small></h3><div id="creator-slots"></div></section>
+        <section id="creator-form-section" class="creator-form-section">
+          <div class="creator-preview"><div id="creator-model" aria-label="Character appearance preview"></div><button type="button" id="creator-rotate">↻ Turn Character</button><p>Clothing is cosmetic. You begin with no equipment or items.</p></div>
+          <form id="creator-form" novalidate>
+            <label>Character name<input id="creator-name" name="name" type="text" maxlength="20" minlength="3" autocomplete="off" placeholder="Enter your character name" required /></label>
+            <div class="creator-form-grid">
+              <label>Character <select name="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
+              <label>Hairstyle <select name="hairstyle"><option value="short">Short</option><option value="swept">Swept</option><option value="buzz">Buzz cut</option><option value="long">Long</option><option value="ponytail">Ponytail</option><option value="curly">Curly</option></select></label>
+              <label>Starter clothes <select name="outfit"><option value="tunic">Simple tunic</option><option value="wanderer">Wanderer</option><option value="scholar">Scholar</option><option value="traveller">Traveller</option></select></label>
+            </div>
+            <fieldset><legend>Skin tone</legend><div id="creator-skin" class="creator-colours"></div></fieldset>
+            <fieldset><legend>Hair colour</legend><div id="creator-hair" class="creator-colours"></div></fieldset>
+            <fieldset><legend>Clothing colour</legend><div id="creator-clothes" class="creator-colours"></div></fieldset>
+            <output id="creator-error" role="status" aria-live="polite"></output>
+            <button id="creator-confirm" type="submit">CREATE CHARACTER</button>
+          </form>
+        </section>
+      </div>
+    </div>
   <div id="error" class="error" hidden>Unable to start 3D graphics. Please use an up-to-date browser with WebGL enabled and a network connection.</div>
   <script type="module" src="./src/main.js"></script>
 </body>
