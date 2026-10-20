@@ -45,3 +45,7 @@ browser-combat-reborn.cjs exercises the actual game engine, controls, hit resolu
 Physical iPad Air hardware, Safari audio output, subjective comfort and long-duration manual balance assessment cannot be certified from Linux emulation. Do not present software-rendered CI FPS as iPad performance. The paired benchmark compares the starting dev commit and current code on the same runner.
 
 No public branch, public game directory or public character data is an allowed release target. Deployment must use the established Cellbound deployment bridge pinned to the reviewed dev commit.
+
+## Reward boundary correction
+
+The combat-session audit found that createMonsterDrops still clamped positions to ±69 and save validation still accepted only ±70, despite the playable world extending to ±120. Boar and bandit rewards could appear far from the defeated enemy. Both creation and validation now use the current world bounds. Regression coverage creates deep-wilderness drops, checks their pickup distance and roundtrips them through validSave. The extended browser scenario now defeats Mosslings, a boar and a bandit, changes melee weapons, physically collects their loot, respawns and reloads the resulting save.

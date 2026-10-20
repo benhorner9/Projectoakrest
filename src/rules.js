@@ -195,7 +195,7 @@ export function validGroundLoot(list){
  if(!Array.isArray(list))return [];
  const out=[],seen=new Set();
  for(const d of list.slice(-36)){
-  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>70||Math.abs(d.z)>70||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
+  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>120||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
   if(d.kind==='coins'&&d.itemId!=='coins')continue;
   if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token'].includes(d.itemId))continue;
   if(d.kind==='armour'&&(!Object.hasOwn(ARMOUR,d.itemId)||d.amount!==1))continue;

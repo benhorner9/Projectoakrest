@@ -113,16 +113,25 @@ let browser,server;
  });
  await scenario('G repeated combat, death, reload and render stability',async page=>{
   const result=await page.evaluate(()=>{
-   oakrestQA.teleport(-6,-.8);for(let i=0;i<80;i++){oakrestQA.basic();oakrestQA.step(1.1);if(i%8===0)oakrestQA.dodge();}
+   const startedAt=oakrestQA.state().time,initialCoins=oakrestQA.state().data.coins,kills=[];
+   for(const [type,weapon] of [['mossling','sword'],['boar','greatsword'],['bandit','daggers'],['mossling','forged_sword']]){
+    oakrestQA.teleport(0,11);oakrestQA.step(13);oakrestQA.equip('weapon',weapon);
+    const target=()=>oakrestQA.state().enemies.find(e=>e.type===type);
+    for(let i=0;i<14&&!target().dead;i++){const e=target();oakrestQA.teleport(e.x,e.z+1.6);oakrestQA.basic();oakrestQA.step(1.8);}
+    if(!target().dead)throw Error('Repeated fight failed: '+type);kills.push(type);
+    for(const drop of oakrestQA.state().data.groundLoot){oakrestQA.teleport(drop.x,drop.z);oakrestQA.pickup();}
+   }
+   if(oakrestQA.state().data.coins<=initialCoins)throw Error('Physical loot was not collected');
+   oakrestQA.teleport(-6,-.8);oakrestQA.equip('weapon','sword');for(let i=0;i<40;i++){oakrestQA.basic();oakrestQA.step(1.1);if(i%8===0)oakrestQA.dodge();}
    const xp=oakrestQA.state().data.xp;oakrestQA.step(3);oakrestQA.receiveDamage(100000);oakrestQA.step(3);
-   const s=oakrestQA.state();if(s.hp<=0||Math.abs(s.hero.z-11)>.1)throw Error('Death/respawn failed');oakrestQA.save();return {xp,data:s.data,hp:s.hp};
+   const s=oakrestQA.state();if(s.hp<=0||Math.abs(s.hero.z-11)>.1)throw Error('Death/respawn failed');oakrestQA.save();return {xp,data:s.data,hp:s.hp,kills,coins:s.data.coins,simulatedSeconds:s.time-startedAt};
   });
   await page.reload();await page.waitForFunction(()=>window.oakrestQA);assert.deepEqual(await page.evaluate(()=>oakrestQA.state().data),result.data);await page.locator('#begin').click();
   await page.waitForTimeout(2500);const initial=await page.evaluate(()=>oakrestDiagnostics());
   const deadline=Date.now()+30000;while(Date.now()<deadline){await page.evaluate(()=>oakrestQA.basic());await page.waitForTimeout(1000);report.performance.push(await page.evaluate(()=>oakrestDiagnostics()));}
   await page.evaluate(()=>oakrestQA.step(3));const final=await page.evaluate(()=>oakrestDiagnostics());
   assert.ok(final.effects<200);assert.ok(final.geometries<initial.geometries+50,JSON.stringify({initial,final}));
-  return {hp:result.hp,simulatedSeconds:91,renderedSeconds:30,initial,final};
+  return {hp:result.hp,kills:result.kills,coins:result.coins,simulatedSeconds:result.simulatedSeconds,renderedSeconds:30,initial,final};
  });
  if(report.errors.length){console.error(report.errors);process.exitCode=1;}
 }finally{fs.writeFileSync(path.join(output,engine+'-combat-reborn.json'),JSON.stringify(report,null,2));await browser?.close();server?.kill();}})().catch(e=>{console.error(e);process.exitCode=1});
