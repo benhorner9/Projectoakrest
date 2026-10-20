@@ -5,6 +5,7 @@ import {LOADOUTS,ARMOUR,STYLE_ORDER,freshCharacterSave,validSave} from '../src/r
 import {MATERIAL_DROPS} from '../src/combat-feel.js';
 import {ITEM_CATALOG,ITEMS_BY_ID,itemIconSvg,itemIconUrl,itemFromDrop,itemIdFromLegacy,DROPPABLE_ITEMS} from '../src/items.js';
 import {makeWorldItemModel} from '../src/item-visuals.js';
+import {createActor,equipActor,applyEquipmentVariant} from '../src/actors.js';
 test('every existing gear and resource has a stable canonical item ID',()=>{
  const expected=1+Object.keys(MATERIAL_DROPS).length+Object.keys(ARMOUR).length+
   STYLE_ORDER.reduce((count,style)=>count+Object.keys(LOADOUTS[style]).length,0)+1;
@@ -44,4 +45,20 @@ test('existing owned gear and ground loot survive catalogue introduction',()=>{
  const next=validSave(JSON.parse(JSON.stringify(data)));
  assert.deepEqual(next.inventory,data.inventory);
  assert.deepEqual(next.groundLoot,data.groundLoot);
+});
+
+test('worn gear variants have item-specific runes and isolated materials',()=>{
+ const first=createActor(),second=createActor();
+ equipActor(first,'melee','sword','traveller');
+ equipActor(second,'melee','sword','traveller');
+ applyEquipmentVariant(first,'melee','sword');
+ applyEquipmentVariant(second,'melee','forged_sword');
+ const one=first.userData.weapon.children.at(-1),two=second.userData.weapon.children.at(-1);
+ assert.ok(one.isMesh&&two.isMesh);
+ assert.notEqual(one.material.color.getHex(),two.material.color.getHex());
+ assert.notEqual(one.geometry.parameters.radius,two.geometry.parameters.radius);
+ const old=first.userData.ownedMaterials.slice();
+ equipActor(first,'magic','frost','traveller');
+ assert.equal(first.userData.ownedMaterials.length,0);
+ assert.ok(old.every(m=>m instanceof THREE.Material));
 });
