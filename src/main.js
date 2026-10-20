@@ -17,9 +17,16 @@ import { segmentHit,dodgeDirection,weaponComparison } from './gameplay-math.js';
 import { createAudio } from './audio.js';
 import { createOpeningLocations,START_POINTS } from './opening-world.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
+import { itemFromDrop } from './items.js';
+import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
+import {cloneDropTables,readDropTables} from './drop-tables.js';
+import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 
 const $=id=>document.getElementById(id);
 const oakrestKey=key=>storageKey(key,location.pathname);
+const devDropEditor=isDropEditorAllowed(location.pathname,location.hostname);
+const dropStorageKey=oakrestKey('oakrest-drop-tables-v1');
+let activeDropTables=devDropEditor?readDropTables(localStorage,dropStorageKey):cloneDropTables();
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
 document.documentElement.classList.toggle('touch-enabled',isTouch);
 // Suppress Safari page zoom while keeping gameplay multitouch working.
@@ -121,6 +128,9 @@ $('skill-detail-back').addEventListener('click',()=>{skillDetail=null;detailPane
 function el(tag,text,parent,className){
  const node=document.createElement(tag);if(text!==null&&text!==undefined)node.textContent=text;
  if(className)node.className=className;if(parent)parent.append(node);return node;
+}
+function addItemIcon(parent,itemId){
+ const img=makeInventoryIcon(itemId);if(img)parent.append(img);return img;
 }
 function uiButton(parent,label,act,disabled=false){
  const b=el('button',label,parent);b.type='button';b.disabled=disabled;if(act)b.addEventListener('click',act);return b;
@@ -225,7 +235,7 @@ function renderBook(){
    const unlocked=canEquipWeapon(bookStyle,id,data.xp),owned=ownsWeapon(data,bookStyle,id);
    const b=uiButton(weapons,'',()=>chooseGear('weapon',id),!unlocked||!owned);
    b.classList.toggle('selected',data.gear[bookStyle]===id&&owned);
-   el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
+   addItemIcon(b,'weapon.'+bookStyle+'.'+id);const d=el('div',null,b);el('strong',w.title,d);
    el('small',weaponDisplay(w),d);if(id!==data.gear[bookStyle])el('small',weaponComparison(w,ownWeapon),d,'gear-comparison');
    el('em',!unlocked?'LEVEL '+w.requiredLevel+' REQUIRED':!owned?'NOT OWNED':data.gear[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
@@ -235,7 +245,7 @@ function renderBook(){
    const unlocked=canEquipArmour(id,data.xp),owned=ownsArmour(data,id);
    const b=uiButton(armourGrid,'',()=>chooseGear('armour',id),!unlocked||!owned);
    b.classList.toggle('selected',data.armour[bookStyle]===id);
-   el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);const d=el('div',null,b);
+   addItemIcon(b,'armour.'+id);const d=el('div',null,b);
    el('strong',a.title,d);el('small',a.description,d);
    el('em',!unlocked?'VITALITY '+a.requiredVitality+' REQUIRED':!owned?'NOT OWNED':data.armour[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
@@ -244,7 +254,7 @@ function renderBook(){
    el('h3','Travel scrolls',host);
    const scrollRow=el('div',null,host,'catalogue-list');
    const canTravel=data.onboarding.area!=='realm'&&(data.onboarding.area!=='tutorial'||data.onboarding.tutorial.hitStyles.length===3&&data.onboarding.tutorial.skillsRead);
-   const scroll=uiButton(scrollRow,'✧ TELEPORTATION SCROLL ×'+data.onboarding.teleportScrolls+' · ENTER PORTAL REALM',()=>{bookClose();useTravelScroll();},!canTravel);
+   const scroll=uiButton(scrollRow,'TELEPORTATION SCROLL ×'+data.onboarding.teleportScrolls+' · ENTER PORTAL REALM',()=>{bookClose();useTravelScroll();},!canTravel);scroll.prepend(makeInventoryIcon('scroll.teleport'));
    scroll.title='Crafted through Inscription in a future update. One scroll is consumed per journey.';
   }
   el('h3','Owned equipment',host);el('p','Collect glowing drops from defeated creatures. Picked-up gear stays here, even if your level is too low to equip it.',host);
@@ -256,7 +266,7 @@ function renderBook(){
     const ready=canEquipWeapon(s,id,data.xp);
     const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);},!ready);
     b.classList.toggle('selected',data.gear[s]===id);
-    el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
+    addItemIcon(b,'weapon.'+s+'.'+id);const d=el('div',null,b);el('strong',w.title,d);
     el('small',s.toUpperCase()+' · LV '+w.requiredLevel+' · '+weaponDisplay(w),d);
     el('em',!ready?'LV '+w.requiredLevel+' REQUIRED':data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
    }
@@ -267,7 +277,7 @@ function renderBook(){
    const a=ARMOUR[id];if(!a)continue;
    const ready=canEquipArmour(id,data.xp);
    const b=uiButton(armour,'',()=>chooseGear('armour',id,style),!ready);
-   el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);
+   addItemIcon(b,'armour.'+id);
    const d=el('div',null,b);el('strong',a.title,d);
    el('small','Vitality '+a.requiredVitality+' · '+a.description,d);
    el('em',!ready?'VITALITY '+a.requiredVitality+' REQUIRED':data.armour[style]===id?'EQUIPPED':'EQUIP TO '+style.toUpperCase(),d);
@@ -278,7 +288,7 @@ function renderBook(){
   for(const mat of Object.values(MATERIAL_DROPS)){
     const qty=data.inventory?.materials?.[mat.id]||0;if(!qty)continue;anyMaterial=true;
     const tile=el('div',null,materials,'material-tile');
-    el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
+    addItemIcon(tile,'material.'+mat.id);el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
   }
   if(!anyMaterial)el('p','Defeat creatures outside the village to collect materials.',host);
   el('p','Coins: '+data.coins+' · Crafting with these materials will arrive later.',host,'inventory-footnote');
@@ -312,14 +322,13 @@ function floating(text,color,pos){const el=document.createElement('div');el.clas
 const lootModels=new Map();let lootCounter=0,lastLootId=null;
 function makeLootModel(drop){
  const group=new THREE.Group();group.position.set(drop.x,terrainHeight(drop.x,drop.z),drop.z);
- const colour=drop.kind==='coins'?'#edc774':drop.kind==='material'?'#8ecfa7':'#b8b6f3';
+ const colour=itemFromDrop(drop)?.accent||'#b8b6f3';
  const glow=new THREE.MeshBasicMaterial({color:colour,transparent:true,opacity:.75,depthWrite:false});
  const halo=new THREE.Mesh(new THREE.RingGeometry(.36,.53,20),new THREE.MeshBasicMaterial({color:colour,transparent:true,opacity:.46,side:THREE.DoubleSide,depthWrite:false}));
  halo.rotation.x=-Math.PI/2;halo.position.y=.065;group.add(halo);
- const coreGeo=drop.kind==='coins'?new THREE.CylinderGeometry(.26,.26,.10,8):
-   drop.kind==='material'?new THREE.IcosahedronGeometry(.29,0):new THREE.OctahedronGeometry(.35,0);
- const core=new THREE.Mesh(coreGeo,new THREE.MeshLambertMaterial({color:colour,emissive:colour,emissiveIntensity:.22,flatShading:true}));
- core.position.y=.62;core.rotation.x=drop.kind==='coins'?Math.PI/2:0;
+ const core=makeWorldItemModel(drop);
+ if(!core)return;
+ core.position.y=.30;
  group.add(core);
  const aura=new THREE.Mesh(new THREE.SphereGeometry(.38,9,7),glow);
  aura.position.y=.62;group.add(aura);
@@ -340,7 +349,7 @@ function addGroundLoot(drop){
 function spawnMonsterLoot(enemy){
  // Every enemy awards a tangible coin pouch, with independent material/gear rolls.
  const prefix=String(Date.now())+'-'+(++lootCounter)+'-'+Math.floor(random()*1e6);
- const created=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,()=>prefix+'-'+(++lootCounter));
+ const created=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,()=>prefix+'-'+(++lootCounter),activeDropTables);
  for(const d of created)addGroundLoot(d);
  save();
 }
@@ -362,7 +371,11 @@ function updateLoot(dt,t){
  if(nearest?.id!==lastLootId){
   lastLootId=nearest?.id||null;
   lootPanel.hidden=!nearest;
-  if(nearest)$('loot-label').textContent=lootName(nearest);
+  if(nearest){
+   $('loot-label').textContent=lootName(nearest);
+   const graphic=$('loot-item-icon');graphic.replaceChildren();
+   const item=itemFromDrop(nearest);if(item)addItemIcon(graphic,item.id);
+  }
  }
  if(!nearest)lootPanel.hidden=true;
  for(const m of lootModels.values()){
