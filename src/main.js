@@ -19,6 +19,8 @@ import { createAudio } from './audio.js';
 import { createOpeningLocations,START_POINTS } from './opening-world.js';
 import { buildOakrestTown } from './town-world.js';
 import {setupTownUI} from './town-ui.js';
+import {equipSlotItem,equipmentModifiers} from './equipment-slots.js';
+import {renderInventoryGrid,renderEquipmentPaperDoll,renderExamine} from './equipment-ui.js';
 import {isOakrestSafe,townInteraction} from './town-services.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 import { itemFromDrop } from './items.js';
@@ -195,6 +197,21 @@ function chooseGear(kind,id,selectedStyle=bookStyle){
  save();if(style===selectedStyle){equipVisual(style,data.gear[style]);refreshSkills();}
  renderBook();
 }
+function chooseSlotGear(selectedStyle,slot,id){
+ if(selectedStyle===style&&(pendingBasic||pendingAbility)){toast('Finish your attack before changing equipment.');return;}
+ if(!equipSlotItem(data,selectedStyle,slot,id))return;
+ save();renderBook();
+}
+function showItemDetail(itemId){
+ skillDetail=null;detailPanel.hidden=false;
+ $('skill-detail-title').textContent='EXAMINE ITEM';
+ const body=$('skill-detail-body');body.replaceChildren();
+ renderExamine(body,data,bookStyle,itemId,{
+  onGear:(kind,id,s)=>{chooseGear(kind,id,s);showItemDetail(itemId);},
+  onSlot:(s,slot,id)=>{chooseSlotGear(s,slot,id);showItemDetail(itemId);},
+  onTravel:()=>{bookClose();useTravelScroll();}
+ });
+}
 function renderBook(){
  if(progressPanel.hidden)return;
  const combatLevel=levelFromXp(data.xp[bookStyle]).level;
@@ -258,77 +275,10 @@ function renderBook(){
    }
   },!current[bookSlot]);clear.className='book-clear';
  }else if(bookTab==='equip'){
-  el('h3','Equipped for '+bookStyle.toUpperCase(),host);
-  const ownWeapon=ownsWeapon(data,bookStyle,data.gear[bookStyle])?LOADOUTS[bookStyle][data.gear[bookStyle]]:{title:bookStyle==='melee'?'Unarmed':'None',basic:bookStyle==='melee'?6:0,interval:bookStyle==='melee'?.88:0,reach:bookStyle==='melee'?1.55:0},ownArmour=ownsArmour(data,data.armour[bookStyle])?defenceFor(data.armour[bookStyle]):defenceFor('none');
-  el('p','Weapon: '+ownWeapon.title+'  ·  Armour: '+ownArmour.title,host);
-  el('h3','Your weapons',host);
-  const weapons=el('div',null,host,'catalogue-list');
-  for(const [id,w] of Object.entries(LOADOUTS[bookStyle])){
-   const unlocked=canEquipWeapon(bookStyle,id,data.xp),owned=ownsWeapon(data,bookStyle,id);
-   const b=uiButton(weapons,'',()=>chooseGear('weapon',id),!unlocked||!owned);
-   b.classList.toggle('selected',data.gear[bookStyle]===id&&owned);
-   addItemIcon(b,'weapon.'+bookStyle+'.'+id);const d=el('div',null,b);el('strong',w.title,d);
-   el('small',weaponDisplay(w),d);if(id!==data.gear[bookStyle])el('small',weaponComparison(w,ownWeapon),d,'gear-comparison');
-   el('em',!unlocked?'LEVEL '+w.requiredLevel+' REQUIRED':!owned?'NOT OWNED':data.gear[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
-  }
-  el('h3','Your armour',host);
-  const armourGrid=el('div',null,host,'catalogue-list');
-  for(const [id,a] of Object.entries(ARMOUR)){
-   const unlocked=canEquipArmour(id,data.xp),owned=ownsArmour(data,id);
-   const b=uiButton(armourGrid,'',()=>chooseGear('armour',id),!unlocked||!owned);
-   b.classList.toggle('selected',data.armour[bookStyle]===id);
-   addItemIcon(b,'armour.'+id);const d=el('div',null,b);
-   el('strong',a.title,d);el('small',a.description,d);
-   el('em',!unlocked?'VITALITY '+a.requiredVitality+' REQUIRED':!owned?'NOT OWNED':data.armour[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
-  }
+  renderEquipmentPaperDoll(host,data,bookStyle,showItemDetail);
  }else if(bookTab==='inventory'){
-  if(data.onboarding?.teleportScrolls>0){
-   el('h3','Travel scrolls',host);
-   const scrollRow=el('div',null,host,'catalogue-list');
-   const canTravel=data.onboarding.area!=='realm'&&(data.onboarding.area!=='tutorial'||data.onboarding.tutorial.hitStyles.length===3&&data.onboarding.tutorial.skillsRead);
-   const scroll=uiButton(scrollRow,'TELEPORTATION SCROLL ×'+data.onboarding.teleportScrolls+' · ENTER PORTAL REALM',()=>{bookClose();useTravelScroll();},!canTravel);scroll.prepend(makeInventoryIcon('scroll.teleport'));
-   scroll.title='Crafted through Inscription in a future update. One scroll is consumed per journey.';
-  }
-  el('h3','Owned equipment',host);el('p','Collect glowing drops from defeated creatures. Picked-up gear stays here, even if your level is too low to equip it.',host);
-  el('h3','Weapons',host);
-  const weapons=el('div',null,host,'catalogue-list');
-  for(const s of STYLE_ORDER){
-   for(const id of data.inventory?.weapons?.[s]||[]){
-    const w=LOADOUTS[s]?.[id];if(!w)continue;
-    const ready=canEquipWeapon(s,id,data.xp);
-    const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);},!ready);
-    b.classList.toggle('selected',data.gear[s]===id);
-    addItemIcon(b,'weapon.'+s+'.'+id);const d=el('div',null,b);el('strong',w.title,d);
-    el('small',s.toUpperCase()+' · LV '+w.requiredLevel+' · '+weaponDisplay(w),d);
-    el('em',!ready?'LV '+w.requiredLevel+' REQUIRED':data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
-   }
-  }
-  el('h3','Armour',host);
-  const armour=el('div',null,host,'catalogue-list');
-  for(const id of data.inventory?.armour||[]){
-   const a=ARMOUR[id];if(!a)continue;
-   const ready=canEquipArmour(id,data.xp);
-   const b=uiButton(armour,'',()=>chooseGear('armour',id,style),!ready);
-   addItemIcon(b,'armour.'+id);
-   const d=el('div',null,b);el('strong',a.title,d);
-   el('small','Vitality '+a.requiredVitality+' · '+a.description,d);
-   el('em',!ready?'VITALITY '+a.requiredVitality+' REQUIRED':data.armour[style]===id?'EQUIPPED':'EQUIP TO '+style.toUpperCase(),d);
-  }
-  el('h3','Materials',host);
-  const materials=el('div',null,host,'catalogue-list');
-  let anyMaterial=false;
-  for(const mat of Object.values(MATERIAL_DROPS)){
-    const qty=data.inventory?.materials?.[mat.id]||0;if(!qty)continue;anyMaterial=true;
-    const tile=el('div',null,materials,'material-tile');
-    addItemIcon(tile,'material.'+mat.id);el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
-  }
-  const softwood=data.inventory?.materials?.['softwood-logs']||0;
-  if(softwood){
-   anyMaterial=true;const wood=el('div',null,materials,'material-tile');
-   addItemIcon(wood,'material.softwood-logs');el('strong','Softwood Logs',wood);el('small','Owned ×'+softwood,wood);
-  }
-  if(!anyMaterial)el('p','Gather resources in the town grove or defeat creatures beyond the greenbelt.',host);
-  el('p','Coins: '+data.coins+' · Crafting with these materials will arrive later.',host,'inventory-footnote');
+  renderInventoryGrid(host,data,showItemDetail);
+
  }
 }
 const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,windup:.25};
@@ -558,7 +508,7 @@ function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style
  if(e.onboardingDummy&&data.onboarding?.area==='tutorial'){
   const hits=data.onboarding.tutorial.hitStyles;
   if(!hits.includes(source.style)){hits.push(source.style);save();renderOpeningGuide();}
- }if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}const amount=Math.round(damage*(1+Math.min(24,source.level-1)*.025)*source.power);audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
+ }if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}const amount=Math.round(damage*(1+Math.min(24,source.level-1)*.025)*source.power*equipmentModifiers(data,source.style).power);audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
  if(e.type!=='dummy'&&!e.retreating){
   const cfg=ENEMY_COMBAT[e.type],heroHome=Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ);
   if(heroHome<=cfg.leash)e.aggro=true;
@@ -671,7 +621,7 @@ function startEnemyWarning(e,t){
 }
 function applyEnemyDamage(e,spec,t){
  if(hp<=0||t<dodgeMovingUntil){floating('EVADED','#a8f2be',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));return;}
- const harm=damageAfterArmour(spec.damage,shieldUntil>t,data.armour[style]);
+ const harm=Math.max(1,Math.round(damageAfterArmour(spec.damage,shieldUntil>t,data.armour[style])*(1-equipmentModifiers(data,style).guard)));
  hp=Math.max(0,hp-harm);lastHurt=t;cameraJolt=.13;
  $('damage-flash').classList.remove('hit');void $('damage-flash').offsetWidth;$('damage-flash').classList.add('hit');
  floating('-'+harm,'#ff948d',hero.position.clone().add(new THREE.Vector3(0,2.8,0)));
