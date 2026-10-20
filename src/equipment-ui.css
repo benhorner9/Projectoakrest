@@ -45,6 +45,7 @@
 .oak-inventory-item[data-kind=scroll]{border-bottom:3px solid #c4a1d4}
 .oak-examine-action{min-height:44px;touch-action:manipulation}
 @media(min-width:768px) and (min-height:900px){
+ .touch-enabled .combatbar{backdrop-filter:none;-webkit-backdrop-filter:none}
  .touch-enabled .progression-panel{position:fixed;left:18px;top:90px;bottom:150px;width:390px;max-height:none}
  .oak-inventory-item,.oak-inventory-empty{height:54px;aspect-ratio:auto}
 }
