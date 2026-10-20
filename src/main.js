@@ -240,6 +240,13 @@ function renderBook(){
    el('em',!unlocked?'VITALITY '+a.requiredVitality+' REQUIRED':!owned?'NOT OWNED':data.armour[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
  }else if(bookTab==='inventory'){
+  if(data.onboarding?.teleportScrolls>0){
+   el('h3','Travel scrolls',host);
+   const scrollRow=el('div',null,host,'catalogue-list');
+   const canTravel=data.onboarding.area!=='realm'&&(data.onboarding.area!=='tutorial'||data.onboarding.tutorial.hitStyles.length===3&&data.onboarding.tutorial.skillsRead);
+   const scroll=uiButton(scrollRow,'✧ TELEPORTATION SCROLL ×'+data.onboarding.teleportScrolls+' · ENTER PORTAL REALM',()=>{bookClose();useTravelScroll();},!canTravel);
+   scroll.title='Crafted through Inscription in a future update. One scroll is consumed per journey.';
+  }
   el('h3','Owned equipment',host);el('p','Collect glowing drops from defeated creatures. Picked-up gear stays here, even if your level is too low to equip it.',host);
   el('h3','Weapons',host);
   const weapons=el('div',null,host,'catalogue-list');
@@ -731,8 +738,8 @@ function animate(dt,t){
  const input=new THREE.Vector3().addScaledVector(front,v).addScaledVector(side,h);
  const speed=(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility;
  motion=smoothMotion(motion,hp>0?input.x:0,hp>0?input.z:0,speed,dt);
- if(dodgeTravel){const remaining=Math.max(0,Math.min(dt,dodgeTravel.end-t+dt));const next=moveOnGround(hero.position,dodgeTravel.dir.x*(dodgeTravel.speed||12.5)*remaining,dodgeTravel.dir.z*(dodgeTravel.speed||12.5)*remaining);hero.position.set(next.x,next.y,next.z);if(t>=dodgeTravel.end)dodgeTravel=null;}
- else {const next=moveOnGround(hero.position,motion.x*dt,motion.z*dt);hero.position.set(next.x,next.y,next.z);}
+ if(dodgeTravel){const remaining=Math.max(0,Math.min(dt,dodgeTravel.end-t+dt));const next=moveOnGround(hero.position,dodgeTravel.dir.x*(dodgeTravel.speed||12.5)*remaining,dodgeTravel.dir.z*(dodgeTravel.speed||12.5)*remaining);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);if(t>=dodgeTravel.end)dodgeTravel=null;}
+ else {const next=moveOnGround(hero.position,motion.x*dt,motion.z*dt);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);}
  const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||t<attackUntil;
  const heading=gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
@@ -869,7 +876,7 @@ $('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){chara
 equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
 const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
-function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.05,realDt);if(started){gameTime+=dt;animate(dt,now());}scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
+function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.05,realDt);if(started){gameTime+=dt;animate(dt,now());}if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
 requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',save);
 // Read-only diagnostics for reproducible device measurements. No player identifiers.
 window.oakrestDiagnostics=()=>({...stats,quality,version:'greenwood-1'});
