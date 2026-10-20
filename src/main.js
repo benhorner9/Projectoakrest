@@ -288,7 +288,10 @@ const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,
 function getWeapon(){if(data.onboarding?.area==='tutorial')return LOADOUTS[style][data.gear[style]];if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
 function save(){if(!saveWritable)return;try{localStorage.setItem(activeCharacter?saveKeyFor(activeCharacter.id):oldSaveKey,JSON.stringify(data));}catch{saveWritable=false;}}
 function useCharacter(profile,loaded){
+ // Switching a saved character must also switch its physical ground drops.
+ for(const id of [...lootModels.keys()])discardLootModel(id);
  activeCharacter=profile;data=loaded;style='melee';hp=maxHealth(levelFromXp(data.xp.vitality).level);
+ for(const drop of data.groundLoot||[]){makeLootModel(drop);worldLayer.push(lootModels.get(drop.id).group);}
  hero.position.set(0,terrainHeight(0,11),11);
  updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
  $('character-name-label').hidden=!profile;$('character-name-label').textContent=profile?.name||'';
