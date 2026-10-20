@@ -921,23 +921,22 @@ const characterUI=setupCharacterCreator({
   startGameplay();
  }
 });
-$('choose-character').addEventListener('click',event=>{
- event.preventDefault();characterUI.show();
-});
-// Reloading before changing characters clears in-flight attacks, enemy state
-// and temporary world meshes while preserving each character's own save.
+// The title's native Characters link opens a separate lightweight page even
+// when the WebGL engine or its event listeners are not available.
+// Reloading before changing characters clears in-flight combat state.
 $('character-switch').addEventListener('click',()=>{
  save();
- const target=new URL(location.href);
- target.searchParams.set('characters','1');
- location.assign(target.href);
+ location.assign(new URL('./characters.html',location.href).href);
 });
 if(activeCharacter)useCharacter(activeCharacter,data);
 else if(legacySave)useCharacter(null,legacySave);
 else characterUI.show();
-if(new URLSearchParams(location.search).has('characters'))characterUI.show();
-$('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){characterUI.show();return;}startGameplay();});
-equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
+const query=new URLSearchParams(location.search);
+if(query.has('characters'))characterUI.show();
+$('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){location.assign(new URL('./characters.html',location.href).href);return;}startGameplay();});
+equipVisual(style,data.gear[style]);refreshSkills();
+if(new URLSearchParams(location.search).has('autostart')&&(activeCharacter||legacySave))startGameplay();
+if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
 const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
 function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.05,realDt);if(started){gameTime+=dt;animate(dt,now());}if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
