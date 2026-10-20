@@ -1,3 +1,4 @@
+import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 /** Combat and progression rules stay independent from Three.js so they can be tested. */
 export const STYLE_ORDER = ['melee', 'magic', 'ranged'];
 export const STYLE_COLOURS = { melee:'#db9a72', magic:'#9cacf6', ranged:'#9edbb1' };
@@ -75,6 +76,9 @@ LOADOUTS.ranged.shortbow={
   requiredLevel:3,family:'shortbow'
 };
 export const ARMOUR={
+  'starter-mail':{title:'Recruit Mail',requiredVitality:1,physical:.12,magical:.04,mobility:.98,bonusStyle:'melee',bonusPower:.02,description:'Beginner melee chest armour: improved physical protection and a small melee bonus.'},
+  'starter-leather':{title:'Scout Leather',requiredVitality:1,physical:.09,magical:.07,mobility:1.02,bonusStyle:'ranged',bonusPower:.02,description:'Beginner ranged chest armour: lightweight protection and a small ranged bonus.'},
+  'starter-robes':{title:'Apprentice Robes',requiredVitality:1,physical:.04,magical:.12,mobility:1.03,bonusStyle:'magic',bonusPower:.02,description:'Beginner magical chest armour: spell protection and a small magic bonus.'},
   traveller:{title:'Traveller Wraps',requiredVitality:1,physical:.06,magical:.15,mobility:1.05,bonusStyle:'magic',bonusPower:.05,
     description:'Quick movement, light protection and a little extra spell power.'},
   leather:{title:'Hardened Leather',requiredVitality:3,physical:.17,magical:.10,mobility:1.01,bonusStyle:'ranged',bonusPower:.06,
@@ -139,7 +143,7 @@ export const SKILLS_OVERVIEW=[
   {id:'vitality',label:'Vitality',icon:'✚',description:'Health, armour and survival'}
 ];
 export function starterInventory(){
- return {weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller'],materials:{}};
+ return {weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller'],slotted:[],materials:{}};
 }
 export function awardTrainingGear(data){
  if(!data.inventory||typeof data.inventory!=='object')data.inventory=starterInventory();
@@ -231,12 +235,12 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),equipment:blankEquipment(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[],slotted:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
 }
 export function freshCharacterSave(){
  const d=defaultSave();
  d.characterFresh=true;
- d.inventory={weapons:{melee:[],magic:[],ranged:[]},armour:[],materials:{}};
+ d.inventory={weapons:{melee:[],magic:[],ranged:[]},armour:[],slotted:[],materials:{}};
  d.armour={melee:'none',magic:'none',ranged:'none'};
  d.onboarding={
   area:'tutorial',
@@ -259,6 +263,7 @@ export function validSave(raw){
    }
   }
   if(Array.isArray(raw.inventory?.armour))d.inventory.armour=raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id));
+  if(Array.isArray(raw.inventory?.slotted))d.inventory.slotted=[...new Set(raw.inventory.slotted.filter(id=>Object.hasOwn(SLOT_ITEMS,id)))];
   if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
   }
@@ -273,6 +278,7 @@ export function validSave(raw){
       if(Array.isArray(held))d.bank.weapons[style]=[...new Set(held.filter(id=>typeof id==='string'&&Object.hasOwn(LOADOUTS[style],id)))].filter(id=>!d.inventory.weapons[style].includes(id));
     }
     if(Array.isArray(raw.bank.armour))d.bank.armour=[...new Set(raw.bank.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id)))].filter(id=>!d.inventory.armour.includes(id));
+    if(Array.isArray(raw.bank.slotted))d.bank.slotted=[...new Set(raw.bank.slotted.filter(id=>Object.hasOwn(SLOT_ITEMS,id)))].filter(id=>!d.inventory.slotted.includes(id));
   }
   if(raw.professions&&typeof raw.professions==='object'){
     d.professions.woodcuttingLearned=raw.professions.woodcuttingLearned===true;
@@ -298,6 +304,10 @@ export function validSave(raw){
    d.onboarding={area:'world',tutorial:{hitStyles:[],skillsRead:false},teleportScrolls:0,activatedPortals:['oakrest']};
   }
   for(const style of STYLE_ORDER){
+    for(const slot of EXTRA_SLOTS){
+      const id=raw.equipment?.[style]?.[slot];
+      if(canEquipSlotItem(d,style,id)&&SLOT_ITEMS[id].slot===slot)d.equipment[style][slot]=id;
+    }
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
     if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];
     const level=levelFromXp(d.xp[style]).level;
