@@ -34,6 +34,7 @@
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
       <label for="quality">Graphics quality</label><select id="quality"><option value="low">Performance</option><option value="balanced">Balanced</option><option value="high">High</option></select>
       <label class="sound-setting"><input id="sound-enabled" type="checkbox" checked /> Combat sounds</label>
+      <button id="character-switch" class="choose-character in-game-characters" type="button">CHARACTERS · SWITCH / CREATE</button>
       <button id="drop-editor-open" class="drop-editor-open" type="button" hidden>EDIT MONSTER DROPS (DEV)</button>
       <output id="performance-stats" aria-label="Measured performance">Measuring performance…</output>
     </section>
@@ -104,9 +105,9 @@
 
   </div>
   <div id="intro" class="overlay">
-    <div class="panel"><span class="intro-emblem">✥</span><span class="eyebrow">THE GREENWOOD FRONTIER</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>Beyond the village gates, every path is a challenge.<br>Choose your weapon. Find your courage.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><button type="button" id="choose-character" class="choose-character">CHARACTERS</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick to move + right thumb action buttons</div></div>
+    <div class="panel"><span class="intro-emblem">✥</span><span class="eyebrow">THE GREENWOOD FRONTIER</span><h1>PROJECT<br/><em>OAKREST</em></h1><p>Beyond the village gates, every path is a challenge.<br>Choose your weapon. Find your courage.</p><div class="features"><span>⚔ MELEE</span><span>✦ MAGIC</span><span>➶ RANGED</span></div><button id="begin">ENTER OAKREST</button><button type="button" id="choose-character" class="choose-character" aria-haspopup="dialog" aria-controls="character-creator">CHARACTERS</button><div class="intro-hint">Desktop: WASD + mouse or keyboard camera · Touch: left stick to move + right thumb action buttons</div></div>
   </div>
-    <div id="character-creator" class="character-creator" hidden aria-label="Create or choose a character">
+    <div id="character-creator" class="character-creator" role="dialog" aria-modal="true" hidden aria-label="Create or choose a character">
       <div class="creator-shell">
         <header class="creator-header"><div><small>THE GREENWOOD FRONTIER</small><h2>YOUR ADVENTURE BEGINS</h2><p>Create a character, or continue an existing adventure.</p></div><button type="button" id="creator-close" aria-label="Back to title">✕</button></header>
         <section class="creator-saves" aria-label="Saved characters"><h3>Saved Characters <small>(this browser only)</small></h3><div id="creator-slots"></div></section>
