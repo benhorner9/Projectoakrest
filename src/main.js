@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { storageKey } from './storage-key.js';
+import {CAMERA_DEFAULTS,normalizeCameraSettings,readCameraSettings,firstStandardGamepad,gamepadEdges,cameraOrbitVector,frameDamping} from './control-config.js';
 import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
@@ -110,8 +111,13 @@ function equipVisual(style,weaponId){
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,lastAttackInterval=0.95,dodgeTravel=null;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
-let savedLookSpeed=1;try{savedLookSpeed=localStorage.getItem(oakrestKey('oakrest-look-speed')) ?? 1;}catch{}
-let lookSensitivity=cameraSensitivity(savedLookSpeed);
+const cameraStorageKey=oakrestKey('oakrest-camera-settings-v1');
+let cameraSettings=readCameraSettings(localStorage,cameraStorageKey);
+try{if(!localStorage.getItem(cameraStorageKey)){const older=localStorage.getItem(oakrestKey('oakrest-look-speed'));if(older!==null)cameraSettings=normalizeCameraSettings({...cameraSettings,sensitivity:cameraSensitivity(older)});}}catch{}
+let lookSensitivity=cameraSettings.sensitivity;
+camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
+function saveCameraSettings(){try{localStorage.setItem(cameraStorageKey,JSON.stringify(cameraSettings));}catch{}}
+let padState=null,padPrevious=null,padName='';
 let holdingAttack=false;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
 let respawnAt=0,lastHurt=-100;let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
@@ -604,7 +610,7 @@ function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;
   else if(a.kind==='retreat'){shoot(a.damage,26,'#f2d79a');shiftHero(-4);}
   sparks(hero.position.clone().add(new THREE.Vector3(0,1.15,0)),STYLE_COLOURS[style],5);
 }
-function dodge(){if(!started||hp<=0||now()<dodgeUntil)return;pendingBasic=null;pendingAbility=null;attackAnimation=null;dodgeUntil=now()+2;dodgeMovingUntil=now()+.22;const dir=dodgeDirection({x:Number(keys.has('d'))-Number(keys.has('a'))+joystick.x,z:Number(keys.has('s'))-Number(keys.has('w'))+joystick.y},yaw);dodgeTravel={dir,start:now(),end:now()+.32};audio.play('dodge');addRing(hero.position.clone(),'#fff1b8',2,.4);}
+function dodge(){if(!started||hp<=0||now()<dodgeUntil)return;pendingBasic=null;pendingAbility=null;attackAnimation=null;dodgeUntil=now()+2;dodgeMovingUntil=now()+.22;const dir=dodgeDirection({x:Number(keys.has('d'))-Number(keys.has('a'))+joystick.x+(padState?.moveX||0),z:Number(keys.has('s'))-Number(keys.has('w'))+joystick.y+(padState?.moveY||0)},yaw);dodgeTravel={dir,start:now(),end:now()+.32};audio.play('dodge');addRing(hero.position.clone(),'#fff1b8',2,.4);}
 function collides(x,z){return blocked(x,z);}
 // Attack telegraphs are visible ground geometry and use a frozen target/direction.
 // Moving out of the red shape before it resolves avoids damage.
@@ -761,14 +767,15 @@ function updateEnemyLevelLabels(){
 }
 function animate(dt,t){
  elapsed+=dt;resolveBasicAttack(t);resolveAbility(t);if(queuedStyle&&!pendingBasic&&!pendingAbility){const next=queuedStyle;queuedStyle=null;setStyle(next);}if(hp<=0&&respawnAt&&t>=respawnAt){const point=START_POINTS[data.onboarding?.area||'world'];hero.position.set(point.x,terrainHeight(point.x,point.z),point.z);hp=maxHealth(levelFromXp(data.xp.vitality).level);respawnAt=0;updateHpUI();}
- if(holdingAttack||keys.has('j')||keys.has('enter'))doBasic();
+ pollGamepad(dt);
+ if(holdingAttack||(!isGameplayMenuOpen()&&padState?.attack)||keys.has('j')||keys.has('enter'))doBasic();
  const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));
  if(turn)yaw+=turn*dt*2.35*lookSensitivity;
  const front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
- const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;
- const h=(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x;
+ const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y-(isGameplayMenuOpen()?0:padState?.moveY||0);
+ const h=(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x+(isGameplayMenuOpen()?0:padState?.moveX||0);
  const input=new THREE.Vector3().addScaledVector(front,v).addScaledVector(side,h);
- const speed=(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility;
+ const speed=(keys.has('shift')||Math.hypot(padState?.moveX||0,padState?.moveY||0)>.88?6.3:5)*defenceFor(data.armour[style]).mobility;
  motion=smoothMotion(motion,hp>0?input.x:0,hp>0?input.z:0,speed,dt);
  if(dodgeTravel){const remaining=Math.max(0,Math.min(dt,dodgeTravel.end-t+dt));const next=moveOnGround(hero.position,dodgeTravel.dir.x*(dodgeTravel.speed||12.5)*remaining,dodgeTravel.dir.z*(dodgeTravel.speed||12.5)*remaining);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);if(t>=dodgeTravel.end)dodgeTravel=null;}
  else {const next=moveOnGround(hero.position,motion.x*dt,motion.z*dt);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);}
@@ -785,14 +792,14 @@ function animate(dt,t){
  const heading=gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
  visualHeading=dampAngle(visualHeading,heading,19,dt);hero.rotation.y=visualHeading;
  animateActor(hero,{dt,t,stride,speed:gait,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
- const back=front.clone().multiplyScalar(-7.8);
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
- const ideal=look.clone().add(back).add(new THREE.Vector3(0,2.8+Math.sin(pitch)*3,0));
+ const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
+ const ideal=look.clone().add(new THREE.Vector3(orbit.x,orbit.y,orbit.z));
  cameraJolt=Math.max(0,cameraJolt-dt*.85);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)ideal.y+=cameraJolt*Math.sin(elapsed*95)*.25;
  const safe=safeCamera(look,ideal);ideal.set(safe.x,safe.y,safe.z);
- camera.position.lerp(ideal,1-Math.exp(-10*dt));const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
+ camera.position.lerp(ideal,frameDamping(cameraSettings.smoothing,dt));const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
  const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*4,0));
- cameraFocus.lerp(cameraAim,1-Math.exp(-13*dt));camera.lookAt(cameraFocus);
+ cameraFocus.lerp(cameraAim,frameDamping(cameraSettings.smoothing+3,dt));camera.lookAt(cameraFocus);
  for(const e of activeEnemies())updateEnemy(e,dt,t);
  updateEnemyLevelLabels();
  updateLoot(dt,t);
@@ -815,7 +822,7 @@ const timer=attackCooldown(attackUntil,lastAttackInterval,t);
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);
 const canvas=renderer.domElement;
-function cameraMove(dx,dy,touch=false){const speed=lookSensitivity*(touch?.82:1);yaw+=dx*.0044*speed;pitch=clamp(pitch+dy*.0026*speed,-.35,.75);}
+function cameraMove(dx,dy,touch=false){const speed=lookSensitivity*(touch?.82:1);yaw+=dx*.0044*speed;pitch=clamp(pitch+dy*.0026*speed*(cameraSettings.invertY?-1:1),-.45,.85);}
 document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas)cameraMove(e.movementX,e.movementY);});
 canvas.addEventListener('mousedown',e=>{if(!started)return;if(!isTouch&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});if(e.button===0)doBasic();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
