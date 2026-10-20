@@ -65,7 +65,7 @@ export function applyCharacterAppearance(g,appearance={}){
  u.outfitTrims.forEach((m,i)=>m.visible=outfit==='scholar'?i===0:outfit==='traveller'?i>0:outfit==='wanderer'?i===1:false);
  u.cape.visible=outfit==='wanderer'&&!u.chestPlate.visible;
 }
-export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();u.owned=[];u.weapon.clear();u.offhand.clear();u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
+export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();for(const mat of u.ownedMaterials||[])mat.dispose();u.ownedMaterials=[];u.owned=[];u.weapon.clear();u.offhand.clear();u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
  const w=u.weapon;function blade(group,heavy=false,dagger=false){block(group,'#54402f',0,0,.02,.105,.11,.38);block(group,'#c4a466',0,0,-.18,dagger?.26:heavy?.55:.40,.09,.10,true);taperedBlade(group,dagger?.52:heavy?1.45:1.03,dagger?.15:heavy?.30:.20);ball(group,'#c4a466',0,0,.24,.08,.08,.08);}
  if(style==='melee'){blade(w,family==='greatsword',family==='daggers');if(family==='daggers')blade(u.offhand,false,true);}
  else if(style==='magic'){const shaft=tube(w,'#604d36',0,0,-.65,.055,.075,1.75);shaft.rotation.x=Math.PI/2;const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.23),material(family==='frost'?'#8fcde3':'#ecaa69'));crystal.position.z=-1.58;w.add(crystal);for(const s of [-1,1]){const prong=block(w,'#baa775',s*.15,0,-1.43,.07,.10,.42,true);prong.rotation.y=s*-.35;}}
@@ -75,6 +75,29 @@ export function equipActor(g,style,family,armour){const u=g.userData;for(const g
  block(w,'#d3bb84',0,0,-.58,.025,.025,.9);}
  // Equipment geometry belongs to this loadout; cached primitive geometry remains shared.
  for(const root of [w,u.offhand])root.traverse(o=>{if(o.isMesh&&o.geometry!==box&&o.geometry!==sphere&&![...geometries.values()].includes(o.geometry))u.owned.push(o.geometry);});
+}
+/**
+ * Individual weapons sharing a combat family still have different equipment
+ * colours and rune shapes. All materials are per-actor so changing an item
+ * cannot recolour other players, enemies or inventory preview models.
+ */
+export function applyEquipmentVariant(g,style,itemId){
+ const u=g.userData;if(!u?.weapon||typeof itemId!=='string')return;
+ let seed=2166136261;for(const char of style+'.'+itemId)seed=Math.imul(seed^char.charCodeAt(0),16777619)>>>0;
+ const hue=((seed%31)-15)/360,light=((seed>>6)%13-6)/100;
+ const mats=new Set();
+ for(const parent of [u.weapon,u.offhand])parent.traverse(object=>{
+  if(!object.isMesh||!object.material)return;
+  const previous=object.material;
+  if(previous.isMaterial){
+   const unique=previous.clone();unique.color?.offsetHSL(hue,0,light);
+   object.material=unique;mats.add(unique);
+  }
+ });
+ const gemMaterial=new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL((seed%360)/360,.42,.62),metalness:.45,roughness:.28});
+ const geometry=new THREE.OctahedronGeometry(.085+(seed%4)*.019,0);
+ const gemstone=new THREE.Mesh(geometry,gemMaterial);gemstone.position.set(.16,-.06,-.25-(seed%3)*.13);u.weapon.add(gemstone);
+ u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
 export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
