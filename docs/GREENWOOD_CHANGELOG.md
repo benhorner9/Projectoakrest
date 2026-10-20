@@ -1,7 +1,7 @@
 # Greenwood overhaul — implementation changelog
 
 Baseline: `ed8a1a1fd9a778779ae3c6e66f15400f5663a462` on `main`.
-Working branch: `overhaul/greenwood-gameplay-visuals`.
+Original implementation branch: `overhaul/greenwood-gameplay-visuals`. Final tested QA refinements: `overhaul/greenwood-qa-refinements` ([PR #2](https://github.com/benhorner9/Projectoakrest/pull/2)).
 
 ## World and rendering
 

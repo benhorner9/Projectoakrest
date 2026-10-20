@@ -1,13 +1,13 @@
 # Greenwood QA and release report
 
 Date: 2026-10-20. Baseline: `ed8a1a1fd9a778779ae3c6e66f15400f5663a462`.
-Branch: `overhaul/greenwood-gameplay-visuals`. [Draft PR #1](https://github.com/benhorner9/Projectoakrest/pull/1).
+Tested branch: `overhaul/greenwood-qa-refinements`. [QA PR #2](https://github.com/benhorner9/Projectoakrest/pull/2) targets the active development branch in [release PR #1](https://github.com/benhorner9/Projectoakrest/pull/1).
 
 ## Release status
 
 **Implemented and locally tested; not signed off for production.** The GitHub integration has produced a READY preview for this overhaul. Protected preview access is denied with HTTP 403 by the connected Vercel account, including when requesting an authenticated share URL. The local Vercel CLI has no authenticated identity. No protection settings have been weakened, no production merge has been made, and no player data has been reset. Concurrent branch notes also describe a shared-host `/oakrest-dev` workflow; that host has not been deployed or verified by this QA pass. The Vercel preview is produced by the repository’s existing Git integration.
 
-[Branch preview](https://projectoakrest-git-overhaul-greenwood-ga-8523ba-benhorner9-7909.vercel.app) requires authorized Vercel access. [Existing production](https://projectoakrest.vercel.app) remains on the pre-overhaul game. A successful Vercel build is not a verified browser playthrough of that deployment.
+[Branch preview](https://projectoakrest-git-overhaul-greenwood-qa-e3dd98-benhorner9-7909.vercel.app) requires authorized Vercel access. [Existing production](https://projectoakrest.vercel.app) remains on the pre-overhaul game. A successful Vercel build is not a verified browser playthrough of that deployment.
 
 To unblock deployed verification, the connection must authorize the `projectoakrest` project (`prj_GEIjeTK0gzkM7fdX0e9rgs88H9mM`) in team `benhorner9-7909` (`team_8P1XS5ilh9Qt223i946ORxrB`). If that scope is already granted, an account with permission to access the protected deployment is needed.
 
@@ -88,3 +88,9 @@ Do not label the brief's complete definition of done as met until these release 
 ## Concurrent branch integration
 
 During final publication, the remote branch was found to have advanced to `fe22bd63567c4ed5f86d6b777116d26e6b00f6e1`, adding character creation, tutorial/realm navigation and world collision. These changes were merged into an isolated working checkout, preserving all newer files and resolving the single ranged-targeting overlap using the active-area enemy list. The integrated code passed 97 regression tests, syntax/build checks, the existing fresh-character/tutorial/realm/legacy-save browser smoke suite, and the focused desktop slope-aim/portrait Settings smoke. The exhaustive legacy-world suite is recorded in `qa/browser-report.json`; earlier results are retained under `qa/pre-integration/`.
+
+## Publication and exact scope
+
+The active development branch advanced again to `dd81e31ff62eac02cd4521aee133347fc106bf5b` during publication, adding an item registry and independent drop tables. The expected-head update did not apply; the branch was not force-updated. The tested tree was published separately as commit `287806739c6be05aec8c944e8fe5185fd67e83e6` on `overhaul/greenwood-qa-refinements`, with PR #2 targeting the active development branch. The latest item/drop-table changes are not part of the recorded test results; re-run integration and loot checks when combining the branches.
+
+Vercel deployment `dpl_JEFpMMiYHSSh1HVGNAVZX31F1Ns4` is READY and its project, branch and source commit were verified through the API. Its source is the existing Git integration. Runtime access to the protected preview remains unverified. This final publication note is documentation-only and does not change built game assets.
