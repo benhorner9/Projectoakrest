@@ -21,7 +21,7 @@ let browser;
     equipment:{melee:{helm:null},magic:{},ranged:{}}
    }));
   });
-  await page.goto('http://127.0.0.1:5173/?equipment-qa=1',{waitUntil:'domcontentloaded',timeout:20000});
+  await page.goto('http://127.0.0.1:5173/?qa=1',{waitUntil:'domcontentloaded',timeout:20000});
   await page.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
   await page.locator('#begin').click();
   await page.locator('#gear-button').click();

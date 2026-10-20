@@ -38,7 +38,7 @@ let browser;
     assert.ok(after.hero.z<before.hero.z,'player movement should update');
     await page.locator('#loadout-button').click({timeout:10000});
     await page.locator('#progression-inventory').click({timeout:10000});
-    assert.ok(await page.locator('#progression-content').getByText('Iron Longsword').isVisible(),'inventory must open');
+    assert.ok(await page.locator('#progression-content').getByRole('button',{name:'Examine Iron Longsword',exact:true}).isVisible(),'inventory must open');
     await page.evaluate(()=>oakrestQA.save());
     const saved=await page.evaluate(()=>localStorage.getItem('oakrest-v1'));
     assert.ok(saved&&JSON.parse(saved).xp,'public/default save key should persist');

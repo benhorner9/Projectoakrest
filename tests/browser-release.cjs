@@ -19,7 +19,7 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  const {defaultSave,LOADOUTS}=await import('../src/rules.js');const d=defaultSave();d.coins=500;d.inventory.slotted=['recruit-helm'];
  const [lockedId]=Object.entries(LOADOUTS.melee).find(([,w])=>w.requiredLevel>1);d.inventory.weapons.melee.push(lockedId);
  await ctx.addInitScript(d=>{if(!localStorage.getItem('oakrest-dev-v1'))localStorage.setItem('oakrest-dev-v1',JSON.stringify(d));localStorage.setItem('oakrest-v1','public-save-sentinel');},d);
- await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.oakrestQA,null,{timeout:20000});await page.locator('#begin').click();
+ await page.goto(base+'?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.oakrestQA,null,{timeout:20000});await page.locator('#begin').click();
  async function state(){return page.evaluate(()=>oakrestQA.state().data)}
  async function openInventory(){await page.locator('#gear-button').click();await page.locator('#progression-inventory').click()}
  async function closeBook(){await page.locator('#close-progression').click()}
@@ -47,7 +47,7 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  for(const style of ['ranged','magic','melee']){await page.evaluate(style=>{oakrestQA.step(2);oakrestQA.style(style);oakrestQA.step(1)},style);assert.equal(await page.evaluate(()=>oakrestQA.state().style),style)}
  const snapshot=await state();await page.evaluate(()=>oakrestQA.save());await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.oakrestQA);assert.deepEqual(await state(),snapshot);assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-v1')),'public-save-sentinel');await page.locator('#begin').click();
  // Movement continues after menus, and real melee attacks still resolve.
- await page.evaluate(()=>{oakrestQA.teleport(0,11);oakrestQA.step(1)});await page.keyboard.down('w');await page.waitForTimeout(400);await page.keyboard.up('w');assert.ok(await page.evaluate(()=>oakrestQA.state().hero.z<11));
+ await page.evaluate(()=>{oakrestQA.teleport(0,11);oakrestQA.step(1)});await page.keyboard.down('w');await page.evaluate(()=>oakrestQA.step(.4));await page.keyboard.up('w');assert.ok(await page.evaluate(()=>oakrestQA.state().hero.z<11));
  const combat=await page.evaluate(()=>{const e=oakrestQA.state().enemies.find(e=>e.type==='dummy');oakrestQA.teleport(e.x,e.z+2);oakrestQA.basic();oakrestQA.step(.5);return {before:e.hp,after:oakrestQA.state().enemies.find(e=>e.type==='dummy').hp}});assert.ok(combat.after<combat.before,'combat damages target after equipment/menu flow');
  await page.setViewportSize({width:1024,height:1366});await openInventory();await page.screenshot({path:path.join(root,'qa',engine+'-portrait.png')});
  const panel=await page.locator('#progression-panel').boundingBox();assert.ok(panel.x>=0&&panel.y>=0&&panel.x+panel.width<=1024&&panel.y+panel.height<=1366);
