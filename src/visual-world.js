@@ -32,7 +32,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   function cub(m,x,y,z,sx,sy,sz){return add(cube,m,x,y,z,sx,sy,sz);}
   function groundMark(x,z,rx,rz,material,at=-.030){
     const p=add(new THREE.CircleGeometry(1,9),material,x,at,z,rx,rz,1);
-    p.rotation.x=-Math.PI/2;return p;
+    p.rotation.x=-Math.PI/2;p.visible=false;return p;
   }
   // Narrow, uneven dust islands on the old road; blend into grass at the edges.
   for(let i=0;i<37;i++){
@@ -53,9 +53,10 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
     }
   }
   // Geometry instancing: low draw-call cost for undergrowth, river pebbles and flowers.
-  const tufts=new THREE.InstancedMesh(new THREE.ConeGeometry(.13,.56,4),materials.grass,320);
-  tufts.castShadow=false;tufts.frustumCulled=false;
-  for(let i=0;i<320;i++){
+  const bladeGeometry=new THREE.BufferGeometry();bladeGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.14,0,0, .14,0,0, .06,.45,.04, 0,0,-.12, 0,0,.12, -.05,.35,.06],3));bladeGeometry.computeVertexNormals();materials.grass.color.set('#ffffff');materials.grass.side=THREE.DoubleSide;
+  const tufts=new THREE.InstancedMesh(bladeGeometry,materials.grass,1100);
+  tufts.castShadow=false;tufts.frustumCulled=true;
+  for(let i=0;i<1100;i++){
     let x=(random()-.5)*128,z=(random()-.5)*128;
     if(Math.abs(x)<5.0)x+=(x<0?-1:1)*6;
     // Leave house doorways, well and gate clear.
@@ -66,10 +67,10 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
     tufts.setMatrixAt(i,dummy.matrix);
     tufts.setColorAt(i,new THREE.Color(i%3===0?'#b9a86a':i%2?'#7b9a62':'#578852'));
   }
-  tufts.instanceMatrix.needsUpdate=true;
+  tufts.instanceMatrix.needsUpdate=true;tufts.computeBoundingSphere();
   if(tufts.instanceColor)tufts.instanceColor.needsUpdate=true;
   scene.add(tufts);
-  const pebbles=new THREE.InstancedMesh(sphere,materials.stone,115);
+  const pebbles=new THREE.InstancedMesh(sphere,materials.stone.clone(),115);pebbles.material.color.set('#ffffff');
   for(let i=0;i<115;i++){
     const z=(random()-.5)*119,sign=random()>.5?1:-1;
     const x=sign*(3.75+random()*5)+(random()-.5)*1.2;
@@ -82,7 +83,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   }
   pebbles.instanceMatrix.needsUpdate=true;if(pebbles.instanceColor)pebbles.instanceColor.needsUpdate=true;
   scene.add(pebbles);
-  const blossoms=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.11,0),materials.flowers,110);
+  const blossoms=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.11,0),materials.flowers.clone(),110);blossoms.material.color.set('#ffffff');
   for(let i=0;i<110;i++){
     const x=(random()-.5)*115,z=(random()-.5)*115;
     dummy.position.set(Math.abs(x)<5?(x<0?-5.3:5.3):x,.38,z);
@@ -106,7 +107,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
     const glass=add(new THREE.CylinderGeometry(.25,.23,.58,6),materials.lantern,x,2.7,z);
     cub(materials.oakTrim,x,2.38,z,.5,.11,.5);
     const flame=add(new THREE.OctahedronGeometry(.13,0),materials.lamp,x,2.72,z,.52,.85,.52);
-    return {flame,glass,base:2.72};
+    flame.userData.animated=true;return {flame,glass,base:2.72};
   }
   const lamps=[lantern(-7.1,5.3),lantern(7.2,5.3),lantern(-6.7,-9.5),lantern(7.1,-9.5),lantern(-5.9,-33),lantern(5.9,-50)];
   // Wooden market cart, wooden crates, barrels and a direction sign by the square.

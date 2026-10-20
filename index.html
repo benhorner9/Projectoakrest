@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#122a24" />
   <meta name="description" content="Project Oakrest: an early playable third-person tribrid action RPG combat prototype." />
-  <title>Project Oakrest — Combat Prototype</title>
+  <title>Oakrest — The Greenwood Frontier</title>
   <link rel="stylesheet" href="./src/styles.css" />
   <link rel="stylesheet" href="./src/mobile-combat.css" />
   <link rel="stylesheet" href="./src/progression.css" />
   <link rel="stylesheet" href="./src/visual-polish.css" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="./src/greenwood.css" />
   <script type="importmap">
-  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js" } }
+  { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
 </head>
 <body>
@@ -29,6 +29,9 @@
       <p class="desktop-help">WASD move · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
       <label for="look-speed">Camera speed <output id="look-speed-value">1.0×</output></label>
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
+      <label for="quality">Graphics quality</label><select id="quality"><option value="low">Performance</option><option value="balanced">Balanced</option><option value="high">High</option></select>
+      <label class="sound-setting"><input id="sound-enabled" type="checkbox" checked /> Combat sounds</label>
+      <output id="performance-stats" aria-label="Measured performance">Measuring performance…</output>
     </section>
     <section class="vitals">
       <div class="combat-level-badge" aria-label="Your overall Combat Level">COMBAT LV <strong id="combat-level-value">1</strong></div>
@@ -37,7 +40,7 @@
       <div class="bar xp"><div id="xp-fill"></div></div>
       <div class="stat-line"><span id="style-level">MELEE LEVEL 1</span><span id="coins">0 COINS</span></div>
     </section>
-    <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Train with a weapon, then defeat 3 creatures outside the village.</div><div id="quest-progress">0 / 3 defeated</div></aside>
+    <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Practice on the straw dummy by the gate. Follow the road to the mosslings; step out of red warnings. Defeat 3 creatures and collect their drops.</div><div id="quest-progress">0 / 3 defeated</div></aside>
     <div id="enemy-level-layer" aria-hidden="true"></div>
     <div class="targetbox" id="targetbox" hidden><div id="target-name">Field Boar</div><div class="bar enemy-health"><div id="target-hp"></div></div></div>
     <div class="reticle" aria-hidden="true"><i></i><i></i></div>
@@ -48,7 +51,7 @@
     <footer class="combatbar">
       <div class="equipment-picker" id="equipment-picker" hidden></div>
       <div class="styles" id="styles"></div>
-      <div class="weaponline"><span id="weapon-name">Iron Longsword</span><div class="loadout-actions"><button id="gear-button" type="button">EQUIP</button><button id="loadout-button" type="button" aria-controls="progression-panel" aria-expanded="false">MENU ▾</button></div></div>
+      <div class="weaponline"><span class="weapon-summary"><span id="weapon-name">Iron Longsword</span><small id="weapon-cycle">ATTACK READY</small></span><div class="loadout-actions"><button id="gear-button" type="button">EQUIP</button><button id="loadout-button" type="button" aria-controls="progression-panel" aria-expanded="false">MENU ▾</button></div></div>
     <section id="progression-panel" class="progression-panel" hidden aria-label="Oakrest character menu">
       <div class="progression-card">
         <header class="progression-header">
