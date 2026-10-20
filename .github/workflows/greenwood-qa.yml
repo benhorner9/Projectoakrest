@@ -2,9 +2,9 @@ name: Oakrest Greenwood QA
 
 on:
   pull_request:
-    branches: [main, overhaul/greenwood-gameplay-visuals]
+    branches: [main, overhaul/greenwood-gameplay-visuals, feature/oakrest-town-and-specialist-training]
   push:
-    branches: [overhaul/greenwood-gameplay-visuals, feature/oakrest-town-and-specialist-training]
+    branches: [overhaul/greenwood-gameplay-visuals, feature/oakrest-town-and-specialist-training, feature/oakrest-equipment-inventory-starter-sets]
 
 permissions:
   contents: read
