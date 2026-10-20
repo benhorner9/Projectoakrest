@@ -409,6 +409,7 @@ function updateOpeningArea(){
  scene.background.set(area==='realm'?'#3b445e':area==='tutorial'?'#9fbf9f':'#a9c8b7');
  scene.fog.color.set(scene.background);
  $('area').textContent=area==='tutorial'?'The First Steps':area==='realm'?'Portal Realm':'Oakrest Village';
+ $('quest-text').closest('.quest').style.display=area==='world'?'':'none';
  hero.position.set(START_POINTS[area].x,terrainHeight(START_POINTS[area].x,START_POINTS[area].z),START_POINTS[area].z);
  yaw=0;motion={x:0,z:0};queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;
  for(const e of enemies){e.levelLabel.hidden=true; if(e.onboardingDummy){e.group.visible=area==='tutorial';e.hp=e.max;}else e.group.visible=area==='world';}
@@ -743,6 +744,14 @@ function animate(dt,t){
  motion=smoothMotion(motion,hp>0?input.x:0,hp>0?input.z:0,speed,dt);
  if(dodgeTravel){const remaining=Math.max(0,Math.min(dt,dodgeTravel.end-t+dt));const next=moveOnGround(hero.position,dodgeTravel.dir.x*(dodgeTravel.speed||12.5)*remaining,dodgeTravel.dir.z*(dodgeTravel.speed||12.5)*remaining);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);if(t>=dodgeTravel.end)dodgeTravel=null;}
  else {const next=moveOnGround(hero.position,motion.x*dt,motion.z*dt);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);}
+ // Dedicated areas are finite islands; never let players walk off their floor.
+ if(data.onboarding?.area==='tutorial'){
+  hero.position.x=clamp(hero.position.x,-25,25);
+  hero.position.z=clamp(hero.position.z,-25,25);
+ }else if(data.onboarding?.area==='realm'){
+  const r=Math.hypot(hero.position.x,hero.position.z);
+  if(r>15.5){hero.position.x*=15.5/r;hero.position.z*=15.5/r;}
+ }
  const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||t<attackUntil;
  const heading=gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
