@@ -5,7 +5,7 @@ const box=new THREE.BoxGeometry(1,1,1);
 function seed(id){let n=2166136261;for(const char of id)n=Math.imul(n^char.charCodeAt(0),16777619)>>>0;return n;}
 const material=(hex,metalness=0)=>new THREE.MeshStandardMaterial({color:hex,roughness:.62,metalness});
 const shape=(parent,geometry,mat,x,y,z,sx=1,sy=1,sz=1)=>{
- const piece=new THREE.Mesh(geometry,mat);piece.position.set(x,y,z);piece.scale.set(sx,sy,sz);
+ const piece=new THREE.Mesh(geometry===box?box.clone():geometry,mat);piece.position.set(x,y,z);piece.scale.set(sx,sy,sz);
  piece.castShadow=false;parent.add(piece);return piece;
 };
 export function makeWorldItemModel(drop){
