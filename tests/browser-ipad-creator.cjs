@@ -48,7 +48,18 @@ async function testStandalone(label,viewport,legacyBad){
   await page.locator('select[name="outfit"]').selectOption('scholar');
   await page.locator('#create-and-play').click({timeout:15000});
   await page.waitForURL(/\/oakrest-dev\/\?autostart=1/,{timeout:20000});
-  await page.waitForFunction(()=>!!window.oakrestQA,{timeout:25000});
+  try{await page.waitForFunction(()=>!!window.oakrestQA,null,{timeout:16000});}
+  catch(e){
+   const diagnostics=await page.evaluate(()=>({
+    ready:document.readyState,title:document.title,html:document.querySelector('#error')?.textContent,
+    errorShown:!!document.querySelector('#error')&&!document.querySelector('#error').hidden,
+    mainScript:[...document.scripts].map(s=>s.src),intro:!!document.querySelector('#intro'),
+    character:localStorage.getItem('oakrest-dev-active-character'),
+    roster:localStorage.getItem('oakrest-dev-characters-v1')
+   })).catch(()=>({evalFailed:true}));
+   console.error('Standalone-to-game navigation failure',label,page.url(),JSON.stringify({diagnostics,errors}));
+   throw e;
+  }
   assert.ok(await page.locator('#intro').isHidden(),'new character auto-starts tutorial');
   assert.equal(await page.locator('#area').textContent(),'The First Steps');
   const saved=await page.evaluate(()=>{
