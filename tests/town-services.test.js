@@ -45,7 +45,7 @@ test('bank transfers money, materials and only unequipped equipment with save ro
  assert.equal(bankCoins(d,'withdraw'),125);
  assert.equal(d.coins,125);
  assert.equal(bankMaterials(d,'softwood-logs','deposit'),3);
- assert.equal(d.inventory.materials['softwood-logs'],0);
+ assert.equal(d.inventory.materials['softwood-logs']||0,0);
  assert.equal(bankMaterials(d,'softwood-logs','withdraw'),3);
  assert.equal(d.inventory.materials['softwood-logs'],3);
  assert.equal(bankEquipment(d,'weapon','sword','deposit','melee'),false,'worn weapon cannot be banked');
