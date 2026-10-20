@@ -921,10 +921,21 @@ const characterUI=setupCharacterCreator({
   startGameplay();
  }
 });
-$('choose-character').addEventListener('click',()=>characterUI.show());
+$('choose-character').addEventListener('click',event=>{
+ event.preventDefault();characterUI.show();
+});
+// Reloading before changing characters clears in-flight attacks, enemy state
+// and temporary world meshes while preserving each character's own save.
+$('character-switch').addEventListener('click',()=>{
+ save();
+ const target=new URL(location.href);
+ target.searchParams.set('characters','1');
+ location.assign(target.href);
+});
 if(activeCharacter)useCharacter(activeCharacter,data);
 else if(legacySave)useCharacter(null,legacySave);
 else characterUI.show();
+if(new URLSearchParams(location.search).has('characters'))characterUI.show();
 $('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){characterUI.show();return;}startGameplay();});
 equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
