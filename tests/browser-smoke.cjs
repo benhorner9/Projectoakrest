@@ -87,7 +87,7 @@ let browser;
     assert.equal(fresh.legacy,null,'fresh creation must not modify the original save key');
     assert.equal(fresh.save.inventory.weapons.melee.length,0,'fresh characters start without weapons');
     assert.equal(fresh.save.inventory.armour.length,0,'fresh characters start without armour');
-    await freshPage.locator('#begin').click();
+    assert.ok(await freshPage.locator('#intro').isHidden(),'successful character creation must immediately start the game');
     assert.ok(await freshPage.locator('#game canvas').count()===1);
     assert.equal(await freshPage.evaluate(()=>oakrestQA.state().area),'tutorial');
     assert.equal(await freshPage.locator('#area').textContent(),'The First Steps');
