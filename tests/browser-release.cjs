@@ -43,7 +43,17 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  await page.locator('#town-close').click();await town(-30);await row.getByRole('button',{name:'TAKE',exact:true}).click();await page.locator('#town-close').click();
  await openInventory();await examine('Iron Longsword');await action('EQUIP');await page.locator('#skill-detail-back').click();
  await examine('Recruit Mail');await action('EQUIP');await action('UNEQUIP');assert.equal((await state()).armour.melee,'none');await action('EQUIP');await page.locator('#skill-detail-back').click();
- await page.locator('#progression-equipment').click();assert.equal(await page.locator('.oak-gear-slot').count(),9);await page.screenshot({path:path.join(root,'qa',engine+'-equipment.png')});await closeBook();
+ await page.locator('#progression-equipment').click();assert.equal(await page.locator('.oak-gear-slot').count(),9);await page.screenshot({path:path.join(root,'qa',engine+'-equipment.png')});
+ if(engine==='chromium'){
+  const scroller=page.locator('#progression-content'),r=await scroller.boundingBox(),cdp=await ctx.newCDPSession(page);
+  const x=r.x+r.width*.7,start=r.y+r.height*.85,end=r.y+r.height*.2;
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y:start,id:1}]});
+  for(let i=1;i<=8;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:start+(end-start)*i/8,id:1}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.ok(await scroller.evaluate(e=>e.scrollTop>0),'touch drag scrolls equipment list');
+  assert.ok(!(await page.locator('#skill-detail').isVisible()),'scrolling does not activate Examine');
+ }
+ await closeBook();
  for(const style of ['ranged','magic','melee']){await page.evaluate(style=>{oakrestQA.step(2);oakrestQA.style(style);oakrestQA.step(1)},style);assert.equal(await page.evaluate(()=>oakrestQA.state().style),style)}
  const snapshot=await state();await page.evaluate(()=>oakrestQA.save());await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.oakrestQA);assert.deepEqual(await state(),snapshot);assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-v1')),'public-save-sentinel');await page.locator('#begin').click();
  // Movement continues after menus, and real melee attacks still resolve.
