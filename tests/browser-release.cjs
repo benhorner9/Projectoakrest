@@ -22,7 +22,7 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  await page.goto(base+'?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.oakrestQA,null,{timeout:20000});await page.locator('#begin').click();
  async function state(){return page.evaluate(()=>oakrestQA.state().data)}
  async function openInventory(){await page.locator('#gear-button').click();await page.locator('#progression-inventory').click()}
- async function closeBook(){await page.locator('#close-progression').click()}
+ async function closeBook(){if(await page.locator('#skill-detail').isVisible())await page.locator('#skill-detail-back').click();await page.locator('#close-progression').click()}
  async function examine(name){await page.getByRole('button',{name:'Examine '+name,exact:true}).click()}
  async function action(name){await page.getByRole('button',{name,exact:true}).click()}
  async function town(x){await page.evaluate(x=>{oakrestQA.teleport(x,19.5);oakrestQA.step(.1)},x);await page.locator('#town-interact-button').click()}
