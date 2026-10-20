@@ -12,7 +12,7 @@ export const LOADOUTS = {
     ]},
     daggers: { title:'Twin Daggers', icon:'⌁', reach:2.1, basic:9, interval:0.40, windup:0.09, abilities:[
       { name:'Quick Slice', icon:'⌁', kind:'hit', damage:15, reach:2.5, bleed:4, cooldown:4, note:'Fast slash that causes bleeding.' },
-      { name:'Twin Strike', icon:'✕', kind:'hit', damage:24, reach:2.5, cooldown:6, note:'Strike twice in quick succession.' },
+      { name:'Twin Strike', icon:'✕', kind:'hit', strikes:2, damage:24, reach:2.5, cooldown:6, note:'Strike twice in quick succession.' },
       { name:'Shadow Step', icon:'»', kind:'dash', distance:5, cooldown:9, note:'Dash quickly toward the target.' },
       { name:'Open Wound', icon:'✦', kind:'execute', damage:23, reach:2.6, cooldown:10, note:'Bonus damage if the target is bleeding.' },
     ]},
@@ -25,7 +25,7 @@ export const LOADOUTS = {
       { name:'Ice Barrier', icon:'⬡', kind:'shield', duration:5, cooldown:16, note:'Take less damage for a short time.' },
     ]},
     ember: { title:'Ember Wand', icon:'✧', reach:17, basic:13, interval:0.75, windup:0.18, abilities:[
-      { name:'Firebolt', icon:'✧', kind:'bolt', damage:29, speed:22, cooldown:4, note:'Launch a fiery projectile.' },
+      { name:'Firebolt', icon:'✧', kind:'bolt', explosion:2.1, damage:29, speed:22, cooldown:4, note:'Launch a fiery projectile.' },
       { name:'Flame Wave', icon:'≋', kind:'sweep', damage:21, reach:6.5, cooldown:8, note:'A close-range wave of fire.' },
       { name:'Blink', icon:'»', kind:'dash', distance:6, cooldown:12, note:'Quickly surge forward.' },
       { name:'Warmth', icon:'✚', kind:'heal', heal:30, cooldown:18, note:'Restore a little health.' },
@@ -68,7 +68,7 @@ for(const [style,otherFamily,forgedFirst,forgedSecond] of [
 LOADOUTS.melee.greatsword={
   ...LOADOUTS.melee.sword,
   title:'Heavy Greatsword',icon:'🗡',reach:3.7,basic:39,interval:1.70,windup:0.55,
-  requiredLevel:7,family:'greatsword'
+  requiredLevel:7,family:'greatsword',abilities:LOADOUTS.melee.sword.abilities.map((a,i)=>({...a,...(i===0?{damage:55,reach:3.7,cooldown:6}:i===1?{damage:32,reach:3.7,cooldown:8}:i===2?{damage:22,reach:3.5}:{} )}))
 };
 LOADOUTS.ranged.shortbow={
   ...LOADOUTS.ranged.bow,
@@ -195,7 +195,7 @@ export function validGroundLoot(list){
  if(!Array.isArray(list))return [];
  const out=[],seen=new Set();
  for(const d of list.slice(-36)){
-  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>70||Math.abs(d.z)>70||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
+  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>120||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
   if(d.kind==='coins'&&d.itemId!=='coins')continue;
   if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token'].includes(d.itemId))continue;
   if(d.kind==='armour'&&(!Object.hasOwn(ARMOUR,d.itemId)||d.amount!==1))continue;

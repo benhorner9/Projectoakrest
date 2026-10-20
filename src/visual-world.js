@@ -1,3 +1,4 @@
+import {addWorldObstacle} from './terrain.js';
 /**
  * Oakrest visual direction: warm storybook timber-and-stone village,
  * mossy forest edge, painted low-poly colours and a readable golden-hour sky.
@@ -99,9 +100,9 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
     const x=sign*(8+random()*45),z=(random()-.5)*105;
     const r=.5+random()*.95;
     const rock=add(sphere,i%3?materials.stone:materials.stoneLight,x,r*.43-.03,z,r,r*.72,r*.8);
-    rock.rotation.y=random()*Math.PI;
+    rock.rotation.y=random()*Math.PI;addWorldObstacle({x,z,r:r*.85,height:r*1.15});
   }
-  function lantern(x,z){
+  function lantern(x,z){addWorldObstacle({x,z,r:.12,height:3.2});
     cub(materials.oak,x,1.6,z,.16,3.15,.16);
     cub(materials.oakTrim,x,3.0,z,.65,.12,.65);
     const glass=add(new THREE.CylinderGeometry(.25,.23,.58,6),materials.lantern,x,2.7,z);
@@ -111,7 +112,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   }
   const lamps=[lantern(-7.1,5.3),lantern(7.2,5.3),lantern(-6.7,-9.5),lantern(7.1,-9.5),lantern(-5.9,-33),lantern(5.9,-50)];
   // Wooden market cart, wooden crates, barrels and a direction sign by the square.
-  function crate(x,z,size=.8){
+  function crate(x,z,size=.8){addWorldObstacle({x,z,hx:size*.5,hz:size*.5,height:size});
     cub(materials.oak,x,size*.5,z,size,size,size);
     for(const offset of [-.33,.33]){
       cub(materials.oakTrim,x+offset*size,.5*size,z+size*.51,.085*size,size*.88,.05);
@@ -120,12 +121,12 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   for(const [x,z,sc] of [[-7,16,.88],[-8.2,16.6,.6],[8.5,23,1],[10.4,23.5,.6],[-10,30,.85],[8,32,.7]]){
     crate(x,z,sc);
   }
-  function barrel(x,z){
+  function barrel(x,z){addWorldObstacle({x,z,r:.48,height:1.08});
     add(new THREE.CylinderGeometry(.47,.43,1.03,9),materials.oak,x,.53,z);
     for(const y of [.17,.86])add(new THREE.CylinderGeometry(.48,.48,.09,9),materials.stone,x,y,z);
   }
   for(const [x,z] of [[-10,13],[-9,14.3],[11,14],[9.9,15.1],[-10,35],[10.2,-5]])barrel(x,z);
-  function cart(x,z){
+  function cart(x,z){addWorldObstacle({x,z,hx:1.45,hz:.95,height:2.6});
     cub(materials.oak,x,1.05,z,2.45,.16,1.55);cub(materials.oakTrim,x,1.22,z,2.65,.18,1.7);
     for(const s of [-1,1]){
       const wheel=add(new THREE.TorusGeometry(.46,.12,6,11),materials.oak,x+s*1.25,.57,z);

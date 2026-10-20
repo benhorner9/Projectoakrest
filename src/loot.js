@@ -4,7 +4,7 @@ import {rollDropTable} from './drop-tables.js';
 export const MAX_GROUND_LOOT=36;
 export function isValidDrop(d){
  if(!d||typeof d!=='object'||typeof d.id!=='string'||d.id.length>64||d.id.length<1)return false;
- if(!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>70||Math.abs(d.z)>70)return false;
+ if(!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>120)return false;
  if(!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)return false;
  const item=itemFromDrop(d);
  return !!item?.dropAllowed&&(d.kind==='coins'||d.amount===1);
@@ -15,8 +15,8 @@ export function lootName(d){
 }
 export function createMonsterDrops(type,x,z,random,idFactory,tables){
  const items=rollDropTable(type,random,tables);
- return items.map((item,index)=>({...item,id:idFactory(),x:Math.max(-69,Math.min(69,x+(index?Math.cos(index*2.3)*.85:0))),
-  z:Math.max(-69,Math.min(69,z+(index?Math.sin(index*2.3)*.85:0)))}));
+ return items.map((item,index)=>({...item,id:idFactory(),x:Math.max(-119,Math.min(119,x+(index?Math.cos(index*2.3)*.85:0))),
+  z:Math.max(-119,Math.min(119,z+(index?Math.sin(index*2.3)*.85:0)))}));
 }
 export function closestDrop(drops,x,z,reach=3.2){
  let nearest=null,dist=reach;

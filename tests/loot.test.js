@@ -47,3 +47,15 @@ test('pickup UI remains touch actionable and XP is still awarded on kill',()=>{
  assert.ok(!s.includes("data.coins+=type==="));
  assert.ok(s.includes('data.groundLoot=data.groundLoot.filter('));
 });
+
+test('expanded wilderness drops remain at the defeated enemy and survive reload',()=>{
+ let next=0;
+ for(const [type,x,z] of [['boar',11,-83],['bandit',-6,-98]]){
+  const drops=createMonsterDrops(type,x,z,()=>0,()=>String(++next));
+  assert.ok(drops.length>0);assert.ok(drops.every(d=>Math.hypot(d.x-x,d.z-z)<=.86));
+  assert.ok(drops.every(isValidDrop));
+  const d=defaultSave();d.groundLoot=drops;assert.deepEqual(validSave(JSON.parse(JSON.stringify(d))).groundLoot,drops);
+  assert.ok(closestDrop(drops,x,z));
+ }
+ assert.equal(isValidDrop({id:'outside',kind:'coins',itemId:'coins',amount:1,x:121,z:0}),false);
+});

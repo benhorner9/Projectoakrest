@@ -5,7 +5,7 @@
 export function createCombatVisuals(THREE,scene){
  const effects=[];
  const col=hex=>new THREE.Color(hex);
- function spawn(mesh,seconds=.32){
+ function spawn(mesh,seconds=.32){if(effects.length>=64){mesh.geometry.dispose();mesh.material.dispose();return mesh;}
   mesh.frustumCulled=false;mesh.renderOrder=4;scene.add(mesh);
   effects.push({mesh,elapsed:0,duration:seconds,baseOpacity:mesh.material.opacity||1});
   return mesh;
@@ -19,6 +19,15 @@ export function createCombatVisuals(THREE,scene){
   mesh.position.set(position.x+heading.x*.65,position.y+1.16,position.z+heading.z*.65);
   mesh.rotation.order='YXZ';mesh.rotation.set(-Math.PI/2,Math.atan2(heading.x,-heading.z)+(combo===1?-.4:combo===2?.20:-.18),0,'YXZ');
   spawn(mesh,.26);
+ }
+ function sweep(strike,hex){
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(36),3));
+  const mesh=new THREE.Line(geometry,new THREE.LineBasicMaterial({color:hex,transparent:true,opacity:.8,depthWrite:false}));
+  mesh.userData.sweep=strike;spawn(mesh,strike.profile.duration+.07);
+ }
+ function field(origin,radius,duration,hex,heightAt=()=>origin.y-1.1){
+  const mesh=new THREE.Mesh(new THREE.RingGeometry(radius-.10,radius,40),new THREE.MeshBasicMaterial({color:hex,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false}));
+  const points=mesh.geometry.attributes.position;for(let i=0;i<points.count;i++){const x=origin.x+points.getX(i),z=origin.z+points.getY(i);points.setXYZ(i,x,heightAt(x,z)+.055,z);}mesh.geometry.computeBoundingSphere();mesh.userData.fixed=true;spawn(mesh,duration);
  }
  function impact(position,hex,heavy=false){
   const mesh=new THREE.Mesh(
@@ -40,7 +49,13 @@ export function createCombatVisuals(THREE,scene){
   for(let i=effects.length-1;i>=0;i--){
    const fx=effects[i];fx.elapsed+=dt;
    const p=Math.min(1,fx.elapsed/fx.duration);
-   fx.mesh.scale.setScalar(1+p*1.4);
+   const strike=fx.mesh.userData.sweep;
+   if(strike){
+    const end=Math.min(1,fx.elapsed/strike.profile.duration),points=fx.mesh.geometry.attributes.position;
+    for(let j=0;j<points.count;j++){const progress=Math.max(0,end-(1-j/(points.count-1))*.22),angle=strike.yaw+(-strike.profile.halfAngle+2*strike.profile.halfAngle*progress)*(strike.reverse?-1:1);
+     points.setXYZ(j,strike.origin.x+Math.sin(angle)*strike.reach,strike.origin.y,strike.origin.z-Math.cos(angle)*strike.reach);}
+    points.needsUpdate=true;
+   }else if(!fx.mesh.userData.fixed)fx.mesh.scale.setScalar(1+p*1.4);
    fx.mesh.material.opacity=fx.baseOpacity*(1-p)*(1-p);
    if(p>=1){
     scene.remove(fx.mesh);
@@ -55,5 +70,5 @@ export function createCombatVisuals(THREE,scene){
   }
   mesh.geometry?.dispose();mesh.material?.dispose();
  }
- return {arc,impact,projectile,update,cleanupProjectile,get count(){return effects.length;}};
+ return {arc,sweep,field,impact,projectile,update,cleanupProjectile,get count(){return effects.length;}};
 }

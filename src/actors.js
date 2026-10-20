@@ -99,16 +99,19 @@ export function applyEquipmentVariant(g,style,itemId){
  const gemstone=new THREE.Mesh(geometry,gemMaterial);gemstone.position.set(.16,-.06,-.25-(seed%3)*.13);u.weapon.add(gemstone);
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;
- u.rig.rotation.z=damp(u.rig.rotation.z,dead?-1.5:-side*.06,12,dt);u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05,22,dt);
+ u.rig.rotation.z=damp(u.rig.rotation.z,dead?-1.5:hit?.13:-side*.06,12,dt);u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05,22,dt);
  let right=-.12+s*.25*strength,left=-.1-s*.30*strength,elbow=-.2;
  if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
  else if(['frost','ember'].includes(family)){right=.38+wind*.8+release*.3;left=.35+wind*.45;elbow=.35;}
  else {right+=wind*1.6+release*.32;elbow=.15+wind*.35;left=family==='greatsword'?right*.8:family==='daggers'?.25-wind*.4+release*.55:left;}
  u.rightArm.rotation.x=pose.phase==='release'&&pose.amount>.93?right:damp(u.rightArm.rotation.x,right,35,dt);u.leftArm.rotation.x=damp(u.leftArm.rotation.x,left,25,dt);
+ const contact=attack?.contactDuration?Math.max(0,Math.min(1,(t-attack.impactAt)/attack.contactDuration)):0;
+ const swing=attack?.halfAngle?(-attack.halfAngle+2*attack.halfAngle*contact)*(attack.reverse?-1:1):0;
+ u.rightArm.rotation.y=damp(u.rightArm.rotation.y,pose.phase==='release'?swing:0,35,dt);
  u.rightArm.rotation.z=damp(u.rightArm.rotation.z,pose.phase==='idle'?-.1:-wind*.7+release*.5,30,dt);
  u.rightElbow.rotation.x=damp(u.rightElbow.rotation.x,elbow,25,dt);u.leftElbow.rotation.x=damp(u.leftElbow.rotation.x,['bow','shortbow','crossbow'].includes(family)?.6:.25,20,dt);
  u.cape.rotation.x=damp(u.cape.rotation.x,.08+strength*.27+Math.sin(t*5)*.025,6,dt);
@@ -119,5 +122,5 @@ export function createCreature(type){const g=new THREE.Group(),body=pivot(g,0,0,
  else{tube(body,'#685438',0,1.3,0,.16,.18,2.6);const sack=ball(body,'#b79c65',0,1.75,0,.48,.62,.3);block(body,'#624b32',0,1.76,0,1.9,.14,.16);ball(body,'#baa778',0,2.62,0,.32,.35,.29);for(const s of [-1,1])block(body,'#493e2e',s*.10,2.64,-.28,.07,.06,.025);const target=mesh(body,new THREE.TorusGeometry(.27,.05,5,20),'#835c47',0,1.78,-.3);ball(body,'#835c47',0,1.78,-.32,.08,.08,.02);}
  return g;
 }
-export function animateCreature(g,type,t,dt,speed,warning,hit,death){const u=g.userData;if(u.rig){animateActor(g,{t,dt,stride:t*speed*2,speed,attack:warning?{start:warning-.76,impactAt:warning,interval:1.2}:null,dead:death>0});return;}
+export function animateCreature(g,type,t,dt,speed,warning,hit,death){const u=g.userData;if(u.rig){animateActor(g,{t,dt,stride:t*speed*2,speed,attack:warning?{start:warning-.76,impactAt:warning,interval:1.2}:null,hit,dead:death>0});return;}
  const b=u.body;b.position.y=Math.sin(t*(speed?9:2.5))*(speed?.055:.018);b.rotation.x=damp(b.rotation.x,warning?-.22:0,12,dt);b.rotation.z=damp(b.rotation.z,death?1.5:hit?.14:0,18,dt);u.legs.forEach((l,i)=>l.rotation.x=Math.sin(t*9+i*Math.PI)*Math.min(.5,speed*.16));if(type==='mossling'){b.scale.y=1+Math.sin(t*3)*.025-(warning?.12:0);b.scale.x=1+(warning?.08:0);}}
