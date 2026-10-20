@@ -1,3 +1,4 @@
+import {STARTER_SETS,SLOT_ITEMS,EXTRA_SLOTS} from './equipment-slots.js';
 /** Oakrest is a starter hub, not a universal skilling destination.
  * New settlements should register their own exclusive skills instead of
  * offering the entire skill catalogue in every bank/shop.
@@ -15,6 +16,7 @@ export const OAKREST_GROVES=Object.freeze([
 ]);
 export const TOWN_MATERIALS=Object.freeze(['moss-fibre','boar-hide','bandit-token','softwood-logs']);
 export const SHOP_STOCK=Object.freeze([
+  ...Object.values(STARTER_SETS).map(set=>Object.freeze({id:set.id,label:set.title,kind:'bundle',style:set.style,price:set.price})),
   Object.freeze({id:'starter-sword',label:'Iron Longsword',kind:'weapon',style:'melee',itemId:'sword',price:45}),
   Object.freeze({id:'starter-staff',label:'Frost Staff',kind:'weapon',style:'magic',itemId:'frost',price:45}),
   Object.freeze({id:'starter-bow',label:'Oak Bow',kind:'weapon',style:'ranged',itemId:'bow',price:45}),
@@ -44,6 +46,7 @@ export function townBank(data){
   if(!bank.weapons||typeof bank.weapons!=='object')bank.weapons={};
   for(const style of ['melee','magic','ranged'])if(!Array.isArray(bank.weapons[style]))bank.weapons[style]=[];
   if(!Array.isArray(bank.armour))bank.armour=[];
+  if(!Array.isArray(bank.slotted))bank.slotted=[];
   return bank;
 }
 export function bankCoins(data,direction){
@@ -68,27 +71,57 @@ export function bankMaterials(data,id,direction){
 }
 export function bankEquipment(data,kind,id,direction,style=null){
   if(!['deposit','withdraw'].includes(direction))return false;
-  if(kind!=='weapon'&&kind!=='armour')return false;
+  if(!['weapon','armour','slot'].includes(kind))return false;
+  if(kind==='slot'&&!Object.hasOwn(SLOT_ITEMS,id))return false;
   if(kind==='weapon'&&!['melee','magic','ranged'].includes(style))return false;
   const bank=townBank(data);
   const sourceRoot=direction==='deposit'?data.inventory:bank,destRoot=direction==='deposit'?bank:data.inventory;
-  const src=kind==='weapon'?sourceRoot.weapons[style]:sourceRoot.armour;
-  const dst=kind==='weapon'?destRoot.weapons[style]:destRoot.armour;
+  const src=kind==='weapon'?sourceRoot.weapons[style]:kind==='slot'?sourceRoot.slotted:sourceRoot.armour;
+  const dst=kind==='weapon'?destRoot.weapons[style]:kind==='slot'?destRoot.slotted:destRoot.armour;
   if(!src.includes(id)||dst.includes(id))return false;
   // Never silently unequip an active set when putting equipment in storage.
-  if(direction==='deposit'&&(kind==='weapon'?data.gear?.[style]===id:Object.values(data.armour||{}).includes(id)))return false;
+  if(direction==='deposit'&&(kind==='weapon'?data.gear?.[style]===id:
+   kind==='slot'?Object.values(data.equipment||{}).some(slots=>EXTRA_SLOTS.some(slot=>slots?.[slot]===id)):
+   Object.values(data.armour||{}).includes(id)))return false;
   src.splice(src.indexOf(id),1);dst.push(id);return true;
 }
+/** Return only pieces not owned or stored in the bank; no duplicate or wasted purchases. */
+export function missingStarterSetPieces(data,style){
+ const set=STARTER_SETS[style];if(!set)return [];
+ const bank=townBank(data),bag=data.inventory;
+ return [
+  {kind:'weapon',style,id:set.weapon,owned:bag.weapons[style].includes(set.weapon)||bank.weapons[style].includes(set.weapon)},
+  {kind:'armour',id:set.chest,owned:bag.armour.includes(set.chest)||bank.armour.includes(set.chest)},
+  ...set.slotted.map(id=>({kind:'slot',id,owned:bag.slotted.includes(id)||bank.slotted.includes(id)}))
+ ].filter(x=>!x.owned);
+}
+export function starterSetPrice(data,style){
+ const set=STARTER_SETS[style];if(!set)return 0;
+ return Math.ceil(set.price*missingStarterSetPieces(data,style).length/(set.slotted.length+2));
+}
 export function buyStarterStock(data,stockId){
-  const item=SHOP_STOCK.find(x=>x.id===stockId);
-  if(!item)return {ok:false,reason:'Unknown stock'};
-  if(!Number.isFinite(data.coins)||data.coins<item.price)return {ok:false,reason:'Not enough coins'};
-  const bag=item.kind==='weapon'?data.inventory.weapons[item.style]:data.inventory.armour;
-  if(bag.includes(item.itemId))return {ok:false,reason:'Already owned'};
-  if(townBank(data)[item.kind==='weapon'?'weapons':'armour'] && (item.kind==='weapon'?data.bank.weapons[item.style]:data.bank.armour).includes(item.itemId))
+ const item=SHOP_STOCK.find(x=>x.id===stockId);
+ if(!item)return {ok:false,reason:'Unknown stock'};
+ if(item.kind==='bundle'){
+  const missing=missingStarterSetPieces(data,item.style),price=starterSetPrice(data,item.style);
+  if(!missing.length)return {ok:false,reason:'Set already owned'};
+  if(!Number.isFinite(data.coins)||data.coins<price)return {ok:false,reason:'Not enough coins'};
+  for(const entry of missing){
+   const bag=entry.kind==='weapon'?data.inventory.weapons[entry.style]:
+     entry.kind==='armour'?data.inventory.armour:data.inventory.slotted;
+   bag.push(entry.id);
+  }
+  data.coins-=price;
+  return {ok:true,item,price,pieces:missing.length};
+ }
+ if(!Number.isFinite(data.coins)||data.coins<item.price)return {ok:false,reason:'Not enough coins'};
+ const bag=item.kind==='weapon'?data.inventory.weapons[item.style]:data.inventory.armour;
+ if(bag.includes(item.itemId))return {ok:false,reason:'Already owned'};
+ if(townBank(data)[item.kind==='weapon'?'weapons':'armour'] &&
+    (item.kind==='weapon'?data.bank.weapons[item.style]:data.bank.armour).includes(item.itemId))
    return {ok:false,reason:'Already stored in bank'};
-  data.coins-=item.price;bag.push(item.itemId);
-  return {ok:true,item};
+ data.coins-=item.price;bag.push(item.itemId);
+ return {ok:true,item,price:item.price};
 }
 export function teachWoodcutting(data){
   if(!data.professions||typeof data.professions!=='object')data.professions={};
