@@ -867,13 +867,86 @@ const swapButton=$('touch-swap');let swapPointerAt=-10;
 swapButton.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();swapPointerAt=now();setStyle(nextStyle(style));}});
 swapButton.addEventListener('click',()=>{if(now()-swapPointerAt>.35)setStyle(nextStyle(style));});
 
-const speedInput=$('look-speed');speedInput.value=lookSensitivity.toFixed(1);
-$('look-speed-value').textContent=`${lookSensitivity.toFixed(1)}×`;
-speedInput.addEventListener('input',e=>{
-  lookSensitivity=cameraSensitivity(e.target.value);
-  $('look-speed-value').textContent=`${lookSensitivity.toFixed(1)}×`;
-  try{localStorage.setItem(oakrestKey('oakrest-look-speed'),String(lookSensitivity));}catch{}
+function refreshCameraControls(){
+ const cfg=cameraSettings;
+ const numeric=[['look-speed','sensitivity','×',1],['camera-zoom','zoom','',1],['camera-height','height','',1],['camera-fov','fov','°',0],['camera-smoothing','smoothing','',0],['gamepad-deadzone','gamepadDeadzone','',2]];
+ for(const [id,key,suffix,precision] of numeric){
+  $(id).value=cfg[key];
+  $(id+'-value').textContent=Number(cfg[key]).toFixed(precision)+suffix;
+ }
+ $('camera-invert-y').checked=cfg.invertY;
+}
+function setCameraOption(key,value){
+ cameraSettings=normalizeCameraSettings({...cameraSettings,[key]:value});
+ lookSensitivity=cameraSettings.sensitivity;
+ camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
+ saveCameraSettings();refreshCameraControls();
+}
+refreshCameraControls();
+for(const [id,key] of [['look-speed','sensitivity'],['camera-zoom','zoom'],['camera-height','height'],['camera-fov','fov'],['camera-smoothing','smoothing'],['gamepad-deadzone','gamepadDeadzone']])
+ $(id).addEventListener('input',e=>setCameraOption(key,Number(e.target.value)));
+$('camera-invert-y').addEventListener('change',e=>setCameraOption('invertY',e.target.checked));
+$('camera-recenter').addEventListener('click',()=>{
+ yaw=0;pitch=.12;cameraFocus.copy(hero.position).add(new THREE.Vector3(0,1.65,0));
+ toast('Camera recentred');
 });
+$('camera-reset').addEventListener('click',()=>{
+ cameraSettings=normalizeCameraSettings(CAMERA_DEFAULTS);lookSensitivity=cameraSettings.sensitivity;
+ yaw=0;pitch=.12;camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
+ saveCameraSettings();refreshCameraControls();toast('Camera settings reset');
+});
+function isGameplayMenuOpen(){
+ return !progressPanel.hidden||!$('controls-panel').hidden||!$('character-creator').hidden;
+}
+function focusGamepadMenu(direction){
+ const parent=!$('controls-panel').hidden?$('controls-panel'):progressPanel;
+ const fields=[...parent.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled)')]
+  .filter(el=>el.getClientRects().length>0);
+ if(!fields.length)return;
+ const current=fields.indexOf(document.activeElement);
+ const next=fields[(current<0?0:current+direction+fields.length)%fields.length];
+ next.focus({preventScroll:true});next.scrollIntoView?.({block:'nearest',behavior:'instant'});
+}
+function pollGamepad(dt){
+ let current=null;
+ try{current=firstStandardGamepad(navigator.getGamepads?.(),cameraSettings.gamepadDeadzone);}
+ catch{current=null;}
+ // A disconnected or unsupported pad never leaves movement or held attack stuck.
+ const newName=current?current.label:'';
+ if(newName!==padName){
+  padName=newName;
+  $('gamepad-status').textContent=current?'Connected: '+(current.label||'Standard Gamepad'):'No compatible controller detected';
+ }
+ const edges=gamepadEdges(padPrevious,current);
+ padState=current;
+ if(!current){padPrevious=null;return;}
+ const menus=isGameplayMenuOpen();
+ if(edges.menu){
+  $('controls-panel').hidden=menus;
+  $('help-button').setAttribute('aria-expanded',String(!menus));
+  if(menus)bookClose();
+  document.exitPointerLock?.();
+ }else if(edges.inventory){if(menus){bookClose();closeControls();}else bookOpen('inventory',true);}
+ else if(started){
+  if(menus){
+   if(edges.abilities[0]||edges.abilities[2])focusGamepadMenu(-1);
+   if(edges.abilities[1]||edges.abilities[3])focusGamepadMenu(1);
+   if(current.attack&&!padPrevious?.attack && document.activeElement?.click)document.activeElement.click();
+   if(edges.dodge){closeControls();bookClose();}
+  }else{
+   if(edges.dodge)dodge();
+   if(edges.swap)setStyle(nextStyle(style));
+   if(edges.previousStyle)setStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+STYLE_ORDER.length-1)%STYLE_ORDER.length]);
+   if(edges.nextStyle)setStyle(nextStyle(style));
+   if(edges.interact){if(data.onboarding?.area==='realm')enterCityPortal();else pickupNearby();}
+   edges.abilities.forEach((hit,index)=>{if(hit)useAbility(index);});
+   if(Math.abs(current.lookX)+Math.abs(current.lookY)>.005)cameraMove(current.lookX*dt*320,current.lookY*dt*320,true);
+  }
+ }else if(current.attack&&!padPrevious?.attack&&$('intro').classList.contains('hidden')===false&&$('character-creator').hidden){
+  startGameplay();
+ }
+ padPrevious=current;
+}
 function closeControls(){$('controls-panel').hidden=true;$('help-button').setAttribute('aria-expanded','false');}
 $('help-button').addEventListener('click',()=>{
   const panel=$('controls-panel');panel.hidden=!panel.hidden;
@@ -946,13 +1019,13 @@ if(new URLSearchParams(location.search).has('autostart')&&(activeCharacter||lega
 if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
 const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
-function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.05,realDt);if(started){gameTime+=dt;animate(dt,now());}if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
+function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.05,realDt);if(started){gameTime+=dt;animate(dt,now());}else pollGamepad(dt);if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
 requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',save);
 // Read-only diagnostics for reproducible device measurements. No player identifiers.
 window.oakrestDiagnostics=()=>({...stats,quality,version:'greenwood-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
- state:()=>({data:structuredClone(data),style,hp,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning})),effects:projectiles.length+rings.length+visuals.count}),
+ state:()=>({data:structuredClone(data),style,hp,cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning})),effects:projectiles.length+rings.length+visuals.count}),
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
  equip:(kind,id,s=style)=>chooseGear(kind,id,s),slot:(index,id)=>{equipSkill(data,style,data.gear[style],index,id);refreshSkills();},
  step(seconds){for(let i=0;i<Math.round(seconds*60);i++){gameTime+=1/60;animate(1/60,gameTime);}},damage(amount){hp=Math.max(1,hp-amount);updateHpUI();}
