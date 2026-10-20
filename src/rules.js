@@ -238,6 +238,12 @@ export function freshCharacterSave(){
  d.characterFresh=true;
  d.inventory={weapons:{melee:[],magic:[],ranged:[]},armour:[],materials:{}};
  d.armour={melee:'none',magic:'none',ranged:'none'};
+ d.onboarding={
+  area:'tutorial',
+  tutorial:{hitStyles:[],skillsRead:false},
+  teleportScrolls:0,
+  activatedPortals:[]
+ };
  return d;
 }
 export function validSave(raw){
@@ -260,6 +266,20 @@ export function validSave(raw){
   // exactly once on migration; in this build new gear is earned from physical drops.
   if(raw.lootVersion!==1&&!d.characterFresh)awardTrainingGear(d);
   d.groundLoot=validGroundLoot(raw.groundLoot);
+  // Only brand-new characters use the tutorial flow. Older saves without this
+  // field remain in the existing world and keep their progression intact.
+  if(raw.onboarding&&typeof raw.onboarding==='object'){
+   const o=raw.onboarding;
+   const area=['tutorial','realm','world'].includes(o.area)?o.area:'world';
+   const hitStyles=Array.isArray(o.tutorial?.hitStyles)?[...new Set(o.tutorial.hitStyles.filter(s=>STYLE_ORDER.includes(s)))]:[];
+   const scrolls=Number.isSafeInteger(o.teleportScrolls)?clamp(o.teleportScrolls,0,999):0;
+   const activatedPortals=Array.isArray(o.activatedPortals)&&o.activatedPortals.includes('oakrest')?['oakrest']:[];
+   d.onboarding={area,tutorial:{hitStyles,skillsRead:o.tutorial?.skillsRead===true},teleportScrolls:scrolls,activatedPortals};
+   // Never let a corrupt/incomplete save jump to the realm without completing training.
+   if(area==='realm'&&(!d.onboarding.tutorial.skillsRead||hitStyles.length<3))d.onboarding.area='tutorial';
+  }else if(d.characterFresh){
+   d.onboarding={area:'world',tutorial:{hitStyles:[],skillsRead:false},teleportScrolls:0,activatedPortals:['oakrest']};
+  }
   for(const style of STYLE_ORDER){
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
     if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];
