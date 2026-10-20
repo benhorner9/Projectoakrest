@@ -1,0 +1,1666 @@
+{
+  "environment": "Linux headless Chromium, SwiftShader software GPU; touch/viewport emulation, not physical iPad",
+  "checks": [
+    {
+      "name": "game starts with local pinned engine",
+      "status": "pass",
+      "detail": 1
+    },
+    {
+      "name": "desktop movement in running touch build",
+      "status": "pass",
+      "detail": {
+        "x": 0,
+        "y": 0,
+        "z": 10.597772571406834
+      }
+    },
+    {
+      "name": "nonmodal inventory / skill unlock UI",
+      "status": "pass"
+    },
+    {
+      "name": "sword windup, single impact and spam cooldown",
+      "status": "pass"
+    },
+    {
+      "name": "queued style switch completes after impact",
+      "status": "pass"
+    },
+    {
+      "name": "dodge is continuous, cancels windup and respects cooldown",
+      "status": "pass"
+    },
+    {
+      "name": "three touch pointers: movement, attack-camera drag, swap",
+      "status": "pass",
+      "detail": {
+        "x": -0.20914740600659576,
+        "y": 0,
+        "z": 8.892288168250657
+      }
+    },
+    {
+      "name": "mossling combat grants XP and physical loot",
+      "status": "pass"
+    },
+    {
+      "name": "boar combat grants XP and physical loot",
+      "status": "pass"
+    },
+    {
+      "name": "bandit combat grants XP and physical loot",
+      "status": "pass"
+    },
+    {
+      "name": "loot collection, XP/level gains and reload preserve full save",
+      "status": "pass"
+    },
+    {
+      "name": "enemy leash cancels warnings and returns home",
+      "status": "pass"
+    },
+    {
+      "name": "combat death and village respawn",
+      "status": "pass"
+    },
+    {
+      "name": "ipad-landscape viewport and nonmodal menu",
+      "status": "pass"
+    },
+    {
+      "name": "ipad-portrait viewport and nonmodal menu",
+      "status": "pass"
+    },
+    {
+      "name": "phone-portrait viewport and nonmodal menu",
+      "status": "pass"
+    },
+    {
+      "name": "phone-landscape viewport and nonmodal menu",
+      "status": "pass"
+    },
+    {
+      "name": "desktop ranged shot connects over sloping terrain",
+      "status": "pass",
+      "detail": {
+        "before": 57,
+        "after": 35
+      }
+    },
+    {
+      "name": "desktop viewport and nonmodal menu",
+      "status": "pass"
+    },
+    {
+      "name": "all catalogue abilities execute with enforced cooldowns",
+      "status": "pass",
+      "detail": 84
+    },
+    {
+      "name": "60-second real render stability and bounded effects",
+      "status": "pass",
+      "detail": {
+        "perfStart": {
+          "fps": 6.511930787478483,
+          "p95": 216.70000000000437,
+          "drawCalls": 427,
+          "triangles": 66248,
+          "geometries": 276,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        "perfEnd": {
+          "fps": 6.000184621065248,
+          "p95": 183.3000000000029,
+          "drawCalls": 427,
+          "triangles": 66248,
+          "geometries": 276,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        }
+      }
+    },
+    {
+      "name": "no runtime JavaScript errors",
+      "status": "pass"
+    }
+  ],
+  "errors": [],
+  "viewports": [
+    {
+      "name": "ipad-landscape",
+      "width": 1366,
+      "height": 1024,
+      "touch": true,
+      "layout": [
+        {
+          "id": "joystick",
+          "x": 28,
+          "y": 864,
+          "w": 132,
+          "h": 132,
+          "visible": true
+        },
+        {
+          "id": "touch-attack",
+          "x": 1222.796875,
+          "y": 841.875,
+          "w": 92,
+          "h": 92,
+          "visible": true
+        },
+        {
+          "id": "touch-swap",
+          "x": 1182.890625,
+          "y": 942.609375,
+          "w": 63,
+          "h": 63,
+          "visible": true
+        },
+        {
+          "id": "touch-dodge",
+          "x": 1282.09375,
+          "y": 942.609375,
+          "w": 63,
+          "h": 63,
+          "visible": true
+        },
+        {
+          "id": "loadout-button",
+          "x": 238.8125,
+          "y": 251,
+          "w": 60.1875,
+          "h": 34,
+          "visible": true
+        },
+        {
+          "id": "help-button",
+          "x": 1313.984375,
+          "y": 14,
+          "w": 42,
+          "h": 42,
+          "visible": true
+        }
+      ],
+      "menu": {
+        "x": 21,
+        "y": 300,
+        "width": 350,
+        "height": 420
+      }
+    },
+    {
+      "name": "ipad-portrait",
+      "width": 1024,
+      "height": 1366,
+      "touch": true,
+      "layout": [
+        {
+          "id": "joystick",
+          "x": 28,
+          "y": 1206,
+          "w": 132,
+          "h": 132,
+          "visible": true
+        },
+        {
+          "id": "touch-attack",
+          "x": 880.796875,
+          "y": 1183.875,
+          "w": 92,
+          "h": 92,
+          "visible": true
+        },
+        {
+          "id": "touch-swap",
+          "x": 840.890625,
+          "y": 1284.609375,
+          "w": 63,
+          "h": 63,
+          "visible": true
+        },
+        {
+          "id": "touch-dodge",
+          "x": 940.09375,
+          "y": 1284.609375,
+          "w": 63,
+          "h": 63,
+          "visible": true
+        },
+        {
+          "id": "loadout-button",
+          "x": 238.8125,
+          "y": 251,
+          "w": 60.1875,
+          "h": 34,
+          "visible": true
+        },
+        {
+          "id": "help-button",
+          "x": 971.984375,
+          "y": 14,
+          "w": 42,
+          "h": 42,
+          "visible": true
+        }
+      ],
+      "menu": {
+        "x": 21,
+        "y": 300,
+        "width": 350,
+        "height": 420
+      }
+    },
+    {
+      "name": "phone-portrait",
+      "width": 390,
+      "height": 844,
+      "touch": true,
+      "layout": [
+        {
+          "id": "joystick",
+          "x": 14,
+          "y": 714,
+          "w": 102,
+          "h": 102,
+          "visible": true
+        },
+        {
+          "id": "touch-attack",
+          "x": 268.890625,
+          "y": 681.25,
+          "w": 79,
+          "h": 79,
+          "visible": true
+        },
+        {
+          "id": "touch-swap",
+          "x": 236.1875,
+          "y": 769.75,
+          "w": 56,
+          "h": 56,
+          "visible": true
+        },
+        {
+          "id": "touch-dodge",
+          "x": 316.796875,
+          "y": 769.75,
+          "w": 56,
+          "h": 56,
+          "visible": true
+        },
+        {
+          "id": "loadout-button",
+          "x": 213.8125,
+          "y": 261,
+          "w": 60.1875,
+          "h": 34,
+          "visible": true
+        },
+        {
+          "id": "help-button",
+          "x": 336,
+          "y": 14,
+          "w": 42,
+          "h": 42,
+          "visible": true
+        }
+      ],
+      "menu": {
+        "x": 21,
+        "y": 310,
+        "width": 315,
+        "height": 260
+      }
+    },
+    {
+      "name": "phone-landscape",
+      "width": 844,
+      "height": 390,
+      "touch": true,
+      "layout": [
+        {
+          "id": "joystick",
+          "x": 22,
+          "y": 262,
+          "w": 100,
+          "h": 100,
+          "visible": true
+        },
+        {
+          "id": "touch-attack",
+          "x": 725.3125,
+          "y": 241.5,
+          "w": 70,
+          "h": 70,
+          "visible": true
+        },
+        {
+          "id": "touch-swap",
+          "x": 688.75,
+          "y": 320.5,
+          "w": 52,
+          "h": 52,
+          "visible": true
+        },
+        {
+          "id": "touch-dodge",
+          "x": 771.828125,
+          "y": 320.5,
+          "w": 52,
+          "h": 52,
+          "visible": true
+        },
+        {
+          "id": "loadout-button",
+          "x": 190.8125,
+          "y": 202,
+          "w": 60.1875,
+          "h": 34,
+          "visible": true
+        },
+        {
+          "id": "help-button",
+          "x": 792,
+          "y": 14,
+          "w": 42,
+          "h": 42,
+          "visible": true
+        }
+      ],
+      "menu": {
+        "x": 267,
+        "y": 160,
+        "width": 340,
+        "height": 215
+      }
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900,
+      "touch": false,
+      "layout": [
+        {
+          "id": "loadout-button",
+          "x": 967.8125,
+          "y": 757,
+          "w": 62.1875,
+          "h": 29,
+          "visible": true
+        },
+        {
+          "id": "help-button",
+          "x": 1387.984375,
+          "y": 14,
+          "w": 32,
+          "h": 32,
+          "visible": true
+        }
+      ],
+      "menu": {
+        "x": 659,
+        "y": 223,
+        "width": 390,
+        "height": 460
+      }
+    }
+  ],
+  "performance": [
+    {
+      "fps": 6.511930787478483,
+      "p95": 216.70000000000437,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.156330567665113,
+      "p95": 316.70000000000437,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.156330567665113,
+      "p95": 316.70000000000437,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.462035541195476,
+      "p95": 266.59999999999854,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.462035541195476,
+      "p95": 266.59999999999854,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.093845216331518,
+      "p95": 199.90000000000146,
+      "drawCalls": 429,
+      "triangles": 66464,
+      "geometries": 278,
+      "textures": 1,
+      "effects": 2,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.093845216331518,
+      "p95": 199.90000000000146,
+      "drawCalls": 429,
+      "triangles": 66464,
+      "geometries": 278,
+      "textures": 1,
+      "effects": 2,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.669469904563927,
+      "p95": 316.59999999999854,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.669469904563927,
+      "p95": 316.59999999999854,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141925729944234,
+      "p95": 183.3000000000029,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141925729944234,
+      "p95": 183.3000000000029,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.714829983807993,
+      "p95": 266.6999999999971,
+      "drawCalls": 429,
+      "triangles": 66464,
+      "geometries": 278,
+      "textures": 1,
+      "effects": 2,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.714829983807993,
+      "p95": 266.6999999999971,
+      "drawCalls": 429,
+      "triangles": 66464,
+      "geometries": 278,
+      "textures": 1,
+      "effects": 2,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.950314870828568,
+      "p95": 199.90000000000146,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.950314870828568,
+      "p95": 199.90000000000146,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.714829983807993,
+      "p95": 283.1999999999971,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.714829983807993,
+      "p95": 283.1999999999971,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.046511627906977,
+      "p95": 216.70000000000437,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.046511627906977,
+      "p95": 216.70000000000437,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.046511627906977,
+      "p95": 216.70000000000437,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.142215922513583,
+      "p95": 183.3000000000029,
+      "drawCalls": 431,
+      "triangles": 66396,
+      "geometries": 280,
+      "textures": 1,
+      "effects": 2,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.142215922513583,
+      "p95": 183.3000000000029,
+      "drawCalls": 431,
+      "triangles": 66396,
+      "geometries": 280,
+      "textures": 1,
+      "effects": 2,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141635564794242,
+      "p95": 216.70000000001164,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141635564794242,
+      "p95": 216.70000000001164,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.954562110663254,
+      "p95": 183.3000000000029,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.954562110663254,
+      "p95": 183.3000000000029,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.760092161474575,
+      "p95": 200,
+      "drawCalls": 432,
+      "triangles": 66504,
+      "geometries": 281,
+      "textures": 1,
+      "effects": 3,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.760092161474575,
+      "p95": 200,
+      "drawCalls": 432,
+      "triangles": 66504,
+      "geometries": 281,
+      "textures": 1,
+      "effects": 3,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.581654960695862,
+      "p95": 216.59999999999127,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.581654960695862,
+      "p95": 216.59999999999127,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.53888760673898,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.53888760673898,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.322752346849883,
+      "p95": 216.6999999999971,
+      "drawCalls": 428,
+      "triangles": 66356,
+      "geometries": 277,
+      "textures": 1,
+      "effects": 1,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.322752346849883,
+      "p95": 216.6999999999971,
+      "drawCalls": 428,
+      "triangles": 66356,
+      "geometries": 277,
+      "textures": 1,
+      "effects": 1,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.454725776058736,
+      "p95": 216.60000000000582,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.454725776058736,
+      "p95": 216.60000000000582,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.454725776058697,
+      "p95": 250,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.454725776058697,
+      "p95": 250,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.280084481351694,
+      "p95": 216.70000000001164,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.280084481351694,
+      "p95": 216.70000000001164,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.366377207532435,
+      "p95": 216.59999999999127,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.366377207532435,
+      "p95": 216.59999999999127,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.66920205981009,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.66920205981009,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 5.66920205981009,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.1907709890947356,
+      "p95": 200.10000000000582,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.1907709890947356,
+      "p95": 200.10000000000582,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.046792874087142,
+      "p95": 183.39999999999418,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.046792874087142,
+      "p95": 183.39999999999418,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141925729944275,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141925729944275,
+      "p95": 200,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.190770989094694,
+      "p95": 183.40000000000873,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.190770989094694,
+      "p95": 183.40000000000873,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.142215922513583,
+      "p95": 250,
+      "drawCalls": 428,
+      "triangles": 66356,
+      "geometries": 277,
+      "textures": 1,
+      "effects": 1,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.142215922513583,
+      "p95": 250,
+      "drawCalls": 428,
+      "triangles": 66356,
+      "geometries": 277,
+      "textures": 1,
+      "effects": 1,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141925729944275,
+      "p95": 183.39999999999418,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.141925729944275,
+      "p95": 183.39999999999418,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.393547435203846,
+      "p95": 166.70000000001164,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.393547435203846,
+      "p95": 166.70000000001164,
+      "drawCalls": 433,
+      "triangles": 66612,
+      "geometries": 282,
+      "textures": 1,
+      "effects": 4,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    },
+    {
+      "fps": 6.000184621065248,
+      "p95": 183.3000000000029,
+      "drawCalls": 427,
+      "triangles": 66248,
+      "geometries": 276,
+      "textures": 1,
+      "effects": 0,
+      "quality": "balanced",
+      "version": "greenwood-1"
+    }
+  ],
+  "abilities": [
+    {
+      "style": "melee",
+      "id": "sword",
+      "ability": "Heavy Slash",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "sword",
+      "ability": "Cleave",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "sword",
+      "ability": "Guard Break",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "sword",
+      "ability": "Counterguard",
+      "kind": "shield",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "sword",
+      "ability": "Battle Rush",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "sword",
+      "ability": "Second Wind",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "daggers",
+      "ability": "Quick Slice",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "daggers",
+      "ability": "Twin Strike",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "daggers",
+      "ability": "Shadow Step",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "daggers",
+      "ability": "Open Wound",
+      "kind": "execute",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "daggers",
+      "ability": "Battle Rush",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "daggers",
+      "ability": "Second Wind",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "forged_sword",
+      "ability": "Heavy Slash",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "forged_sword",
+      "ability": "Cleave",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "forged_sword",
+      "ability": "Guard Break",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "forged_sword",
+      "ability": "Counterguard",
+      "kind": "shield",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "forged_sword",
+      "ability": "Battle Rush",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "forged_sword",
+      "ability": "Second Wind",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "honed_daggers",
+      "ability": "Quick Slice",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "honed_daggers",
+      "ability": "Twin Strike",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "honed_daggers",
+      "ability": "Shadow Step",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "honed_daggers",
+      "ability": "Open Wound",
+      "kind": "execute",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "honed_daggers",
+      "ability": "Battle Rush",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "honed_daggers",
+      "ability": "Second Wind",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "greatsword",
+      "ability": "Heavy Slash",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "greatsword",
+      "ability": "Cleave",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "greatsword",
+      "ability": "Guard Break",
+      "kind": "hit",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "greatsword",
+      "ability": "Counterguard",
+      "kind": "shield",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "greatsword",
+      "ability": "Battle Rush",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "melee",
+      "id": "greatsword",
+      "ability": "Second Wind",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "frost",
+      "ability": "Ice Shard",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "frost",
+      "ability": "Frost Nova",
+      "kind": "nova",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "frost",
+      "ability": "Frozen Binding",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "frost",
+      "ability": "Ice Barrier",
+      "kind": "shield",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "frost",
+      "ability": "Arcane Bolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "frost",
+      "ability": "Phase Step",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "ember",
+      "ability": "Firebolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "ember",
+      "ability": "Flame Wave",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "ember",
+      "ability": "Blink",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "ember",
+      "ability": "Warmth",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "ember",
+      "ability": "Arcane Bolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "ember",
+      "ability": "Phase Step",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "runic_frost",
+      "ability": "Ice Shard",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "runic_frost",
+      "ability": "Frost Nova",
+      "kind": "nova",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "runic_frost",
+      "ability": "Frozen Binding",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "runic_frost",
+      "ability": "Ice Barrier",
+      "kind": "shield",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "runic_frost",
+      "ability": "Arcane Bolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "runic_frost",
+      "ability": "Phase Step",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "inferno_wand",
+      "ability": "Firebolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "inferno_wand",
+      "ability": "Flame Wave",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "inferno_wand",
+      "ability": "Blink",
+      "kind": "dash",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "inferno_wand",
+      "ability": "Warmth",
+      "kind": "heal",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "inferno_wand",
+      "ability": "Arcane Bolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "magic",
+      "id": "inferno_wand",
+      "ability": "Phase Step",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "bow",
+      "ability": "Piercing Arrow",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "bow",
+      "ability": "Rapid Shot",
+      "kind": "burst",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "bow",
+      "ability": "Pinning Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "bow",
+      "ability": "Retreating Shot",
+      "kind": "retreat",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "bow",
+      "ability": "Evasive Roll",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "bow",
+      "ability": "Focus Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "crossbow",
+      "ability": "Crack Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "crossbow",
+      "ability": "Scattershot",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "crossbow",
+      "ability": "Snare Bolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "crossbow",
+      "ability": "Roll Back",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "crossbow",
+      "ability": "Evasive Roll",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "crossbow",
+      "ability": "Focus Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "reinforced_bow",
+      "ability": "Piercing Arrow",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "reinforced_bow",
+      "ability": "Rapid Shot",
+      "kind": "burst",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "reinforced_bow",
+      "ability": "Pinning Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "reinforced_bow",
+      "ability": "Retreating Shot",
+      "kind": "retreat",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "reinforced_bow",
+      "ability": "Evasive Roll",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "reinforced_bow",
+      "ability": "Focus Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "hunter_crossbow",
+      "ability": "Crack Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "hunter_crossbow",
+      "ability": "Scattershot",
+      "kind": "sweep",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "hunter_crossbow",
+      "ability": "Snare Bolt",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "hunter_crossbow",
+      "ability": "Roll Back",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "hunter_crossbow",
+      "ability": "Evasive Roll",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "hunter_crossbow",
+      "ability": "Focus Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "shortbow",
+      "ability": "Piercing Arrow",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "shortbow",
+      "ability": "Rapid Shot",
+      "kind": "burst",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "shortbow",
+      "ability": "Pinning Shot",
+      "kind": "bolt",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "shortbow",
+      "ability": "Retreating Shot",
+      "kind": "retreat",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "shortbow",
+      "ability": "Evasive Roll",
+      "kind": "dashback",
+      "correct": true
+    },
+    {
+      "style": "ranged",
+      "id": "shortbow",
+      "ability": "Focus Shot",
+      "kind": "bolt",
+      "correct": true
+    }
+  ]
+}

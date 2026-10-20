@@ -1,0 +1,868 @@
+{
+  "environment": "Linux Chromium / SwiftShader software rendering, 1366 × 1024, DPR 1, touch emulation; NOT iPad hardware",
+  "scenarios": [
+    {
+      "name": "baseline",
+      "durationMs": 20074,
+      "frameCount": 150,
+      "fps": 7.525360464766265,
+      "medianFrameMs": 133.29999999999927,
+      "p95FrameMs": 166.59999999999945,
+      "errors": [],
+      "samples": [
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        },
+        {
+          "drawCalls": 511,
+          "triangles": 28796,
+          "geometries": 433,
+          "textures": 1
+        }
+      ]
+    },
+    {
+      "name": "greenwood-balanced",
+      "durationMs": 20050,
+      "frameCount": 107,
+      "fps": 5.399731527367053,
+      "medianFrameMs": 183.30000000000018,
+      "p95FrameMs": 216.60000000000218,
+      "errors": [],
+      "samples": [
+        {
+          "fps": 5.538631957906396,
+          "p95": 200,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.366115420264404,
+          "p95": 200,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.197014079183595,
+          "p95": 233.3000000000011,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.625351584474028,
+          "p95": 183.39999999999964,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.760092161474586,
+          "p95": 183.39999999999964,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.669469904563927,
+          "p95": 200,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.669469904563917,
+          "p95": 183.40000000000146,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.454725776058717,
+          "p95": 200,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 4.463178775105381,
+          "p95": 383.2999999999993,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 5.280084481351704,
+          "p95": 216.70000000000073,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 77,
+          "textures": 1,
+          "effects": 0,
+          "quality": "balanced",
+          "version": "greenwood-1"
+        }
+      ]
+    },
+    {
+      "name": "greenwood-low",
+      "durationMs": 120242,
+      "frameCount": 941,
+      "fps": 7.837630287068845,
+      "medianFrameMs": 116.79999999999927,
+      "p95FrameMs": 150,
+      "errors": [],
+      "samples": [
+        {
+          "fps": 7.258298654795318,
+          "p95": 200,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.031689480592534,
+          "p95": 333.3000000000002,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.377170117542913,
+          "p95": 166.70000000000073,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.680491551459291,
+          "p95": 166.70000000000073,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.143197295109292,
+          "p95": 216.60000000000036,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.680122881966114,
+          "p95": 150.10000000000036,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.869368483179222,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.500117189331086,
+          "p95": 150.09999999999854,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.500117189331086,
+          "p95": 150.09999999999854,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.559293206085223,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.934540044631788,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.619047619047619,
+          "p95": 266.6000000000022,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.096009143727978,
+          "p95": 150.10000000000218,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.968874513664279,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.680491551459304,
+          "p95": 150.09999999999854,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.805258793111854,
+          "p95": 150.09999999999854,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.031369584730932,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.16052227342551,
+          "p95": 133.40000000000146,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.293087467681344,
+          "p95": 133.40000000000146,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.226071808768031,
+          "p95": 133.40000000000146,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.292682926829269,
+          "p95": 133.39999999999418,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.9341465833581335,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.504606661941885,
+          "p95": 133.3000000000029,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.969248078004859,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.619047619047619,
+          "p95": 166.6999999999971,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.5596503661705645,
+          "p95": 150.09999999999854,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.9341465833581335,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.741810615957818,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.680491551459277,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.43826242189825,
+          "p95": 199.89999999999418,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.36120401337791,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.160130562089039,
+          "p95": 183.39999999999418,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.031749031465536,
+          "p95": 150.09999999999127,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.869368483179236,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.5592932060852105,
+          "p95": 183.3000000000029,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.293087467681374,
+          "p95": 183.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.293087467681374,
+          "p95": 183.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.031749031465536,
+          "p95": 166.60000000000582,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.22607180876806,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.805258793111826,
+          "p95": 183.3000000000029,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.293087467681374,
+          "p95": 133.39999999999418,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.09562360112383,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.868981458712483,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.031749031465536,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 6.412605349945044,
+          "p95": 350.1000000000058,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.868981458712427,
+          "p95": 166.6999999999971,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.096009143727963,
+          "p95": 150.10000000000582,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.292682926829269,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.869368483179236,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.934146583358105,
+          "p95": 133.39999999999418,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.680122881966154,
+          "p95": 200,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.032128514056225,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.160130562088982,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.742185231781648,
+          "p95": 166.6999999999971,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.742559883861602,
+          "p95": 150,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.03174903146559,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.226071808768001,
+          "p95": 133.39999999999418,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 8.292682926829269,
+          "p95": 133.40000000000873,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 7.500468779298717,
+          "p95": 166.70000000001164,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        },
+        {
+          "fps": 6.393547435203846,
+          "p95": 266.6000000000058,
+          "drawCalls": 268,
+          "triangles": 134808,
+          "geometries": 76,
+          "textures": 0,
+          "effects": 0,
+          "quality": "low",
+          "version": "greenwood-1"
+        }
+      ]
+    }
+  ]
+}

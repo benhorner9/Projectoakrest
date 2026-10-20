@@ -1,22 +1,26 @@
-# Project Oakrest — Combat Prototype 0.1
+# Project Oakrest — Greenwood overhaul
 
-A separate experimental low-poly third-person fantasy action RPG. No Cellbound files or services are reused.
+A browser-based third-person fantasy action RPG with an original procedural world, three combat styles and persistent local progression. The Greenwood branch replaces the character rigs, scenery, terrain and combat presentation while keeping the existing game systems and save key.
+
+See [the implementation changelog](docs/GREENWOOD_CHANGELOG.md) and [the test/release report](docs/GREENWOOD_QA.md). The overhaul remains a preview until protected deployment verification and release checks are complete.
 
 ## Currently implemented
 - Small low-poly starter village, road, forest, training dummy, hostile mobs and respawns.
 - Third-person camera; WASD movement, mouse look, sprint, dodge.
 - iPad / touch joystick, camera swipe, attack, dodge and style/ability buttons.
 - Melee / Magic / Ranged equipment presets, switch with Tab or 1/2/3.
-- Two weapon families for each combat style, each with four distinct abilities (24 total).
+- Fourteen weapons across three combat styles; four customisable slots and progression-gated family/universal abilities.
 - Cooldowns, damage, projectile collisions, shield, heal, slow, root, stun, bleed.
 - Independent XP for each style, vitality/health, coins; browser-local saves.
-- 7 automated gameplay rules tests. Not an online MMO yet.
+- 97 automated rules/regression tests, plus running-browser gameplay and layout coverage. Not an online MMO.
 
 ## Run and test
-Open a terminal in this repository and run `python3 -m http.server 5173`, then open `http://localhost:5173`. Internet connection required for the pinned Three.js CDN. Run `npm test` and `npm run check`.
+Run `npm ci`, then `npm run dev`, and open `http://localhost:5173`. Three.js 0.180.0 is vendored with its MIT license; gameplay has no runtime CDN dependency. Run `npm test`, `npm run check`, and `npm run build`.
+
+For Chromium gameplay checks: `npx playwright install chromium`, then `npm run test:browser`. Linux hosts may need Playwright's browser system dependencies. The suite creates isolated browser profiles, never touches real player saves, and records screenshots/results in `qa/`. Its simulation fixture is only exposed on localhost with `?qa=1`; it is unavailable on deployed domains. A complete natural 20-minute playthrough and physical iPad/Safari validation remain separate release checks.
 
 ## Deploy
-The prototype is static, no server functions or build step. Import this GitHub repository into Vercel. Framework preset: Other, Build Command: blank; publish repository root with index.html and src/. The game uses an import map to load Three.js from jsDelivr.
+Vercel's existing Git integration builds branch previews. `vercel.json` runs regression tests, syntax checks and the static build; only `dist/` is published. No server functions, database migrations or account resets are involved. Keep production on the existing domain so browser-local progression retains its origin. A preview has its own separate localStorage and will not display progress saved on production.
 
 ## Controls
 | Action | Desktop | Touch |

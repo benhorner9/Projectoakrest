@@ -33,7 +33,10 @@ export function addLandmarks(scene){
 /** Bake immobile scenery by material/shadow bucket. Animation and actors stay separate. */
 export function batchScenery(scene){scene.updateMatrixWorld(true);const buckets=new Map(),original=[];
  scene.traverse(o=>{if(!o.visible||!o.isMesh||o.isInstancedMesh||o.userData.animated||o.material?.side===THREE.BackSide||o.material?.transparent)return;
- const key=o.material.uuid+':'+o.castShadow+':'+o.receiveShadow;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);});
+ // Local buckets retain frustum culling: a forest behind the camera should not
+ // be submitted simply because one tree of the same material is visible.
+ const cellX=Math.floor(o.matrixWorld.elements[12]/24),cellZ=Math.floor(o.matrixWorld.elements[14]/24);
+ const key=o.material.uuid+':'+o.castShadow+':'+o.receiveShadow+':'+cellX+':'+cellZ;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);});
  for(const list of buckets.values()){if(list.length<3)continue;const geometries=list.map(o=>{const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(o.matrixWorld);g.deleteAttribute('uv');return g;});const geometry=mergeGeometries(geometries);geometries.forEach(g=>g.dispose());if(!geometry)continue;const result=new THREE.Mesh(geometry,list[0].material);result.castShadow=list[0].castShadow;result.receiveShadow=list[0].receiveShadow;for(const m of list){m.removeFromParent();original.push(m.geometry);}scene.add(result);}
  const stillUsed=new Set();scene.traverse(o=>{if(o.geometry)stillUsed.add(o.geometry);});for(const g of new Set(original))if(!stillUsed.has(g))g.dispose();
 }

@@ -28,3 +28,8 @@ button{font-family:inherit}button:focus-visible,select:focus-visible,input:focus
 @media(prefers-reduced-motion:reduce){.toast,.damage-pop,#damage-flash.hit{animation:none!important}.health>div{transition:none}}
 
 .touch-enabled .combatbar,.vitals{left:max(20px,env(safe-area-inset-left))}.touch-enabled .touch-actions{right:max(14px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom))}.touch-enabled .joystick{bottom:calc(28px + env(safe-area-inset-bottom))}.brand b{color:#f0e8ce}
+@media(max-width:600px) and (orientation:portrait){
+ .topbar{padding-right:64px}
+ .topbar .location{position:absolute;left:20px;top:50px;margin:0}
+ #help-button{position:absolute;right:max(12px,env(safe-area-inset-right));top:14px;width:42px;height:42px}
+}
