@@ -16,7 +16,7 @@ export function createCombatVisuals(THREE,scene){
    new THREE.TorusGeometry(r,combo===2?.085:.055,4,24,Math.PI*(combo===2?1.38:1.03)),
    new THREE.MeshBasicMaterial({color:col(hex),transparent:true,opacity:.84,side:THREE.DoubleSide,depthWrite:false,fog:false})
   );
-  mesh.position.set(position.x+heading.x*.65,1.16,position.z+heading.z*.65);
+  mesh.position.set(position.x+heading.x*.65,position.y+1.16,position.z+heading.z*.65);
   mesh.rotation.order='YXZ';mesh.rotation.set(-Math.PI/2,Math.atan2(heading.x,-heading.z)+(combo===1?-.4:combo===2?.20:-.18),0,'YXZ');
   spawn(mesh,.26);
  }
@@ -25,10 +25,12 @@ export function createCombatVisuals(THREE,scene){
    new THREE.RingGeometry(.22,.34,20),
    new THREE.MeshBasicMaterial({color:col(hex),transparent:true,opacity:heavy?.84:.62,side:THREE.DoubleSide,depthWrite:false,fog:false})
   );
-  mesh.rotation.x=-Math.PI/2;mesh.position.set(position.x,.10,position.z);
+  mesh.rotation.x=-Math.PI/2;mesh.position.set(position.x,position.y+.10,position.z);
   spawn(mesh,heavy?.41:.3);
  }
  function projectile(mesh,hex,style){
+  if(style==='ranged'){mesh.geometry.dispose();mesh.geometry=new THREE.CylinderGeometry(.026,.026,.9,5);mesh.geometry.rotateX(Math.PI/2);mesh.scale.set(1,1,1);const tip=new THREE.Mesh(new THREE.ConeGeometry(.09,.23,4),new THREE.MeshBasicMaterial({color:'#d3e2dc'}));tip.rotation.x=-Math.PI/2;tip.position.z=-.53;mesh.add(tip);const feather=new THREE.Mesh(new THREE.BoxGeometry(.18,.012,.20),new THREE.MeshBasicMaterial({color:'#e3d2ad'}));feather.position.z=.36;mesh.add(feather);return tip;}
+
   const material=new THREE.MeshBasicMaterial({color:hex,transparent:true,opacity:style==='magic'?.3:.18,depthWrite:false,fog:false});
   const halo=new THREE.Mesh(new THREE.SphereGeometry(style==='magic'?.28:.22,8,6),material);
   mesh.add(halo);

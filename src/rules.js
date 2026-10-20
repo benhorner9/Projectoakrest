@@ -106,7 +106,8 @@ export function skillCatalogue(style,weaponId){
 }
 export function canEquipWeapon(style,weaponId,xp){const w=LOADOUTS[style]?.[weaponId];return !!w&&levelFromXp(xp?.[style]||0).level>=w.requiredLevel;}
 export function canEquipArmour(id,xp){return !!ARMOUR[id]&&levelFromXp(xp?.vitality||0).level>=ARMOUR[id].requiredVitality;}
-export function defenceFor(id){return ARMOUR[id]||ARMOUR.traveller;}
+export const UNARMOURED={title:'Starter clothing',physical:0,magical:0,mobility:1,bonusStyle:null,bonusPower:0,description:'Ordinary clothes, with no armour protection.'};
+export function defenceFor(id){return id==='none'?UNARMOURED:ARMOUR[id]||ARMOUR.traveller;}
 export function outgoingMultiplier(armourId,style){const a=defenceFor(armourId);return a.bonusStyle===style?1+a.bonusPower:1;}
 export function slotFamily(style,weaponId){return LOADOUTS[style]?.[weaponId]?.family||weaponId;}
 export function equippedSkills(data,style,weaponId){
@@ -230,10 +231,23 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),groundLoot:[],lootVersion:1};
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
+}
+export function freshCharacterSave(){
+ const d=defaultSave();
+ d.characterFresh=true;
+ d.inventory={weapons:{melee:[],magic:[],ranged:[]},armour:[],materials:{}};
+ d.armour={melee:'none',magic:'none',ranged:'none'};
+ d.onboarding={
+  area:'tutorial',
+  tutorial:{hitStyles:[],skillsRead:false},
+  teleportScrolls:0,
+  activatedPortals:[]
+ };
+ return d;
 }
 export function validSave(raw){
-  const d=defaultSave();if(!raw||typeof raw!=='object')return d;
+  const d=raw?.characterFresh===true?freshCharacterSave():defaultSave();if(!raw||typeof raw!=='object')return d;
   for(const k of Object.keys(d.xp))if(Number.isFinite(raw.xp?.[k]))d.xp[k]=clamp(raw.xp[k],0,10000000);
   d.coins=clamp(Number(raw.coins)||0,0,10000000);
   d.defeated=clamp(Number(raw.defeated)||0,0,10000000);
@@ -245,13 +259,44 @@ export function validSave(raw){
    }
   }
   if(Array.isArray(raw.inventory?.armour))d.inventory.armour=raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id));
-  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token']){
+  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
+  }
+  // Bank and profession data live in each character save and must survive reloads.
+  if(raw.bank&&typeof raw.bank==='object'){
+    d.bank.coins=Number.isSafeInteger(raw.bank.coins)?clamp(raw.bank.coins,0,10000000):0;
+    for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
+      const value=raw.bank.materials?.[id];if(Number.isSafeInteger(value)&&value>0)d.bank.materials[id]=clamp(value,0,9999);
+    }
+    for(const style of STYLE_ORDER){
+      const held=raw.bank.weapons?.[style];
+      if(Array.isArray(held))d.bank.weapons[style]=[...new Set(held.filter(id=>typeof id==='string'&&Object.hasOwn(LOADOUTS[style],id)))].filter(id=>!d.inventory.weapons[style].includes(id));
+    }
+    if(Array.isArray(raw.bank.armour))d.bank.armour=[...new Set(raw.bank.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id)))].filter(id=>!d.inventory.armour.includes(id));
+  }
+  if(raw.professions&&typeof raw.professions==='object'){
+    d.professions.woodcuttingLearned=raw.professions.woodcuttingLearned===true;
+    const xp=raw.professions.woodcuttingXp;
+    d.professions.woodcuttingXp=Number.isSafeInteger(xp)?clamp(xp,0,710):0;
   }
   // The previous prototype granted gear at level milestones. Preserve that legacy gear
   // exactly once on migration; in this build new gear is earned from physical drops.
-  if(raw.lootVersion!==1)awardTrainingGear(d);
+  if(raw.lootVersion!==1&&!d.characterFresh)awardTrainingGear(d);
   d.groundLoot=validGroundLoot(raw.groundLoot);
+  // Only brand-new characters use the tutorial flow. Older saves without this
+  // field remain in the existing world and keep their progression intact.
+  if(raw.onboarding&&typeof raw.onboarding==='object'){
+   const o=raw.onboarding;
+   const area=['tutorial','realm','world'].includes(o.area)?o.area:'world';
+   const hitStyles=Array.isArray(o.tutorial?.hitStyles)?[...new Set(o.tutorial.hitStyles.filter(s=>STYLE_ORDER.includes(s)))]:[];
+   const scrolls=Number.isSafeInteger(o.teleportScrolls)?clamp(o.teleportScrolls,0,999):0;
+   const activatedPortals=Array.isArray(o.activatedPortals)&&o.activatedPortals.includes('oakrest')?['oakrest']:[];
+   d.onboarding={area,tutorial:{hitStyles,skillsRead:o.tutorial?.skillsRead===true},teleportScrolls:scrolls,activatedPortals};
+   // Never let a corrupt/incomplete save jump to the realm without completing training.
+   if(area==='realm'&&(!d.onboarding.tutorial.skillsRead||hitStyles.length<3))d.onboarding.area='tutorial';
+  }else if(d.characterFresh){
+   d.onboarding={area:'world',tutorial:{hitStyles:[],skillsRead:false},teleportScrolls:0,activatedPortals:['oakrest']};
+  }
   for(const style of STYLE_ORDER){
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
     if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];

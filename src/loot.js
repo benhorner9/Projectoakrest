@@ -1,37 +1,20 @@
 /** Persistent, explicitly picked-up monster rewards. */
-import {LOADOUTS,ARMOUR} from './rules.js';
-import {MATERIAL_DROPS} from './combat-feel.js';
+import {ITEMS_BY_ID,itemFromDrop} from './items.js';
+import {rollDropTable} from './drop-tables.js';
 export const MAX_GROUND_LOOT=36;
-const rare={
- mossling:[{chance:.08,kind:'weapon',style:'melee',itemId:'daggers'}],
- boar:[{chance:.13,kind:'armour',itemId:'leather'},{chance:.07,kind:'weapon',style:'ranged',itemId:'shortbow'}],
- bandit:[{chance:.19,kind:'weapon',style:'ranged',itemId:'crossbow'},{chance:.09,kind:'weapon',style:'melee',itemId:'forged_sword'}]
-};
-const coinValues={mossling:4,boar:7,bandit:13};
 export function isValidDrop(d){
  if(!d||typeof d!=='object'||typeof d.id!=='string'||d.id.length>64||d.id.length<1)return false;
  if(!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>70||Math.abs(d.z)>70)return false;
  if(!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)return false;
- if(d.kind==='coins')return d.itemId==='coins'&&d.amount<=99;
- if(d.kind==='material')return Object.values(MATERIAL_DROPS).some(x=>x.id===d.itemId);
- if(d.amount!==1)return false;
- if(d.kind==='armour')return Object.hasOwn(ARMOUR,d.itemId);
- if(d.kind==='weapon')return ['melee','ranged','magic'].includes(d.style)&&Object.hasOwn(LOADOUTS[d.style],d.itemId);
- return false;
+ const item=itemFromDrop(d);
+ return !!item?.dropAllowed&&(d.kind==='coins'||d.amount===1);
 }
 export function lootName(d){
- if(d.kind==='coins')return d.amount+' coins';
- if(d.kind==='material')return Object.values(MATERIAL_DROPS).find(x=>x.id===d.itemId)?.title||'Material';
- if(d.kind==='armour')return ARMOUR[d.itemId]?.title||'Armour';
- if(d.kind==='weapon')return LOADOUTS[d.style]?.[d.itemId]?.title||'Weapon';
- return 'Loot';
+ const name=itemFromDrop(d)?.title||'Loot';
+ return d.kind==='coins'?d.amount+' coins':name;
 }
-export function createMonsterDrops(type,x,z,random,idFactory){
- if(!Object.hasOwn(coinValues,type))return [];
- const items=[{kind:'coins',itemId:'coins',amount:coinValues[type]}];
- const mat=MATERIAL_DROPS[type];
- if(mat&&random()<mat.chance)items.push({kind:'material',itemId:mat.id,amount:1});
- for(const e of rare[type]||[])if(random()<e.chance)items.push({kind:e.kind,itemId:e.itemId,amount:1,...(e.style?{style:e.style}:{})});
+export function createMonsterDrops(type,x,z,random,idFactory,tables){
+ const items=rollDropTable(type,random,tables);
  return items.map((item,index)=>({...item,id:idFactory(),x:Math.max(-69,Math.min(69,x+(index?Math.cos(index*2.3)*.85:0))),
   z:Math.max(-69,Math.min(69,z+(index?Math.sin(index*2.3)*.85:0)))}));
 }

@@ -1,32 +1,54 @@
 import * as THREE from 'three';
-import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
+import { storageKey } from './storage-key.js';
+import {CAMERA_DEFAULTS,normalizeCameraSettings,readCameraSettings,firstStandardGamepad,gamepadEdges,cameraOrbitVector,frameDamping} from './control-config.js';
+import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, ENEMY_COMBAT, enemyBehaviour, enemyThreatTier, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
-import { createOakrestScenery, enrichHero, enrichEnemy } from './visual-world.js';
+import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
+import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit } from './terrain.js';
+import { createActor,equipActor,applyEquipmentVariant,applyCharacterAppearance,animateActor,createCreature,animateCreature } from './actors.js';
+import { readCharacters,createCharacter } from './characters.js';
+import { setupCharacterCreator } from './character-creator.js';
+import { cottageModel,treeModel,addLandmarks,batchScenery } from './environment.js';
+import { segmentHit,dodgeDirection,weaponComparison } from './gameplay-math.js';
+import { createAudio } from './audio.js';
+import { createOpeningLocations,START_POINTS } from './opening-world.js';
+import { buildOakrestTown } from './town-world.js';
+import {setupTownUI} from './town-ui.js';
+import {isOakrestSafe,townInteraction} from './town-services.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
+import { itemFromDrop } from './items.js';
+import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
+import {cloneDropTables,readDropTables} from './drop-tables.js';
+import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 
 const $=id=>document.getElementById(id);
+const oakrestKey=key=>storageKey(key,location.pathname);
+const devDropEditor=isDropEditorAllowed(location.pathname,location.hostname);
+const dropStorageKey=oakrestKey('oakrest-drop-tables-v1');
+let activeDropTables=devDropEditor?readDropTables(localStorage,dropStorageKey):cloneDropTables();
 const isTouch=matchMedia('(hover:none), (pointer:coarse)').matches || navigator.maxTouchPoints > 0;
 document.documentElement.classList.toggle('touch-enabled',isTouch);
 // Suppress Safari page zoom while keeping gameplay multitouch working.
 installGameZoomGuard(document);
 // Reuse the existing weapon ability buttons inside a right-thumb arc on touch devices.
 if(isTouch) $('touch-skill-dock').appendChild($('skills'));
-const now=()=>performance.now()/1000;
+let gameTime=0;const now=()=>gameTime;const audio=createAudio();
 const rand=(seed)=>{let s=seed;return ()=>{s=(s*16807)%2147483647;return (s-1)/2147483646;};};
 const random=rand(27184);
-const scene=new THREE.Scene();scene.background=new THREE.Color('#a9c8b7');scene.fog=new THREE.Fog('#a9c8b7',48,130);
-let renderer;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#a9c8b7');scene.fog=new THREE.Fog('#a9c8b7',32,105);
+let renderer,quality='balanced';try{quality=localStorage.getItem(oakrestKey('oakrest-quality'))||'balanced';}catch{}if(!['low','balanced','high'].includes(quality))quality='balanced';
 try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.45:1.85));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;$('game').appendChild(renderer.domElement); }
 catch(err){$('error').hidden=false;throw err;}
+function applyQuality(value){quality=value;renderer.setPixelRatio(Math.min(devicePixelRatio,{low:1,balanced:1.35,high:1.8}[quality]));renderer.shadowMap.enabled=quality!=='low';renderer.setSize(innerWidth,innerHeight);try{localStorage.setItem(oakrestKey('oakrest-quality'),quality);}catch{}}applyQuality(quality);$('quality').value=quality;$('quality').addEventListener('change',e=>applyQuality(e.target.value));$('sound-enabled').addEventListener('change',e=>{audio.setEnabled(e.target.checked);audio.unlock();});
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,150);
 const sun=new THREE.DirectionalLight('#ffdfad',2.1);sun.position.set(-26,45,20);sun.castShadow=true;sun.shadow.mapSize.set(isTouch?1024:2048,isTouch?1024:2048);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;sun.shadow.normalBias=.045;scene.add(sun);
-scene.add(new THREE.AmbientLight('#dae5da',.78));
-const hemi=new THREE.HemisphereLight('#e1ecdf','#6f6c48',.98);scene.add(hemi);
+scene.add(new THREE.AmbientLight('#dae5da',.40));
+const hemi=new THREE.HemisphereLight('#d4e6e4','#747350',1.05);scene.add(hemi);
 const MAT={ground:new THREE.MeshLambertMaterial({color:'#73956e',flatShading:true}),road:new THREE.MeshLambertMaterial({color:'#baa889',flatShading:true}),wood:new THREE.MeshLambertMaterial({color:'#79543a'}),woodLight:new THREE.MeshLambertMaterial({color:'#ac7951'}),stone:new THREE.MeshLambertMaterial({color:'#a1a399'}),roof:new THREE.MeshLambertMaterial({color:'#775c56'}),roof2:new THREE.MeshLambertMaterial({color:'#57685a'}),grass:new THREE.MeshLambertMaterial({color:'#547a53'}),leaves:new THREE.MeshLambertMaterial({color:'#436949'}),leaves2:new THREE.MeshLambertMaterial({color:'#648456'}),gold:new THREE.MeshLambertMaterial({color:'#e4bd72'}),black:new THREE.MeshLambertMaterial({color:'#171f1f'}),eye:new THREE.MeshBasicMaterial({color:'#edead6'}),water:new THREE.MeshLambertMaterial({color:'#759e9b'})};
 const playerColours={melee:'#ae6954',magic:'#597ba0',ranged:'#627e51'};
 const boxGeom=new THREE.BoxGeometry(1,1,1), ballGeom=new THREE.SphereGeometry(1,9,7);
@@ -35,44 +57,13 @@ function put(parent,geo,material,x,y,z,sx=1,sy=1,sz=1,shadow=true){const m=new T
 function block(parent,x,y,z,sx,sy,sz,m){return put(parent,boxGeom,m,x,y,z,sx,sy,sz);}
 function ball(parent,x,y,z,sx,sy,sz,m){return put(parent,ballGeom,m,x,y,z,sx,sy,sz);}
 function cylinder(parent,x,y,z,r,h,m){return put(parent,new THREE.CylinderGeometry(r,r,h,8),m,x,y,z);}
-const ground=put(scene,new THREE.PlaneGeometry(160,160),MAT.ground,0,-.065,0,1,1,1,false);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;
-const road=put(scene,new THREE.PlaneGeometry(8,125),MAT.road,0,-.044,-9,1,1,1,false);road.rotation.x=-Math.PI/2;
-function patch(x,z,w,d,color){const p=put(scene,new THREE.PlaneGeometry(w,d),mat(color),x,-.035,z,1,1,1,false);p.rotation.x=-Math.PI/2;return p;}
-for(let i=0;i<65;i++){const x=(random()-.5)*130,z=(random()-.5)*130;if(Math.abs(x)<6 && z>-60 && z<50)continue;patch(x,z,1+random()*4,.5+random()*3,random()>.5?'#789e6f':'#6b9167');}
-function tree(x,z,height=1){
- const g=new THREE.Group();g.position.set(x,0,z);
- cylinder(g,0,1.25*height,0,.23*height,2.5*height,MAT.wood);
- const leaf=random()>.5?MAT.leaves:MAT.leaves2;
- for(let t=0;t<3;t++){
-  const layer=put(g,new THREE.ConeGeometry((1.75-t*.31)*height,2.35*height,7),leaf,0,(2.7+t*.82)*height,0);
-  layer.rotation.y=random()*.42;
- }
- for(let j=0;j<3;j++){
-  const ang=j*2.09;
-  ball(g,Math.cos(ang)*.95*height,2.7*height,Math.sin(ang)*.8*height,.45*height,.58*height,.4*height,MAT.leaves2);
- }
- scene.add(g);
-}
-for(let i=0;i<90;i++){let x=(random()-.5)*112,z=(random()-.5)*112;if(Math.abs(x)<11&&z>-38&&z<35)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
-function cottage(x,z,roofmat=MAT.roof){const g=new THREE.Group();g.position.set(x,0,z);block(g,0,2.2,0,8,4.4,6,MAT.stone);const r=put(g,new THREE.ConeGeometry(5.8,3,4),roofmat,0,5.4,0);r.rotation.y=Math.PI/4;block(g,-.8,1.4,3.02,1.35,2.8,.1,MAT.wood);block(g,2.2,2.55,3.05,1.3,1.1,.14,MAT.water);block(g,2.2,2.55,3.15,.15,1.2,.14,MAT.wood);block(g,2.2,2.55,3.15,1.35,.13,.14,MAT.wood);
- const trim=mat('#654b36'),warm=mat('#d8af78'),foundation=mat('#78877a');
- for(const side of [-1,1]){
-  block(g,side*3.72,2.0,3.1,.22,4.05,.20,trim);
-  block(g,side*3.65,.45,0,.25,.65,6.1,foundation);
- }
- block(g,0,4.1,3.08,7.7,.22,.21,trim);
- block(g,0,.28,3.1,7.7,.52,.24,foundation);
- const chimney=block(g,-2.45,5.9,-.5,1.12,2.1,1.08,foundation);
- block(g,-2.45,6.95,-.5,1.42,.22,1.38,trim);
- block(g,-.8,2.55,3.11,.13,2.7,.15,trim);
- block(g,-.8,1.30,3.14,.7,.13,.18,warm);
- block(g,2.2,2.55,3.22,1.4,.10,.05,warm);
- block(g,2.2,2.55,3.24,.10,1.14,.05,warm);
- for(const zsign of [-1,1]){block(g,zsign*3.75,3.8,0,.11,.45,5.8,trim);}
- scene.add(g);}
+const ground=createTerrain(THREE,scene);
+let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));addWorldObstacle({x,z,r:.3*height,height:3.3*height});}
+for(let i=0;i<155;i++){let x=(random()-.5)*178,z=(random()-.5)*230;if(Math.abs(x)<45&&z>-30&&z<72)continue;if(Math.abs(x)<9&&z< -12)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
+let houseIndex=0;function cottage(x,z){scene.add(cottageModel(x,z,houseIndex++));}
 cottage(-14,12);cottage(14,8,MAT.roof2);cottage(-14,28,MAT.roof2);cottage(14,27);
-function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}}
-fence(-8,37,9);fence(7,37,7);fence(-8,-8,3);fence(5,-8,4);
+function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}addWorldObstacle({x:x+len-1,z,hx:len-1+.14,hz:.14,height:1.4});}
+fence(-40,67,12);fence(17,67,12);fence(-8,-8,3);fence(5,-8,4);
 // Village well and a training dummy establish scale and orientation.
 cylinder(scene,6,.7,19,2.1,1.3,MAT.stone);cylinder(scene,6,1.38,19,1.5,.18,MAT.woodLight);
 for(let x of [4,8])block(scene,x,2.6,19,.3,3.8,.3,MAT.wood);
@@ -83,39 +74,57 @@ for(const x of [-4,4])block(scene,x,2.35,-9,.7,4.7,.7,MAT.wood);block(scene,0,4.
 const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));block(scene,0,3.9,-9.1,2.45,.10,.05,MAT.gold);
 function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2.65,z,1.75,.7,.16,MAT.woodLight);}sign(5,12);
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
+groundScenery(THREE,scene,[ground]);addLandmarks(scene);batchScenery(scene);
+const expandedTown=buildOakrestTown(scene);
 const visuals=createCombatVisuals(THREE,scene);
 
-function createHero(){const g=new THREE.Group();const base=mat(playerColours.melee);const skin=mat('#dfad81');block(g,0,1.25,0,.86,1.18,.48,base);block(g,0,1.36,-.27,.65,.75,.08,MAT.woodLight);ball(g,0,2.13,0,.39,.43,.37,skin);const hair=ball(g,0,2.4,.01,.4,.21,.38,mat('#3b2f2a'));
-const leftLeg=new THREE.Group(),rightLeg=new THREE.Group(),leftArm=new THREE.Group(),rightArm=new THREE.Group();leftLeg.position.set(-.23,.77,0);rightLeg.position.set(.23,.77,0);leftArm.position.set(-.59,1.76,0);rightArm.position.set(.59,1.76,0);for(const leg of [leftLeg,rightLeg]){block(leg,0,-.32,0,.31,.72,.36,MAT.wood);block(leg,0,-.69,-.1,.33,.24,.58,MAT.black);g.add(leg);}for(const arm of [leftArm,rightArm]){block(arm,0,-.35,0,.24,.75,.28,base);g.add(arm);}const hand=ball(rightArm,0,-.76,0,.17,.16,.17,skin);const weapon=new THREE.Group();weapon.position.set(.05,-.78,-.16);rightArm.add(weapon);
- const costume=enrichHero({THREE,g,block,ball,mat,MAT,leftLeg,rightLeg,leftArm,rightArm});
- g.userData={body:base,leftLeg,rightLeg,leftArm,rightArm,weapon,...costume};return g;}
-const hero=createHero();hero.position.set(0,0,11);scene.add(hero);
-function equipVisual(style,weaponId){const group=hero.userData.weapon;group.clear();hero.userData.body.color.set(playerColours[style]);
- hero.userData.cloth.color.set(style==='melee'?'#54483b':style==='magic'?'#34485d':'#4b6040');
- hero.userData.chestPlate.visible=data.armour[style]==='plate';
- hero.userData.cape.visible=data.armour[style]!=='plate';
- const family=slotFamily(style,weaponId);let handle,blade;if(style==='melee'){
-  if(family==='daggers'){for(const x of [-.12,.15]){block(group,x,-.15,-.38,.08,.11,.62,MAT.wood);block(group,x,-.15,-.94,.12,.09,.7,MAT.stone);} }
-  else{
-  const heavy=family==='greatsword';
-  block(group,0,-.12,-.56,.13,.16,heavy?1.5:1.2,MAT.wood);
-  block(group,0,-.12,heavy?-1.66:-1.36,heavy?.34:.17,.13,heavy?1.56:.97,MAT.stone);
-  block(group,0,-.12,-.84,heavy?.83:.53,.13,.12,MAT.gold);
-  if(heavy)block(group,0,-.12,-2.42,.17,.12,.22,MAT.gold);
+function createHero(){return createActor();}
+const hero=createHero();hero.position.set(0,terrainHeight(0,11),11);scene.add(hero);
+const oldSaveKey=oakrestKey('oakrest-v1'),rosterKey=oakrestKey('oakrest-characters-v1'),activeKey=oakrestKey('oakrest-active-character');
+const saveKeyFor=id=>oakrestKey('oakrest-character-save-'+id);
+let profiles=[],activeCharacter=null,legacySave=null,saveWritable=true,data=defaultSave();
+try{
+ const raw=localStorage.getItem(oldSaveKey);
+ if(raw){
+  // Corrupt legacy data must never prevent creating a new character.
+  // Keep its original bytes untouched, and preserve a backup if possible.
+  try{
+   if(!localStorage.getItem(oakrestKey('oakrest-before-greenwood')))
+    localStorage.setItem(oakrestKey('oakrest-before-greenwood'),raw);
+  }catch{}
+  try{legacySave=validSave(JSON.parse(raw));data=legacySave;}catch{legacySave=null;}
  }
-}else if(style==='magic'){
-  block(group,0,.1,-.56,.12,.13,1.7,MAT.wood);ball(group,0,.1,-1.5,.24,.25,.25,mat(family==='frost'?'#8ecfe7':'#fd9858'));
-}else{block(group,0,-.1,-.67,.09,.1,1.52,MAT.wood);if(family==='bow'||family==='shortbow'){const bow=put(group,new THREE.TorusGeometry(family==='shortbow'?.52:.68,.065,4,12,Math.PI),MAT.woodLight,0,-.09,-.64);bow.rotation.y=Math.PI/2;block(group,.15,-.09,-.65,.03,.03,1.15,MAT.stone);}else{block(group,0,-.1,-1,.38,.17,.55,MAT.woodLight);block(group,0,-.07,-1.3,.05,.04,.42,MAT.stone);}}
+ profiles=readCharacters(localStorage,rosterKey);
+ const selected=localStorage.getItem(activeKey);
+ const profile=profiles.find(p=>p.id===selected);
+ if(profile){
+  const saved=localStorage.getItem(saveKeyFor(profile.id));
+  if(saved){
+   try{data=validSave(JSON.parse(saved));activeCharacter=profile;}catch{activeCharacter=null;}
+  }
+ }
+}catch{saveWritable=false;}
+function equipVisual(style,weaponId){
+ const practice=data.onboarding?.area==='tutorial';
+ const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
+ equipActor(hero,style,slotFamily(style,weaponId),protection);
+ if(!practice&&!ownsWeapon(data,style,weaponId)){hero.userData.weapon.clear();hero.userData.offhand.clear();}
+ else applyEquipmentVariant(hero,style,weaponId);
+ if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
 }
-let data=defaultSave();try{data=validSave(JSON.parse(localStorage.getItem('oakrest-v1')));}catch{}
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
-let pendingBasic=null,lastAttackInterval=0.95;
+let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,lastAttackInterval=0.95,dodgeTravel=null;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
-let savedLookSpeed=1;try{savedLookSpeed=localStorage.getItem('oakrest-look-speed') ?? 1;}catch{}
-let lookSensitivity=cameraSensitivity(savedLookSpeed);
+const cameraStorageKey=oakrestKey('oakrest-camera-settings-v1');
+let cameraSettings=readCameraSettings(localStorage,cameraStorageKey);
+try{if(!localStorage.getItem(cameraStorageKey)){const older=localStorage.getItem(oakrestKey('oakrest-look-speed'));if(older!==null)cameraSettings=normalizeCameraSettings({...cameraSettings,sensitivity:cameraSensitivity(older)});}}catch{}
+let lookSensitivity=cameraSettings.sensitivity;
+camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
+function saveCameraSettings(){try{localStorage.setItem(cameraStorageKey,JSON.stringify(cameraSettings));}catch{}}
+let padState=null,padPrevious=null,padName='';
 let holdingAttack=false;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
-let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
+let respawnAt=0,lastHurt=-100;let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
 let motion={x:0,z:0},stride=0,visualHeading=0;
 const cameraFocus=new THREE.Vector3(0,1.6,7.8);
 const forward=()=>new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
@@ -133,10 +142,20 @@ $('close-progression').addEventListener('click',bookClose);
 const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills'};
 for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();});
 $('loadout-button').addEventListener('click',()=>bookOpen('skills',true));
+if(devDropEditor){
+ setupDropEditor({
+  storage:localStorage,key:dropStorageKey,
+  button:$('drop-editor-open'),modal:$('drop-editor'),
+  onApply:(saved)=>{activeDropTables=saved;}
+ });
+}
 $('skill-detail-back').addEventListener('click',()=>{skillDetail=null;detailPanel.hidden=true;});
 function el(tag,text,parent,className){
  const node=document.createElement(tag);if(text!==null&&text!==undefined)node.textContent=text;
  if(className)node.className=className;if(parent)parent.append(node);return node;
+}
+function addItemIcon(parent,itemId){
+ const img=makeInventoryIcon(itemId);if(img)parent.append(img);return img;
 }
 function uiButton(parent,label,act,disabled=false){
  const b=el('button',label,parent);b.type='button';b.disabled=disabled;if(act)b.addEventListener('click',act);return b;
@@ -161,10 +180,11 @@ function showSkillDetail(id){
   el('small',entry.type+' · '+entry.detail,item);
   el('span',unlocked?'UNLOCKED':'LOCKED',row,'milestone-state');
  }
- el('p','Unlocking a weapon level grants its prototype training item to your inventory. Later versions will award equipment through drops, shops or crafting.',body,'detail-footnote');
+ el('p','Levels let you use equipment and learn abilities. Find equipment in physical enemy drops, then collect it from the ground.',body,'detail-footnote');
 }
 function selectStyle(s){bookStyle=s;bookSlot=0;renderBook();}
 function chooseGear(kind,id,selectedStyle=bookStyle){
+ if(selectedStyle===style&&(pendingBasic||pendingAbility)){toast("Finish your attack before changing equipment.");return;}
  if(kind==='weapon'){
   if(!canEquipWeapon(selectedStyle,id,data.xp)||!ownsWeapon(data,selectedStyle,id))return;
   data.gear[selectedStyle]=id;
@@ -202,6 +222,13 @@ function renderBook(){
    el('small',info.maxed?'MAX LEVEL':xpText(info.needed)+' XP to next level',card);
    el('small','Total XP '+xpText(info.totalXp)+'  ·  View unlocks ›',card,'level-meta');
   }
+  const wcXp=data.professions?.woodcuttingXp||0,learned=data.professions?.woodcuttingLearned===true;
+  const woodCard=el('div',null,grid,'level-card level-woodcutting');
+  const woodTop=el('div',null,woodCard,'level-card-title');
+  el('strong','🌲 Woodcutting',woodTop);
+  el('span',learned?'Level '+levelFromXp(wcXp).level:'LOCKED',woodTop);
+  el('small',learned?'Oakrest beginner practice '+wcXp+' / 710 XP':'Learn at Oakrest Forester’s Lodge',woodCard);
+  el('small','Other gathering and crafting skills have their own towns and trainers.',woodCard,'level-meta');
  }else if(bookTab==='abilities'){
   el('p','Select a slot, then choose an unlocked ability. Each weapon family remembers its four slots.',host);
   const slots=el('div',null,host,'book-slots'),current=equippedSkills(data,bookStyle,weaponId);
@@ -232,16 +259,16 @@ function renderBook(){
   },!current[bookSlot]);clear.className='book-clear';
  }else if(bookTab==='equip'){
   el('h3','Equipped for '+bookStyle.toUpperCase(),host);
-  const ownWeapon=LOADOUTS[bookStyle][data.gear[bookStyle]],ownArmour=defenceFor(data.armour[bookStyle]);
+  const ownWeapon=ownsWeapon(data,bookStyle,data.gear[bookStyle])?LOADOUTS[bookStyle][data.gear[bookStyle]]:{title:bookStyle==='melee'?'Unarmed':'None',basic:bookStyle==='melee'?6:0,interval:bookStyle==='melee'?.88:0,reach:bookStyle==='melee'?1.55:0},ownArmour=ownsArmour(data,data.armour[bookStyle])?defenceFor(data.armour[bookStyle]):defenceFor('none');
   el('p','Weapon: '+ownWeapon.title+'  ·  Armour: '+ownArmour.title,host);
   el('h3','Your weapons',host);
   const weapons=el('div',null,host,'catalogue-list');
   for(const [id,w] of Object.entries(LOADOUTS[bookStyle])){
    const unlocked=canEquipWeapon(bookStyle,id,data.xp),owned=ownsWeapon(data,bookStyle,id);
    const b=uiButton(weapons,'',()=>chooseGear('weapon',id),!unlocked||!owned);
-   b.classList.toggle('selected',data.gear[bookStyle]===id);
-   el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
-   el('small',weaponDisplay(w),d);
+   b.classList.toggle('selected',data.gear[bookStyle]===id&&owned);
+   addItemIcon(b,'weapon.'+bookStyle+'.'+id);const d=el('div',null,b);el('strong',w.title,d);
+   el('small',weaponDisplay(w),d);if(id!==data.gear[bookStyle])el('small',weaponComparison(w,ownWeapon),d,'gear-comparison');
    el('em',!unlocked?'LEVEL '+w.requiredLevel+' REQUIRED':!owned?'NOT OWNED':data.gear[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
   el('h3','Your armour',host);
@@ -250,11 +277,18 @@ function renderBook(){
    const unlocked=canEquipArmour(id,data.xp),owned=ownsArmour(data,id);
    const b=uiButton(armourGrid,'',()=>chooseGear('armour',id),!unlocked||!owned);
    b.classList.toggle('selected',data.armour[bookStyle]===id);
-   el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);const d=el('div',null,b);
+   addItemIcon(b,'armour.'+id);const d=el('div',null,b);
    el('strong',a.title,d);el('small',a.description,d);
    el('em',!unlocked?'VITALITY '+a.requiredVitality+' REQUIRED':!owned?'NOT OWNED':data.armour[bookStyle]===id?'EQUIPPED':'TAP TO EQUIP',d);
   }
  }else if(bookTab==='inventory'){
+  if(data.onboarding?.teleportScrolls>0){
+   el('h3','Travel scrolls',host);
+   const scrollRow=el('div',null,host,'catalogue-list');
+   const canTravel=data.onboarding.area!=='realm'&&(data.onboarding.area!=='tutorial'||data.onboarding.tutorial.hitStyles.length===3&&data.onboarding.tutorial.skillsRead);
+   const scroll=uiButton(scrollRow,'TELEPORTATION SCROLL ×'+data.onboarding.teleportScrolls+' · ENTER PORTAL REALM',()=>{bookClose();useTravelScroll();},!canTravel);scroll.prepend(makeInventoryIcon('scroll.teleport'));
+   scroll.title='Crafted through Inscription in a future update. One scroll is consumed per journey.';
+  }
   el('h3','Owned equipment',host);el('p','Collect glowing drops from defeated creatures. Picked-up gear stays here, even if your level is too low to equip it.',host);
   el('h3','Weapons',host);
   const weapons=el('div',null,host,'catalogue-list');
@@ -264,7 +298,7 @@ function renderBook(){
     const ready=canEquipWeapon(s,id,data.xp);
     const b=uiButton(weapons,'',()=>{bookStyle=s;chooseGear('weapon',id,s);},!ready);
     b.classList.toggle('selected',data.gear[s]===id);
-    el('span',w.icon,b);const d=el('div',null,b);el('strong',w.title,d);
+    addItemIcon(b,'weapon.'+s+'.'+id);const d=el('div',null,b);el('strong',w.title,d);
     el('small',s.toUpperCase()+' · LV '+w.requiredLevel+' · '+weaponDisplay(w),d);
     el('em',!ready?'LV '+w.requiredLevel+' REQUIRED':data.gear[s]===id?'EQUIPPED':'TAP TO EQUIP',d);
    }
@@ -275,7 +309,7 @@ function renderBook(){
    const a=ARMOUR[id];if(!a)continue;
    const ready=canEquipArmour(id,data.xp);
    const b=uiButton(armour,'',()=>chooseGear('armour',id,style),!ready);
-   el('span',id==='plate'?'⬡':id==='leather'?'◈':'✧',b);
+   addItemIcon(b,'armour.'+id);
    const d=el('div',null,b);el('strong',a.title,d);
    el('small','Vitality '+a.requiredVitality+' · '+a.description,d);
    el('em',!ready?'VITALITY '+a.requiredVitality+' REQUIRED':data.armour[style]===id?'EQUIPPED':'EQUIP TO '+style.toUpperCase(),d);
@@ -286,14 +320,32 @@ function renderBook(){
   for(const mat of Object.values(MATERIAL_DROPS)){
     const qty=data.inventory?.materials?.[mat.id]||0;if(!qty)continue;anyMaterial=true;
     const tile=el('div',null,materials,'material-tile');
-    el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
+    addItemIcon(tile,'material.'+mat.id);el('strong',mat.title,tile);el('small','Owned ×'+qty,tile);
   }
-  if(!anyMaterial)el('p','Defeat creatures outside the village to collect materials.',host);
+  const softwood=data.inventory?.materials?.['softwood-logs']||0;
+  if(softwood){
+   anyMaterial=true;const wood=el('div',null,materials,'material-tile');
+   addItemIcon(wood,'material.softwood-logs');el('strong','Softwood Logs',wood);el('small','Owned ×'+softwood,wood);
+  }
+  if(!anyMaterial)el('p','Gather resources in the town grove or defeat creatures beyond the greenbelt.',host);
   el('p','Coins: '+data.coins+' · Crafting with these materials will arrive later.',host,'inventory-footnote');
  }
 }
-function getWeapon(){return LOADOUTS[style][data.gear[style]];}
-function save(){try{localStorage.setItem('oakrest-v1',JSON.stringify(data));}catch{}}
+const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,windup:.25};
+function getWeapon(){if(data.onboarding?.area==='tutorial')return LOADOUTS[style][data.gear[style]];if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
+function save(){if(!saveWritable)return;try{localStorage.setItem(activeCharacter?saveKeyFor(activeCharacter.id):oldSaveKey,JSON.stringify(data));}catch{saveWritable=false;}}
+function useCharacter(profile,loaded){
+ // Switching a saved character must also switch its physical ground drops.
+ for(const id of [...lootModels.keys()])discardLootModel(id);
+ activeCharacter=profile;data=loaded;style='melee';hp=maxHealth(levelFromXp(data.xp.vitality).level);
+ for(const drop of data.groundLoot||[]){makeLootModel(drop);worldLayer.push(lootModels.get(drop.id).group);}
+ hero.position.set(0,terrainHeight(0,11),11);
+ updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
+ $('character-name-label').hidden=!profile;$('character-name-label').textContent=profile?.name||'';
+ $('begin').textContent=profile?'PLAY AS '+profile.name.toUpperCase():'CONTINUE ORIGINAL ADVENTURE';
+ $('quest-text').textContent=data.defeated>=3?'Master all three styles and defeat the bandit on the forest road.':'Explore the Bank, General Store and Forester\'s Lodge. Then follow the protected greenbelt to the monsters in the Greenwood.';
+ questCompleted=data.defeated>=3;updateHpUI();
+}
 function toast(message){
  const el=document.createElement('div');el.className='toast';
  if(message.includes('LEVEL '))el.classList.add('level-up');
@@ -306,15 +358,14 @@ function floating(text,color,pos){const el=document.createElement('div');el.clas
 // Persisted ground pickups are separate from combat XP and existing local inventory.
 const lootModels=new Map();let lootCounter=0,lastLootId=null;
 function makeLootModel(drop){
- const group=new THREE.Group();group.position.set(drop.x,0,drop.z);
- const colour=drop.kind==='coins'?'#edc774':drop.kind==='material'?'#8ecfa7':'#b8b6f3';
+ const group=new THREE.Group();group.position.set(drop.x,terrainHeight(drop.x,drop.z),drop.z);
+ const colour=itemFromDrop(drop)?.accent||'#b8b6f3';
  const glow=new THREE.MeshBasicMaterial({color:colour,transparent:true,opacity:.75,depthWrite:false});
  const halo=new THREE.Mesh(new THREE.RingGeometry(.36,.53,20),new THREE.MeshBasicMaterial({color:colour,transparent:true,opacity:.46,side:THREE.DoubleSide,depthWrite:false}));
  halo.rotation.x=-Math.PI/2;halo.position.y=.065;group.add(halo);
- const coreGeo=drop.kind==='coins'?new THREE.CylinderGeometry(.26,.26,.10,8):
-   drop.kind==='material'?new THREE.IcosahedronGeometry(.29,0):new THREE.OctahedronGeometry(.35,0);
- const core=new THREE.Mesh(coreGeo,new THREE.MeshLambertMaterial({color:colour,emissive:colour,emissiveIntensity:.22,flatShading:true}));
- core.position.y=.62;core.rotation.x=drop.kind==='coins'?Math.PI/2:0;
+ const core=makeWorldItemModel(drop);
+ if(!core)return;
+ core.position.y=.30;
  group.add(core);
  const aura=new THREE.Mesh(new THREE.SphereGeometry(.38,9,7),glow);
  aura.position.y=.62;group.add(aura);
@@ -335,17 +386,17 @@ function addGroundLoot(drop){
 function spawnMonsterLoot(enemy){
  // Every enemy awards a tangible coin pouch, with independent material/gear rolls.
  const prefix=String(Date.now())+'-'+(++lootCounter)+'-'+Math.floor(random()*1e6);
- const created=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,()=>prefix+'-'+(++lootCounter));
+ const created=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,()=>prefix+'-'+(++lootCounter),activeDropTables);
  for(const d of created)addGroundLoot(d);
  save();
 }
 function pickupNearby(){
- if(!started||hp<=0)return;
+ if(!started||hp<=0||data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm')return;
  const nearest=closestDrop(data.groundLoot,hero.position.x,hero.position.z,3.3);
  if(!nearest||!collectDrop(data,nearest))return;
  data.groundLoot=data.groundLoot.filter(d=>d.id!==nearest.id);discardLootModel(nearest.id);
  const text=lootName(nearest);
- toast('<b>PICKED UP</b> · '+text);
+ toast('<b>PICKED UP</b> · '+text);audio.play('loot');
  floating('+'+text,'#e9d39d',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));
  updateHpUI();if(!progressPanel.hidden)renderBook();save();updateLoot(0,now());
 }
@@ -353,11 +404,15 @@ const lootPanel=$('loot-prompt'),lootButton=$('loot-pickup');
 lootButton.addEventListener('click',e=>{e.preventDefault();pickupNearby();});
 function updateLoot(dt,t){
  let nearest=null;
- if(started&&hp>0)nearest=closestDrop(data.groundLoot,hero.position.x,hero.position.z,3.3);
+ if(started&&hp>0&&data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')nearest=closestDrop(data.groundLoot,hero.position.x,hero.position.z,3.3);
  if(nearest?.id!==lastLootId){
   lastLootId=nearest?.id||null;
   lootPanel.hidden=!nearest;
-  if(nearest)$('loot-label').textContent=lootName(nearest);
+  if(nearest){
+   $('loot-label').textContent=lootName(nearest);
+   const graphic=$('loot-item-icon');graphic.replaceChildren();
+   const item=itemFromDrop(nearest);if(item)addItemIcon(graphic,item.id);
+  }
  }
  if(!nearest)lootPanel.hidden=true;
  for(const m of lootModels.values()){
@@ -369,12 +424,8 @@ function updateLoot(dt,t){
  }
 }
 
-function makeEnemy(type,x,z){const g=new THREE.Group();g.position.set(x,0,z);const d={type,x,z,startX:x,startZ:z,group:g,level:ENEMY_COMBAT[type].level,aggro:false,retreating:false,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
-  if(type==='dummy'){d.max=1200;d.hp=1200;cylinder(g,0,1.2,0,.32,2.4,MAT.wood);block(g,0,1.73,0,1.5,.28,.3,MAT.woodLight);ball(g,0,2.58,0,.38,.42,.38,MAT.woodLight);block(g,0,1.9,-.34,.5,.5,.06,MAT.gold);}
-  if(type==='mossling'){d.max=57;d.hp=57;ball(g,0,.55,0,.79,.54,.75,mat('#609b59'));for(const xx of [-.29,.29]){ball(g,xx,.72,-.65,.13,.13,.13,MAT.black);}}
-  if(type==='boar'){d.max=90;d.hp=90;ball(g,0,.72,0,.95,.68,1.25,mat('#865f44'));ball(g,0,.65,-1.04,.53,.4,.43,mat('#bd8f78'));for(const xx of [-.33,.33]){ball(g,xx,.94,-.99,.095,.11,.08,MAT.black);block(g,xx,.23,.55,.27,.44,.3,MAT.wood);}}
-  if(type==='bandit'){d.max=125;d.hp=125;block(g,0,1.08,0,.8,1.3,.51,mat('#714c48'));ball(g,0,2.02,0,.37,.4,.37,mat('#c89770'));for(const xx of [-.28,.28])block(g,xx,.35,0,.26,.7,.34,MAT.wood);block(g,.6,1.23,-.25,.17,1,.2,MAT.stone);}
-  enrichEnemy({THREE,type,g,block,ball,mat,MAT});
+function makeEnemy(type,x,z){const g=type==='bandit'?createActor(true):createCreature(type);g.position.set(x,terrainHeight(x,z),z);const d={type,x,z,startX:x,startZ:z,group:g,level:ENEMY_COMBAT[type].level,aggro:false,retreating:false,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
+d.max={dummy:1200,mossling:57,boar:90,bandit:125}[type];d.hp=d.max;if(type==='bandit')equipActor(g,'melee','sword','leather');
  const plate=new THREE.Group();plate.position.y=type==='dummy'?3.15:type==='mossling'?1.5:2.55;g.add(plate);
  const frame=block(plate,0,0,-.05,1.55,.24,.07,MAT.gold);
  const bg=block(plate,0,0,0,1.40,.14,.06,MAT.black);
@@ -386,9 +437,101 @@ d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);
  return d;
 }
 makeEnemy('dummy',-6,-3);
-makeEnemy('mossling',-4,-21);makeEnemy('mossling',5,-24);makeEnemy('mossling',-8,-30);
-makeEnemy('boar',4,-33);makeEnemy('boar',10,-39);
-makeEnemy('bandit',-5,-49);
+// First hostile encounters are a journey beyond the safe town and approach.
+makeEnemy('mossling',-4,-55);makeEnemy('mossling',6,-62);makeEnemy('mossling',-9,-70);
+makeEnemy('boar',5,-77);makeEnemy('boar',11,-83);
+makeEnemy('bandit',-6,-98);
+// The existing Greenwood is one physical world layer. The tutorial and Portal
+// Realm are separate scenes in the same renderer, with independent visibility.
+const worldLayer=scene.children.filter(obj=>obj!==hero&&!obj.isLight);
+const openingWorld=createOpeningLocations(scene);
+const townUI=setupTownUI({
+ getData:()=>data,getTime:now,
+ onChange:()=>{save();updateHpUI();if(!progressPanel.hidden)renderBook();},
+ onEquipmentChange:()=>{equipVisual(style,data.gear[style]);refreshSkills();},
+ notify:message=>toast(message),
+ onOpen:()=>{bookClose();$('controls-panel').hidden=true;document.exitPointerLock?.();}
+});
+const practiceDummy=makeEnemy('dummy',0,-7);
+practiceDummy.onboardingDummy=true;
+openingWorld.training.add(practiceDummy.group);
+const activeEnemies=()=>data.onboarding?.area==='tutorial'?[practiceDummy]:
+ data.onboarding?.area==='realm'?[]:enemies.filter(e=>!e.onboardingDummy);
+const firstCity={name:'Oakrest',id:'oakrest'};
+function updateOpeningArea(){
+ const area=data.onboarding?.area||'world';
+ for(const p of projectiles){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);}projectiles.length=0;
+ for(const o of worldLayer)o.visible=area==='world';
+ openingWorld.training.visible=area==='tutorial';
+ openingWorld.realm.visible=area==='realm';
+ scene.background.set(area==='realm'?'#3b445e':area==='tutorial'?'#9fbf9f':'#a9c8b7');
+ scene.fog.color.set(scene.background);
+ $('area').textContent=area==='tutorial'?'The First Steps':area==='realm'?'Portal Realm':'Oakrest Village';
+ $('quest-text').closest('.quest').style.display=area==='world'?'':'none';
+ hero.position.set(START_POINTS[area].x,terrainHeight(START_POINTS[area].x,START_POINTS[area].z),START_POINTS[area].z);
+ yaw=0;motion={x:0,z:0};queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;
+ for(const e of enemies){e.levelLabel.hidden=true; if(e.onboardingDummy){e.group.visible=area==='tutorial';e.hp=e.max;}else e.group.visible=area==='world';}
+ for(const model of lootModels.values())model.group.visible=area==='world';
+ $('targetbox').hidden=true;
+ renderOpeningGuide();
+}
+function renderOpeningGuide(){
+ const o=data.onboarding,area=o?.area||'world';
+ const panel=$('opening-panel'),action=$('opening-action'),styles=$('opening-styles'),interact=$('opening-interact');
+ panel.hidden=area==='world';interact.hidden=true;action.hidden=true;styles.hidden=true;
+ if(area==='world')return;
+ if(area==='tutorial'){
+  const hits=o.tutorial.hitStyles,finished=hits.length===3;
+  $('opening-step').textContent='THE FIRST STEPS';
+  $('opening-progress').textContent=finished?'3 / 3':hits.length+' / 3';
+  if(!finished){
+   $('opening-title').textContent='Practise all three combat styles';
+   $('opening-instructions').textContent='Move towards the training dummy and hit it with Melee, Magic and Ranged. Use Tab, 1/2/3 or SWAP to change style. Practice weapons are loaned here and disappear when you leave.';
+   styles.hidden=false;styles.replaceChildren();
+   for(const s of STYLE_ORDER){const chip=document.createElement('span');chip.className='opening-style'+(hits.includes(s)?' done':'');chip.textContent=(hits.includes(s)?'✓ ':'○ ')+s.toUpperCase();styles.append(chip);}
+  }else if(!o.tutorial.skillsRead){
+   $('opening-title').textContent='Understanding your skills';
+   $('opening-instructions').textContent='Health, Melee, Magic and Ranged grow separately. Gathering and crafting skills—including Mining, Hunting, Blacksmithing and Inscription—will be taught here as they are implemented. Inscription will make spell and travel scrolls.';
+   action.hidden=false;action.textContent='I UNDERSTAND THE SKILLS';
+   action.onclick=()=>{o.tutorial.skillsRead=true;save();renderOpeningGuide();};
+  }else if(o.teleportScrolls<1){
+   $('opening-title').textContent='Training complete!';
+   $('opening-instructions').textContent='You have learned the basics. Accept your first Teleportation Scroll from your instructor. Your practice equipment stays here.';
+   action.hidden=false;action.textContent='RECEIVE TELEPORTATION SCROLL';
+   action.onclick=()=>{o.teleportScrolls=1;save();renderOpeningGuide();toast('Received: Teleportation Scroll ×1');};
+  }else{
+   $('opening-title').textContent='Your first journey';
+   $('opening-instructions').textContent='Use your Teleportation Scroll to travel to the Portal Realm. Only the portal to '+firstCity.name+' is open. The scroll is consumed when used.';
+   action.hidden=false;action.textContent='USE TELEPORTATION SCROLL (1)';
+   action.onclick=()=>useTravelScroll();
+  }
+ }else if(area==='realm'){
+  $('opening-step').textContent='THE PORTAL REALM';
+  $('opening-progress').textContent='FIRST DESTINATION';
+  $('opening-title').textContent='The gateway to '+firstCity.name;
+  $('opening-instructions').textContent='Walk into reach of the glowing gateway ahead. It is your only active destination. Other portals unlock when you activate them in cities you visit.';
+ }
+}
+function useTravelScroll(){
+ const o=data.onboarding;
+ if(!started||!o||o.teleportScrolls<1||o.area==='realm')return false;
+ if(o.area==='tutorial'&&(!o.tutorial.skillsRead||o.tutorial.hitStyles.length<3))return false;
+ o.teleportScrolls--;o.area='realm';style='melee';updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();save();
+ toast('You entered the Portal Realm');return true;
+}
+function enterCityPortal(){
+ const o=data.onboarding;
+ if(!started||o?.area!=='realm'||Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)>3.7)return false;
+ o.activatedPortals=['oakrest'];o.area='world';style='melee';updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
+ save();toast('Welcome to '+firstCity.name+'! Your adventure begins.');return true;
+}
+$('opening-interact-button').addEventListener('click',enterCityPortal);
+function updatePortalInteraction(){
+ const o=data.onboarding,interact=$('opening-interact');
+ if(!started||o?.area!=='realm'){interact.hidden=true;return;}
+ const near=Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)<=3.7;
+ interact.hidden=!near;if(near){$('opening-interact-description').textContent='Active gateway: '+firstCity.name;$('opening-interact-button').textContent='ENTER '+firstCity.name.toUpperCase()+' · E';}
+}
 function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
 function refreshStyles(){const host=$('styles');host.innerHTML='';for(const st of STYLE_ORDER){const b=document.createElement('button');b.className=`style ${st===style?'active':''}`;b.style.borderColor=st===style?STYLE_COLOURS[st]:'';b.innerHTML=`<span class="symbol">${{melee:'⚔',magic:'✦',ranged:'➶'}[st]}</span>${st.toUpperCase()} <small>${levelFromXp(data.xp[st]).level}</small>`;b.addEventListener('click',()=>setStyle(st));host.append(b);}}
 function refreshSkills(){
@@ -405,47 +548,52 @@ function refreshSkills(){
  const swap=$('touch-swap'),upcoming=nextStyle(style);
  swap.querySelector('small').textContent=upcoming.toUpperCase();swap.setAttribute('aria-label',`Switch to ${upcoming}`);
 }
-function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if(pendingBasic&&!instant)return;if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.53;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
+function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if((pendingBasic||pendingAbility)&&!instant){queuedStyle=which;return;}if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.53;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
 function gearMenu(){bookOpen('equip',true);}
 $('gear-button').addEventListener('click',gearMenu);
-function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=.045;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
-function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=ball(scene,pos.x,pos.y,pos.z,.07,.07,.07,new THREE.MeshBasicMaterial({color}));const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
-function gainXp(type){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[style]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[style]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[style]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(style,data.gear[style]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${style.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
-function hitEnemy(e,damage,ability){if(!e||e.dead||e.hp<=0)return;const amount=Math.round(damage*(1+Math.min(24,levelFromXp(data.xp[style]).level-1)*.025)*outgoingMultiplier(data.armour[style],style));e.hp-=amount;e.hitFlashUntil=now()+.16;
+function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=terrainHeight(pos.x,pos.z)+.065;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
+function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=put(scene,ballGeom.clone(),new THREE.MeshBasicMaterial({color}),pos.x,pos.y,pos.z,.07,.07,.07,false);const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
+function gainXp(type,sourceStyle=style){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[sourceStyle]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[sourceStyle]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[sourceStyle]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(sourceStyle,data.gear[sourceStyle]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${sourceStyle.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
+function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)}){if(!e||e.dead||e.hp<=0||e.retreating||!activeEnemies().includes(e))return;
+ if(e.onboardingDummy&&data.onboarding?.area==='tutorial'){
+  const hits=data.onboarding.tutorial.hitStyles;
+  if(!hits.includes(source.style)){hits.push(source.style);save();renderOpeningGuide();}
+ }if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}const amount=Math.round(damage*(1+Math.min(24,source.level-1)*.025)*source.power);audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
  if(e.type!=='dummy'&&!e.retreating){
   const cfg=ENEMY_COMBAT[e.type],heroHome=Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ);
   if(heroHome<=cfg.leash)e.aggro=true;
  }
  floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));
- if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.group.visible=false;addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type);}}
-function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return enemies.filter(e=>!e.dead&&e.hp>0).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
-function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},enemies,reach,isTouch?.12:.25);}
+ if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[style],4);visuals.impact(e.group.position,STYLE_COLOURS[style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;e.bleedSource=source;}if(ability?.stun)e.stunUntil=now()+ability.stun;if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root)e.rootUntil=now()+ability.root;if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.deathAt=now();addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type,source.style);}}
+function enemiesNear(reach,cone=.2){const pos=hero.position,front=forward();return activeEnemies().filter(e=>!e.dead&&e.hp>0&&!e.retreating).filter(e=>{const dx=e.x-pos.x,dz=e.z-pos.z,dist=Math.hypot(dx,dz);return dist<=reach&&(dx*front.x+dz*front.z)/(dist||1)>=cone;});}
+function nearTarget(reach){return meleeTarget({x:hero.position.x,z:hero.position.z},{x:Math.sin(yaw),z:-Math.cos(yaw)},activeEnemies().filter(e=>!e.retreating),reach,isTouch?.35:.40);}
 function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWeapon().reach){
- let dir=forward();
- if(isTouch){const target=combatAim(hero.position,{x:dir.x,z:dir.z},enemies,maxRange,.24);
-  if(target)dir=new THREE.Vector3(target.x-hero.position.x,0,target.z-hero.position.z).normalize();
+ let dir=forward(),aimTarget=null;
+ if(isTouch){const target=combatAim(hero.position,{x:dir.x,z:dir.z},activeEnemies().filter(e=>!e.retreating),maxRange,.24);
+  if(target){aimTarget=target;dir=new THREE.Vector3(target.x-hero.position.x,0,target.z-hero.position.z).normalize();}
  }
- dir.applyAxisAngle(new THREE.Vector3(0,1,0),spread);
- const mesh=ball(scene,hero.position.x+dir.x*.9,1.3,hero.position.z+dir.z*.9,
+ dir.applyAxisAngle(new THREE.Vector3(0,1,0),spread);const horizontal=Math.max(.1,aimTarget?Math.hypot(aimTarget.x-hero.position.x,aimTarget.z-hero.position.z):maxRange);dir.y=aimTarget?(terrainHeight(aimTarget.x,aimTarget.z)+(aimTarget.type==='mossling'?.75:1.25)-hero.position.y-1.3)/horizontal:0;
+ const mesh=ball(scene,hero.position.x+dir.x*.9,hero.position.y+1.3+dir.y*.9,hero.position.z+dir.z*.9,
  style==='magic'?.24:.13,style==='magic'?.24:.13,style==='magic'?.3:.48,
  new THREE.MeshBasicMaterial({color:colour}));
- visuals.projectile(mesh,colour,style);
- projectiles.push({mesh,dir,speed,damage,opts,life:Math.max(1.4,maxRange/Math.max(1,speed)+.1),age:0,distance:0,maxDistance:Math.max(.1,maxRange-.9),origin:hero.position.clone(),style,particle:false});
+ mesh.geometry=mesh.geometry.clone();mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),dir.clone().normalize());visuals.projectile(mesh,colour,style);
+ projectiles.push({mesh,dir,speed,damage,opts,life:Math.max(1.4,maxRange/Math.max(1,speed)+.1),age:0,distance:0,maxDistance:Math.max(.1,maxRange-.9),origin:hero.position.clone(),style,source:{style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)},particle:false});
 }
 function slashEffect(reach=3){
  const heading=forward();
  const p=hero.position.clone().add(heading.clone().multiplyScalar(Math.min(2,reach*.68)));
- p.y=1.25;
+ p.y=hero.position.y+1.25;
  sparks(p,STYLE_COLOURS[style],7);
  visuals.arc(hero.position,heading,reach,STYLE_COLOURS[style],comboStage);
 }
 function doBasic(){
- const t=now();if(!started||hp<=0||t<switchUntil||!basicAttackReady(t,attackUntil,!!pendingBasic))return;
+ const t=now();if(!started||hp<=0||dodgeTravel||pendingAbility||t<switchUntil||!basicAttackReady(t,attackUntil,!!pendingBasic))return;
+ if(data.onboarding?.area!=='tutorial'&&style!=='melee'&&!ownsWeapon(data,style,data.gear[style])){toast('You need a weapon to use this combat style.');return;}
  const w=getWeapon();
  attackUntil=t+w.interval;lastAttackInterval=w.interval;
  const windup=Math.min(w.interval*.70,w.windup||w.interval*.25);
- pendingBasic={style,weapon:data.gear[style],impactAt:t+windup,interval:w.interval};
- recoilUntil=t+Math.max(windup+.13,w.interval*.56);
+ pendingBasic={style,weapon:data.gear[style],impactAt:t+windup,interval:w.interval,start:t};
+ recoilUntil=t+Math.max(windup+.13,w.interval*.56);attackAnimation=pendingBasic;
  if(style==='melee'){
   comboStage=t-lastMeleeAttack<w.interval*1.8?(comboStage+1)%3:0;
   lastMeleeAttack=t;pendingBasic.combo=comboStage;
@@ -456,8 +604,8 @@ function doBasic(){
 function resolveBasicAttack(t){
  if(!pendingBasic||t<pendingBasic.impactAt)return;
  const attack=pendingBasic;pendingBasic=null;
- if(!started||hp<=0||style!==attack.style)return;
- const w=LOADOUTS[attack.style][attack.weapon];
+ if(!started||hp<=0||style!==attack.style)return;audio.play(style==='magic'?'magic':'attack',getWeapon().basic>25);
+ const w=(data.onboarding?.area==='tutorial'||ownsWeapon(data,attack.style,attack.weapon))?LOADOUTS[attack.style][attack.weapon]:attack.style==='melee'?UNARMED:null;
  if(!w)return;
  hero.userData.rightArm.rotation.x=-1.5;
  if(attack.style==='melee'){
@@ -468,15 +616,16 @@ function resolveBasicAttack(t){
   // Bows are distinguished by launch speed and maximum travel; heavy crossbow recovers slowly.
   const velocity=attack.style==='magic'?(slotFamily(style,attack.weapon)==='ember'?24:21):
     slotFamily(style,attack.weapon)==='shortbow'?27:slotFamily(style,attack.weapon)==='crossbow'?34:36;
-  shoot(w.basic,velocity,attack.style==='magic'?'#b6d9ef':'#e4c292',{},0,w.reach);
+  shoot(w.basic,velocity,attack.style==='magic'?(slotFamily(style,attack.weapon)==='ember'?'#f6b070':'#b6d9ef'):'#e4c292',{},0,w.reach);
  }
 }
-function shiftHero(dist){let f=forward();const steps=8;for(let i=0;i<steps;i++){const nx=hero.position.x+f.x*dist/steps,nz=hero.position.z+f.z*dist/steps;if(!collides(nx,nz)){hero.position.x=nx;hero.position.z=nz;}else break;}addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
-function useAbility(index){if(!started||hp<=0||now()<switchUntil||pendingBasic)return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=`${style}.${slotFamily(style,data.gear[style])}.${a.id}`;if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);
+function shiftHero(dist){const f=forward();dodgeTravel={dir:{x:f.x*Math.sign(dist),z:f.z*Math.sign(dist)},speed:Math.abs(dist)/.32,start:now(),end:now()+.32};addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
+function useAbility(index){if(!started||hp<=0||dodgeTravel||pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic||(data.onboarding?.area!=='tutorial'&&!ownsWeapon(data,style,data.gear[style])))return;const a=equippedSkills(data,style,data.gear[style])[index];if(!a)return;const id=`${style}.${slotFamily(style,data.gear[style])}.${a.id}`;if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
+function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;const {a,style:castStyle}=pendingAbility;pendingAbility=null;if(hp<=0||style!==castStyle)return;audio.play(style==='magic'?'magic':'attack');
   if(a.kind==='hit'||a.kind==='execute'){const t=nearTarget(a.reach);if(t)hitEnemy(t,a.damage+(a.kind==='execute'&&t.bleedUntil>now()?20:0),a);slashEffect(a.reach);}
-  else if(a.kind==='sweep'){for(const e of enemiesNear(a.reach,-.1))hitEnemy(e,a.damage,a);addRing(hero.position.clone(),STYLE_COLOURS[style],a.reach,.46);}
-  else if(a.kind==='nova'){for(const e of enemies){if(!e.dead&&e.group.position.distanceTo(hero.position)<a.reach)hitEnemy(e,a.damage,a);}addRing(hero.position.clone(),'#92d8ec',a.reach,.65);}
-  else if(a.kind==='bolt')shoot(a.damage,a.speed,style==='magic'?'#a3d6f7':'#edd28f',a);
+  else if(a.kind==='sweep'){for(const e of enemiesNear(a.reach,.10))hitEnemy(e,a.damage,a);addRing(hero.position.clone(),STYLE_COLOURS[style],a.reach,.46);}
+  else if(a.kind==='nova'){for(const e of activeEnemies()){if(!e.dead&&e.group.position.distanceTo(hero.position)<a.reach)hitEnemy(e,a.damage,a);}addRing(hero.position.clone(),'#92d8ec',a.reach,.65);}
+  else if(a.kind==='bolt')shoot(a.damage,a.speed,style==='magic'?(slotFamily(style,data.gear[style])==='ember'?'#f6b070':'#a3d6f7'):'#edd28f',a);
   else if(a.kind==='burst')[-.09,0,.09].forEach(v=>shoot(a.damage,a.speed,'#eac993',a,v));
   else if(a.kind==='shield'){shieldUntil=now()+a.duration;addRing(hero.position.clone(),'#83c4ee',2.6,.65);toast(`${a.name} activated`);}
   else if(a.kind==='heal'){const max=maxHealth(levelFromXp(data.xp.vitality).level);hp=Math.min(max,hp+a.heal);floating(`+${a.heal}`,'#80f0a2',hero.position.clone().add(new THREE.Vector3(0,2.4,0)));addRing(hero.position.clone(),'#80f0a2',2,.4);updateHpUI();}
@@ -485,8 +634,8 @@ function useAbility(index){if(!started||hp<=0||now()<switchUntil||pendingBasic)r
   else if(a.kind==='retreat'){shoot(a.damage,26,'#f2d79a');shiftHero(-4);}
   sparks(hero.position.clone().add(new THREE.Vector3(0,1.15,0)),STYLE_COLOURS[style],5);
 }
-function dodge(){if(!started||hp<=0||now()<dodgeUntil)return;pendingBasic=null;dodgeUntil=now()+2;floating('DODGE','#a2f3ce',hero.position.clone().add(new THREE.Vector3(0,2.9,0)));dodgeMovingUntil=now()+.22;const move=new THREE.Vector3((Number(keys.has('d'))-Number(keys.has('a')))+joystick.x,0,(Number(keys.has('s'))-Number(keys.has('w')))-joystick.y);const axis=forward(),right=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));const dir=axis.multiplyScalar(-move.z).add(right.multiplyScalar(move.x));if(dir.length()<.15)dir.copy(forward());dir.normalize();for(let i=0;i<8;i++){const nx=hero.position.x+dir.x*.5,nz=hero.position.z+dir.z*.5;if(collides(nx,nz))break;hero.position.set(nx,0,nz);}addRing(hero.position.clone(),'#fff1b8',2,.4);}
-function collides(x,z){if(Math.abs(x)>70||Math.abs(z)>70)return true;for(const c of [[-14,12],[14,8],[-14,28],[14,27]])if(Math.abs(x-c[0])<4.8&&Math.abs(z-c[1])<3.8)return true;if(Math.hypot(x-6,z-19)<2.6)return true;return false;}
+function dodge(){if(!started||hp<=0||now()<dodgeUntil)return;pendingBasic=null;pendingAbility=null;attackAnimation=null;dodgeUntil=now()+2;dodgeMovingUntil=now()+.22;const dir=dodgeDirection({x:Number(keys.has('d'))-Number(keys.has('a'))+joystick.x+(padState?.moveX||0),z:Number(keys.has('s'))-Number(keys.has('w'))+joystick.y+(padState?.moveY||0)},yaw);dodgeTravel={dir,start:now(),end:now()+.32};audio.play('dodge');addRing(hero.position.clone(),'#fff1b8',2,.4);}
+function collides(x,z){return blocked(x,z);}
 // Attack telegraphs are visible ground geometry and use a frozen target/direction.
 // Moving out of the red shape before it resolves avoids damage.
 function cancelEnemyWarning(e){
@@ -516,19 +665,20 @@ function startEnemyWarning(e,t){
   mesh.rotation.set(-Math.PI/2,-Math.atan2(dir.x,-dir.z),0,'YXZ');
   mesh.position.set(e.x,.029,e.z);
  }
+ mesh.updateMatrixWorld();const pos=mesh.geometry.attributes.position,world=new THREE.Vector3();for(let i=0;i<pos.count;i++){world.fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld);world.y=terrainHeight(world.x,world.z)+.055;mesh.worldToLocal(world);pos.setXYZ(i,world.x,world.y,world.z);}mesh.geometry.computeBoundingSphere();
  e.warning=warning;e.warningMesh=mesh;e.attackWindup=t+spec.windup;e.lastAttack=t;
  scene.add(mesh);
 }
 function applyEnemyDamage(e,spec,t){
  if(hp<=0||t<dodgeMovingUntil){floating('EVADED','#a8f2be',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));return;}
  const harm=damageAfterArmour(spec.damage,shieldUntil>t,data.armour[style]);
- hp=Math.max(0,hp-harm);cameraJolt=.13;
+ hp=Math.max(0,hp-harm);lastHurt=t;cameraJolt=.13;
  $('damage-flash').classList.remove('hit');void $('damage-flash').offsetWidth;$('damage-flash').classList.add('hit');
  floating('-'+harm,'#ff948d',hero.position.clone().add(new THREE.Vector3(0,2.8,0)));
  updateHpUI();
- if(hp<=0){
+ if(hp<=0){pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;motion={x:0,z:0};
   toast('<b>YOU WERE DEFEATED</b> · Respawning in Oakrest');
-  setTimeout(()=>{hero.position.set(0,0,11);hp=maxHealth(levelFromXp(data.xp.vitality).level);updateHpUI();},2100);
+  respawnAt=t+2.1;
  }
 }
 function disengageEnemy(e,t){
@@ -540,32 +690,36 @@ function disengageEnemy(e,t){
 }
 function returnEnemyHome(e,dt,t){
  const dx=e.startX-e.x,dz=e.startZ-e.z,dist=Math.hypot(dx,dz);
- if(dist<.15){e.x=e.startX;e.z=e.startZ;e.group.position.set(e.x,0,e.z);e.retreating=false;return;}
+ if(dist<.15){e.x=e.startX;e.z=e.startZ;e.group.position.set(e.x,terrainHeight(e.x,e.z),e.z);e.retreating=false;return;}
  const step=Math.min(dist,ENEMY_COMBAT[e.type].returnSpeed*dt);
  const nx=e.x+dx/dist*step,nz=e.z+dz/dist*step;
  // Enemy pathing cannot permanently trap an evading creature on scenery.
  if(!collides(nx,nz)){e.x=nx;e.z=nz;}
  else {e.x+=dx/dist*step;e.z+=dz/dist*step;}
- e.group.position.set(e.x,0,e.z);
+ e.group.position.set(e.x,terrainHeight(e.x,e.z),e.z);
  e.group.rotation.y=dampAngle(e.group.rotation.y,Math.atan2(-dx,-dz),10,dt);
 }
 function updateEnemy(e,dt,t){
  if(e.dead){
-  e.levelLabel.hidden=true;
+  e.levelLabel.hidden=true;e.plate.visible=false;animateCreature(e.group,e.type,t,dt,0,0,false,t-e.deathAt+.01);e.group.visible=t-e.deathAt<.8;
   if(t>=e.respawn){
-   e.dead=false;e.hp=e.max;e.bleedUntil=0;e.rootUntil=0;e.stunUntil=0;
+   e.dead=false;e.plate.visible=true;e.hp=e.max;e.bleedUntil=0;e.rootUntil=0;e.stunUntil=0;
    e.lastAttack=t;e.aggro=false;e.retreating=false;
-   e.group.visible=true;e.group.position.set(e.startX,0,e.startZ);e.x=e.startX;e.z=e.startZ;
+   e.group.visible=true;e.group.position.set(e.startX,terrainHeight(e.startX,e.startZ),e.startZ);e.x=e.startX;e.z=e.startZ;
   }
   return;
  }
- if(e.bleedUntil>t&&t>=e.nextBleed){e.nextBleed=t+1;hitEnemy(e,3,null);}
+ if(e.bleedUntil>t&&t>=e.nextBleed){e.nextBleed=t+1;hitEnemy(e,3,null,e.bleedSource);}
  if(e.dead)return;
  e.bar.scale.x=clamp(e.hp/e.max,.001,1);e.bar.position.x=-.68*(1-e.hp/e.max);e.plate.lookAt(camera.position);
- e.group.scale.setScalar(e.hitFlashUntil>t?1.12:1);
+ animateCreature(e.group,e.type,t,dt,e.charge?10:e.aggro?2:0,e.warning?e.attackWindup:0,e.hitFlashUntil>t,0);
  if(e.type==='dummy')return;
- const bob=e.warning?-.04:Math.sin(t*(e.type==='boar'?5.4:3.9)+e.startX)*.028;
- e.group.position.y=damp(e.group.position.y,bob,9,dt);
+ e.group.position.y=terrainHeight(e.x,e.z);
+ // No monster may continue a chase or strike while the hero is protected by town patrols.
+ if(isOakrestSafe(hero.position.x,hero.position.z)){
+  if(e.aggro||e.retreating){if(!e.retreating)disengageEnemy(e,t);returnEnemyHome(e,dt,t);}
+  return;
+ }
  const spec=ENEMY_PATTERNS[e.type];
  const playerPos={x:hero.position.x,z:hero.position.z};
  const state=enemyBehaviour(e.type,e,playerPos,e.aggro);
@@ -598,13 +752,15 @@ function updateEnemy(e,dt,t){
   const dir=e.charge.direction,step=spec.chargeSpeed*dt,nx=e.x+dir.x*step,nz=e.z+dir.z*step;
   const homeDistance=Math.hypot(nx-e.startX,nz-e.startZ);
   if(homeDistance>ENEMY_COMBAT[e.type].leash||collides(nx,nz)){e.charge=null;disengageEnemy(e,t);return;}
-  e.x=nx;e.z=nz;e.group.position.set(nx,0,nz);
+  e.x=nx;e.z=nz;e.group.position.set(nx,terrainHeight(nx,nz),nz);
   if(!e.charge.hit&&Math.hypot(hero.position.x-e.x,hero.position.z-e.z)<1.4){
    e.charge.hit=true;applyEnemyDamage(e,spec,t);
   }
   return;
  }
  const ready=t-e.lastAttack>=spec.cooldown;
+ if(e.type==='bandit'&&!ready&&dist<4.5&&dist>2&&e.stunUntil<t&&e.rootUntil<t){const sign=e.startX<0?1:-1,n=moveOnGround({x:e.x,z:e.z},-dz/Math.max(.1,dist)*dt*.65*sign,dx/Math.max(.1,dist)*dt*.65*sign);if(Math.hypot(n.x-e.startX,n.z-e.startZ)<ENEMY_COMBAT.bandit.leash){e.x=n.x;e.z=n.z;e.group.position.set(n.x,n.y,n.z);}}
+
  if(dist<=spec.engage&&ready&&e.stunUntil<t&&e.rootUntil<t){
   startEnemyWarning(e,t);return;
  }
@@ -614,7 +770,7 @@ function updateEnemy(e,dt,t){
   if(step>0){
    const nx=e.x+dx/dist*step,nz=e.z+dz/dist*step;
    if(Math.hypot(nx-e.startX,nz-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,t);return;}
-   if(!collides(nx,nz)){e.x=nx;e.z=nz;e.group.position.set(nx,0,nz);}
+   const moved=moveOnGround({x:e.x,z:e.z},nx-e.x,nz-e.z);e.x=moved.x;e.z=moved.z;e.group.position.set(e.x,moved.y,e.z);
   }
   e.group.rotation.y=dampAngle(e.group.rotation.y,Math.atan2(-dx,-dz),10,dt);
  }
@@ -623,8 +779,9 @@ function updateEnemyLevelLabels(){
  const playerLevel=combatLevelFromXp(data.xp);
  camera.updateMatrixWorld();
  for(const e of enemies){
+  if(!activeEnemies().includes(e)){e.levelLabel.hidden=true;e.plate.visible=false;continue;}
   const label=e.levelLabel,dist=Math.hypot(hero.position.x-e.x,hero.position.z-e.z);
-  if(e.dead||!started||dist>17){label.hidden=true;continue;}
+  e.plate.visible=!e.dead&&started&&dist<17;if(e.dead||!started||dist>17){label.hidden=true;continue;}
   const pos=new THREE.Vector3(e.x,(e.type==='dummy'?3.78:e.type==='mossling'?2.15:3.24)+e.group.position.y,e.z);
   pos.project(camera);
   if(pos.z< -1||pos.z>1||Math.abs(pos.x)>1.05||Math.abs(pos.y)>1.05){
@@ -638,58 +795,63 @@ function updateEnemyLevelLabels(){
  }
 }
 function animate(dt,t){
- elapsed+=dt;resolveBasicAttack(t);
- if(holdingAttack||keys.has('j')||keys.has('enter'))doBasic();
+ elapsed+=dt;resolveBasicAttack(t);resolveAbility(t);if(queuedStyle&&!pendingBasic&&!pendingAbility){const next=queuedStyle;queuedStyle=null;setStyle(next);}if(hp<=0&&respawnAt&&t>=respawnAt){const point=START_POINTS[data.onboarding?.area||'world'];hero.position.set(point.x,terrainHeight(point.x,point.z),point.z);hp=maxHealth(levelFromXp(data.xp.vitality).level);respawnAt=0;updateHpUI();}
+ pollGamepad(dt);
+ if(holdingAttack||(!isGameplayMenuOpen()&&padState?.attack)||keys.has('j')||keys.has('enter'))doBasic();
  const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));
  if(turn)yaw+=turn*dt*2.35*lookSensitivity;
  const front=forward(),side=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
- const v=(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y;
- const h=(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x;
+ const v=isGameplayMenuOpen()?0:(Number(keys.has('w'))-Number(keys.has('s')))-joystick.y-(padState?.moveY||0);
+ const h=isGameplayMenuOpen()?0:(Number(keys.has('d'))-Number(keys.has('a')))+joystick.x+(padState?.moveX||0);
  const input=new THREE.Vector3().addScaledVector(front,v).addScaledVector(side,h);
- const speed=(keys.has('shift')?6.3:5)*defenceFor(data.armour[style]).mobility;
+ const speed=(keys.has('shift')||Math.hypot(padState?.moveX||0,padState?.moveY||0)>.88?6.3:5)*defenceFor(data.armour[style]).mobility;
  motion=smoothMotion(motion,hp>0?input.x:0,hp>0?input.z:0,speed,dt);
- const nx=hero.position.x+motion.x*dt,nz=hero.position.z+motion.z*dt;
- if(!collides(nx,hero.position.z))hero.position.x=nx;else motion.x=0;
- if(!collides(hero.position.x,nz))hero.position.z=nz;else motion.z=0;
- const gait=Math.hypot(motion.x,motion.z),strideStrength=Math.min(1,gait/4.7);
- stride+=gait*dt*1.95;
- const swing=Math.sin(stride)*.54*strideStrength;
- visualHeading=dampAngle(visualHeading,-yaw,19,dt);hero.rotation.y=visualHeading;
- hero.userData.leftLeg.rotation.x=damp(hero.userData.leftLeg.rotation.x,swing,16,dt);
- hero.userData.rightLeg.rotation.x=damp(hero.userData.rightLeg.rotation.x,-swing,16,dt);
- hero.userData.leftArm.rotation.x=damp(hero.userData.leftArm.rotation.x,-swing*.52,11,dt);
- const attacking=t<recoilUntil,armTarget=attacking?-1.12:Math.sin(stride)*.18*strideStrength;
- hero.userData.rightArm.rotation.x=damp(hero.userData.rightArm.rotation.x,armTarget,attacking?19:12,dt);
- hero.userData.cape.rotation.x=damp(hero.userData.cape.rotation.x,-.08+strideStrength*.12,5,dt);
- hero.position.y=damp(hero.position.y,strideStrength*Math.sin(stride*2)*.032,8,dt);
- const back=front.clone().multiplyScalar(-6.5);
+ if(dodgeTravel){const remaining=Math.max(0,Math.min(dt,dodgeTravel.end-t+dt));const next=moveOnGround(hero.position,dodgeTravel.dir.x*(dodgeTravel.speed||12.5)*remaining,dodgeTravel.dir.z*(dodgeTravel.speed||12.5)*remaining);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);if(t>=dodgeTravel.end)dodgeTravel=null;}
+ else {const next=moveOnGround(hero.position,motion.x*dt,motion.z*dt);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);}
+ // Dedicated areas are finite islands; never let players walk off their floor.
+ if(data.onboarding?.area==='tutorial'){
+  hero.position.x=clamp(hero.position.x,-25,25);
+  hero.position.z=clamp(hero.position.z,-25,25);
+ }else if(data.onboarding?.area==='realm'){
+  const r=Math.hypot(hero.position.x,hero.position.z);
+  if(r>15.5){hero.position.x*=15.5/r;hero.position.z*=15.5/r;}
+ }
+ const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
+ const combatFacing=holdingAttack||pendingBasic||pendingAbility||t<attackUntil;
+ const heading=gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
+ visualHeading=dampAngle(visualHeading,heading,19,dt);hero.rotation.y=visualHeading;
+ animateActor(hero,{dt,t,stride,speed:gait,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
- const ideal=look.clone().add(back).add(new THREE.Vector3(0,2.15+Math.sin(pitch)*3,0));
- cameraJolt=Math.max(0,cameraJolt-dt*.85);ideal.y+=cameraJolt*Math.sin(elapsed*95);
- camera.position.lerp(ideal,1-Math.exp(-8.5*dt));
- const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*5,0));
- cameraFocus.lerp(cameraAim,1-Math.exp(-13*dt));camera.lookAt(cameraFocus);
- for(const e of enemies)updateEnemy(e,dt,t);
+ const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
+ const ideal=look.clone().add(new THREE.Vector3(orbit.x,orbit.y,orbit.z));
+ cameraJolt=Math.max(0,cameraJolt-dt*.85);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)ideal.y+=cameraJolt*Math.sin(elapsed*95)*.25;
+ const safe=safeCamera(look,ideal);ideal.set(safe.x,safe.y,safe.z);
+ camera.position.lerp(ideal,frameDamping(cameraSettings.smoothing,dt));const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
+ const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*4,0));
+ cameraFocus.lerp(cameraAim,frameDamping(cameraSettings.smoothing+3,dt));camera.lookAt(cameraFocus);
+ for(const e of activeEnemies())updateEnemy(e,dt,t);
  updateEnemyLevelLabels();
  updateLoot(dt,t);
-for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(.965);}else{const travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;p.mesh.rotation.y+=dt*7;for(const e of enemies){if(e.dead||e.hp<=0)continue;const y=e.type==='mossling'?.7:1.2;const ex=e.x-p.mesh.position.x,ez=e.z-p.mesh.position.z,dy=y-p.mesh.position.y;if(Math.hypot(ex,ez,dy)<(e.type==='dummy'?1.1:1.15)){hitEnemy(e,p.damage,p.opts);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],7);p.life=0;break;}}}if(p.age>p.life || (!p.particle&&p.distance>=p.maxDistance)){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.age+=dt;if(p.particle){p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=7*dt;p.mesh.scale.multiplyScalar(Math.exp(-2.14*dt));}else{const start=p.mesh.position.clone(),travel=projectileTravel(p.distance, p.speed, dt, p.maxDistance);p.mesh.position.addScaledVector(p.dir,travel.step);p.distance=travel.distance;let closest=null,best=Infinity;for(const e of activeEnemies()){if(e.dead||e.hp<=0||e.retreating)continue;const center={x:e.x,y:terrainHeight(e.x,e.z)+(e.type==='mossling'?.75:1.25),z:e.z};const hit=segmentHit(start,p.mesh.position,center,e.type==='dummy'?.7:.8);if(hit!==null&&hit<best){best=hit;closest=e;}}const worldHit=segmentWorldHit(start,p.mesh.position);if(worldHit!==null&&worldHit<=best){sparks(start.clone().lerp(p.mesh.position,worldHit),STYLE_COLOURS[p.style],4);p.life=0;}else if(closest){hitEnemy(closest,p.damage,p.opts,p.source);sparks(p.mesh.position.clone(),STYLE_COLOURS[p.style],5);p.life=0;}}
+ if(p.age>p.life||(!p.particle&&(p.distance>=p.maxDistance||p.mesh.position.y<terrainHeight(p.mesh.position.x,p.mesh.position.z)))){scene.remove(p.mesh);visuals.cleanupProjectile(p.mesh);projectiles.splice(i,1);}}
 visuals.update(dt);
  for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.time+=dt;r.mesh.scale.setScalar(r.radius*(.3+r.time/r.duration*.8));r.mesh.material.opacity=Math.max(0,.85*(1-r.time/r.duration));if(r.time>=r.duration){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);}}
 for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.age+=dt;const v=f.pos.clone().project(camera);f.el.style.left=`${(v.x+1)*innerWidth*.5}px`;f.el.style.top=`${(-v.y+1)*innerHeight*.5-f.age*37}px`;f.el.style.opacity=`${Math.max(0,1-f.age/1.1)}`;if(f.age>1.1){f.el.remove();floaters.splice(i,1);}}
-let aim=null,aimScore=-Infinity;for(const e of enemies){if(e.dead||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
+let aim=null,aimScore=-Infinity;for(const e of activeEnemies()){if(e.dead||e.retreating||e.type==='dummy'&&hero.position.distanceTo(e.group.position)>15)continue;const dx=e.x-hero.position.x,dz=e.z-hero.position.z,dist=Math.hypot(dx,dz);if(dist>30)continue;const dot=(dx*front.x+dz*front.z)/Math.max(.01,dist);const score=dot-0.01*dist;if(dot>.86&&score>aimScore){aim=e;aimScore=score;}}
 $('targetbox').hidden=!aim;if(aim){$('target-name').textContent=ENEMY_COMBAT[aim.type].name+' · Combat Lv '+aim.level;$('target-name').dataset.threat=enemyThreatTier(aim.level,combatLevelFromXp(data.xp));$('target-hp').style.width=`${100*aim.hp/aim.max}%`;}
-const z=hero.position.z;$('area').textContent=z< -42?'Forest Road':z< -12?'Oakrest Outskirts':'Oakrest Village';
+if(data.onboarding?.area!=='realm'&&hp>0&&isOakrestSafe(hero.position.x,hero.position.z)&&t-lastHurt>8&&!activeEnemies().some(e=>e.aggro)){const max=maxHealth(levelFromXp(data.xp.vitality).level);if(hp<max){hp=Math.min(max,hp+max*.025*dt);updateHpUI();}}
+const z=hero.position.z;$('area').textContent=data.onboarding?.area==='tutorial'?'The First Steps':data.onboarding?.area==='realm'?'Portal Realm':z< -80?'Deep Greenwood':z< -47?'Forest Road':z< -13?'Oakrest Greenbelt':'Oakrest Town';updatePortalInteraction();townUI.update({x:hero.position.x,z:hero.position.z,allowed:started&&hp>0&&(data.onboarding?.area||'world')==='world'});openingWorld.update(data.onboarding?.area||'world',t);
 const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  const attackButton=$('touch-attack'),attackTimer=$('attack-timer');
  attackButton.style.setProperty('--attack-deg',(timer.progress*360).toFixed(1)+'deg');
- attackButton.classList.toggle('recovering',!timer.ready);
+ attackButton.classList.toggle('recovering',!timer.ready);$('weapon-cycle').textContent=timer.ready?'ATTACK READY':timer.remaining.toFixed(1)+'s recovery';
  if(attackTimer)attackTimer.textContent=timer.ready?'READY':timer.remaining.toFixed(1)+'s';
  const remainingDodge=Math.max(0,dodgeUntil-t);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
  for(const [i,b] of [...$('skills').children].entries()){const ability=equippedSkills(data,style,data.gear[style])[i];const until=ability?cooldowns.get(`${style}.${slotFamily(style,data.gear[style])}.${ability.id}`)||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);
 const canvas=renderer.domElement;
-function cameraMove(dx,dy,touch=false){const speed=lookSensitivity*(touch?.82:1);yaw+=dx*.0044*speed;pitch=clamp(pitch+dy*.0026*speed,-.35,.75);}
+function cameraMove(dx,dy,touch=false){const speed=lookSensitivity*(touch?.82:1);yaw+=dx*.0044*speed;pitch=clamp(pitch+dy*.0026*speed*(cameraSettings.invertY?-1:1),-.45,.85);}
 document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas)cameraMove(e.movementX,e.movementY);});
 canvas.addEventListener('mousedown',e=>{if(!started)return;if(!isTouch&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});if(e.button===0)doBasic();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -734,13 +896,86 @@ const swapButton=$('touch-swap');let swapPointerAt=-10;
 swapButton.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();swapPointerAt=now();setStyle(nextStyle(style));}});
 swapButton.addEventListener('click',()=>{if(now()-swapPointerAt>.35)setStyle(nextStyle(style));});
 
-const speedInput=$('look-speed');speedInput.value=lookSensitivity.toFixed(1);
-$('look-speed-value').textContent=`${lookSensitivity.toFixed(1)}×`;
-speedInput.addEventListener('input',e=>{
-  lookSensitivity=cameraSensitivity(e.target.value);
-  $('look-speed-value').textContent=`${lookSensitivity.toFixed(1)}×`;
-  try{localStorage.setItem('oakrest-look-speed',String(lookSensitivity));}catch{}
+function refreshCameraControls(){
+ const cfg=cameraSettings;
+ const numeric=[['look-speed','sensitivity','×',1],['camera-zoom','zoom','',1],['camera-height','height','',1],['camera-fov','fov','°',0],['camera-smoothing','smoothing','',0],['gamepad-deadzone','gamepadDeadzone','',2]];
+ for(const [id,key,suffix,precision] of numeric){
+  $(id).value=cfg[key];
+  $(id+'-value').textContent=Number(cfg[key]).toFixed(precision)+suffix;
+ }
+ $('camera-invert-y').checked=cfg.invertY;
+}
+function setCameraOption(key,value){
+ cameraSettings=normalizeCameraSettings({...cameraSettings,[key]:value});
+ lookSensitivity=cameraSettings.sensitivity;
+ camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
+ saveCameraSettings();refreshCameraControls();
+}
+refreshCameraControls();
+for(const [id,key] of [['look-speed','sensitivity'],['camera-zoom','zoom'],['camera-height','height'],['camera-fov','fov'],['camera-smoothing','smoothing'],['gamepad-deadzone','gamepadDeadzone']])
+ $(id).addEventListener('input',e=>setCameraOption(key,Number(e.target.value)));
+$('camera-invert-y').addEventListener('change',e=>setCameraOption('invertY',e.target.checked));
+$('camera-recenter').addEventListener('click',()=>{
+ yaw=0;pitch=.12;cameraFocus.copy(hero.position).add(new THREE.Vector3(0,1.65,0));
+ toast('Camera recentred');
 });
+$('camera-reset').addEventListener('click',()=>{
+ cameraSettings=normalizeCameraSettings(CAMERA_DEFAULTS);lookSensitivity=cameraSettings.sensitivity;
+ yaw=0;pitch=.12;camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
+ saveCameraSettings();refreshCameraControls();toast('Camera settings reset');
+});
+function isGameplayMenuOpen(){
+ return !progressPanel.hidden||!$('controls-panel').hidden||!$('character-creator').hidden||townUI.isOpen();
+}
+function focusGamepadMenu(direction){
+ const parent=townUI.isOpen()?$('town-panel'):!$('controls-panel').hidden?$('controls-panel'):progressPanel;
+ const fields=[...parent.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled)')]
+  .filter(el=>el.getClientRects().length>0);
+ if(!fields.length)return;
+ const current=fields.indexOf(document.activeElement);
+ const next=fields[(current<0?0:current+direction+fields.length)%fields.length];
+ next.focus({preventScroll:true});next.scrollIntoView?.({block:'nearest',behavior:'instant'});
+}
+function pollGamepad(dt){
+ let current=null;
+ try{current=firstStandardGamepad(navigator.getGamepads?.(),cameraSettings.gamepadDeadzone);}
+ catch{current=null;}
+ // A disconnected or unsupported pad never leaves movement or held attack stuck.
+ const newName=current?current.label:'';
+ if(newName!==padName){
+  padName=newName;
+  $('gamepad-status').textContent=current?'Connected: '+(current.label||'Standard Gamepad'):'No compatible controller detected';
+ }
+ const edges=gamepadEdges(padPrevious,current);
+ padState=current;
+ if(!current){padPrevious=null;return;}
+ const menus=isGameplayMenuOpen();
+ if(edges.menu){
+  $('controls-panel').hidden=menus;
+  $('help-button').setAttribute('aria-expanded',String(!menus));
+  if(menus)bookClose();
+  document.exitPointerLock?.();
+ }else if(edges.inventory){if(menus){bookClose();closeControls();}else bookOpen('inventory',true);}
+ else if(started){
+  if(menus){
+   if(edges.abilities[0]||edges.abilities[2])focusGamepadMenu(-1);
+   if(edges.abilities[1]||edges.abilities[3])focusGamepadMenu(1);
+   if(current.attack&&!padPrevious?.attack && document.activeElement?.click)document.activeElement.click();
+   if(edges.dodge){closeControls();bookClose();}
+  }else{
+   if(edges.dodge)dodge();
+   if(edges.swap)setStyle(nextStyle(style));
+   if(edges.previousStyle)setStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+STYLE_ORDER.length-1)%STYLE_ORDER.length]);
+   if(edges.nextStyle)setStyle(nextStyle(style));
+   if(edges.interact){if(data.onboarding?.area==='realm')enterCityPortal();else if(!townUI.interact({x:hero.position.x,z:hero.position.z,allowed:started&&hp>0&&(data.onboarding?.area||'world')==='world',time:now()}))pickupNearby();}
+   edges.abilities.forEach((hit,index)=>{if(hit)useAbility(index);});
+   if(Math.abs(current.lookX)+Math.abs(current.lookY)>.005)cameraMove(current.lookX*dt*320,current.lookY*dt*320,true);
+  }
+ }else if(current.attack&&!padPrevious?.attack&&$('intro').classList.contains('hidden')===false&&$('character-creator').hidden){
+  startGameplay();
+ }
+ padPrevious=current;
+}
 function closeControls(){$('controls-panel').hidden=true;$('help-button').setAttribute('aria-expanded','false');}
 $('help-button').addEventListener('click',()=>{
   const panel=$('controls-panel');panel.hidden=!panel.hidden;
@@ -751,12 +986,76 @@ $('close-controls').addEventListener('click',closeControls);
 addEventListener('blur',()=>{
   holdingAttack=false;attackId=null;attackButton.classList.remove('held');
   joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';
-  lookPointer=null;
+  lookPointer=null;keys.clear();
 });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
-document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.code==='Escape'){closeControls();bookClose();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
-$('begin').addEventListener('click',()=>{started=true;$('intro').classList.add('hidden');if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});toast('<b>Welcome to Oakrest!</b> One skill is ready. Level up to unlock more in your SKILLS book.');});
-equipVisual(style,data.gear[style]);refreshSkills();if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
-let last=performance.now();function loop(time){requestAnimationFrame(loop);const dt=Math.min(.05,(time-last)/1000);last=time;const t=now();if(started)animate(dt,t);scenery.update(t,camera);renderer.render(scene,camera);}requestAnimationFrame(loop);setInterval(save,6000);
+document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key==='j'||e.key==='J'||e.code==='Enter')doBasic();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.key==='Shift')dodge();if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
+function startGameplay(){
+ if(started)return;
+ if(!activeCharacter&&!legacySave)return;
+ started=true;audio.unlock();$('intro').classList.add('hidden');
+ if(!isTouch)canvas.requestPointerLock?.().catch(()=>{});
+ if(!saveWritable)toast('Browser storage is unavailable. Your progress cannot be saved.');
+ toast(data.onboarding?.area==='tutorial'
+  ?'<b>Welcome to The First Steps!</b> Hit the training dummy with all three combat styles.'
+  :'<b>Welcome to Oakrest!</b> Visit the bank, general store and Forester\'s Lodge before venturing beyond the safe greenbelt.');
+}
+const characterUI=setupCharacterCreator({
+ listProfiles:()=>profiles,getCurrentId:()=>activeCharacter?.id,
+ legacyAvailable:()=>legacySave!==null,
+ onCreate(input){
+  if(!saveWritable)throw new Error('Browser storage is unavailable. Cannot save a new character.');
+  const profile=createCharacter(input,profiles,crypto.randomUUID());
+  const fresh=freshCharacterSave(),updated=[...profiles,profile];
+  try{
+   localStorage.setItem(saveKeyFor(profile.id),JSON.stringify(fresh));
+   localStorage.setItem(rosterKey,JSON.stringify(updated));
+   localStorage.setItem(activeKey,profile.id);
+  }catch{throw new Error('Could not save the character. Check available browser storage.');}
+  profiles=updated;useCharacter(profile,fresh);save();
+  startGameplay(); // one tap: Create Character -> playable tutorial
+ },
+ onSelect(profile){
+  const saved=localStorage.getItem(saveKeyFor(profile.id));
+  if(!saved)throw new Error('Character progress could not be found. No saves were changed.');
+  const loaded=validSave(JSON.parse(saved));localStorage.setItem(activeKey,profile.id);
+  useCharacter(profile,loaded);
+  startGameplay();
+ },
+ onLegacy(){
+  if(!legacySave)throw new Error('No earlier character was found.');
+  localStorage.removeItem(activeKey);useCharacter(null,legacySave);
+  startGameplay();
+ }
+});
+// The title's native Characters link opens a separate lightweight page even
+// when the WebGL engine or its event listeners are not available.
+// Reloading before changing characters clears in-flight combat state.
+$('character-switch').addEventListener('click',()=>{
+ save();
+ location.assign(new URL('./characters.html',location.href).href);
+});
+if(activeCharacter)useCharacter(activeCharacter,data);
+else if(legacySave)useCharacter(null,legacySave);
+else characterUI.show();
+const query=new URLSearchParams(location.search);
+if(query.has('characters'))characterUI.show();
+$('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){location.assign(new URL('./characters.html',location.href).href);return;}startGameplay();});
+equipVisual(style,data.gear[style]);refreshSkills();
+if(new URLSearchParams(location.search).has('autostart')&&(activeCharacter||legacySave))startGameplay();
+if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
+let last=performance.now(),lastMetrics=last,frameTimes=[];
+const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
+function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.05,realDt);if(started){gameTime+=dt;animate(dt,now());}else pollGamepad(dt);if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
+requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',save);
+// Read-only diagnostics for reproducible device measurements. No player identifiers.
+window.oakrestDiagnostics=()=>({...stats,quality,version:'greenwood-1'});
+// Local-only QA uses isolated browser contexts and the real simulation/actions.
+if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
+ state:()=>({data:structuredClone(data),style,hp,cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning})),effects:projectiles.length+rings.length+visuals.count}),
+ teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
+ equip:(kind,id,s=style)=>chooseGear(kind,id,s),slot:(index,id)=>{equipSkill(data,style,data.gear[style],index,id);refreshSkills();},
+ step(seconds){for(let i=0;i<Math.round(seconds*60);i++){gameTime+=1/60;animate(1/60,gameTime);}},damage(amount){hp=Math.max(1,hp-amount);updateHpUI();}
+};

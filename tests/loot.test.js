@@ -43,7 +43,7 @@ test('pickup UI remains touch actionable and XP is still awarded on kill',()=>{
  const s=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  assert.ok(h.includes('id="loot-pickup"')&&h.includes('id="loot-prompt"'));
  assert.ok(s.includes("lootButton.addEventListener('click'"));
- assert.ok(s.includes('spawnMonsterLoot(e);gainXp(e.type);'));
+ assert.ok(s.includes('spawnMonsterLoot(e);gainXp(e.type,source.style);'));
  assert.ok(!s.includes("data.coins+=type==="));
  assert.ok(s.includes('data.groundLoot=data.groundLoot.filter('));
 });
