@@ -37,3 +37,5 @@ jobs:
         run: node tests/browser-smoke.cjs
       - name: iPad-size dev-path character start regression
         run: node tests/browser-ipad-creator.cjs
+      - name: iPad-size controller and camera regression
+        run: node tests/browser-controller.cjs
