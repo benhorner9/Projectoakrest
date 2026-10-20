@@ -13,6 +13,33 @@ symlinkSync('.',subdirectory,'dir');
 const server=spawn('python3',['-m','http.server','5174','--bind','127.0.0.1'],{cwd:root,stdio:'ignore'});
 let browser;
 
+
+async function checkCharactersButton(viewport) {
+ const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,deviceScaleFactor:2});
+ const page=await context.newPage();
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{
+  localStorage.setItem('oakrest-dev-v1',JSON.stringify({
+   xp:{melee:0,magic:0,ranged:0,vitality:0},lootVersion:1,
+   gear:{melee:'sword',magic:'frost',ranged:'bow'},
+   armour:{melee:'traveller',magic:'traveller',ranged:'traveller'},
+   inventory:{weapons:{melee:['sword'],magic:['frost'],ranged:['bow']},armour:['traveller'],materials:{}}
+  }));
+ });
+ try{
+  await page.goto('http://127.0.0.1:5174/oakrest-dev/?qa=1',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
+  assert.equal(await page.locator('#character-creator').isHidden(),true,'Existing player should see title initially');
+  assert.ok(await page.locator('#choose-character').isVisible(),'Characters button visible');
+  await page.locator('#choose-character').click({timeout:12000});
+  assert.equal(await page.locator('#character-creator').isVisible(),true,'Characters opens after physical touch click');
+  await page.locator('#creator-close').click();
+  assert.equal(await page.locator('#character-creator').isHidden(),true,'Close returns to title');
+  assert.ok(await page.locator('#begin').isVisible(),'Enter Oakrest remains accessible');
+  assert.deepEqual(errors,[]);
+  console.log('PASS: Characters button opens and closes on iPad-size touch layout');
+ }finally{await context.close();}
+}
 async function runCase(label,viewport,seedBrokenLegacy){
  const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,deviceScaleFactor:2});
  const page=await context.newPage(),errors=[];
@@ -57,6 +84,7 @@ async function runCase(label,viewport,seedBrokenLegacy){
  try{
   await new Promise(resolve=>setTimeout(resolve,1100));
   browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  await checkCharactersButton({width:1366,height:1024});
   await runCase('iPad portrait dev path',{width:1024,height:1366},false);
   await runCase('iPad landscape dev path with corrupt legacy save',{width:1366,height:1024},true);
  }catch(e){console.error(e.stack||e);process.exitCode=1;}
