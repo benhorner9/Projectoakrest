@@ -231,7 +231,7 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),groundLoot:[],lootVersion:1};
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
 }
 export function freshCharacterSave(){
  const d=defaultSave();
@@ -259,8 +259,25 @@ export function validSave(raw){
    }
   }
   if(Array.isArray(raw.inventory?.armour))d.inventory.armour=raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id));
-  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token']){
+  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
+  }
+  // Bank and profession data live in each character save and must survive reloads.
+  if(raw.bank&&typeof raw.bank==='object'){
+    d.bank.coins=Number.isSafeInteger(raw.bank.coins)?clamp(raw.bank.coins,0,10000000):0;
+    for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
+      const value=raw.bank.materials?.[id];if(Number.isSafeInteger(value)&&value>0)d.bank.materials[id]=clamp(value,0,9999);
+    }
+    for(const style of STYLE_ORDER){
+      const held=raw.bank.weapons?.[style];
+      if(Array.isArray(held))d.bank.weapons[style]=[...new Set(held.filter(id=>typeof id==='string'&&Object.hasOwn(LOADOUTS[style],id)))].filter(id=>!d.inventory.weapons[style].includes(id));
+    }
+    if(Array.isArray(raw.bank.armour))d.bank.armour=[...new Set(raw.bank.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id)))].filter(id=>!d.inventory.armour.includes(id));
+  }
+  if(raw.professions&&typeof raw.professions==='object'){
+    d.professions.woodcuttingLearned=raw.professions.woodcuttingLearned===true;
+    const xp=raw.professions.woodcuttingXp;
+    d.professions.woodcuttingXp=Number.isSafeInteger(xp)?clamp(xp,0,710):0;
   }
   // The previous prototype granted gear at level milestones. Preserve that legacy gear
   // exactly once on migration; in this build new gear is earned from physical drops.
