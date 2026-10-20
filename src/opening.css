@@ -1,0 +1,14 @@
+.opening-panel[hidden],.opening-interact[hidden]{display:none!important}
+.opening-panel{position:fixed;z-index:70;top:126px;right:max(14px,env(safe-area-inset-right));width:min(310px,32vw);max-height:42vh;overflow-y:auto;box-sizing:border-box;padding:15px;background:linear-gradient(145deg,#17322ff5,#152827f5);border:1px solid #dac59677;border-radius:12px;box-shadow:0 10px 35px #001f1b88;pointer-events:auto;color:#efebda}
+.opening-panel-heading{display:flex;justify-content:space-between;gap:8px;text-transform:uppercase;font-size:10px;letter-spacing:.12em;color:#d9c18a}
+.opening-panel h2{font-size:19px;margin:9px 0;letter-spacing:.02em;line-height:1.25}.opening-panel p{font-size:13px;line-height:1.55;margin:7px 0;color:#d0ded4}
+.opening-styles{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.opening-style{border:1px solid #6e837d;background:#263d3c;color:#d8e1d9;border-radius:8px;padding:7px;font-size:12px}
+.opening-style.done{border-color:#a5daa6;background:#29493b;color:#dff3cc}
+#opening-action,#opening-interact-button{border:1px solid #dec590;background:#c9ac73;color:#192d28;cursor:pointer;border-radius:8px;padding:10px 12px;font-weight:700;font-size:13px;min-height:42px}
+#opening-action{width:100%;margin-top:8px}
+.opening-interact{z-index:85;position:fixed;bottom:max(170px,22vh);left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;padding:10px 14px;background:#172e2bed;border:1px solid #e7d29a99;border-radius:12px;box-shadow:0 6px 24px #0b2322ab;max-width:min(460px,85vw);font-size:13px;text-align:center}
+.opening-interact button{white-space:nowrap}
+@media(max-width:850px){.opening-panel{top:70px;right:8px;width:min(280px,54vw);max-height:43vh;padding:11px}.opening-panel h2{font-size:16px}.opening-panel p{font-size:12px}.opening-interact{bottom:max(160px,24vh)}}
+@media(max-width:600px){.opening-panel{top:65px;right:7px;width:clamp(190px,52vw,230px);max-height:35vh}.opening-interact{bottom:145px;padding:8px 10px;font-size:11px;width:52vw}}
+@media(max-height:500px){.opening-panel{top:58px;max-height:37vh}.opening-panel h2{font-size:15px}.opening-panel p{font-size:11px}.opening-interact{bottom:105px}}
