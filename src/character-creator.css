@@ -30,3 +30,10 @@
 #intro .choose-character{display:block;margin:10px auto 0;background:#243e38;border:1px solid #a8b99a69;color:#e8e1c8;padding:11px 20px;border-radius:7px;cursor:pointer}
 @media (max-width:620px){.character-creator{align-items:flex-start;padding:8px}.creator-shell{max-height:none;padding:15px}.creator-form-section{grid-template-columns:1fr;gap:10px}.creator-preview{min-height:180px;flex-direction:row;flex-wrap:wrap}.creator-preview p{max-width:none}.creator-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.creator-header h2{font-size:20px}#creator-model{min-height:190px}#creator-model canvas{max-height:205px}}
 @media (prefers-reduced-motion:reduce){.character-creator *{scroll-behavior:auto!important}}
+
+/* Make the Characters actions reliably tappable in touch-first Safari layouts. */
+#intro #choose-character{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation;min-height:48px;min-width:170px}
+#controls-panel .in-game-characters{display:block;width:100%;min-height:46px;margin:12px 0 8px;background:#c9ac73;color:#132d2a;font-size:12px;font-weight:800;letter-spacing:.035em;touch-action:manipulation;pointer-events:auto}
+.character-creator{touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.creator-shell{touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.character-creator button,.character-creator input,.character-creator select{touch-action:manipulation}
