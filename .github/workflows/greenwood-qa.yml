@@ -43,3 +43,12 @@ jobs:
         run: node tests/browser-ipad-creator.cjs
       - name: iPad-size controller and camera regression
         run: node tests/browser-controller.cjs
+      - name: Built dev-path release flow
+        run: node tests/browser-release.cjs
+      - name: Preserve browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oakrest-release-qa
+          path: qa/
+          if-no-files-found: ignore

@@ -18,8 +18,8 @@ export const TOWN_MATERIALS=Object.freeze(['moss-fibre','boar-hide','bandit-toke
 export const SHOP_STOCK=Object.freeze([
   ...Object.values(STARTER_SETS).map(set=>Object.freeze({id:set.id,label:set.title,kind:'bundle',style:set.style,price:set.price})),
   Object.freeze({id:'starter-sword',label:'Iron Longsword',kind:'weapon',style:'melee',itemId:'sword',price:45}),
-  Object.freeze({id:'starter-staff',label:'Frost Staff',kind:'weapon',style:'magic',itemId:'frost',price:45}),
-  Object.freeze({id:'starter-bow',label:'Oak Bow',kind:'weapon',style:'ranged',itemId:'bow',price:45}),
+  Object.freeze({id:'starter-staff',label:'Frostwood Staff',kind:'weapon',style:'magic',itemId:'frost',price:45}),
+  Object.freeze({id:'starter-bow',label:'Oak Longbow',kind:'weapon',style:'ranged',itemId:'bow',price:45}),
   Object.freeze({id:'starter-robe',label:'Traveller Clothing',kind:'armour',itemId:'traveller',price:35})
 ]);
 export const STARTER_GROVE_XP_CAP=710; // The level 5 ceiling sends advanced learners elsewhere.

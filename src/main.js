@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { storageKey } from './storage-key.js';
 import {CAMERA_DEFAULTS,normalizeCameraSettings,readCameraSettings,firstStandardGamepad,gamepadEdges,cameraOrbitVector,frameDamping} from './control-config.js';
-import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor } from './rules.js';
+import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor,equipPrimaryItem } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, ENEMY_COMBAT, enemyBehaviour, enemyThreatTier, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
@@ -187,13 +187,7 @@ function showSkillDetail(id){
 function selectStyle(s){bookStyle=s;bookSlot=0;renderBook();}
 function chooseGear(kind,id,selectedStyle=bookStyle){
  if(selectedStyle===style&&(pendingBasic||pendingAbility)){toast("Finish your attack before changing equipment.");return;}
- if(kind==='weapon'){
-  if(!canEquipWeapon(selectedStyle,id,data.xp)||!ownsWeapon(data,selectedStyle,id))return;
-  data.gear[selectedStyle]=id;
- }else{
-  if(!canEquipArmour(id,data.xp)||!ownsArmour(data,id))return;
-  data.armour[selectedStyle]=id;
- }
+ if(!equipPrimaryItem(data,kind,selectedStyle,id))return;
  save();if(style===selectedStyle){equipVisual(style,data.gear[style]);refreshSkills();}
  renderBook();
 }
@@ -282,7 +276,7 @@ function renderBook(){
  }
 }
 const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,windup:.25};
-function getWeapon(){if(data.onboarding?.area==='tutorial')return LOADOUTS[style][data.gear[style]];if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
+function getWeapon(){if(data.onboarding?.area==='tutorial'&&LOADOUTS[style][data.gear[style]])return LOADOUTS[style][data.gear[style]];if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
 function save(){if(!saveWritable)return;try{localStorage.setItem(activeCharacter?saveKeyFor(activeCharacter.id):oldSaveKey,JSON.stringify(data));}catch{saveWritable=false;}}
 function useCharacter(profile,loaded){
  // Switching a saved character must also switch its physical ground drops.
@@ -504,11 +498,11 @@ $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=terrainHeight(pos.x,pos.z)+.065;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
 function sparks(pos,color,count=10){for(let i=0;i<count;i++){const sphere=put(scene,ballGeom.clone(),new THREE.MeshBasicMaterial({color}),pos.x,pos.y,pos.z,.07,.07,.07,false);const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
 function gainXp(type,sourceStyle=style){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[sourceStyle]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[sourceStyle]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[sourceStyle]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(sourceStyle,data.gear[sourceStyle]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${sourceStyle.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
-function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)}){if(!e||e.dead||e.hp<=0||e.retreating||!activeEnemies().includes(e))return;
+function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power}){if(!e||e.dead||e.hp<=0||e.retreating||!activeEnemies().includes(e))return;
  if(e.onboardingDummy&&data.onboarding?.area==='tutorial'){
   const hits=data.onboarding.tutorial.hitStyles;
   if(!hits.includes(source.style)){hits.push(source.style);save();renderOpeningGuide();}
- }if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}const amount=Math.round(damage*(1+Math.min(24,source.level-1)*.025)*source.power*equipmentModifiers(data,source.style).power);audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
+ }if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}const amount=Math.round(damage*(1+Math.min(24,source.level-1)*.025)*source.power);audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
  if(e.type!=='dummy'&&!e.retreating){
   const cfg=ENEMY_COMBAT[e.type],heroHome=Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ);
   if(heroHome<=cfg.leash)e.aggro=true;
@@ -527,7 +521,7 @@ function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWea
  style==='magic'?.24:.13,style==='magic'?.24:.13,style==='magic'?.3:.48,
  new THREE.MeshBasicMaterial({color:colour}));
  mesh.geometry=mesh.geometry.clone();mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),dir.clone().normalize());visuals.projectile(mesh,colour,style);
- projectiles.push({mesh,dir,speed,damage,opts,life:Math.max(1.4,maxRange/Math.max(1,speed)+.1),age:0,distance:0,maxDistance:Math.max(.1,maxRange-.9),origin:hero.position.clone(),style,source:{style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)},particle:false});
+ projectiles.push({mesh,dir,speed,damage,opts,life:Math.max(1.4,maxRange/Math.max(1,speed)+.1),age:0,distance:0,maxDistance:Math.max(.1,maxRange-.9),origin:hero.position.clone(),style,source:{style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power},particle:false});
 }
 function slashEffect(reach=3){
  const heading=forward();

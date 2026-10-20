@@ -72,3 +72,63 @@ test('equipped slot gear cannot be banked and tampered save data cannot equip an
  assert.equal(saved.inventory.slotted.includes('unknown-item'),false);
  assert.deepEqual(saved.bank.slotted,[]);
 });
+
+test('weapons and chests unequip, bank and reload without resurrecting equipment',async()=>{
+ const {defaultSave,equipPrimaryItem}=await import('../src/rules.js');
+ let d=defaultSave();
+ for(const style of ['melee','ranged','magic']){
+  const id=d.gear[style];
+  assert.equal(equipPrimaryItem(d,'weapon',style,null),true);
+  assert.equal(bankEquipment(d,'weapon',id,'deposit',style),true);
+ }
+ for(const style of ['melee','ranged','magic'])assert.equal(equipPrimaryItem(d,'armour',style,null),true);
+ assert.equal(bankEquipment(d,'armour','traveller','deposit'),true);
+ const snapshot=structuredClone(d);d=validSave(d);
+ assert.deepEqual(d,snapshot);
+ for(const style of ['melee','ranged','magic']){
+  assert.equal(d.gear[style],'none');assert.equal(d.armour[style],'none');
+  const id=STARTER_SETS[style].weapon;
+  assert.equal(equipPrimaryItem(d,'weapon',style,id),false);
+  assert.equal(bankEquipment(d,'weapon',id,'withdraw',style),true);
+  assert.equal(equipPrimaryItem(d,'weapon',style,id),true);
+ }
+ assert.equal(bankEquipment(d,'armour','traveller','withdraw'),true);
+ assert.equal(equipPrimaryItem(d,'armour','melee','traveller'),true);
+ assert.deepEqual(validSave(d),d);
+});
+test('all starter presets preserve exact bonuses, bank ownership and partial prices',()=>{
+ let d=freshCharacterSave();d.coins=1000;
+ const expected={melee:{power:1.03,guard:.08},ranged:{power:1.05,guard:.05},magic:{power:1.05,guard:.05}};
+ for(const style of ['melee','ranged','magic']){
+  assert.equal(buyStarterStock(d,STARTER_SETS[style].id).ok,true);
+  for(const id of STARTER_SETS[style].slotted)equipSlotItem(d,style,SLOT_ITEMS[id].slot,id);
+  assert.deepEqual(equipmentModifiers(d,style),expected[style]);
+ }
+ for(const style of ['melee','ranged','magic']){
+  const id=STARTER_SETS[style].slotted[0];equipSlotItem(d,style,'helm',null);
+  assert.equal(bankEquipment(d,'slot',id,'deposit'),true);
+  assert.equal(starterSetPrice(d,style),0);
+  const coins=d.coins;assert.equal(buyStarterStock(d,STARTER_SETS[style].id).ok,false);assert.equal(d.coins,coins);
+ }
+ assert.deepEqual(validSave(d).bank,d.bank);
+ assert.deepEqual(validSave(d).equipment,d.equipment);
+});
+test('primary requirements reject high level equipment and malformed styles',async()=>{
+ const {defaultSave,equipPrimaryItem,LOADOUTS}=await import('../src/rules.js');
+ const d=defaultSave();
+ for(const style of ['melee','ranged','magic']){
+  const [id,w]=Object.entries(LOADOUTS[style]).find(([,w])=>w.requiredLevel>1);
+  d.inventory.weapons[style].push(id);
+  assert.equal(equipPrimaryItem(d,'weapon',style,id),false);
+ }
+ assert.equal(equipPrimaryItem(d,'weapon','invalid',null),false);
+ assert.equal(equipPrimaryItem(d,'invalid','melee',null),false);
+ assert.equal(equipPrimaryItem(freshCharacterSave(),'weapon','melee',null),false);
+});
+test('save sanitation removes duplicate ownership and banked armour grants no free protection',async()=>{
+ const {defaultSave,defenceFor}=await import('../src/rules.js');
+ const d=defaultSave();d.inventory.weapons.melee.push('sword');d.inventory.armour.push('traveller');
+ const loaded=validSave(d);assert.deepEqual(loaded.inventory.weapons.melee,['sword']);assert.deepEqual(loaded.inventory.armour,['traveller']);
+ d.inventory.armour=[];d.bank.armour=['traveller'];const banked=validSave(d);
+ assert.equal(banked.armour.melee,'none');assert.equal(defenceFor(banked.armour.melee).physical,0);
+});
