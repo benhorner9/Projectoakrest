@@ -108,10 +108,21 @@ let browser;
     assert.equal(await freshPage.evaluate(()=>oakrestQA.state().area),'tutorial');
     assert.equal(await freshPage.locator('#area').textContent(),'The First Steps');
     // Training attacks must actually connect with the dummy, not just change a tab.
-    await freshPage.evaluate(()=>{oakrestQA.teleport(0,-4.7);oakrestQA.basic();oakrestQA.step(.35);});
+    await freshPage.evaluate(()=>{
+      oakrestQA.teleport(0,-4.7);
+      // Valid training hits now use an accuracy roll: misses for zero are expected.
+      for(let tries=0;tries<18&&!oakrestQA.state().data.onboarding.tutorial.hitStyles.includes('melee');tries++){
+        oakrestQA.basic();oakrestQA.step(1.25);
+      }
+    });
     assert.deepEqual(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.tutorial.hitStyles),['melee']);
     for(const next of ['magic','ranged']){
-      await freshPage.evaluate(next=>{oakrestQA.step(1);oakrestQA.style(next);oakrestQA.step(1);oakrestQA.basic();oakrestQA.step(1.2);},next);
+      await freshPage.evaluate(next=>{
+        oakrestQA.step(1);oakrestQA.style(next);oakrestQA.step(1);
+        for(let tries=0;tries<18&&!oakrestQA.state().data.onboarding.tutorial.hitStyles.includes(next);tries++){
+          oakrestQA.basic();oakrestQA.step(1.5);
+        }
+      },next);
     }
     assert.equal(await freshPage.evaluate(()=>oakrestQA.state().data.onboarding.tutorial.hitStyles.length),3);
     await freshPage.locator('#opening-action').click();
