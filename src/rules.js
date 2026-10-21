@@ -302,7 +302,7 @@ export function validSave(raw){
     const xp=raw.professions.woodcuttingXp;
     d.professions.woodcuttingXp=Number.isSafeInteger(xp)?clamp(xp,0,WOODCUTTING_MAX_XP):0;
      // Previous versions taught this skill before axes existed. Keep those saves playable.
-     if(d.professions.woodcuttingLearned&&!WOODCUTTING_AXES.some(a=>d.inventory.weapons.melee.includes(a.id)))d.inventory.weapons.melee.push('bronze-axe');
+     if(d.professions.woodcuttingLearned&&!WOODCUTTING_AXES.some(a=>d.inventory.weapons.melee.includes(a.id)||d.bank.weapons.melee.includes(a.id)))d.inventory.weapons.melee.push('bronze-axe');
   }
   // The previous prototype granted gear at level milestones. Preserve that legacy gear
   // exactly once on migration; in this build new gear is earned from physical drops.
