@@ -1,0 +1,78 @@
+/* Optional live, four-column backpack beneath the main menu.
+   Intentionally non-modal: movement, camera and gathering remain usable. */
+#hud .player-hud{gap:6px}
+#hud .player-hud .side-inventory-toggle{
+ display:none;align-items:center;justify-content:center;gap:7px;
+ min-height:39px;width:128px;padding:6px 9px;
+ border:1px solid #c6b0808c;border-radius:8px;
+ color:#f6e7c9;background:#17342eeb;
+ font-size:12px;font-weight:800;letter-spacing:.04em;
+ box-shadow:0 3px 12px #071a1a87;pointer-events:auto;
+ touch-action:manipulation;text-shadow:none;
+}
+#hud .side-inventory-toggle span{font-size:10px}
+.oakrest-playing #hud .player-hud .side-inventory-toggle{display:flex}
+#hud .player-hud .side-inventory-toggle[aria-expanded="true"]{
+ border-color:#eaca8e;background:#4e4932;
+}
+#hud .player-hud .side-inventory[hidden]{display:none!important}
+#hud .player-hud .side-inventory{
+ display:flex;flex-direction:column;align-self:stretch;
+ width:min(100%,238px);max-height:min(440px,calc(100dvh - 228px));
+ min-height:0;overflow:hidden;pointer-events:auto;
+ border:1px solid #c1aa7baa;border-radius:10px;
+ background:#112921f5;box-shadow:0 8px 24px #001411a6;
+ backdrop-filter:blur(7px);text-shadow:none;
+}
+#hud .side-inventory-header{
+ flex:0 0 auto;display:flex;align-items:center;gap:7px;
+ min-height:34px;padding:3px 7px 3px 10px;border-bottom:1px solid #baa57554;
+ color:#e9d3a1;
+}
+#hud .side-inventory-header strong{font-size:11px;letter-spacing:.09em}
+#hud #side-inventory-count{font-size:10px;color:#b9cdbd;margin-left:auto}
+#hud .side-inventory-header button{
+ display:grid;place-items:center;min-height:30px;min-width:30px;
+ background:#2c4137;border:1px solid #a99a7c80;border-radius:6px;
+ color:#f0ddb8;pointer-events:auto;touch-action:manipulation;
+}
+#hud .side-inventory-body{
+ min-height:0;overflow:auto;overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;touch-action:pan-y;
+ padding:5px 6px 7px;scrollbar-width:thin;
+}
+#hud .side-inventory-body .oak-inventory-heading,
+#hud .side-inventory-body .oak-inventory-hint{display:none}
+#hud .side-inventory-body .oak-inventory-grid{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ width:100%;gap:3px;padding:4px;margin:0;
+}
+#hud .side-inventory-body .oak-inventory-item,
+#hud .side-inventory-body .oak-inventory-empty{
+ min-height:0;aspect-ratio:1;padding:1px;
+}
+#hud .side-inventory-body .oak-item-icon{max-width:34px;max-height:34px}
+#hud .side-inventory-body .oak-item-quantity{font-size:9px;right:2px;bottom:1px}
+#hud .side-inventory-toggle:focus-visible,
+#hud .side-inventory-header button:focus-visible,
+#hud .side-inventory-body button:focus-visible{
+ outline:2px solid #f7dfaf;outline-offset:1px;
+}
+/* The full modal owns item examination and takes priority; restore sidebar afterward. */
+.oak-menu-open #hud .side-inventory,
+.oak-menu-open #hud .side-inventory-toggle{visibility:hidden;pointer-events:none}
+#hud .level-woodcutting .level-xp-fill{background:linear-gradient(90deg,#659b65,#c0d98d)}
+@media(max-width:620px){
+ #hud .player-hud .side-inventory-toggle{width:112px;min-height:37px}
+ #hud .player-hud .side-inventory{max-height:min(360px,calc(100dvh - 204px))}
+ #hud .side-inventory-body .oak-inventory-grid{gap:2px;padding:3px}
+}
+@media(max-height:500px) and (orientation:landscape){
+ #hud .player-hud .side-inventory-toggle{min-height:31px;padding:3px 7px}
+ #hud .player-hud .side-inventory{max-height:max(110px,calc(100dvh - 183px))}
+ #hud .side-inventory-header{min-height:29px}
+ #hud .side-inventory-body{padding:3px}
+}
+@media(prefers-reduced-motion:reduce){
+ #hud .player-hud .side-inventory{transition:none}
+}
