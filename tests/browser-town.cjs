@@ -23,6 +23,16 @@ let browser;
     await page.goto('http://127.0.0.1:5173/?qa=1',{waitUntil:'domcontentloaded',timeout:20000});
     await page.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
     await page.locator('#begin').click();
+    // Real-rendered city evidence: capture entrance, square and Warden Hall at
+    // the iPad landscape reference viewport; no special renderer or mock UI.
+    const fs=require('node:fs'),path=require('node:path');fs.mkdirSync(path.resolve(__dirname,'../qa'),{recursive:true});
+    for(const [label,x,z] of [['southgate',0,-26],['heartwood',0,25],['wardens-hall',-19,71]]){
+      await page.evaluate(({x,z})=>{oakrestQA.teleport(x,z,Math.PI);oakrestQA.step(.35);},{x,z});
+      await page.screenshot({path:path.resolve(__dirname,'../qa/oakrest-city-'+label+'.png')});
+    }
+    const city=await page.evaluate(()=>oakrestQA.state().city);
+    assert.equal(city.landmark.name,'Heartwood Oak');
+    assert.ok(city.districts.length>=5);
     const mobs=await page.evaluate(()=>oakrestQA.state().enemies);
     assert.ok(mobs.filter(x=>x.type!=='dummy').every(x=>x.z<=-55),'hostile spawns must not border town');
     async function walkTo(x,z){
