@@ -33,14 +33,14 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  await examine(LOADOUTS.melee[lockedId].title);assert.ok(await page.locator('.oak-examine-action').isDisabled());await page.locator('#skill-detail-back').click();
  await examine('Recruit Helm');await action('EQUIP');assert.equal((await state()).equipment.melee.helm,'recruit-helm');await action('UNEQUIP');assert.equal((await state()).equipment.melee.helm,null);await page.locator('#skill-detail-back').click();
  await examine('Iron Longsword');await action('UNEQUIP');assert.equal((await state()).gear.melee,'none');await closeBook();
- await town(-30);const row=page.locator('.town-row').filter({hasText:'Iron Longsword'});await row.getByRole('button',{name:'STORE',exact:true}).click();assert.deepEqual((await state()).bank.weapons.melee,['sword']);await page.locator('#town-close').click();
+ await town(-30);await page.getByRole('button',{name:'Select Iron Longsword in backpack',exact:true}).click();await page.getByRole('button',{name:'STORE',exact:true}).click();assert.deepEqual((await state()).bank.weapons.melee,['sword']);await page.locator('#town-close').click();
  await town(30);
  for(const name of ['Recruit Melee Set','Scout Ranged Set','Apprentice Magic Set']){
-  const r=page.locator('.town-row').filter({hasText:name});await r.getByRole('button',{name:'BUY SET',exact:true}).click();assert.ok(await r.getByRole('button',{name:'OWNED',exact:true}).isDisabled());
+  await page.getByRole('button',{name:'Select '+name,exact:true}).click();await page.getByRole('button',{name:'BUY SET',exact:true}).click();assert.ok(await page.getByRole('button',{name:'OWNED',exact:true}).isDisabled());
  }
  // Melee owns its banked weapon and helm: six missing. Other styles own weapon: seven missing each.
  assert.equal((await state()).coins,500-Math.ceil(110*6/8)-2*Math.ceil(110*7/8));
- await page.locator('#town-close').click();await town(-30);await row.getByRole('button',{name:'TAKE',exact:true}).click();await page.locator('#town-close').click();
+ await page.locator('#town-close').click();await town(-30);await page.getByRole('button',{name:'Select Iron Longsword in bank',exact:true}).click();await page.getByRole('button',{name:'TAKE',exact:true}).click();await page.locator('#town-close').click();
  await openInventory();await examine('Iron Longsword');await action('EQUIP');await page.locator('#skill-detail-back').click();
  await examine('Recruit Mail');await action('EQUIP');await action('UNEQUIP');assert.equal((await state()).armour.melee,'none');await action('EQUIP');await page.locator('#skill-detail-back').click();
  await page.locator('#progression-equipment').click();assert.equal(await page.locator('.oak-gear-slot').count(),9);await page.screenshot({path:path.join(root,'qa',engine+'-equipment.png')});
