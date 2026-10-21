@@ -1,4 +1,5 @@
 import {addWorldObstacle} from './terrain.js';
+import {reservedTownGround} from './town-layout.js';
 /**
  * Oakrest visual direction: warm storybook timber-and-stone village,
  * mossy forest edge, painted low-poly colours and a readable golden-hour sky.
@@ -53,15 +54,22 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
       groundMark(x+Math.cos(t)*r,z+Math.sin(t)*r,.9+random(),.6+random(),materials.vergeDark,-.029);
     }
   }
+  // Deterministic rejection prevents instanced tufts, flowers and pebbles from
+  // penetrating ANY indoor floor, doorway, cobbled path or Heartwood Square.
+  function wildGround(){
+    for(let i=0;i<24;i++){
+      const x=(random()-.5)*128,z=(random()-.5)*128;
+      if(!reservedTownGround(x,z))return {x,z};
+    }
+    const x=(random()>.5?1:-1)*(72+random()*18),z=(random()-.5)*170;
+    return {x,z};
+  }
   // Geometry instancing: low draw-call cost for undergrowth, river pebbles and flowers.
   const bladeGeometry=new THREE.BufferGeometry();bladeGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.14,0,0, .14,0,0, .06,.45,.04, 0,0,-.12, 0,0,.12, -.05,.35,.06],3));bladeGeometry.computeVertexNormals();materials.grass.color.set('#ffffff');materials.grass.side=THREE.DoubleSide;
   const tufts=new THREE.InstancedMesh(bladeGeometry,materials.grass,1100);
   tufts.castShadow=false;tufts.frustumCulled=true;
   for(let i=0;i<1100;i++){
-    let x=(random()-.5)*128,z=(random()-.5)*128;
-    if(Math.abs(x)<5.0)x+=(x<0?-1:1)*6;
-    // Leave house doorways, well and gate clear.
-    if(Math.hypot(x-6,z-19)<4||Math.abs(x)<5&&z>-12&&z<13)z-=8;
+    const {x,z}=wildGround();
     const sc=.45+random()*1.5;dummy.position.set(x,sc*.26-.01,z);
     dummy.rotation.set(0,random()*Math.PI*2,(random()-.5)*.16);
     dummy.scale.setScalar(sc);dummy.updateMatrix();
@@ -73,8 +81,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   scene.add(tufts);
   const pebbles=new THREE.InstancedMesh(sphere,materials.stone.clone(),115);pebbles.material.color.set('#ffffff');
   for(let i=0;i<115;i++){
-    const z=(random()-.5)*119,sign=random()>.5?1:-1;
-    const x=sign*(3.75+random()*5)+(random()-.5)*1.2;
+    const {x,z}=wildGround();
     const scale=.13+random()*.42;
     dummy.position.set(x,scale*.24-.005,z);
     dummy.rotation.set(0,random()*6.28,0);
@@ -86,8 +93,8 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   scene.add(pebbles);
   const blossoms=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.11,0),materials.flowers.clone(),110);blossoms.material.color.set('#ffffff');
   for(let i=0;i<110;i++){
-    const x=(random()-.5)*115,z=(random()-.5)*115;
-    dummy.position.set(Math.abs(x)<5?(x<0?-5.3:5.3):x,.38,z);
+    const {x,z}=wildGround();
+    dummy.position.set(x,.38,z);
     dummy.rotation.set(0,random()*6.28,0);dummy.scale.setScalar(.6+random()*.8);dummy.updateMatrix();
     blossoms.setMatrixAt(i,dummy.matrix);
     blossoms.setColorAt(i,new THREE.Color(i%5===0?'#cfc5f0':i%3===0?'#f6eee0':'#e6c875'));
