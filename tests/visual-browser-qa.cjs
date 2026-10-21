@@ -40,7 +40,7 @@ async function awaitFreshFrame(page){
     await page.locator('#begin').click();
     await page.waitForFunction(()=>window.oakrestDiagnostics?.().drawCalls>0,{timeout:20000});
     for(const [name,x,z,heading] of [
-      ['southgate',0,11],['heartwood-square',0,39],
+      ['southgate',0,11],['heartwood-square',0,29.5,Math.PI],
       ['bank-exterior',-23,14],['bank-interior',-30,14],
       ['west-wall',-39,35,-Math.PI/2],['wilderness',0,-42]
     ]){
@@ -48,6 +48,14 @@ async function awaitFreshFrame(page){
         oakrestQA.teleport(x,z,heading===null?undefined:heading);oakrestQA.step(.1);
       },[x,z,heading??null]);
       await awaitFreshFrame(page);
+      if(name==='heartwood-square'){
+        const walkable=await page.evaluate(async()=>{
+          const {blocked}=await import('/src/terrain.js');
+          const p=oakrestQA.state().hero;
+          return !blocked(p.x,p.z,.35);
+        });
+        assert.ok(walkable,'Heartwood QA camera must stand outside the tree collision footprint');
+      }
       const diagnostics=await page.evaluate(()=>oakrestDiagnostics());
       assert.ok(diagnostics.drawCalls>0,name+' should render real 3D geometry');
       if(name==='wilderness')assert.equal(diagnostics.graphics.interiorLight,false,'wilderness must not reuse indoor lighting');
