@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="./src/combat-reborn.css" />
   <link rel="stylesheet" href="./src/minimal-hud.css" />
   <link rel="stylesheet" href="./src/hud-minimap.css" />
+  <link rel="stylesheet" href="./src/side-inventory.css" />
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
@@ -74,6 +75,15 @@
       </div>
     </section>
     <button id="loadout-button" class="top-button oak-menu-toggle" type="button" aria-controls="progression-panel" aria-expanded="false" aria-label="Open character menu">☰ <span>MENU</span></button>
+    <button id="side-inventory-toggle" class="side-inventory-toggle" type="button" aria-controls="side-inventory" aria-expanded="false" aria-label="Show backpack while playing">🎒 <span>INVENTORY</span></button>
+    <aside id="side-inventory" class="side-inventory" hidden aria-label="Quick inventory">
+      <div class="side-inventory-header">
+        <strong>BACKPACK</strong>
+        <span id="side-inventory-count">0 / 28</span>
+        <button id="side-inventory-close" type="button" aria-label="Hide quick inventory">✕</button>
+      </div>
+      <div id="side-inventory-body" class="side-inventory-body"></div>
+    </aside>
     </div>
     <button id="minimap-button" class="minimap-button" type="button" aria-controls="progression-panel" aria-label="Open world map" title="Open world map">
       <span class="minimap-face"><canvas id="minimap-canvas" width="160" height="160" aria-hidden="true"></canvas><span class="minimap-north" aria-hidden="true">N</span></span>
