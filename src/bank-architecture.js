@@ -73,6 +73,12 @@ export function buildGrandBankFacade(group,build,h,mat,block,wallCollider){
   block(group,mat.stone,x,4.52,d/2+1.10,1.19,.35,1.19);
   wallCollider(build,x,d/2+1.10,.73,.73,4.8);
  }
+ // The stone approach continues from the set-back civic road to the public
+ // doorway but never enters the bank floor. Use shallow individual flagstones.
+ for(const distance of [1.95,2.86,3.78,4.70]){
+  const stone=block(group,mat.pale,0,.025,d/2+distance,2.52,.045,.70,false);
+  stone.name='Grand Bank entrance flagstone';
+ }
  const canopy=block(group,mat.stone,0,4.88,d/2+1.09,8.15,.40,2.88);
  canopy.name='Bank monumental stone portico';
  block(group,mat.gold,0,4.62,d/2+2.49,7.40,.12,.12);
