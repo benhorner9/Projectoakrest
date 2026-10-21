@@ -28,9 +28,66 @@ const shared={
   glass:new THREE.MeshLambertMaterial({color:'#a4c4c0',transparent:true,opacity:.7}),
   glow:new THREE.MeshBasicMaterial({color:'#ffd58e'})
 };
+// Draw lightweight original architectural surface patterns once. This avoids
+// hundreds of separate shingle and plank meshes on iPad Safari.
+function surfacePattern(type){
+ if(typeof document==='undefined')return null;
+ const canvas=document.createElement('canvas');
+ canvas.width=256;canvas.height=256;
+ const c=canvas.getContext('2d');
+ if(!c)return null;
+ c.fillStyle='#f3f0e8';c.fillRect(0,0,256,256);
+ if(type==='roof'){
+  for(let row=0;row<8;row++){
+   const y=row*32;
+   c.fillStyle=row%2?'#e8e8e5':'#f5f3ec';c.fillRect(0,y,256,32);
+   c.fillStyle='rgba(28,36,33,.25)';c.fillRect(0,y+29,256,3);
+   const offset=row%2?16:0;
+   for(let x=offset-32;x<288;x+=64){
+    c.fillRect(x,y,2,30);
+    c.fillStyle='rgba(255,255,255,.16)';c.fillRect(x+5,y+3,44,2);
+    c.fillStyle='rgba(28,36,33,.25)';
+   }
+  }
+ }else if(type==='planks'){
+  c.fillStyle='#d3c1a2';c.fillRect(0,0,256,256);
+  for(let row=0;row<8;row++){
+   const y=row*32;
+   c.fillStyle=row%2?'#a98d6c':'#c7a986';
+   c.fillRect(0,y+30,256,2);
+   for(let x=(row%2?38:0);x<256;x+=100){
+    c.fillRect(x,y,2,30);
+    c.fillStyle='rgba(255,255,255,.21)';c.fillRect(x+7,y+6,46,1);
+    c.fillStyle=row%2?'#a98d6c':'#c7a986';
+   }
+  }
+ }else{
+  c.fillStyle='#d7d1c1';c.fillRect(0,0,256,256);
+  c.strokeStyle='rgba(80,78,72,.24)';c.lineWidth=2;
+  for(let row=0;row<8;row++){
+   const y=row*32;c.beginPath();c.moveTo(0,y);c.lineTo(256,y);c.stroke();
+   for(let x=(row%2?32:0);x<256;x+=64){
+    c.beginPath();c.moveTo(x,y);c.lineTo(x,y+32);c.stroke();
+   }
+  }
+ }
+ const tex=new THREE.CanvasTexture(canvas);
+ tex.colorSpace=THREE.SRGBColorSpace;
+ tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.RepeatWrapping;
+ tex.repeat.set(type==='roof'?1:2,2);
+ tex.anisotropy=4;
+ return tex;
+}
+const roofPattern=surfacePattern('roof'),plankPattern=surfacePattern('planks'),stonePattern=surfacePattern('stone');
+const roofFinishes={};
+const floorFinishes={
+  wood:new THREE.MeshLambertMaterial({color:'#e3d1b2',map:plankPattern}),
+  stone:new THREE.MeshLambertMaterial({color:'#c0b9aa',map:stonePattern})
+};
 const cube=new THREE.BoxGeometry(1,1,1);
 const roofColours={bank:shared.slate,store:shared.red,forester:shared.moss,home:shared.slate,workshop:shared.red,guard:shared.moss,hall:shared.slate};
 const bodyColours={bank:shared.stone,store:shared.plaster,forester:shared.plaster,home:shared.plaster,workshop:shared.stone,guard:shared.stone,hall:shared.stone};
+for(const [kind,source] of Object.entries(roofColours))roofFinishes[kind]=new THREE.MeshLambertMaterial({color:source.color,map:roofPattern});
 function block(g,m,x,y,z,w,h,d,shadow=true){
   const item=new THREE.Mesh(cube,m);item.position.set(x,y,z);item.scale.set(w,h,d);
   item.castShadow=shadow;item.receiveShadow=true;g.add(item);return item;
@@ -104,7 +161,7 @@ function makeRoof(group,build,h){
   // Two slopes meet on the exact ridge line; eaves sit at the same height on
   // both sides. Unlike arbitrary rotated cubes there are no open roof seams.
   for(const side of [-1,1]){
-    const panel=block(roof,roofColours[kind],side*run/2,h+rise/2,0,span+.12,.23,depth);
+    const panel=block(roof,roofFinishes[kind],side*run/2,h+rise/2,0,span+.12,.23,depth);
     panel.rotation.z=-side*slope;
     const fascia=block(roof,shared.trim,side*run,h-.04,0,.16,.17,depth+.06);
     fascia.rotation.z=-side*slope*.15;
@@ -140,11 +197,9 @@ function makeRoof(group,build,h){
 }
 function makeInteriors(group,build){
   const {w,d,kind}=build;
-  block(group,shared.wood,0,.08,0,w+.16,.16,d+.16,false);
-  for(let i=0;i<Math.floor(w-1);i++){
-    const x=-w/2+.75+i*.96;
-    block(group,shared.cloth,x,.176,0,.035,.025,d-.7,false);
-  }
+  const floorMaterial=['bank','hall','guard'].includes(kind)?floorFinishes.stone:floorFinishes.wood;
+  const floor=block(group,floorMaterial,0,.095,0,w+.16,.18,d+.16,false);
+  floor.name=build.id+' finished interior floor';
   if(['bank','store','forester'].includes(kind)){
     // Counter lies behind the reachable front half, with space to walk inside.
     block(group,kind==='bank'?shared.stone:shared.timber,0,1,-1.22,w*.64,1.5,.65);
@@ -209,9 +264,17 @@ function decorateFacade(group,build,h){
   block(group,shared.trim,0,3.31,d/2+.22,3.1,.22,.42);
   for(const side of [-1,1]){
     block(group,shared.timber,side*1.54,1.68,d/2+.23,.19,3.35,.24);
-    block(group,shared.timber,side*(w/2-.75),h*.52,d/2+.22,.85,1.20,.16);
-    block(group,shared.glass,side*(w/2-.75),h*.52,d/2+.32,.57,.90,.07,false);
-    block(group,shared.trim,side*(w/2-.75),h*.52,d/2+.42,.74,.10,.16);
+    const wx=side*(w/2-.91),wy=h*.52;
+    const pane=block(group,shared.glass,wx,wy,d/2+.02,1.01,1.04,.08,false);
+    pane.name=build.id+' recessed window';
+    for(const delta of [-.57,.57])block(group,shared.timber,wx+delta,wy,d/2+.28,.12,1.28,.22);
+    for(const delta of [-.63,.63])block(group,shared.timber,wx,wy+delta,d/2+.28,1.27,.13,.23);
+    block(group,shared.timber,wx,wy,d/2+.32,.07,1.20,.085,false);
+    block(group,shared.timber,wx,wy,d/2+.32,1.17,.065,.085,false);
+    block(group,shared.trim,wx,wy-.71,d/2+.50,1.52,.16,.51);
+    block(group,shared.pale,wx,wy+.71,d/2+.30,1.48,.21,.40);
+    // Shutters are fixed to the masonry, not floating above the window.
+    for(const sx of [-1,1])block(group,shared.wood,wx+sx*.78,wy,d/2+.25,.34,1.17,.16);
   }
   const plaque=block(group,kind==='bank'?shared.gold:kind==='store'?shared.red:kind==='forester'?shared.moss:shared.trim,0,h+.20,d/2+.28,3,.52,.23);
   const labels={bank:'OAKREST BANK',store:'GENERAL STORE',forester:'FORESTER',hall:"WARDEN'S HALL",workshop:'WORKSHOP',guard:'CITY WATCH'};
@@ -242,7 +305,18 @@ function buildHouse(scene,build){
     block(g,base,side*w/2,h/2,0,wall,h,d);
     wallCollider(build,side*w/2,0,wall,d,h);
     const px=side*(opening/2+edge/2);
-    block(g,base,px,h/2,d/2,edge,h,wall);
+    // Solid collider retains the facade shape; the visible stone/plaster now
+    // has a true window recess instead of a glass decal on an unbroken wall.
+    const apertureCenter=w/2-.91,apertureWidth=1.06;
+    const windowBottom=h*.52-.55,windowTop=h*.52+.55;
+    const lo=opening/2,hi=w/2;
+    const a=apertureCenter-apertureWidth/2,b=apertureCenter+apertureWidth/2;
+    for(const [left,right] of [[lo,a],[b,hi]]){
+      const width=right-left;
+      if(width>.01)block(g,base,side*(left+right)/2,h/2,d/2,width+.025,h,wall);
+    }
+    block(g,base,side*apertureCenter,windowBottom/2,d/2,apertureWidth+.045,windowBottom,wall);
+    block(g,base,side*apertureCenter,(windowTop+h)/2,d/2,apertureWidth+.045,h-windowTop,wall);
     wallCollider(build,px,d/2,edge,wall,h);
     block(g,shared.trim,side*(w/2-.19),h*.52,0,.18,h*.9,d+.25);
   }
