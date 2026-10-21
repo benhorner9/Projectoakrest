@@ -1,5 +1,5 @@
 import {addWorldObstacle} from './terrain.js';
-import {reservedTownGround} from './town-layout.js';
+import {reservedTownGround,OAKREST_MARKET_CRATES,OAKREST_MARKET_BARRELS,OAKREST_VEGETABLE_BEDS} from './town-layout.js';
 /**
  * Oakrest visual direction: warm storybook timber-and-stone village,
  * mossy forest edge, painted low-poly colours and a readable golden-hour sky.
@@ -126,14 +126,14 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
       cub(materials.oakTrim,x+offset*size,.5*size,z+size*.51,.085*size,size*.88,.05);
     }
   }
-  for(const [x,z,sc] of [[-7,16,.88],[-8.2,16.6,.6],[8.5,23,1],[10.4,23.5,.6],[-10,30,.85],[8,32,.7]]){
+  for(const [x,z,sc] of OAKREST_MARKET_CRATES){
     crate(x,z,sc);
   }
   function barrel(x,z){addWorldObstacle({x,z,r:.48,height:1.08});
     add(new THREE.CylinderGeometry(.47,.43,1.03,9),materials.oak,x,.53,z);
     for(const y of [.17,.86])add(new THREE.CylinderGeometry(.48,.48,.09,9),materials.stone,x,y,z);
   }
-  for(const [x,z] of [[-10,13],[-9,14.3],[11,14],[9.9,15.1],[-10,35],[10.2,-5]])barrel(x,z);
+  for(const [x,z] of OAKREST_MARKET_BARRELS)barrel(x,z);
   function cart(x,z){addWorldObstacle({x,z,hx:1.45,hz:.95,height:2.6});
     cub(materials.oak,x,1.05,z,2.45,.16,1.55);cub(materials.oakTrim,x,1.22,z,2.65,.18,1.7);
     for(const s of [-1,1]){
@@ -147,7 +147,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   }
   cart(-9.8,5);
   // Small vegetable beds near cottages, naturally framing the village.
-  for(const [cx,cz] of [[-9,22],[9,28],[-8,30]]){
+  for(const [cx,cz] of OAKREST_VEGETABLE_BEDS){
     const w=3.1,d=1.55;
     cub(materials.oak,cx,.23,cz-d/2,w,.46,.19);
     cub(materials.oak,cx,.23,cz+d/2,w,.46,.19);
