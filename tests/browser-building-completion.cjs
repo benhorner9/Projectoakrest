@@ -49,18 +49,43 @@ const errors=[],report={viewport:'iPad 13-inch landscape proxy (Chromium SwiftSh
     oakrestQA.step(.050);
    },{at,target});
   }
+  async function clearStreetView(b,kind){
+   return page.evaluate(async({b,kind})=>{
+    const {blocked,groundSegmentClear}=await import('/src/terrain.js');
+    const a={north:Math.PI,south:0,east:Math.PI/2,west:-Math.PI/2}[b.face];
+    const co=Math.cos(a),si=Math.sin(a);
+    const local=(x,z)=>({x:b.x+x*co+z*si,z:b.z-x*si+z*co});
+    const doorway=local(0,b.d/2+1.7);
+    const lateral=kind==='front'?[2.4,-2.4,0,4.3,-4.3,6,-6]:
+      [b.w/2+3.5,-b.w/2-3.5,b.w/2+5,-b.w/2-5];
+    const depths=kind==='front'?[6.8,9.2,11.5,5.5,13.5]:[5.8,7.5,10.5];
+    for(const distance of depths)for(const offset of lateral){
+     const at=local(offset,b.d/2+distance);
+     if(blocked(at.x,at.z,.45))continue;
+     const dx=at.x-doorway.x,dz=at.z-doorway.z,len=Math.hypot(dx,dz)||1;
+     const cameraClear={x:at.x+dx/len*6,z:at.z+dz/len*6};
+     if(blocked(cameraClear.x,cameraClear.z,.45))continue;
+     if(!groundSegmentClear(at,cameraClear,.35))continue;
+     if(!groundSegmentClear(at,doorway,.2))continue;
+     return at;
+    }
+    throw new Error('No unobstructed exterior street/camera viewpoint for '+b.id+' '+kind);
+   },{b,kind});
+  }
   for(const b of buildings){
-   const outside=point(b,0,b.d/2+4.5),centre=point(b,0,0);
-   const note={id:b.id,kind:b.kind,face:b.face};
-   // Real gameplay view from the street, not a camera inside wall geometry.
-   await place(outside,{x:b.x,y:3.35,z:b.z});
+   const outside=await clearStreetView(b,'front'),centre=point(b,0,0);
+   const note={id:b.id,kind:b.kind,face:b.face,frontView:outside};
+   // Only capture the real facade from a player-safe street with clear
+   // space behind the camera; dense neighbouring buildings can clip it.
+   await place(outside,{x:b.x,y:2.7,z:b.z});
    const facade=await page.evaluate(()=>oakrestQA.state());
    assert.equal(facade.town.inside,null,b.id+' exterior screenshot must be outside');
    assert.ok(facade.hp>0,b.id+' player unexpectedly dead during QA');
    await page.screenshot({path:join(out,b.id+'-front.jpg'),type:'jpeg',quality:75});
    // Oblique view checks the wall/roof joins that front-only screenshots miss.
-   const oblique=point(b,b.w/2+3.8,b.d/2+3.8);
-   await place(oblique,{x:b.x,y:3,z:b.z});
+   const oblique=await clearStreetView(b,'corner');
+   note.cornerView=oblique;
+   await place(oblique,{x:b.x,y:2.7,z:b.z});
    await page.screenshot({path:join(out,b.id+'-corner.jpg'),type:'jpeg',quality:72});
    // The room shell must remain usable, and camera-aware removable geometry
    // should reveal the interior instead of cutting off the user's view.
