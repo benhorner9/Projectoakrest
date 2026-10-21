@@ -1,4 +1,5 @@
 import {addWorldObstacle} from './terrain.js';
+import {createSurfaceMaterial} from './visual-fidelity.js';
 import {reservedTownGround,OAKREST_MARKET_CRATES,OAKREST_MARKET_BARRELS,OAKREST_VEGETABLE_BEDS} from './town-layout.js';
 /**
  * Oakrest visual direction: warm storybook timber-and-stone village,
@@ -7,18 +8,18 @@ import {reservedTownGround,OAKREST_MARKET_CRATES,OAKREST_MARKET_BARRELS,OAKREST_
  */
 export function createOakrestScenery({THREE,scene,random,MAT}){
   const materials={
-    trail:new THREE.MeshLambertMaterial({color:'#a79172'}),
-    dust:new THREE.MeshLambertMaterial({color:'#bba17d'}),
+    trail:createSurfaceMaterial(THREE,'#a79172','road'),
+    dust:createSurfaceMaterial(THREE,'#bba17d','road'),
     verge:new THREE.MeshLambertMaterial({color:'#7b9b64'}),
     vergeDark:new THREE.MeshLambertMaterial({color:'#617f59'}),
-    stone:new THREE.MeshLambertMaterial({color:'#7f8e7c',flatShading:true}),
-    stoneLight:new THREE.MeshLambertMaterial({color:'#c2b6a0',flatShading:true}),
+    stone:createSurfaceMaterial(THREE,'#7f8e7c','limestone',{flatShading:true}),
+    stoneLight:createSurfaceMaterial(THREE,'#c2b6a0','limestone',{flatShading:true}),
     grass:new THREE.MeshLambertMaterial({color:'#507a49',flatShading:true,side:THREE.DoubleSide}),
     flowers:new THREE.MeshLambertMaterial({color:'#f1c68b',flatShading:true}),
     leaf:new THREE.MeshLambertMaterial({color:'#7b9463',flatShading:true}),
-    oak:new THREE.MeshLambertMaterial({color:'#6b4a31',flatShading:true}),
-    oakTrim:new THREE.MeshLambertMaterial({color:'#cba776',flatShading:true}),
-    cloth:new THREE.MeshLambertMaterial({color:'#9e694f',flatShading:true}),
+    oak:createSurfaceMaterial(THREE,'#6b4a31','timber',{flatShading:true}),
+    oakTrim:createSurfaceMaterial(THREE,'#cba776','timber',{flatShading:true}),
+    cloth:createSurfaceMaterial(THREE,'#9e694f','cloth',{flatShading:true}),
     moss:new THREE.MeshLambertMaterial({color:'#3f6651',flatShading:true}),
     lamp:new THREE.MeshBasicMaterial({color:'#ffd38a'}),
     lantern:new THREE.MeshBasicMaterial({color:'#f2e1ac',transparent:true,opacity:.82,depthWrite:false})
@@ -66,6 +67,16 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   }
   // Geometry instancing: low draw-call cost for undergrowth, river pebbles and flowers.
   const bladeGeometry=new THREE.BufferGeometry();bladeGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.14,0,0, .14,0,0, .06,.45,.04, 0,0,-.12, 0,0,.12, -.05,.35,.06],3));bladeGeometry.computeVertexNormals();materials.grass.color.set('#ffffff');materials.grass.side=THREE.DoubleSide;
+  // Animated entirely on the GPU: individual blades sway using their instance
+  // positions as phase seeds. No CPU mesh updates and no additional draw calls.
+  const windTime={value:0};
+  materials.grass.onBeforeCompile=shader=>{
+    shader.uniforms.oakrestWindTime=windTime;
+    shader.vertexShader='uniform float oakrestWindTime;\n'+shader.vertexShader;
+    shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat oakrestBreeze=sin(oakrestWindTime*1.36+instanceMatrix[3].x*.37+instanceMatrix[3].z*.21);\ntransformed.x+=position.y*oakrestBreeze*.075;\n#endif');
+  };
+  materials.grass.customProgramCacheKey=()=>'oakrest-instanced-wind-1';
   const tufts=new THREE.InstancedMesh(bladeGeometry,materials.grass,1100);
   tufts.castShadow=false;tufts.frustumCulled=true;
   for(let i=0;i<1100;i++){
@@ -189,6 +200,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   const motes=new THREE.Points(pointsGeometry,new THREE.PointsMaterial({color:'#ffe3a1',size:.16,transparent:true,opacity:.7,depthWrite:false,sizeAttenuation:true}));
   scene.add(motes);
   function update(time,camera){
+    windTime.value=time;
     dome.position.copy(camera.position);
     for(let i=0;i<motesCount;i++){
       const a=motesBase[i],j=i*3;
