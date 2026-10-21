@@ -8,6 +8,7 @@ import {inventoryEntries} from '../src/equipment-ui.js';
 import {bankGridEntries} from '../src/town-ui.js';
 import {buildOakrestTown,OAKREST_BUILDINGS} from '../src/town-world.js';
 import {terrainHeight,blocked,clearWorldObstacles} from '../src/terrain.js';
+import {roadQuads} from '../src/town-layout.js';
 
 test('Oakrest Bank is a monumental bank with an enterable secure banking hall',()=>{
  const b=OAKREST_BUILDINGS.find(b=>b.id==='bank');
@@ -93,4 +94,29 @@ test('corrupted item positions cannot inject unavailable items or duplicate slot
  assert.deepEqual(clean.bankSlots,[null,null,null]);
  assert.deepEqual(sanitizeSlotOrder(['x','x'],['x','y']),['x',null]);
  assert.ok(inventoryKeyList(clean,'bag').includes('weapon.melee.sword'));
+});
+
+
+test('grand bank foundation is clear of actual full-width street paving',()=>{
+ const building=OAKREST_BUILDINGS.find(b=>b.id==='bank');
+ const bankMinX=building.x-building.d/2,bankMaxX=building.x+building.d/2;
+ const bankMinZ=building.z-building.w/2,bankMaxZ=building.z+building.w/2;
+ // Axis-aligned for an east-facing entrance.
+ const item=[[bankMinX,bankMinZ],[bankMaxX,bankMinZ],[bankMaxX,bankMaxZ],[bankMinX,bankMaxZ]];
+ const projections=(poly,axis)=>{
+  const vals=poly.map(([x,z])=>x*axis[0]+z*axis[1]);
+  return [Math.min(...vals),Math.max(...vals)];
+ };
+ for(const road of roadQuads()){
+  const axes=[[1,0],[0,1]];
+  for(let i=0;i<road.length;i++){
+   const a=road[i],b=road[(i+1)%road.length],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
+   axes.push([-dz/len,dx/len]);
+  }
+  const touches=axes.every(axis=>{
+   const [a,b]=projections(road,axis),[c,d]=projections(item,axis);
+   return a<d-.02&&c<b-.02;
+  });
+  assert.equal(touches,false,'cobbled thoroughfare cuts into the bank masonry');
+ }
 });
