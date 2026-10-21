@@ -11,7 +11,7 @@ export const CITY_DISTRICTS=Object.freeze([
   {id:'market',name:'Merchant Quarter',x:0,z:19,description:'Bank, general shop and covered market'},
   {id:'heartwood',name:'Heartwood Square',x:0,z:39,description:'A great oak surrounded by the old city'},
   {id:'green',name:'The Green Quarter',x:8,z:63,description:'Gardens and the woodland lodge'},
-  {id:'wardens',name:"Warden's Hall",x:-29,z:76,description:'The city's civic and defensive heart'}
+  {id:'wardens',name:"Warden's Hall",x:-29,z:76,description:"The city's civic and defensive heart"}
 ]);
 const mat={
  stone:new THREE.MeshLambertMaterial({color:'#b8b4a1',flatShading:true}),
