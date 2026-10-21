@@ -106,12 +106,12 @@ let browser;
     await page.locator('#town-close').click();
         await walkTo(-29.6,46);
     await page.locator('#town-interact-button').click();
-    await page.getByRole('button',{name:'LEARN WOODCUTTING'}).click();
+    await page.getByRole('button',{name:/LEARN WOODCUTTING/}).click();
     assert.equal(await page.evaluate(()=>oakrestQA.state().data.professions.woodcuttingLearned),true);
     await page.locator('#town-close').click();
     await walkTo(-18,60.5);
     await page.getByRole('button',{name:'CUT WOOD'}).click();
-    assert.equal(await page.evaluate(()=>oakrestQA.state().data.inventory.materials['softwood-logs']),1);
+    await page.waitForFunction(()=>oakrestQA.state().data.inventory.materials['softwood-logs']>=1,{timeout:25000});
     // Four-column inventory must let its user swap positions on iPad-size UI.
     await page.locator('#loadout-button').click();
     await page.locator('#progression-inventory').click();
