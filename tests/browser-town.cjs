@@ -51,6 +51,24 @@ let browser;
     assert.equal(await page.evaluate(()=>oakrestQA.state().data.coins),0);
     await page.getByRole('button',{name:'Select Gold Coins in bank, quantity 120'}).click();
     await page.getByRole('button',{name:'TAKE ALL',exact:true}).click();
+    // Actual drag gestures across the visible RuneScape-style slot grids.
+    async function drag(from,to){
+      const a=await from.boundingBox(),b=await to.boundingBox();
+      assert.ok(a&&b,'both drag slots must be visible');
+      const ax=a.x+a.width/2,ay=a.y+a.height/2,bx=b.x+b.width/2,by=b.y+b.height/2;
+      await page.mouse.move(ax,ay);await page.mouse.down();
+      await page.mouse.move(bx,by,{steps:7});await page.mouse.up();
+    }
+    await drag(page.getByRole('button',{name:'Select Gold Coins in backpack, quantity 120'}),
+      page.locator('.town-vault .town-item-empty').nth(6));
+    assert.equal(await page.evaluate(()=>oakrestQA.state().data.bank.coins),120,'drag deposit must store coins');
+    assert.equal(await page.evaluate(()=>oakrestQA.state().data.coins),0);
+    await drag(page.getByRole('button',{name:'Select Gold Coins in bank, quantity 120'}),
+      page.locator('.town-backpack .town-item-empty').nth(5));
+    assert.equal(await page.evaluate(()=>oakrestQA.state().data.coins),120,'drag withdraw must restore coins');
+    assert.equal(await page.evaluate(()=>oakrestQA.state().data.bank.coins),0);
+    assert.ok(await page.evaluate(()=>oakrestQA.state().data.inventorySlots.some(id=>id==='currency.coins')),
+      'dragged item has a persistent inventory location');
     await page.locator('#town-close').click();
     await walkTo(29.6,14);
     await page.evaluate(()=>{oakrestQA.aim(33,2,14);oakrestQA.step(.5);});
@@ -70,6 +88,16 @@ let browser;
     await walkTo(-18,60.5);
     await page.getByRole('button',{name:'CUT WOOD'}).click();
     assert.equal(await page.evaluate(()=>oakrestQA.state().data.inventory.materials['softwood-logs']),1);
+    // Four-column inventory must let its user swap positions on iPad-size UI.
+    await page.locator('#loadout-button').click();
+    await page.locator('#progression-inventory').click();
+    assert.ok(await page.locator('.oak-inventory-grid .oak-inventory-item').count()>0);
+    const inventoryFrom=page.locator('.oak-inventory-grid .oak-inventory-item').first();
+    const inventoryTo=page.locator('.oak-inventory-grid .oak-inventory-empty').last();
+    await drag(inventoryFrom,inventoryTo);
+    assert.ok(await page.evaluate(()=>oakrestQA.state().data.inventorySlots.some((id,i)=>i>15&&!!id)),
+      'inventory drag reorders a slot beyond the initial occupied positions');
+    await page.locator('#close-progression').click();
     await page.evaluate(()=>oakrestQA.save());
     const snapshot=await page.evaluate(()=>oakrestQA.state().data);
     await page.reload({waitUntil:'domcontentloaded'});
