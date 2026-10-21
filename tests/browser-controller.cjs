@@ -39,7 +39,7 @@ let browser;
   assert.ok(Math.abs(moved.yaw-before.yaw)>.05,'right stick turns camera');
   assert.ok(Math.abs(moved.pitch-before.pitch)>.02,'right stick changes camera pitch');
   assert.match(await page.locator('#gamepad-status').textContent(),/Connected:/);
-  await page.locator('#help-button').click();
+  await page.locator('#loadout-button').click();await page.locator('#progression-settings').click();
   await page.locator('#camera-zoom').fill('11');
   await page.locator('#camera-height').fill('4');
   await page.locator('#camera-fov').fill('75');
