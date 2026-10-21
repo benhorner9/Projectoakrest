@@ -20,6 +20,36 @@ export const OAKREST_BUILDINGS=Object.freeze([
   {id:'wardens-hall',x:-30,z:76,w:12,d:11,face:'east',kind:'hall'},
   {id:'garden-house',x:29,z:75,w:8,d:8,face:'west',kind:'home'}
 ]);
+/**
+ * Authoritative world-space anchors for hard and decorative props.
+ * Geometry and collision must consume these same coordinates.
+ */
+export const OAKREST_WELL=Object.freeze({x:18,z:36,r:1.7,roofRadius:2.30,courtyardRadius:3.10});
+export const OAKREST_MARKET_STALLS=Object.freeze([
+ Object.freeze({x:-16,z:38,colour:'red'}),
+ Object.freeze({x:17,z:48,colour:'blue'}),
+ Object.freeze({x:22,z:24,colour:'moss'})
+]);
+export const OAKREST_TRADE_TABLES=Object.freeze([
+ Object.freeze({x:-19,z:35}),Object.freeze({x:9,z:22}),
+ Object.freeze({x:-11,z:35}),Object.freeze({x:12,z:34})
+]);
+export const OAKREST_GARDEN_BENCHES=Object.freeze([
+ Object.freeze({x:12,z:50,angle:.2}),Object.freeze({x:19,z:70,angle:Math.PI/2})
+]);
+export const OAKREST_CITY_LAMPS=Object.freeze([
+ [-22,9],[22,9],[-23,38],[14,35],[-18,53],[22,60],[-9,81],[10,81]
+]);
+export const OAKREST_SIGNPOSTS=Object.freeze([
+ [-11,37,.18],[9,49,-.6],[-15,65,.4]
+]);
+export const OAKREST_MARKET_CRATES=Object.freeze([
+ [-7,16,.88],[-8.2,16.6,.6],[8.5,23,1],[10.4,23.5,.6],[-22,36,.85],[23,36,.7]
+]);
+export const OAKREST_MARKET_BARRELS=Object.freeze([
+ [-20,15],[-20,16.2],[20,20.8],[21.1,20.5],[-10,35],[10.2,-5]
+]);
+export const OAKREST_VEGETABLE_BEDS=Object.freeze([[-10,51],[21,58],[-22,54]]);
 export const OAKREST_PATHS=Object.freeze([
   [[0,-13],[0,29]], [[-4.6,29],[-4.6,50]], [[4.6,29],[4.6,50]], [[0,50],[0,69]],
   [[0,20],[-23,20],[-23,14]], [[0,17],[23,17],[24.4,14]],
@@ -29,7 +59,7 @@ export const OAKREST_PATHS=Object.freeze([
   [[4.6,54],[20,54],[29,54.4]],
   [[-4.6,57],[-13,57]],
   [[0,69],[0,86]], [[0,76],[-22.9,76]], [[0,75],[24.4,75]],
-  [[-4.6,31],[-24.4,31]], [[4.6,30],[24.4,30]],
+  [[-4.6,31],[-24.4,31]], [[4.6,30],[24.4,30]], [[18,30],[18,32.1]], [[18,39.9],[18,42]],
   [[-4.6,65],[-4.6,79]],[[4.6,65],[4.6,79]]
 ]);
 
@@ -72,6 +102,7 @@ function distanceToSegment(x,z,a,b){
 /** Roads, indoor floors and their thresholds should never sprout wild grass. */
 export function reservedTownGround(x,z){
   if(buildingAt(x,z,1.15))return true;
+  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.courtyardRadius+.40)return true;
   if(Math.hypot(x,z-39)<10)return true; // paved Heartwood Square
   for(const path of OAKREST_PATHS)for(let i=1;i<path.length;i++)
     if(distanceToSegment(x,z,path[i-1],path[i])<3.25)return true;
