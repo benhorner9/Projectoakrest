@@ -39,7 +39,7 @@ export function renderWorldPage(host,{area,x=0,z=0}){
  map.setAttribute('role','img');
  map.setAttribute('aria-label','Schematic north-to-south Greenwood guide, with approximate player marker');
  map.style.setProperty('--map-x',Math.max(8,Math.min(92,(x+65)/130*100)).toFixed(1)+'%');
- map.style.setProperty('--map-y',Math.max(8,Math.min(92,(42-z)/155*100)).toFixed(1)+'%');
+ map.style.setProperty('--map-y',Math.max(8,Math.min(92,(z+115)/155*100)).toFixed(1)+'%');
  for(const [name,label] of [['deep','Deep Greenwood'],['road','Forest Road'],['greenbelt','Greenbelt'],['village','Oakrest Town']])
   element(map,'span',label,'region '+name);
  element(map,'span','N ↑','north');
