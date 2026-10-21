@@ -48,7 +48,7 @@ export const OAKREST_MARKET_CRATES=Object.freeze([
  [-7,16,.88],[-8.2,16.6,.6],[7.1,22.9,1],[7,21,.6],[-22,36,.85],[23,36,.7]
 ]);
 export const OAKREST_MARKET_BARRELS=Object.freeze([
- [-20,15],[-20,16.2],[20,20.8],[21.1,20.5],[-12,39],[10.2,-5]
+ [-18.5,15],[-18.5,16.2],[20,20.8],[21.1,20.5],[-12,39],[10.2,-5]
 ]);
 export const OAKREST_VEGETABLE_BEDS=Object.freeze([[-10,51],[21,58],[-22,54]]);
 export const OAKREST_PATHS=Object.freeze([
