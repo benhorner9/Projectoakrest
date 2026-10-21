@@ -1,22 +1,38 @@
-# Project Oakrest — Combat Prototype 0.1
+# Project Oakrest
 
-A separate experimental low-poly third-person fantasy action RPG. No Cellbound files or services are reused.
+Oakrest is an independently developed low-poly third-person fantasy RPG made with Three.js, prioritising **iPad Safari in landscape**, then desktop and other mobile browsers. It combines direct-control combat with separate Melee, Ranged, Magic and Vitality progression. The game is currently an actively tested browser-local prototype, **not** a networked MMO.
 
-## Currently implemented
-- Small low-poly starter village, road, forest, training dummy, hostile mobs and respawns.
-- Third-person camera; WASD movement, mouse look, sprint, dodge.
-- iPad / touch joystick, camera swipe, attack, dodge and style/ability buttons.
-- Melee / Magic / Ranged equipment presets, switch with Tab or 1/2/3.
-- Two weapon families for each combat style, each with four distinct abilities (24 total).
-- Cooldowns, damage, projectile collisions, shield, heal, slow, root, stun, bleed.
-- Independent XP for each style, vitality/health, coins; browser-local saves.
-- 7 automated gameplay rules tests. Not an online MMO yet.
+**Play:** [Oakrest development](https://playcellbound.com/oakrest-dev/) · [Oakrest public](https://playcellbound.com/oakrest/) (a separate release, not automatically updated from dev).
 
-## Run and test
-Open a terminal in this repository and run `python3 -m http.server 5173`, then open `http://localhost:5173`. Internet connection required for the pinned Three.js CDN. Run `npm test` and `npm run check`.
+## Current playable systems
 
-## Deploy
-The prototype is static, no server functions or build step. Import this GitHub repository into Vercel. Framework preset: Other, Build Command: blank; publish repository root with index.html and src/. The game uses an import map to load Three.js from jsDelivr.
+- Third-person exploration of a town with enterable buildings, independent interiors, bank, shops, forester and ambient citizens, leading to the forest frontier.
+- Character movement, free/follow camera, joystick/touch look, gamepad/keyboard controls, terrain and obstacle collision.
+- Melee, Magic and Ranged loadouts, weapon-specific timed auto-attacks, four slotted abilities, enemy telegraphs and physical projectile or melee contact.
+- Equipment, RuneScape-inspired four-column inventory and Examine, bank storage, ground drops, Woodcutting with distinct tree species/axes and a persistent quick backpack.
+- Independent skill XP and local character persistence, with a character creator and separate save namespaces for development and public.
+- Automated unit, browser, rendering and release checks; CI and browser emulation do **not** replace physical iPad Safari acceptance.
+
+## Development and QA
+
+```sh
+npm ci --ignore-scripts
+npm run check
+npm test
+npm run build
+npx playwright install --with-deps chromium
+node tests/browser-smoke.cjs
+```
+
+For local development: `npm run dev` and visit `http://localhost:5173/`. Three.js is a pinned package dependency; the built release is generated to `dist/`.
+
+## Deployment and studio workflow
+
+**Oakrest does not deploy with Vercel.** Developers work on task branches from `dev`, open a PR against `dev`, run the core and full Greenwood quality workflows, then coordinate a deliberate development-only release using the shared-host bridge in `benhorner9/Cellbound`.
+
+Read [the exact shared-host deployment workflow](docs/development-deployment.md), [AI studio charter](docs/AI_STUDIO_CHARTER.md), [first quality audit](docs/AI_STUDIO_AUDIT_2026-10-21.md) and [AI contributor rules](AGENTS.md). A successful GitHub merge is **not** evidence that the website was updated; release QA checks the pinned SHA and hosted assets. The development bridge must never publish to `/oakrest/`.
+
+Browser saves are stored locally on each device. Don't clear site data to troubleshoot unless you have a safe backup: it can delete character progress. No accounts, server-side character persistence or public multiplayer are currently offered.
 
 ## Controls
 | Action | Desktop | Touch |
