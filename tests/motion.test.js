@@ -17,5 +17,5 @@ test('rotation wraps through shortest angle',()=>{
 });
 test('camera and model smoothing do not displace combat input',()=>{
  const s=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- for(const t of ['motion=smoothMotion','dampAngle(visualHeading','cameraFocus.lerp(cameraAim',"attackButton.addEventListener('pointermove'", "cameraSettings.mode==='follow'?heading", "cameraFocus.copy(cameraAim)"])assert.ok(s.includes(t),t);
+ for(const t of ['motion=smoothMotion','dampAngle(visualHeading','cameraFocus.lerp(cameraAim',"attackButton.addEventListener('pointermove'", "characterFacingTarget({mode:cameraSettings.mode", "gait>.3||combatFacing?heading:visualHeading", "cameraFocus.copy(cameraAim)"])assert.ok(s.includes(t),t);
 });

@@ -12,3 +12,21 @@ export function cameraSensitivity(value){const n=Number(value);return Number.isF
 
 /** Clamp pointer jumps and ignore accidental one-pixel twitches on attack hold. */
 export function attackDragDelta(dx){return Number.isFinite(dx)&&Math.abs(dx)>=1?Math.max(-48,Math.min(48,dx)):0;}
+
+/**
+ * Character orientation is a persistent world-space state, not a reflection
+ * of the camera's idle position. Moving turns the character toward travel;
+ * attacking deliberately faces the aim/strike. Releasing movement preserves
+ * the last visible heading in both free and follow camera modes.
+ */
+export function characterFacingTarget({
+  mode='free',lastHeading=0,cameraYaw=0,strikeYaw=null,
+  velocityX=0,velocityZ=0,combatFacing=false,moveThreshold=.3
+}={}){
+  const moving=Math.hypot(velocityX,velocityZ)>moveThreshold;
+  if(!moving&&!combatFacing)return lastHeading;
+  if(mode==='follow')return -cameraYaw;
+  if(strikeYaw!==null)return -strikeYaw;
+  if(combatFacing)return -cameraYaw;
+  return Math.atan2(-velocityX,-velocityZ);
+}
