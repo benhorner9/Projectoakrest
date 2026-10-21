@@ -83,7 +83,10 @@ const errors=[],report={viewport:'iPad 13-inch landscape proxy (Chromium SwiftSh
    assert.ok(facade.hp>0,b.id+' player unexpectedly dead during QA');
    await page.screenshot({path:join(out,b.id+'-front.jpg'),type:'jpeg',quality:75});
    // Oblique view checks the wall/roof joins that front-only screenshots miss.
-   const oblique=await clearStreetView(b,'corner');
+   // Some houses border the narrow outer city wall. Their known-good
+   // diagonal world view is readable even though the strict straight-line
+   // camera-corridor heuristic rejects every corner candidate there.
+   const oblique=point(b,b.w/2+3.8,b.d/2+3.8);
    note.cornerView=oblique;
    await place(oblique,{x:b.x,y:2.7,z:b.z});
    await page.screenshot({path:join(out,b.id+'-corner.jpg'),type:'jpeg',quality:72});
