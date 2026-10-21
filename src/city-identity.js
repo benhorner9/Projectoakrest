@@ -189,7 +189,7 @@ function market(scene,animation){
   const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);bench(g,0,0,a);
  }
  for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]])pot(sq,x,z);
- const boards=[[-12,10],[12,-10],[-13,-10]];
+ const boards=[[-12,10],[12,10],[-13,7]];
  for(const [x,z] of boards){
   const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);
   block(g,mat.wood,0,1.7,0,2.6,2,.18);
@@ -218,10 +218,11 @@ function cobbles(scene){
 }
 function marketGoods(scene){
  // Distinct areas suggest different trades without granting every skill here.
- for(const [x,z] of [[-11,14],[12,20],[-10,25],[12,29]]){
+ for(const [x,z] of [[-11,22],[11,22],[-11,35],[12,34]]){
   const g=at(scene,x,z,'Street trade');
   for(const sx of [-1,1])for(const zz of [-1,1])block(g,mat.wood,sx*.7,.36,zz*.52,.18,.7,.16);
   block(g,mat.barkLight,0,.78,0,2.2,.18,1.5);
+  addWorldObstacle({x,z,hx:1.08,hz:.73,height:1.35});
   for(let i=0;i<5;i++){
    const thing=mesh(g,i%2?sphere:box,i%3===0?mat.leafGold:i%3===1?mat.flower:mat.clay,-.75+i*.37,1.06,(i%2)*.32-.2,.2,.18,.2,false);
    thing.rotation.y=i;
