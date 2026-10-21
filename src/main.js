@@ -892,7 +892,7 @@ function animate(dt,t){
   const r=Math.hypot(hero.position.x,hero.position.z);
   if(r>15.5){hero.position.x*=15.5/r;hero.position.z*=15.5/r;}
  }
- expandedTown.update(hero.position,t,camera.position);
+ // Keep cutaway in sync with the actual rendered camera, updated below.
   townLife.update(dt,t,hero.position,(data.onboarding?.area||'world')==='world');
   audio.cityAmbience(t,(data.onboarding?.area||'world')==='world'&&isOakrestSafe(hero.position.x,hero.position.z));
   const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
