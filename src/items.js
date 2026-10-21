@@ -2,6 +2,7 @@
 import {LOADOUTS,ARMOUR,STYLE_ORDER} from './rules.js';
 import {MATERIAL_DROPS} from './combat-feel.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
+import {TREE_SPECIES,WOODCUTTING_AXES} from './woodcutting.js';
 const catalogue=[];
 const add=(id,kind,title,legacy,accent,shape,extra={})=>{
  catalogue.push(Object.freeze({id,kind,title,legacy:Object.freeze({...legacy}),accent,shape,dropAllowed:true,...extra}));
@@ -15,8 +16,8 @@ for(const [id,a] of Object.entries(ARMOUR))add('armour.'+id,'armour',a.title,{ki
 const styleColours={melee:'#c3c9ca',magic:'#8aa8df',ranged:'#c99c68'};
 for(const style of STYLE_ORDER){
  for(const [id,weapon] of Object.entries(LOADOUTS[style])){
-  const shape=style==='magic'?'staff':style==='ranged'?'bow':'blade';
-  add('weapon.'+style+'.'+id,'weapon',weapon.title,{kind:'weapon',style,itemId:id},styleColours[style],shape,{description:style+' · '+(weapon.family||id)});
+  const shape=style==='magic'?'staff':style==='ranged'?'bow':id.endsWith('-axe')?'axe':'blade';
+  add('weapon.'+style+'.'+id,'weapon',weapon.title,{kind:'weapon',style,itemId:id},WOODCUTTING_AXES.find(axe=>axe.id===id)?.colour||styleColours[style],shape,{description:id.endsWith('-axe')?'A forestry tool. Keep in your bag or wield it to chop trees; better axes improve successful cuts.':style+' · '+(weapon.family||id),dropAllowed:!id.endsWith('-axe')});
  }
 }
 // Starter-town slot equipment has unique icons and is purchased rather than randomly dropped.
@@ -25,8 +26,10 @@ for(const item of Object.values(SLOT_ITEMS)){
   {melee:'#dfb07a',magic:'#a0b6ef',ranged:'#b4cf9b'}[item.style],
   item.shape,{description:item.description,dropAllowed:false});
 }
-// Wood from the starter grove is gathered through skilling, not monster drops.
-add('material.softwood-logs','material','Softwood Logs',{kind:'material',itemId:'softwood-logs'},'#aa8660','logs',{dropAllowed:false});
+// All seven logs come only from Woodcutting, never monster drops.
+for(const tree of TREE_SPECIES)add('material.'+tree.logId,'material',tree.name+' Logs',
+ {kind:'material',itemId:tree.logId},tree.bark,'logs',
+ {dropAllowed:false,description:'Logs cut from a '+tree.name+' tree. A resource for future crafting.'});
 // This scroll already exists as a persisted onboarding balance, not as a general monster drop.
 catalogue.push(Object.freeze({id:'scroll.teleport',kind:'scroll',title:'Teleportation Scroll',legacy:Object.freeze({kind:'scroll',itemId:'teleport'}),accent:'#9bcfe6',shape:'scroll',dropAllowed:false}));
 export const ITEM_CATALOG=Object.freeze(catalogue);
@@ -47,6 +50,7 @@ const shapes={
  token:'<path d="M32 7L51 18L51 44L32 55L13 44L13 18Z" fill="#a17f48" stroke="#f9df97" stroke-width="3"/><path d="M32 16L44 32L32 47L20 32Z" fill="#e4b763" stroke="#fef1be" stroke-width="2"/>',
  armour:'<path d="M15 13L25 8L32 15L40 8L50 13L55 26L45 32L45 53L19 53L19 32L9 26Z" fill="#536c7b" stroke="#d5e0d9" stroke-width="2"/><path d="M20 19L32 25L45 19M24 46H40" fill="none" stroke="#e7dcba" stroke-width="3"/>',
  blade:'<path d="M31 7L39 15L36 38L31 43L26 38L23 15Z" fill="#b7d2d6" stroke="#ecf7f0" stroke-width="2"/><path d="M15 42L47 42M32 44V56" stroke="#bd8f52" stroke-width="6" stroke-linecap="round"/><circle cx="32" cy="41" r="4" fill="#e2bd7b"/>',
+ axe:'<path d="M18 57L37 13" stroke="#8e704c" stroke-width="7" stroke-linecap="round"/><path d="M33 8Q51 4 56 17L49 29Q43 20 31 23Z" fill="#c2cfd0" stroke="#eef0e7" stroke-width="3"/>',
  staff:'<path d="M20 55L39 12" stroke="#86653f" stroke-width="7" stroke-linecap="round"/><path d="M41 5L53 17L41 29L29 17Z" fill="#87bfd8" stroke="#e3f8ff" stroke-width="3"/><path d="M33 17H49M41 9V25" stroke="#e7ffff" stroke-width="2"/>',
  bow:'<path d="M26 8Q52 30 26 54Q40 32 26 8Z" fill="#8e6242" stroke="#dbb77a" stroke-width="4"/><path d="M26 8L26 54M9 33H49M43 28L51 33L43 38" fill="none" stroke="#e9e1ca" stroke-width="2.5"/>',
  helm:'<path d="M13 32Q14 11 32 10Q50 11 51 32L46 47H18Z" fill="#b2b7bd" stroke="#efebcd" stroke-width="3"/><path d="M13 34H51M30 20V47" stroke="#5a6873" stroke-width="4"/>',
