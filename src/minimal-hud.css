@@ -35,7 +35,7 @@
 #hud .progression-content{overflow-y:auto;flex:1;min-height:0;padding:14px 17px 24px;overscroll-behavior:contain;touch-action:pan-y}
 #hud .progression-styles{padding:5px 12px 8px}
 #hud .progression-styles button{min-height:41px}
-#hud .progression-content .oak-inventory-grid{width:min(100%,300px)}
+#hud .progression-content .oak-inventory-grid{width:min(100%,275px)}
 #hud .progression-content .oak-inventory-item,#hud .progression-content .oak-inventory-empty{min-height:56px}
 #hud .progression-content .controls-panel{position:static;display:block;width:100%;max-width:580px;max-height:none;padding:5px 0 20px;border:0!important;background:transparent!important;box-shadow:none;backdrop-filter:none;pointer-events:auto}
 #hud .progression-content .controls-panel[hidden]{display:none!important}
