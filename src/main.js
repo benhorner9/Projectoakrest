@@ -23,6 +23,7 @@ import {setupTownUI} from './town-ui.js';
 import {equipSlotItem,equipmentModifiers} from './equipment-slots.js';
 import {renderInventoryGrid,renderEquipmentPaperDoll,renderExamine} from './equipment-ui.js';
 import {isOakrestSafe,townInteraction} from './town-services.js';
+import {renderQuestPage,renderWorldPage} from './ui-pages.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
@@ -139,17 +140,42 @@ const forward=()=>new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
 const directions={ArrowUp:'w',ArrowDown:'s'};
 let bookStyle='melee',bookTab='skills',bookSlot=0,skillDetail=null;
 const progressPanel=$('progression-panel'),detailPanel=$('skill-detail');
-function bookOpen(tab='skills',toggle=false){
+function bookOpen(tab='inventory',toggle=false){
  if(toggle&&!progressPanel.hidden&&bookTab===tab){bookClose();return;}
  bookStyle=style;bookTab=tab;bookSlot=0;skillDetail=null;detailPanel.hidden=true;
  progressPanel.hidden=false;$('equipment-picker').hidden=true;
- $('loadout-button').setAttribute('aria-expanded','true');renderBook();
+ $('menu-backdrop').hidden=false;document.documentElement.classList.add('oak-menu-open');
+ $('loadout-button').setAttribute('aria-expanded','true');
+ $('loadout-button').setAttribute('aria-label','Close character menu');
+ document.exitPointerLock?.();renderBook();
+ $(bookTabs[tab])?.focus({preventScroll:true});
 }
-function bookClose(){skillDetail=null;detailPanel.hidden=true;progressPanel.hidden=true;$('loadout-button').setAttribute('aria-expanded','false');}
+function bookClose(){
+ if(progressPanel.hidden)return;
+ skillDetail=null;detailPanel.hidden=true;progressPanel.hidden=true;
+ $('controls-panel').hidden=true;
+ $('menu-backdrop').hidden=true;document.documentElement.classList.remove('oak-menu-open');
+ $('loadout-button').setAttribute('aria-expanded','false');
+ $('loadout-button').setAttribute('aria-label','Open character menu');
+ $('loadout-button').focus({preventScroll:true});
+}
 $('close-progression').addEventListener('click',bookClose);
-const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills'};
-for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();});
-$('loadout-button').addEventListener('click',()=>bookOpen('skills',true));
+$('menu-backdrop').addEventListener('click',bookClose);
+const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills',quests:'progression-quests',map:'progression-map',settings:'progression-settings'};
+for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();$('progression-content').scrollTop=0;});
+$('loadout-button').addEventListener('click',()=>bookOpen(progressPanel.hidden?'inventory':bookTab,true));
+document.addEventListener('keydown',event=>{
+ if(progressPanel.hidden)return;
+ if(event.key==='Escape'){event.preventDefault();event.stopPropagation();bookClose();return;}
+ if(event.key==='Tab'){
+  const fields=[...progressPanel.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled),a[href]')].filter(x=>x.getClientRects().length);
+  if(fields.length){const first=fields[0],last=fields[fields.length-1];
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  }
+ }
+ event.stopPropagation(); // Menu keys must not also trigger gameplay.
+},true);
 if(devDropEditor){
  setupDropEditor({
   storage:localStorage,key:dropStorageKey,
