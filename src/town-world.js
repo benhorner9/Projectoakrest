@@ -198,7 +198,7 @@ function makeRoof(group,build,h){
 function makeInteriors(group,build){
   const {w,d,kind}=build;
   const floorMaterial=['bank','hall','guard'].includes(kind)?floorFinishes.stone:floorFinishes.wood;
-  const floor=block(group,floorMaterial,0,.095,0,w+.16,.18,d+.16,false);
+  const floor=block(group,floorMaterial,0,-.095,0,w+.16,.22,d+.16,false);
   floor.name=build.id+' finished interior floor';
   if(['bank','store','forester'].includes(kind)){
     // Counter lies behind the reachable front half, with space to walk inside.
@@ -332,9 +332,9 @@ function buildHouse(scene,build){
   }
   // Interior floor and porch share a level terrain foundation with the real
   // gameplay ground (not a high floating platform hiding grass beneath it).
-  block(g,shared.stone,0,.032,0,w+.16,.10,d+.16,false);
-  block(g,shared.stone,0,.045,d/2+.45,opening-.12,.12,.95,false);
-  block(g,shared.trim,0,.14,d/2+.27,opening-.08,.10,.22,false);
+  block(g,shared.stone,0,-.10,0,w+.16,.20,d+.16,false);
+  block(g,shared.stone,0,-.045,d/2+.45,opening-.12,.15,.95,false);
+  block(g,shared.trim,0,.035,d/2+.27,opening-.08,.06,.22,false);
   // Above-door lintel must not seal the player-height doorway.
   decorateFacade(g,build,h);
   makeInteriors(g,build);
