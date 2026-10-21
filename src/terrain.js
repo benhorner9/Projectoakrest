@@ -1,10 +1,21 @@
 import {segmentBox,segmentCylinder} from './combat-physics.js';
+import {nearestBuildingEdge} from './town-layout.js';
 /** One continuous height field for geometry, actors, loot and telegraphs. */
 const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-export function terrainHeight(x,z){
+function naturalTerrainHeight(x,z){
  const wilderness=smooth((-z-5)/24),edge=smooth((Math.abs(x)-18)/22);
  const hills=1.5+Math.sin(x*.068+z*.032)*1.7+Math.sin(z*.105)*.9+Math.cos(x*.12-z*.045)*.55;
  return (wilderness+edge*(1-wilderness))*hills;
+}
+/** Flatten the actual ground inside *every* building, then ease back to hills
+ * beyond the exterior foundation. The renderer, character and loot all sample
+ * the same height function so grass cannot poke through a raised floor.
+ */
+export function terrainHeight(x,z){
+ const natural=naturalTerrainHeight(x,z),near=nearestBuildingEdge(x,z);
+ if(!near||near.distance>=3)return natural;
+ const base=naturalTerrainHeight(near.build.x,near.build.z);
+ return base+(natural-base)*smooth(near.distance/3);
 }
 export function terrainNormal(x,z){const e=.08,dx=(terrainHeight(x+e,z)-terrainHeight(x-e,z))/(2*e),dz=(terrainHeight(x,z+e)-terrainHeight(x,z-e))/(2*e),len=Math.hypot(dx,1,dz);return {x:-dx/len,y:1/len,z:-dz/len};}
 export function roadCentre(z){return z> -8?0:Math.sin((z+8)*.07)*1.2;}
