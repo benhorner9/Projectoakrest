@@ -169,6 +169,8 @@ function gardens(scene,animation){
  addWorldObstacle({x:22,z:66,r:2.35,height:.4});
  for(const {x,z,angle:a} of OAKREST_GARDEN_BENCHES){
   const g=at(scene,x,z,'Garden resting place');bench(g,0,0,a);
+  addWorldObstacle({x,z,hx:Math.abs(Math.cos(a))*1.39+Math.abs(Math.sin(a))*.42,
+    hz:Math.abs(Math.sin(a))*1.39+Math.abs(Math.cos(a))*.42,height:1.52});
  }
  const leaves=[];
  for(let i=0;i<12;i++){
@@ -186,8 +188,9 @@ function market(scene,animation){
   const stone=mesh(sq,cyl,mat.cobble,Math.sin(a)*rad,.055,Math.cos(a)*rad,.8,.10,1.0,false);
   stone.rotation.y=a;
  }
- for(const [x,z,a] of [[-8,5,.2],[8,5,-.25],[-8,-5,Math.PI],[8,-5,Math.PI]]){
+ for(const [x,z,a] of [[-10,6,.2],[10,6,-.25],[-10,0,Math.PI],[10,-1.8,Math.PI]]){
   const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);bench(g,0,0,a);
+  addWorldObstacle({x,z:z+39,hx:1.42,hz:.76,height:1.5});
  }
  for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]])pot(sq,x,z);
  const boards=[[-12,10],[12,10],[-13,3]];
