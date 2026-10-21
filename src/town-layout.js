@@ -34,7 +34,7 @@ export const OAKREST_TRADE_TABLES=Object.freeze([
  Object.freeze({x:-19,z:35}),Object.freeze({x:9,z:22}),
  Object.freeze({x:-11,z:35}),Object.freeze({x:12,z:34})
 ]);
-export const OAKREST_SQUARE_BENCHES=Object.freeze([[-10,45,.2],[10,45,-.25],[-10,39,Math.PI],[10,37.2,Math.PI]]);
+export const OAKREST_SQUARE_BENCHES=Object.freeze([[-17,51,.2],[10,46.7,-.25],[-10,39,Math.PI],[10,37.2,Math.PI]]);
 export const OAKREST_GARDEN_BENCHES=Object.freeze([
  Object.freeze({x:12,z:50,angle:.2}),Object.freeze({x:19,z:70,angle:Math.PI/2})
 ]);
