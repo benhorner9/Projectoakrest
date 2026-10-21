@@ -314,6 +314,11 @@ function renderBook(){
   },!current[bookSlot]);clear.className='book-clear';
  }else if(bookTab==='equip'){
   renderEquipmentPaperDoll(host,data,bookStyle,showItemDetail);
+   const item=LOADOUTS[bookStyle]?.[data.gear[bookStyle]];
+   const weaponPower=item?.basic||(bookStyle==='melee'?UNARMED.basic:0);
+   const combatLv=levelFromXp(data.xp[bookStyle]).level;
+   const equipmentPower=outgoingMultiplier(data.armour[bookStyle],bookStyle)*equipmentModifiers(data,bookStyle).power;
+   el('p',bookStyle.toUpperCase()+' · Level '+combatLv+' · Maximum hit '+maxHitFor(combatLv,weaponPower,equipmentPower)+' · Accuracy vs level '+combatLv+': '+Math.round(accuracyFor(combatLv,combatLv,weaponPower)*100)+'% · '+(item?.interval||UNARMED.interval).toFixed(2)+'s per attack',host,'detail-footnote');
  }else if(bookTab==='inventory'){
   renderInventoryGrid(host,data,showItemDetail,()=>{save();renderBook();});
  }else if(bookTab==='quests'){
@@ -540,7 +545,7 @@ function refreshSkills(){
   b.addEventListener('click',()=>{if(now()-touchAt>.35)a?useAbility(i):bookOpen('abilities');});host.append(b);
  });
  $('weapon-name').textContent=getWeapon().title;refreshStyles();updateHpUI();
- $('touch-attack').title=weaponDisplay(getWeapon());
+ $('touch-attack').title=getWeapon().title+' · Max hit '+maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power)+' · '+weaponDisplay(getWeapon());
  document.documentElement.dataset.combatStyle=style;
  const swap=$('touch-swap'),upcoming=nextStyle(style);
  swap.querySelector('small').textContent=upcoming.toUpperCase();swap.setAttribute('aria-label',`Switch to ${upcoming}`);
