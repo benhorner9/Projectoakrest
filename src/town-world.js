@@ -111,6 +111,7 @@ function makeInteriors(group,build){
     // Counter lies behind the reachable front half, with space to walk inside.
     block(group,kind==='bank'?shared.stone:shared.timber,0,1,-1.22,w*.64,1.5,.65);
     block(group,shared.trim,0,1.8,-1.22,w*.66,.18,.79);
+    wallCollider(build,0,-1.22,w*.64,.65,1.9);
     for(const x of [-w*.34,w*.34]){
       block(group,shared.wood,x,1.5,-d/2+.57,.64,2.8,.56);
       block(group,shared.trim,x,2.55,-d/2+.20,1,.14,1.15);
