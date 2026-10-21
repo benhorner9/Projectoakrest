@@ -8,7 +8,7 @@ import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
  * collidable walls and an interior; roofs lift away while the player is inside.
  * Building orientation is independent of door and service interaction rules.
  */
-import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition} from './town-layout.js';
+import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_MARKET_STALLS} from './town-layout.js';
 export {OAKREST_BUILDINGS,OAKREST_PATHS} from './town-layout.js';
 const shared={
   plaster:new THREE.MeshLambertMaterial({color:'#d1c4a6'}),
@@ -341,6 +341,38 @@ function buildHouse(scene,build){
   const roof=makeRoof(g,build,h);
   return {build,roof};
 }
+function buildMerchantWell(scene){
+  const {x,z,r,roofRadius,courtyardRadius}=OAKREST_WELL;
+  const group=new THREE.Group();
+  group.name='Merchant Quarter Well';
+  group.userData.townFixture='well';
+  group.position.set(x,terrainHeight(x,z),z);
+  scene.add(group);
+  // Terrain-following paving leaves no hovering circular slab and keeps a
+  // clear approach from both of the surrounding pedestrian streets.
+  const pave=new THREE.CircleGeometry(courtyardRadius,32);
+  pave.rotateX(-Math.PI/2);
+  const pos=pave.getAttribute('position');
+  for(let i=0;i<pos.count;i++){
+    const dx=pos.getX(i),dz=pos.getZ(i);
+    pos.setY(i,terrainHeight(x+dx,z+dz)-group.position.y+.045);
+  }
+  pave.computeVertexNormals();
+  const courtyard=new THREE.Mesh(pave,shared.dirt);
+  courtyard.name='Well cobblestone courtyard';
+  courtyard.receiveShadow=true;group.add(courtyard);
+  const basin=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.85,18),shared.stone);
+  basin.position.y=.40;basin.castShadow=true;basin.receiveShadow=true;group.add(basin);
+  const trim=new THREE.Mesh(new THREE.TorusGeometry(r-.12,.16,8,24),shared.pale);
+  trim.rotation.x=Math.PI/2;trim.position.y=.88;group.add(trim);
+  const water=new THREE.Mesh(new THREE.CylinderGeometry(r-.30,r-.30,.055,18),shared.dark);
+  water.position.y=.85;group.add(water);
+  for(const xx of [-r+.18,r-.18])block(group,shared.wood,xx,1.94,0,.24,2.65,.24);
+  block(group,shared.timber,0,3.34,0,roofRadius*2.05,.22,3.4);
+  const cap=new THREE.Mesh(new THREE.ConeGeometry(roofRadius,1.45,4),shared.moss);
+  cap.position.y=4.10;cap.rotation.y=Math.PI/4;cap.castShadow=true;group.add(cap);
+  addWorldObstacle({x,z,r,height:4.8});
+}
 export function buildOakrestTown(scene){
   makeRoad(scene,OAKREST_PATHS,5.4,'#86795f',.018);
   makeRoad(scene,OAKREST_PATHS,4.35,'#b49c75',.034);
@@ -349,36 +381,32 @@ export function buildOakrestTown(scene){
   // Historic Heartwood Square is built in city-identity.js. The broad ancient
   // oak trunk uses a matching collision footprint with a passable paved ring.
   addWorldObstacle({x:0,z:39,r:2.2,height:15});
-  // Distinct market corners outside the pedestrian path.
-  for(const [x,z,colour] of [[-9,43,shared.red],[9,49,shared.blue],[9,17,shared.moss]]){
+  buildMerchantWell(scene);
+  // Market stalls sit in deliberate setbacks, not on a paved travel lane.
+  for(const {x,z,colour} of OAKREST_MARKET_STALLS){
+    const canopy={red:shared.red,blue:shared.blue,moss:shared.moss}[colour];
     const stall=new THREE.Group();stall.position.set(x,terrainHeight(x,z),z);scene.add(stall);
     block(stall,shared.timber,0,1,0,3.5,.25,2.3);
     for(const sx of [-1,1])for(const sz of [-1,1])block(stall,shared.wood,sx*1.47,1.4,sz*.92,.18,2.8,.18);
-    block(stall,colour,0,2.98,0,4.1,.26,2.7);
+    block(stall,canopy,0,2.98,0,4.1,.26,2.7);
     for(let i=0;i<4;i++)block(stall,i%2?shared.moss:shared.gold,-1.08+i*.7,1.27,.12,.35,.25,.45,false);
     addWorldObstacle({x,z,hx:1.7,hz:1.15,height:3.1});
   }
-  for(const x of [-42,42]){
-    for(let z=-9;z<=63;z+=4.5){
-      const p=new THREE.Group();p.position.set(x,terrainHeight(x,z),z);scene.add(p);
-      block(p,shared.wood,0,2.25,0,.55,4.5,.55);
-      block(p,shared.trim,0,4.55,0,.73,.24,.73);
-    }
-    const p=new THREE.Group();p.position.set(x,terrainHeight(x,27),27);scene.add(p);
-    block(p,shared.timber,0,1.8,0,.24,3.6,72);
-    addWorldObstacle({x,z:27,hx:.3,hz:36,height:4.8});
+  // The outer city wall and the limestone gates are built in city-identity.
+  // Keep only the joined south curtain sections that reach those gate towers.
+  // The earlier timber fence, posts and second arch were visually doubled and
+  // obstructed otherwise usable garden and arrival paths.
+  for(const x of [-25,25]){
+    const curtain=new THREE.Group();
+    curtain.name='Southgate curtain wall';
+    curtain.position.set(x,terrainHeight(x,-13),-13);
+    scene.add(curtain);
+    block(curtain,shared.stone,0,2.05,0,38,4.1,1.0);
+    block(curtain,shared.pale,0,4.33,0,38,.46,1.25);
+    for(let off=-17;off<=17;off+=2.4)
+      block(curtain,shared.stone,off,4.9,0,1.04,.66,1.30);
+    addWorldObstacle({x,z:-13,hx:19,hz:.58,height:5});
   }
-  for(const [x,w] of [[-24,35],[24,35]]){
-    const p=new THREE.Group();p.position.set(x,terrainHeight(x,-13),-13);scene.add(p);
-    block(p,shared.timber,0,1.7,0,w,3.4,.45);
-    addWorldObstacle({x,z:-13,hx:w*.5,hz:.3,height:3.5});
-  }
-  for(const x of [-5.2,5.2]){
-    const p=new THREE.Group();p.position.set(x,terrainHeight(x,-13),-13);scene.add(p);
-    block(p,shared.stone,0,2.3,0,.9,4.6,.9);
-  }
-  const gate=new THREE.Group();gate.position.set(0,terrainHeight(0,-13),-13);scene.add(gate);
-  block(gate,shared.trim,0,4.65,0,11,.55,.9);
   for(const tree of OAKREST_GROVES){
     const g=new THREE.Group();g.position.set(tree.x,terrainHeight(tree.x,tree.z),tree.z);scene.add(g);
     block(g,shared.wood,0,1.75,0,.67,3.5,.67);
