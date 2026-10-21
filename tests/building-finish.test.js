@@ -76,3 +76,27 @@ test('instanced natural grass, pebbles and wildflowers never occupy a building o
     for(const b of OAKREST_BUILDINGS)assert.equal(reservedTownGround(b.x,b.z),true);
   }finally{clearWorldObstacles();}
 });
+
+
+test('all fifteen buildings have genuine recessed window apertures, flush frame joins and finished floors',()=>{
+  clearWorldObstacles();const scene=new THREE.Scene();buildOakrestTown(scene);
+  try{
+    for(const b of OAKREST_BUILDINGS){
+      const panes=[];scene.traverse(o=>{if(o.name===b.id+' recessed window')panes.push(o);});
+      assert.equal(panes.length,2,b.id+' should have two actual front facade windows');
+      for(const pane of panes){
+        assert.equal(pane.material.transparent,true,b.id+' glass must remain translucent');
+        const group=pane.parent,back=group.children.find(o=>o.isMesh&&o.geometry.type==='BoxGeometry'&&o.position.z===-b.d/2&&o.position.x===0);
+        assert.ok(back,b.id+' missing masonry rear wall');
+        const opaqueFacade=group.children.filter(o=>o.isMesh&&o.material===back.material&&o.geometry.type==='BoxGeometry'&&Math.abs(o.position.z-b.d/2)<.0001);
+        const intersect=opaqueFacade.some(o=>
+          Math.abs(o.position.x-pane.position.x)<(o.scale.x+pane.scale.x)/2-.07&&
+          Math.abs(o.position.y-pane.position.y)<(o.scale.y+pane.scale.y)/2-.07);
+        assert.equal(intersect,false,b.id+' glass is still painted over an opaque unbroken wall');
+      }
+      const floors=[];scene.traverse(o=>{if(o.name===b.id+' finished interior floor')floors.push(o);});
+      assert.equal(floors.length,1,b.id+' missing solid finished floor');
+      assert.ok(floors[0].scale.x>b.w&&floors[0].scale.z>b.d,b.id+' floor does not meet walls');
+    }
+  }finally{clearWorldObstacles();}
+});
