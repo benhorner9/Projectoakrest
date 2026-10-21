@@ -1,5 +1,6 @@
 import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 import {sanitizeSlotOrder,inventoryKeyList,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from './item-slot-layout.js';
+import {WOODCUTTING_AXES,WOODCUTTING_MATERIALS,WOODCUTTING_MAX_XP} from './woodcutting.js';
 /** Combat and progression rules stay independent from Three.js so they can be tested. */
 export const STYLE_ORDER = ['melee', 'magic', 'ranged'];
 export const STYLE_COLOURS = { melee:'#db9a72', magic:'#9cacf6', ranged:'#9edbb1' };
@@ -78,6 +79,10 @@ LOADOUTS.ranged.shortbow={
   ...LOADOUTS.ranged.bow,
   title:'Hunter Shortbow',icon:'➹',reach:16,basic:13,interval:0.68,windup:0.17,
   requiredLevel:3,family:'shortbow'
+};
+for(const axe of WOODCUTTING_AXES)LOADOUTS.melee[axe.id]={
+ ...LOADOUTS.melee.sword,title:axe.name,icon:'🪓',family:'sword',requiredLevel:1,
+ basic:12,interval:1.25,windup:.35
 };
 export const ARMOUR={
   'starter-mail':{title:'Recruit Mail',requiredVitality:1,physical:.12,magical:.04,mobility:.98,bonusStyle:'melee',bonusPower:.02,description:'Beginner melee chest armour: improved physical protection and a small melee bonus.'},
@@ -164,7 +169,7 @@ export function awardTrainingGear(data){
   if(!Array.isArray(data.inventory.weapons[style]))data.inventory.weapons[style]=[];
   const owned=new Set(data.inventory.weapons[style].filter(id=>Object.hasOwn(LOADOUTS[style],id)));
   for(const [id,w] of Object.entries(LOADOUTS[style])){
-   if(canEquipWeapon(style,id,data.xp))owned.add(id);
+   if(!id.endsWith('-axe')&&canEquipWeapon(style,id,data.xp))owned.add(id);
   }
   data.inventory.weapons[style]=[...owned];
  }
@@ -276,13 +281,13 @@ export function validSave(raw){
   }
   if(Array.isArray(raw.inventory?.armour))d.inventory.armour=[...new Set(raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id)))];
   if(Array.isArray(raw.inventory?.slotted))d.inventory.slotted=[...new Set(raw.inventory.slotted.filter(id=>Object.hasOwn(SLOT_ITEMS,id)))];
-  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
+  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS]){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
   }
   // Bank and profession data live in each character save and must survive reloads.
   if(raw.bank&&typeof raw.bank==='object'){
     d.bank.coins=Number.isSafeInteger(raw.bank.coins)?clamp(raw.bank.coins,0,10000000):0;
-    for(const id of ['moss-fibre','boar-hide','bandit-token','softwood-logs']){
+    for(const id of ['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS]){
       const value=raw.bank.materials?.[id];if(Number.isSafeInteger(value)&&value>0)d.bank.materials[id]=clamp(value,0,9999);
     }
     for(const style of STYLE_ORDER){
@@ -295,7 +300,9 @@ export function validSave(raw){
   if(raw.professions&&typeof raw.professions==='object'){
     d.professions.woodcuttingLearned=raw.professions.woodcuttingLearned===true;
     const xp=raw.professions.woodcuttingXp;
-    d.professions.woodcuttingXp=Number.isSafeInteger(xp)?clamp(xp,0,710):0;
+    d.professions.woodcuttingXp=Number.isSafeInteger(xp)?clamp(xp,0,WOODCUTTING_MAX_XP):0;
+     // Previous versions taught this skill before axes existed. Keep those saves playable.
+     if(d.professions.woodcuttingLearned&&!WOODCUTTING_AXES.some(a=>d.inventory.weapons.melee.includes(a.id)||d.bank.weapons.melee.includes(a.id)))d.inventory.weapons.melee.push('bronze-axe');
   }
   // The previous prototype granted gear at level milestones. Preserve that legacy gear
   // exactly once on migration; in this build new gear is earned from physical drops.

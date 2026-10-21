@@ -1,4 +1,5 @@
 import {STARTER_SETS,SLOT_ITEMS,EXTRA_SLOTS} from './equipment-slots.js';
+import {WOODCUTTING_MATERIALS,WOODCUTTING_AXES} from './woodcutting.js';
 /** Oakrest is a starter hub, not a universal skilling destination.
  * New settlements should register their own exclusive skills instead of
  * offering the entire skill catalogue in every bank/shop.
@@ -21,13 +22,14 @@ export const OAKREST_GROVES=Object.freeze([
   Object.freeze({id:'pine-east',x:-8,z:56,reach:2.6}),
   Object.freeze({id:'pine-north',x:-13,z:65,reach:2.6})
 ]);
-export const TOWN_MATERIALS=Object.freeze(['moss-fibre','boar-hide','bandit-token','softwood-logs']);
+export const TOWN_MATERIALS=Object.freeze(['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS]);
 export const SHOP_STOCK=Object.freeze([
   ...Object.values(STARTER_SETS).map(set=>Object.freeze({id:set.id,label:set.title,kind:'bundle',style:set.style,price:set.price})),
   Object.freeze({id:'starter-sword',label:'Iron Longsword',kind:'weapon',style:'melee',itemId:'sword',price:45}),
   Object.freeze({id:'starter-staff',label:'Frostwood Staff',kind:'weapon',style:'magic',itemId:'frost',price:45}),
   Object.freeze({id:'starter-bow',label:'Oak Longbow',kind:'weapon',style:'ranged',itemId:'bow',price:45}),
-  Object.freeze({id:'starter-robe',label:'Traveller Clothing',kind:'armour',itemId:'traveller',price:35})
+  Object.freeze({id:'starter-robe',label:'Traveller Clothing',kind:'armour',itemId:'traveller',price:35}),
+  ...WOODCUTTING_AXES.map(axe=>Object.freeze({id:'stock-'+axe.id,label:axe.name,kind:'weapon',style:'melee',itemId:axe.id,price:axe.price}))
 ]);
 export const STARTER_GROVE_XP_CAP=710; // The level 5 ceiling sends advanced learners elsewhere.
 export const WOODCUTTING_XP_PER_LOG=35;
@@ -39,7 +41,7 @@ export function townInteraction(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return null;
   const options=[
     ...OAKREST_SERVICES.map(s=>({...s,type:'service',x:s.npcX??s.x,z:s.npcZ??s.z})),
-    ...OAKREST_GROVES.map(s=>({...s,type:'grove',label:'Training pine'})),
+    ...OAKREST_GROVES.map(s=>({...s,type:'grove',species:'softwood',label:'Softwood tree'})),
     ...OAKREST_NOTICES
   ].map(point=>({...point,distance:Math.hypot(x-point.x,z-point.z)}))
    .filter(point=>point.distance<=point.reach)
@@ -138,8 +140,15 @@ export function teachWoodcutting(data){
   if(data.professions.woodcuttingLearned)return false;
   data.professions.woodcuttingLearned=true;
   if(!Number.isFinite(data.professions.woodcuttingXp))data.professions.woodcuttingXp=0;
+  // The trainer provides a usable starter tool; higher tiers can be bought or crafted later.
+  if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');
   return true;
 }
+export function claimTrainingAxe(data){
+ if(!data.professions?.woodcuttingLearned||WOODCUTTING_AXES.some(a=>data.inventory?.weapons?.melee?.includes(a.id)||data.bank?.weapons?.melee?.includes(a.id)))return false;
+ data.inventory.weapons.melee.push('bronze-axe');return true;
+}
+// Compatibility shim for old tests/saves. Gameplay uses the continuous Woodcutting controller.
 export function harvestStarterGrove(data,groveId,time,cooldowns){
   if(!OAKREST_GROVES.some(g=>g.id===groveId))return {ok:false,reason:'Unknown tree'};
   if(!data.professions?.woodcuttingLearned)return {ok:false,reason:"Visit the Forester's Lodge to learn Woodcutting first"};

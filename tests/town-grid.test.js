@@ -38,7 +38,7 @@ test('bank quantity choices transfer exact amounts and preserve saves',()=>{
 });
 test('icon shop grid reflects missing pieces, owned items and banked inventory',()=>{
  const data=defaultSave(),entries=shopGridEntries(data);
- assert.equal(entries.length,7);
+ assert.equal(entries.length,14);
  assert.ok(entries.every(e=>e.icon&&e.cost>=0&&e.label));
  assert.ok(entries.some(e=>e.kind==='bundle'));
  data.inventory.weapons.melee.push('daggers');

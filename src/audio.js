@@ -28,9 +28,9 @@ export function createAudio(storage=null,key='oakrest-audio'){
  play(kind,heavy=false){
   if(!enabled||!volume||!ctx||ctx.state!=='running'||voices>=12)return;
   voices++;const osc=ctx.createOscillator(),gain=ctx.createGain(),t=ctx.currentTime;
-  const tones={loot:740,dodge:240,magic:520,bow:330,warning:160,hurt:75,death:65};
-  const hz=tones[kind]||(heavy?90:180),duration=kind==='warning'?.26:.18;
-  osc.type=['hurt','bow','warning'].includes(kind)?'triangle':kind==='hit'?'triangle':'sine';
+  const tones={loot:740,dodge:240,magic:520,bow:330,warning:160,hurt:75,death:65,chop:210,treefall:82};
+  const hz=tones[kind]||(heavy?90:180),duration=kind==='treefall'?.56:kind==='warning'?.26:.18;
+  osc.type=['hurt','bow','warning'].includes(kind)?'triangle':['hit','chop','treefall'].includes(kind)?'triangle':'sine';
   osc.frequency.setValueAtTime(hz,t);osc.frequency.exponentialRampToValueAtTime(kind==='loot'?1100:hz*.38,t+duration);
   gain.gain.setValueAtTime(.055*volume,t);gain.gain.exponentialRampToValueAtTime(.001,t+duration);
   osc.connect(gain);gain.connect(ctx.destination);osc.start(t);osc.stop(t+duration+.02);
