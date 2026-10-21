@@ -22,6 +22,9 @@ let browser;
   qa.step(.2);
   const initial=health();
   if(!qa.target('dummy'))throw new Error('Could not select visible dummy');
+  // A tapped skill during the basic attack interval must be buffered, not swallowed.
+  qa.step(.15);qa.ability(0);qa.step(2.5);
+  if(!Object.keys(qa.state().cooldowns).some(k=>k.includes('w0')))throw new Error('Queued melee ability never activated during auto-attacks');
   qa.step(8);
   const melee=health();
   if(!(melee<initial))throw new Error('No repeating melee hits on locked dummy');
