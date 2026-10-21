@@ -53,20 +53,65 @@ jobs:
       - name: iPad-size controller and camera regression
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-controller.cjs
-      - name: Combat Reborn real simulation scenarios
-        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-combat-reborn.cjs
-      - name: Auto combat targeting and three-style switching in Chromium
-        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-auto-combat.cjs
-      - name: Compare combat performance against starting dev
-        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-combat-performance.cjs
       - name: Preserve browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: oakrest-release-qa
+          path: qa/
+          if-no-files-found: ignore
+
+  combat-browser:
+    name: Combat Reborn full scenario audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout all history for baseline parity
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise all rendered combat scenarios with bounded runtime
+        run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-combat-reborn.cjs
+      - name: Preserve combat scenario diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oakrest-combat-scenario-qa
+          path: qa/
+          if-no-files-found: ignore
+
+  auto-combat-and-performance:
+    name: Auto combat and historical performance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout all history for baseline comparison
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Auto combat and three-style switch regression
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-auto-combat.cjs
+      - name: Compare combat performance to pinned starting dev
+        run: timeout --signal=TERM --kill-after=10s 7m node tests/browser-combat-performance.cjs
+      - name: Preserve performance diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oakrest-combat-performance-qa
           path: qa/
           if-no-files-found: ignore
 
