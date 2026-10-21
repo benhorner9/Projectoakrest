@@ -1,4 +1,5 @@
 import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
+import {sanitizeSlotOrder,inventoryKeyList,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from './item-slot-layout.js';
 /** Combat and progression rules stay independent from Three.js so they can be tested. */
 export const STYLE_ORDER = ['melee', 'magic', 'ranged'];
 export const STYLE_COLOURS = { melee:'#db9a72', magic:'#9cacf6', ranged:'#9edbb1' };
@@ -243,7 +244,7 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),equipment:blankEquipment(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[],slotted:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
+  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),inventorySlots:[],bankSlots:[],equipment:blankEquipment(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[],slotted:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
 }
 export function freshCharacterSave(){
  const d=defaultSave();
@@ -311,6 +312,8 @@ export function validSave(raw){
   }else if(d.characterFresh){
    d.onboarding={area:'world',tutorial:{hitStyles:[],skillsRead:false},teleportScrolls:0,activatedPortals:['oakrest']};
   }
+  d.inventorySlots=sanitizeSlotOrder(raw.inventorySlots,inventoryKeyList(d,'bag'),BAG_MAX_SLOTS);
+  d.bankSlots=sanitizeSlotOrder(raw.bankSlots,inventoryKeyList(d,'vault'),VAULT_MAX_SLOTS);
   for(const style of STYLE_ORDER){
     for(const slot of EXTRA_SLOTS){
       const id=raw.equipment?.[style]?.[slot];

@@ -308,7 +308,7 @@ function renderBook(){
  }else if(bookTab==='equip'){
   renderEquipmentPaperDoll(host,data,bookStyle,showItemDetail);
  }else if(bookTab==='inventory'){
-  renderInventoryGrid(host,data,showItemDetail);
+  renderInventoryGrid(host,data,showItemDetail,()=>{save();renderBook();});
  }else if(bookTab==='quests'){
   renderQuestPage(host,{area:data.onboarding?.area||'world',defeated:data.defeated||0,quest:$('quest-text').textContent,progress:$('quest-progress').textContent});
  }else if(bookTab==='map'){

@@ -30,7 +30,7 @@ test('world extension builds solid services and supports the new frontier',()=>{
  assert.equal(blocked(30,14,.35),false,'shop floor is walkable');
  assert.equal(blocked(-25.5,14,.35),false,'bank doorway is open');
  assert.equal(blocked(25.5,14,.35),false,'shop doorway is open');
- assert.equal(blocked(-25.5,17.25,.35),true,'bank facade is a real wall away from doorway');
+ assert.equal(blocked(-24,18.5,.35),true,'grand bank front facade is a real wall away from doorway');
  assert.equal(blocked(0,-25,.35),false,'central gate road must remain traversable');
  assert.equal(blocked(0,-98,.35),false,'forest bandit area is inside world');
  assert.equal(blocked(0,-121,.35),true,'world is still bounded');

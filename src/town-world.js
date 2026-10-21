@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
+import {furnishGrandBank,buildGrandBankFacade} from './bank-architecture.js';
 
 /**
  * Walkable starter town. Every building has a real doorway, four separate
@@ -205,7 +206,9 @@ function makeInteriors(group,build){
   const floorMaterial=['bank','hall','guard'].includes(kind)?floorFinishes.stone:floorFinishes.wood;
   const floor=block(group,floorMaterial,0,-.095,0,w+.16,.22,d+.16,false);
   floor.name=build.id+' finished interior floor';
-  if(['bank','store','forester'].includes(kind)){
+  if(kind==='bank'){
+    furnishGrandBank(group,build,shared,block,wallCollider);
+  }else if(['store','forester'].includes(kind)){
     // Counter lies behind the reachable front half, with space to walk inside.
     block(group,kind==='bank'?shared.stone:shared.timber,0,1,-1.22,w*.64,1.5,.65);
     block(group,shared.trim,0,1.8,-1.22,w*.66,.18,.79);
@@ -214,12 +217,7 @@ function makeInteriors(group,build){
       block(group,shared.wood,x,1.5,-d/2+.57,.64,2.8,.56);
       block(group,shared.trim,x,2.55,-d/2+.20,1,.14,1.15);
     }
-    if(kind==='bank'){
-      // Vault door and coin piles identify the bank from inside.
-      block(group,shared.stone,0,1.7,-d/2+.18,2.1,2.9,.22);
-      const dial=new THREE.Mesh(new THREE.TorusGeometry(.54,.13,8,14),shared.gold);
-      dial.position.set(0,1.76,-d/2+.38);group.add(dial);
-    }else if(kind==='store'){
+    if(kind==='store'){
       for(let i=0;i<4;i++){
         block(group,i%2?shared.moss:shared.red,-w*.28+i*.63,2.06,-d/2+.66,.42,.55,.48);
       }
@@ -285,8 +283,7 @@ function decorateFacade(group,build,h){
   const labels={bank:'OAKREST BANK',store:'GENERAL STORE',forester:'FORESTER',hall:"WARDEN'S HALL",workshop:'WORKSHOP',guard:'CITY WATCH'};
   if(labels[kind])makeBuildingNameplate(group,labels[kind],h+.21,d/2+.45);
   if(kind==='bank'){
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.14,8,18),shared.gold);
-    ring.position.set(0,h+.99,d/2+.33);group.add(ring);
+    buildGrandBankFacade(group,build,h,shared,block,wallCollider);
   }else if(kind==='store'){
     for(let i=-3;i<=3;i++)block(group,i%2?shared.red:shared.cloth,i*.47,3.33,d/2+.85,.46,.28,1.4);
   }else if(kind==='forester'){
@@ -299,7 +296,7 @@ function buildHouse(scene,build){
   const g=new THREE.Group();
   g.position.set(build.x,terrainHeight(build.x,build.z),build.z);
   g.rotation.y=FACING[build.face];scene.add(g);
-  const {w,d,kind}=build,h=['bank','store','forester','hall'].includes(kind)?5.15:4.15;
+  const {w,d,kind}=build,h=kind==='bank'?6.05:['store','forester','hall'].includes(kind)?5.15:4.15;
   const wall=.36,opening=3.15,edge=(w-opening)/2;
   const base=bodyColours[kind];
   // Four physical walls with a front opening. These shape meshes and collision

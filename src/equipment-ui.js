@@ -2,6 +2,8 @@ import {STYLE_ORDER,LOADOUTS,ARMOUR,canEquipWeapon,canEquipArmour,ownsWeapon,own
 import {EQUIPMENT_SLOTS,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
 import {weaponDisplay} from './attack-rules.js';
+import {positionedEntries,reorderSlot,BAG_MIN_SLOTS,BAG_MAX_SLOTS} from './item-slot-layout.js';
+import {bindSlotDrag} from './slot-drag.js';
 const node=(tag,text,parent,cls)=>{
  const e=document.createElement(tag);if(cls)e.className=cls;
  if(text!==null&&text!==undefined)e.textContent=text;
@@ -30,23 +32,36 @@ export function inventoryEntries(data){
  if(data.coins>0)list.push({canonical:'currency.coins',kind:'coins',id:'coins',qty:Math.floor(data.coins)});
  return list;
 }
-export function renderInventoryGrid(host,data,examine){
+export function renderInventoryGrid(host,data,examine,onReorder=()=>{}){
+ const entries=inventoryEntries(data);
  const head=node('div',null,host,'oak-inventory-heading');
  node('strong','INVENTORY',head);
- node('span',inventoryEntries(data).length+' items · '+data.coins+' coins',head);
- node('p','Tap an item to examine its use, bonuses and requirements. From there you can equip it.',host,'oak-inventory-hint');
+ node('span',entries.length+' items · '+data.coins+' coins',head);
+ node('p','Tap to examine. Drag an item to an empty slot or swap it with another item. On a keyboard, use Alt + arrow keys.',host,'oak-inventory-hint');
  const grid=node('div',null,host,'oak-inventory-grid');
- const entries=inventoryEntries(data);
- for(let i=0;i<Math.max(28,entries.length);i++){
-  const entry=entries[i];
-  if(!entry){node('div',null,grid,'oak-inventory-empty').setAttribute('aria-hidden','true');continue;}
+ grid.dataset.columns='4';
+ const cells=positionedEntries(entries,data.inventorySlots,BAG_MIN_SLOTS,BAG_MAX_SLOTS);
+ for(let i=0;i<cells.length;i++){
+  const entry=cells[i];
+  if(!entry){
+   const empty=node('button',null,grid,'oak-inventory-empty oak-drag-slot');
+   empty.type='button';empty.dataset.scope='bag';empty.dataset.slotIndex=String(i);
+   empty.setAttribute('aria-label','Empty inventory slot '+(i+1));empty.tabIndex=-1;
+   continue;
+  }
   const item=getItem(entry.canonical);if(!item)continue;
-  const tile=button(grid,'Examine '+item.title,()=>examine(entry.canonical),'oak-inventory-item');
-  tile.dataset.kind=item.kind;
+  const tile=button(grid,'Examine '+item.title,()=>examine(entry.canonical),'oak-inventory-item oak-drag-slot');
+  tile.dataset.kind=item.kind;tile.dataset.scope='bag';tile.dataset.slotIndex=String(i);
+  tile.dataset.canonical=entry.canonical;
   tile.setAttribute('aria-label','Examine '+item.title+(entry.qty>1?', quantity '+entry.qty:''));
+  tile.title='Drag to arrange · Tap to examine '+item.title;
   icon(tile,entry.canonical);
   if(entry.qty>1)node('span',String(entry.qty),tile,'oak-item-quantity');
  }
+ bindSlotDrag(grid,({fromScope,toScope,fromIndex,toIndex})=>{
+  if(fromScope!=='bag'||toScope!=='bag')return;
+  if(reorderSlot(data,'bag',entries,fromIndex,toIndex))onReorder();
+ });
 }
 const activeSlot=(data,style,slot)=>{
  if(slot==='weapon'){const id=data.gear?.[style];return ownsWeapon(data,style,id)?canonical('weapon',id,style):null;}

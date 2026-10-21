@@ -74,3 +74,23 @@
  .town-item-tile,.town-item-empty{min-height:40px}
 }
 @media(prefers-reduced-motion:reduce){.town-item-tile,.town-tab{transition:none}}
+
+
+/* Bankable tile interactions share one visual language across the vault and bag. */
+#town-panel .town-card{width:min(1080px,100%);border-color:#bda779;background:linear-gradient(145deg,#374039,#192924)}
+.town-bank-view .town-item-toolbar{border:1px solid #8f7855;background:#142720;padding:10px 12px;border-radius:6px}
+.town-bank-drag-hint{font-size:12px;color:#e8d5ae!important;margin:8px 0 12px!important}
+.town-vault h3:before{content:'◈ ';color:#d9b56f}
+.town-item-grid .town-item-tile.town-tile-filtered{visibility:hidden;pointer-events:none}
+.town-item-grid .oak-drag-slot{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.town-item-grid .oak-slot-source{opacity:.38}
+.town-item-grid .oak-slot-over{box-shadow:inset 0 0 0 3px #f1dba4;background:#526f5a}
+.town-item-grid .town-item-empty{cursor:default;color:transparent}
+.oak-slot-ghost{position:fixed!important;z-index:10000;pointer-events:none!important;transform:translate(-50%,-50%);opacity:.88;
+ border:2px solid #efce88!important;border-radius:7px!important;background:#294638!important;
+ box-shadow:0 9px 28px #000c!important;display:flex;align-items:center;justify-content:center}
+.oak-slot-ghost img{max-width:100%;max-height:100%;object-fit:contain}
+@media(max-height:580px){
+ .town-bank-drag-hint{font-size:11px;margin:3px 0 7px!important}
+ .town-bank-layout{grid-template-columns:minmax(0,1fr) minmax(210px,240px)}
+}

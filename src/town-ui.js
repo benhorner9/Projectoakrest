@@ -2,6 +2,8 @@ import {LOADOUTS,ARMOUR,STYLE_ORDER,levelFromXp} from './rules.js';
 import {SLOT_ITEMS,STARTER_SETS} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
 import {SHOP_STOCK,missingStarterSetPieces,starterSetPrice,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
+import {positionedEntries,reorderSlot,positionTransfer,BAG_MIN_SLOTS,VAULT_MIN_SLOTS,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from './item-slot-layout.js';
+import {bindSlotDrag} from './slot-drag.js';
 
 /**
  * Classic RPG interfaces: item-icon grids, a selected-item inspection panel
@@ -79,17 +81,20 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   if(equipment)onEquipmentChange();
   if(message)notify(message);
   render();
+  // Transactions rebuild the slot grids. Never leave them hidden beneath the
+  // modal header after the panel's previous scroll position is restored.
+  body.scrollTop=0;
  }
  const visible=(entry)=> (tab==='all'||groupFor(entry)===tab)&&
   (!search||entry.title.toLowerCase().includes(search));
  function filterTiles(){
   for(const tile of body.querySelectorAll('.town-item-tile')){
-   tile.hidden=!((tab==='all'||tile.dataset.group===tab)&&
-    (!search||tile.dataset.search.includes(search)));
+   tile.classList.toggle('town-tile-filtered',!((tab==='all'||tile.dataset.group===tab)&&
+    (!search||tile.dataset.search.includes(search))));
   }
   for(const grid of body.querySelectorAll('.town-item-grid')){
    const empty=grid.nextElementSibling;
-   if(empty?.classList.contains('town-grid-empty'))empty.hidden=[...grid.querySelectorAll('.town-item-tile')].some(c=>!c.hidden);
+   if(empty?.classList.contains('town-grid-empty'))empty.hidden=[...grid.querySelectorAll('.town-item-tile')].some(c=>!c.classList.contains('town-tile-filtered'));
   }
  }
  function tabs(host,choices){
@@ -106,9 +111,10 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   input.setAttribute('aria-label','Find a bank item');
   input.addEventListener('input',()=>{search=input.value.trim().toLowerCase();filterTiles();});
  }
- function tile(grid,{name,canonicalId,group='gear',qty=1,key,scope,onChoose,selectedNow,iconIds=[]}){
+ function tile(grid,{name,canonicalId,group='gear',qty=1,key,scope,slotIndex,onChoose,selectedNow,iconIds=[]}){
   const b=button(grid,null,onChoose,'town-item-tile'+(selectedNow?' is-selected':''));
   b.dataset.search=name.toLowerCase();b.dataset.group=group;
+  if(scope){b.classList.add('oak-drag-slot');b.dataset.scope=scope;b.dataset.canonical=canonicalId;b.dataset.slotIndex=String(slotIndex);}
   b.title=name+(qty>1?' · '+qty:'');
   b.setAttribute('aria-label','Select '+name+(scope?' in '+(scope==='vault'?'bank':'backpack'):'')+(qty>1?', quantity '+qty:''));
   b.setAttribute('aria-pressed',String(!!selectedNow));
@@ -120,21 +126,30 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
  }
  function grid(host,entries,scope=''){
   const g=node('div',null,host,'town-item-grid'+(scope==='bag'?' town-bag-grid':''));
+  g.dataset.columns=scope==='bag'?'4':scope==='vault'?'8':'6';
   g.setAttribute('role','group');g.setAttribute('aria-label',scope==='vault'?'Stored bank items':scope==='bag'?'Backpack items':'Shop stock');
-  for(const e of entries){
-   if(scope){
+  const data=getData(),isBank=scope==='vault'||scope==='bag';
+  const placed=isBank?positionedEntries(entries,data[scope==='vault'?'bankSlots':'inventorySlots'],
+    scope==='vault'?VAULT_MIN_SLOTS:BAG_MIN_SLOTS,
+    scope==='vault'?VAULT_MAX_SLOTS:BAG_MAX_SLOTS):entries;
+  for(let i=0;i<placed.length;i++){
+   const e=placed[i];
+   if(!e){
+    const empty=node('button',null,g,'town-item-empty oak-drag-slot');
+    empty.type='button';empty.dataset.scope=scope;empty.dataset.slotIndex=String(i);
+    empty.setAttribute('aria-label','Empty '+(scope==='vault'?'bank':'backpack')+' slot '+(i+1));
+    empty.tabIndex=-1;continue;
+   }
+   if(isBank){
     tile(g,{name:e.title,canonicalId:e.canonical,group:groupFor(e),qty:e.qty,scope,
-      key:entryKey(e),selectedNow:selected===entryKey(e),onChoose:()=>{selected=entryKey(e);render();}});
+      slotIndex:i,key:entryKey(e),selectedNow:selected===entryKey(e),onChoose:()=>{selected=entryKey(e);render();}});
    }else{
     tile(g,{name:e.label,canonicalId:e.icon,group:e.kind==='bundle'?'sets':'gear',
       iconIds:e.kind==='bundle'?['armour.'+STARTER_SETS[e.style].chest]:[],
       selectedNow:selected===stockKey(e),onChoose:()=>{selected=stockKey(e);render();}});
    }
   }
-  // Cells remain visible even in small starter inventories; bank expansion is
-  // organic as the character acquires more gear.
-  const min=scope==='bag'?20:scope==='vault'?32:24;
-  for(let i=entries.length;i<min;i++)node('span',null,g,'town-item-empty').setAttribute('aria-hidden','true');
+  if(!isBank)for(let i=entries.length;i<24;i++)node('span',null,g,'town-item-empty').setAttribute('aria-hidden','true');
   const empty=node('p','No items match this view.',host,'town-grid-empty');empty.hidden=true;
   return g;
  }
@@ -151,13 +166,21 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
    node('span',label,line);node('strong',value,line);
   }
  }
- function bankTransfer(entry,amount){
+ function bankTransfer(entry,amount,targetIndex=null){
   const dir=entry.scope==='vault'?'withdraw':'deposit',data=getData();
+  const sourceEntries=targetIndex!==null?bankGridEntries(data,entry.scope):null;
+  const destScope=entry.scope==='vault'?'bag':'vault';
+  const destEntries=targetIndex!==null?bankGridEntries(data,destScope):null;
   let moved=0,equipment=false;
   if(entry.kind==='coins')moved=bankCoins(data,dir,amount);
   else if(entry.kind==='material')moved=bankMaterials(data,entry.id,dir,amount);
   else {equipment=true;moved=bankEquipment(data,entry.kind,entry.id,dir,entry.style)?1:0;}
   if(!moved){notify(equipment?'Unequip this item before storing it, or clear space in your backpack.':'Nothing to transfer.');return;}
+  if(targetIndex!==null){
+   // Ownership is changed only by the existing validated bank functions.
+   const remains=bankGridEntries(data,entry.scope).some(e=>e.canonical===entry.canonical);
+   if(!remains)positionTransfer(data,entry.scope,destScope,entry.canonical,targetIndex,sourceEntries,destEntries);
+  }
   selected=entryKey({...entry,scope:dir==='deposit'?'vault':'bag'});
   changed((dir==='deposit'?'Stored ':'Withdrew ')+(moved>1?moved+' ':'')+entry.title,equipment);
  }
@@ -193,6 +216,7 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   const top=node('div',null,frame,'town-item-toolbar');
   node('span','VAULT '+bankGridEntries(data,'vault').length+' slots · '+quantity(bank.coins)+' coins',top);
   node('span','ON YOU '+quantity(data.coins)+' coins',top);
+  node('p','Drag items from your backpack into the vault to deposit, or from the vault to withdraw. Drag within either grid to rearrange. Tap for quantity controls.',frame,'town-bank-drag-hint');
   tabs(frame,[['all','ALL'],['gear','EQUIPMENT'],['supplies','SUPPLIES']]);
   searchBox(frame);
   const content=node('div',null,frame,'town-bank-layout');
@@ -283,6 +307,22 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
    $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='notice'?'READ · T':target.type==='citizen'?'TALK · T':'SPEAK · T';
   }
  }
+ // One delegated handler survives bank panel rerenders on both iPad and desktop.
+ bindSlotDrag(body,({fromScope,toScope,fromIndex,toIndex,canonical})=>{
+  if(service?.id!=='bank'||panel.hidden)return;
+  const data=getData();
+  const list=bankGridEntries(data,fromScope);
+  const cells=positionedEntries(list,data[fromScope==='vault'?'bankSlots':'inventorySlots'],
+    fromScope==='vault'?VAULT_MIN_SLOTS:BAG_MIN_SLOTS,
+    fromScope==='vault'?VAULT_MAX_SLOTS:BAG_MAX_SLOTS);
+  const entry=cells[fromIndex];
+  if(!entry||entry.canonical!==canonical)return;
+  if(fromScope===toScope){
+   if(reorderSlot(data,fromScope,list,fromIndex,toIndex)){onChange();render();}
+  }else if(['bag','vault'].includes(fromScope)&&['bag','vault'].includes(toScope)){
+   bankTransfer(entry,Infinity,toIndex);
+  }
+ });
  $('town-interact-button').addEventListener('click',()=>{
   if(lastPosition)interact({...lastPosition,allowed:true,time:getTime()});
  });

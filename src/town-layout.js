@@ -4,7 +4,7 @@
  * elevations from drifting away from the actual building meshes.
  */
 export const OAKREST_BUILDINGS=Object.freeze([
-  {id:'bank',x:-30,z:14,w:10,d:9,face:'east',kind:'bank'},
+  {id:'bank',x:-30,z:14,w:14,d:12,face:'east',kind:'bank'},
   {id:'store',x:30,z:14,w:10,d:9,face:'west',kind:'store'},
   {id:'forester',x:-30,z:46,w:11,d:9,face:'east',kind:'forester'},
   {id:'cottage-a',x:-14,z:12,w:8,d:7,face:'east',kind:'home'},
@@ -50,12 +50,12 @@ export const OAKREST_MARKET_CRATES=Object.freeze([
  [-7,16,.88],[-8.2,16.6,.6],[7.1,22,1],[7,21,.6],[-22,36,.85],[23,36,.7]
 ]);
 export const OAKREST_MARKET_BARRELS=Object.freeze([
- [-18.5,15],[-18.5,16.2],[20,20.8],[21.1,20.5],[-15,35],[10.2,-5]
+ [-20.6,25],[-20.6,26.2],[20,20.8],[21.1,20.5],[-15,35],[10.2,-5]
 ]);
 export const OAKREST_VEGETABLE_BEDS=Object.freeze([[-10,51],[21,58],[-22,54]]);
 export const OAKREST_PATHS=Object.freeze([
   [[0,-13],[0,29]], [[-4.6,29],[-4.6,50]], [[4.6,29],[4.6,50]], [[0,50],[0,69]],
-  [[0,20],[-23,20],[-23,14]], [[0,17],[23,17],[24.4,14]],
+  [[0,20],[-19.8,20],[-19.8,14]], [[0,17],[23,17],[24.4,14]],
   [[-4.6,46],[-24.4,46]], [[4.6,46],[19,46],[24.4,42]],
   [[0,12],[-9.4,12]], [[0,8],[9.4,8]], [[0,28],[-9.4,28]], [[0,27],[9.4,27]],
   [[0,0],[-24.4,0],[-24.4,-2]], [[0,2.8],[29,2.8],[29,1.6]],

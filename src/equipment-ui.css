@@ -46,3 +46,13 @@
  .touch-enabled .progression-panel{position:fixed;left:18px;top:90px;bottom:150px;width:390px;max-height:none}
  .oak-inventory-item,.oak-inventory-empty{height:54px;aspect-ratio:auto}
 }
+
+
+/* Drag-and-drop item rearrangement does not change the four-column RuneScape-
+   inspired inventory size or the existing item Examine interactions. */
+.oak-inventory-grid .oak-drag-slot{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.oak-inventory-grid .oak-inventory-empty{border:1px solid #776e5a;background:#303931;box-shadow:inset 0 1px 5px #070b0c99;
+ min-width:0;aspect-ratio:1;padding:0;border-radius:4px;cursor:default}
+.oak-inventory-grid .oak-slot-source{opacity:.35}
+.oak-inventory-grid .oak-slot-over{background:#426049!important;outline:2px solid #efce88;outline-offset:-2px}
+.oak-inventory-grid .oak-slot-ghost{pointer-events:none}
