@@ -34,6 +34,12 @@ let browser;
   await page.waitForFunction(()=>window.oakrestQA,{timeout:20000});
   await page.locator('#begin').click();
   await page.waitForTimeout(360);
+  if(config.name==='phone-landscape'){
+    const skillCaption=page.locator('#skills .skill .name').first();
+    assert.ok(await skillCaption.count(),'combat skill captions must remain accessible');
+    const size=await skillCaption.evaluate(element=>parseFloat(getComputedStyle(element).fontSize));
+    assert.ok(size>=9,'compact landscape ability labels should be legible: '+size+'px');
+  }
   const vitals=await page.locator('.player-hud .vitals').boundingBox();
   const menu=await page.locator('#loadout-button').boundingBox();
   const map=await page.locator('#minimap-button').boundingBox();

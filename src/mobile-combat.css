@@ -47,7 +47,7 @@
  .touch-enabled .touch-actions{width:min(268px,44vw);height:min(250px,72vh);bottom:calc(8px + env(safe-area-inset-bottom))}
  .touch-enabled .touch-actions .skill{width:47px;height:47px;min-width:47px;min-height:47px}
  .touch-enabled .touch-actions .skill .skill-icon{font-size:18px}
- .touch-enabled .touch-actions .skill .name{font-size:7px}
+ .touch-enabled .touch-actions .skill .name{font-size:9px;line-height:1.05;max-width:42px;max-height:20px}
  .touch-enabled .touch-actions #touch-attack{width:70px;height:70px;min-width:70px;min-height:70px;font-size:24px}
  .touch-enabled .touch-actions #touch-attack small{font-size:9px}
  .touch-enabled .touch-actions #touch-swap,.touch-enabled .touch-actions #touch-dodge{width:52px;height:52px;min-width:52px;min-height:52px;font-size:20px}
@@ -68,3 +68,15 @@
  mask:radial-gradient(farthest-side,transparent calc(100% - 5px),black calc(100% - 4px))}
 .touch-enabled .touch-actions #touch-attack .attack-timer{font-size:10px;line-height:1.1;color:#f9e2b0;font-weight:750;white-space:nowrap}
 .touch-enabled .touch-actions #touch-attack.recovering{filter:saturate(.76)}
+
+/* Keep compact touch controls readable for switch/keyboard users without
+   overriding the positioning transforms that preserve the right-thumb arc. */
+.touch-enabled .touch-actions button:focus-visible{
+  outline:3px solid #ffe4a6;outline-offset:3px;
+  box-shadow:0 0 0 5px #132c2ab8,0 4px 13px #071b1ab3;
+}
+@media (prefers-reduced-motion:reduce){
+  .touch-enabled .touch-actions button,.touch-enabled .touch-actions #touch-attack{
+    transition:none!important;
+  }
+}

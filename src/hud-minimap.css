@@ -81,3 +81,11 @@
   #hud .player-hud #loadout-button{height:40px;min-height:40px}
   #hud .minimap-button{--oak-map-size:108px}
 }
+
+/* Loaded after legacy Greenwood and mobile layouts; ensure compact landscape
+   ability names are genuinely legible in the final computed stylesheet. */
+@media (max-height:620px) and (orientation:landscape){
+  #hud .touch-actions .skill .name{
+    font-size:9px;line-height:1.05;max-width:42px;max-height:20px;
+  }
+}
