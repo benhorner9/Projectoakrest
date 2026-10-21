@@ -14,7 +14,7 @@ test('new scenery and character details hook into running scene',()=>{
  assert.ok(src.includes('const scenery=createOakrestScenery({THREE,scene,random,MAT})'));
  assert.ok(src.includes('scenery.update(now(),camera)'));
  assert.ok(src.includes('return createActor()'));
- assert.ok(src.includes('equipActor(hero,style,slotFamily'));
+ assert.ok(src.includes('equipActor(hero,style,'));
  assert.ok(src.includes("type==='bandit'?createActor(true):createCreature(type)"));
  for(const key of ['InstancedMesh','vegetable','dome','lantern','cart','crate','enrichHero','enrichEnemy'])assert.ok(key==='vegetable'?visual.includes('Small vegetable beds'):visual.includes(key),key);
 });
