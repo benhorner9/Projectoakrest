@@ -84,8 +84,11 @@ test('all room types have visible finished architecture and a clean, unobstructe
    const roof=scene.getObjectByName(b.id+' removable roof');
    const main=roof.parent;
    assert.ok(main.children.some(m=>m.name===b.id+' finished interior floor'),b.id+' no floor');
-   assert.ok(main.children.filter(m=>m.userData.cutawaySide).length>=22,
-    b.id+' does not have detailed, detachable facade and wall trim');
+   const sections=main.children.filter(m=>m.userData.cutawaySide);
+   assert.ok(sections.length>=8,b.id+' has missing cutaway geometry');
+   assert.ok(new Set(sections.map(m=>m.userData.cutawaySide)).size===4,
+    b.id+' should have independently hideable walls on all four sides');
+   assert.ok(sections.length<=100,b.id+' architectural detail exceeds the intended iPad draw budget');
    const indoors=world(b,0,b.d*.18);
    assert.equal(blocked(indoors.x,indoors.z,.30),false,b.id+' furnished entrance aisle obstructed');
   }
