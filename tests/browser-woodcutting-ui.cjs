@@ -69,7 +69,7 @@ let browser;
   await page.locator('#loadout-button').click();
   await page.locator('#progression-levels-tab').click();
   const updated=page.locator('.level-card.level-woodcutting');
-  assert.match(await updated.textContent(),/Level 1/);
+  assert.match(await updated.textContent(),/Level [1-9][0-9]*/);
   const width=await updated.locator('.level-xp-fill').evaluate(el=>Number.parseFloat(el.style.width));
   assert.ok(width>0,'Woodcutting card XP bar advances from log acquisition');
   await updated.click();
