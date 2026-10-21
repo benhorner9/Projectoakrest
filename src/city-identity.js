@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createSurfaceMaterial} from './visual-fidelity.js';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
 import {OAKREST_GARDEN_BENCHES,OAKREST_SQUARE_BENCHES,OAKREST_TRADE_TABLES,OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS} from './town-layout.js';
 
@@ -16,21 +17,21 @@ export const CITY_DISTRICTS=Object.freeze([
   {id:'wardens',name:"Warden's Hall",x:-29,z:76,description:"The city's civic and defensive heart"}
 ]);
 const mat={
- stone:new THREE.MeshLambertMaterial({color:'#b8b4a1',flatShading:true}),
- pale:new THREE.MeshLambertMaterial({color:'#d2c6a9',flatShading:true}),
- cobble:new THREE.MeshLambertMaterial({color:'#a7a38e',flatShading:true}),
- dark:new THREE.MeshLambertMaterial({color:'#566559',flatShading:true}),
- bronze:new THREE.MeshLambertMaterial({color:'#b99a64',flatShading:true}),
- iron:new THREE.MeshLambertMaterial({color:'#59645c',flatShading:true}),
- bark:new THREE.MeshLambertMaterial({color:'#705039',flatShading:true}),
- barkLight:new THREE.MeshLambertMaterial({color:'#8e6546',flatShading:true}),
+ stone:createSurfaceMaterial(THREE,'#b8b4a1','limestone',{flatShading:true}),
+ pale:createSurfaceMaterial(THREE,'#d2c6a9','limestone',{flatShading:true}),
+ cobble:createSurfaceMaterial(THREE,'#a7a38e','road',{flatShading:true}),
+ dark:createSurfaceMaterial(THREE,'#566559','limestone',{flatShading:true}),
+ bronze:new THREE.MeshStandardMaterial({color:'#b99a64',roughness:.4,metalness:.58,flatShading:true}),
+ iron:new THREE.MeshStandardMaterial({color:'#59645c',roughness:.49,metalness:.68,flatShading:true}),
+ bark:createSurfaceMaterial(THREE,'#705039','timber',{flatShading:true}),
+ barkLight:createSurfaceMaterial(THREE,'#8e6546','timber',{flatShading:true}),
  leaf:new THREE.MeshLambertMaterial({color:'#577a4c',flatShading:true}),
  leafLight:new THREE.MeshLambertMaterial({color:'#74925c',flatShading:true}),
  leafGold:new THREE.MeshLambertMaterial({color:'#9cab64',flatShading:true}),
- cloth:new THREE.MeshLambertMaterial({color:'#486f62',side:THREE.DoubleSide}),
- brass:new THREE.MeshLambertMaterial({color:'#d5bc7f',flatShading:true}),
- wood:new THREE.MeshLambertMaterial({color:'#684d38',flatShading:true}),
- clay:new THREE.MeshLambertMaterial({color:'#947353',flatShading:true}),
+ cloth:createSurfaceMaterial(THREE,'#486f62','cloth',{side:THREE.DoubleSide}),
+ brass:new THREE.MeshStandardMaterial({color:'#d5bc7f',roughness:.29,metalness:.74,flatShading:true}),
+ wood:createSurfaceMaterial(THREE,'#684d38','timber',{flatShading:true}),
+ clay:createSurfaceMaterial(THREE,'#947353','plaster',{flatShading:true}),
  flower:new THREE.MeshLambertMaterial({color:'#e6be7f',flatShading:true}),
  flowerBlue:new THREE.MeshLambertMaterial({color:'#a2bdd2',flatShading:true}),
  water:new THREE.MeshLambertMaterial({color:'#76a2a0',transparent:true,opacity:.78,depthWrite:false}),
