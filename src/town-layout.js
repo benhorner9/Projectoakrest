@@ -40,6 +40,10 @@ export function localBuildingPosition(build,x,z){
 }
 export function buildingAt(x,z,padding=0){
   for(const build of OAKREST_BUILDINGS){
+    const lateral=(build.face==='east'||build.face==='west');
+    const halfX=(lateral?build.d:build.w)*.5+padding;
+    const halfZ=(lateral?build.w:build.d)*.5+padding;
+    if(Math.abs(x-build.x)>halfX||Math.abs(z-build.z)>halfZ)continue;
     const p=localBuildingPosition(build,x,z);
     if(Math.abs(p.x)<=build.w*.5+padding&&Math.abs(p.z)<=build.d*.5+padding)return build;
   }
@@ -48,6 +52,9 @@ export function buildingAt(x,z,padding=0){
 export function nearestBuildingEdge(x,z){
   let nearest=null;
   for(const build of OAKREST_BUILDINGS){
+    const lateral=(build.face==='east'||build.face==='west');
+    if(Math.abs(x-build.x)>(lateral?build.d:build.w)*.5+3.1||
+       Math.abs(z-build.z)>(lateral?build.w:build.d)*.5+3.1)continue;
     const p=localBuildingPosition(build,x,z);
     // Rectangular distance outside the rotated footprint, zero inside.
     const dx=Math.max(0,Math.abs(p.x)-build.w*.5);
