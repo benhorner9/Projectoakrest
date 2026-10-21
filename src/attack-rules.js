@@ -14,5 +14,5 @@ export function projectileTravel(distance,speed,dt,maxDistance) {
   return {step,distance:next,expired:next>=maxDistance-1e-6};
 }
 export function weaponDisplay(w) {
-  return `${w.basic} damage · ${w.interval.toFixed(2)}s/attack · ${w.reach.toFixed(1)} range`;
+  return `${w.basic} weapon power · ${w.interval.toFixed(2)}s/attack · ${w.reach.toFixed(1)} range`;
 }
