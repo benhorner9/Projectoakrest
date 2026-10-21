@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {damp} from './motion.js';
 import {attackPose} from './gameplay-math.js';
+import {abilityMotion} from './animation-language.js';
 import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
@@ -124,6 +125,11 @@ export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0
  }else if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
  else if(['frost','ember'].includes(family)){right=.38+wind*.8+release*.3;left=.35+wind*.45;elbow=.35;}
  else {right+=wind*1.6+release*.32;elbow=.15+wind*.35;left=family==='greatsword'?right*.8:family==='daggers'?.25-wind*.4+release*.55:left;}
+ const cue=chopping?abilityMotion(family,null,0,0):abilityMotion(family,attack?.abilityKind,wind,release,attack?.combo);
+ right+=cue.right;left+=cue.left;elbow+=cue.elbow;
+ u.rig.rotation.y=damp(u.rig.rotation.y,cue.twist,15,dt);
+ u.head.rotation.z=damp(u.head.rotation.z,cue.head,12,dt);
+ if(!chopping)u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05+cue.lean,16,dt);
  u.rightArm.rotation.x=pose.phase==='release'&&pose.amount>.93?right:damp(u.rightArm.rotation.x,right,35,dt);u.leftArm.rotation.x=damp(u.leftArm.rotation.x,left,25,dt);
  const contact=attack?.contactDuration?Math.max(0,Math.min(1,(t-attack.impactAt)/attack.contactDuration)):0;
  const swing=attack?.halfAngle?(-attack.halfAngle+2*attack.halfAngle*contact)*(attack.reverse?-1:1):0;
