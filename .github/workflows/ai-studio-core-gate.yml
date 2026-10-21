@@ -1,0 +1,53 @@
+name: Oakrest AI Studio Core Gate
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oakrest-ai-studio-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-quality:
+    name: Core QA — parse, unit, build, Chromium smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate source
+        run: npm run check
+      - name: Run unit and regression tests
+        run: npm test
+      - name: Build static release
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Chromium gameplay smoke
+        run: node tests/browser-smoke.cjs
+      - name: Preserve diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oakrest-ai-core-qa
+          path: qa/
+          if-no-files-found: ignore
+
+# This *fast* signal does not replace the existing comprehensive Greenwood
+# workflow, iPad Safari signoff, or shared-host dev release verification.
