@@ -1,0 +1,88 @@
+/* Oakrest minimal play HUD: player health, a single menu, and combat actions. */
+#hud .topbar{z-index:9;justify-content:flex-end;align-items:flex-start;height:auto;min-height:0;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));background:none;pointer-events:none}
+#hud .topbar .brand,#hud .topbar .location,#hud #help-button{display:none!important}
+#hud #loadout-button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:86px;width:auto;height:44px;padding:0 12px;border-radius:9px;border:1px solid #d5bb8699;background:#132e2cf0;box-shadow:0 3px 14px #061d1aaa;color:#f8e6c6;font-size:19px;font-weight:800;letter-spacing:.05em;touch-action:manipulation;pointer-events:auto}
+#hud #loadout-button span{font-size:11px}
+#hud .vitals{z-index:8;position:absolute;top:max(10px,env(safe-area-inset-top));left:max(14px,env(safe-area-inset-left));width:min(238px,calc(100vw - 126px));min-width:0;min-height:62px;padding:8px 10px;display:flex;align-items:center;gap:9px;border-radius:10px;border:1px solid #cdb68880;background:linear-gradient(135deg,#163732ef,#102724ef);box-shadow:0 3px 16px #00141275;backdrop-filter:blur(8px);float:none}
+#hud .vitals-portrait{width:43px;height:43px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,#53634c,#1b3b34);color:#eed49e;border:1px solid #e1c8999c;border-radius:8px;font-size:25px}
+#hud .vitals-info{flex:1;min-width:0}
+#hud .vitals-heading{display:flex;justify-content:space-between;align-items:center;gap:4px;min-height:18px}
+#hud .character-name-label{font-size:11px!important;font-weight:750;max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hud .combat-level-badge{position:static;float:none;margin:0;padding:3px 5px;flex:none;font-size:9px;border-radius:5px}
+#hud .vital-line{display:flex;justify-content:flex-start;clear:none;gap:0;margin-top:1px;font-size:10px}
+#hud .vital-line strong{font-size:11px;letter-spacing:.02em}
+#hud .vital-line #level-label,#hud .vitals .xp,#hud .vitals .stat-line{display:none}
+#hud .vitals .health{margin-top:5px;height:10px;border-radius:5px}
+#hud .quest{display:none!important}
+#hud .targetbox{top:max(73px,calc(env(safe-area-inset-top) + 65px))}
+#hud .combatbar{z-index:5;position:absolute;left:auto;right:max(12px,env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));transform:none;width:min(405px,calc(100vw - 24px));max-width:none;top:auto;min-height:0;padding:6px;display:flex;flex-direction:column;gap:6px;align-items:stretch;background:transparent!important;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;pointer-events:none}
+#hud .combatbar .weaponline,#hud .combatbar .equipment-picker,#hud .combatbar .bottom-hint{display:none!important}
+#hud .combatbar .styles,#hud .combatbar .skills{pointer-events:auto}
+#hud .combatbar .styles{display:flex;gap:5px;justify-content:flex-end}
+#hud .combatbar .style{min-width:0;min-height:36px;font-size:9px;letter-spacing:.03em;flex:0 1 94px;touch-action:manipulation}
+#hud .combatbar .skills{display:flex;gap:5px}
+#hud .combatbar .skill{min-width:0;min-height:54px;flex:1;touch-action:manipulation}
+#hud .combatbar .skill .name{font-size:9px}
+#hud .touch-look-zone{z-index:1}
+#hud .oak-menu-backdrop[hidden],#hud .progression-panel[hidden]{display:none!important}
+#hud .oak-menu-backdrop{position:absolute;inset:0;z-index:24;display:block;width:100%;height:100%;padding:0;border:0;background:rgba(3,17,18,.49);pointer-events:auto;touch-action:manipulation}
+#hud .progression-panel{z-index:25;position:absolute;top:max(64px,calc(env(safe-area-inset-top) + 56px));right:max(14px,env(safe-area-inset-right));left:auto;bottom:auto;transform:none;width:min(680px,calc(100vw - 28px));max-width:none;height:min(625px,calc(100dvh - 80px - env(safe-area-inset-top)));max-height:calc(100dvh - 80px - env(safe-area-inset-top));min-height:0;display:flex;flex-direction:column;pointer-events:auto;text-shadow:none}
+#hud .progression-card{height:100%;width:100%;max-height:none;border-radius:13px;overflow:hidden}
+#hud .progression-header{display:flex;justify-content:space-between;align-items:center;padding:13px 16px}
+#hud .progression-header #close-progression{min-width:44px;min-height:44px;font-size:18px;touch-action:manipulation}
+#hud .progression-tabs{display:flex;grid-template-columns:none;overflow-x:auto;overscroll-behavior-x:contain;flex-shrink:0;scrollbar-width:thin;gap:6px;padding:10px 12px 8px;touch-action:pan-x}
+#hud .progression-tabs button{flex:0 0 auto;min-width:83px;min-height:43px;padding:0 10px;font-size:10px;white-space:nowrap;touch-action:manipulation}
+#hud .progression-content{overflow-y:auto;flex:1;min-height:0;padding:14px 17px 24px;overscroll-behavior:contain;touch-action:pan-y}
+#hud .progression-styles{padding:5px 12px 8px}
+#hud .progression-styles button{min-height:41px}
+#hud .progression-content .oak-inventory-grid{width:min(100%,440px)}
+#hud .progression-content .oak-inventory-item,#hud .progression-content .oak-inventory-empty{min-height:56px}
+#hud .progression-content .controls-panel{position:static;display:block;width:100%;max-width:580px;max-height:none;padding:5px 0 20px;border:0!important;background:transparent!important;box-shadow:none;backdrop-filter:none;pointer-events:auto}
+#hud .progression-content .controls-panel[hidden]{display:none!important}
+#hud .progression-content .settings-heading{margin:0 0 9px;font-size:14px}
+#hud .progression-content #close-controls{display:none}
+#hud .progression-content .camera-tune-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#hud .progression-content .camera-tune-grid label{display:block}
+#hud .progression-content .camera-tune-grid input{width:100%}
+#hud .oak-page{display:grid;align-content:start;gap:14px;max-width:630px}
+#hud .oak-page h2{margin:3px 0;color:#f2dbad;font:700 19px Georgia,serif}
+#hud .oak-page p{color:#d4dfd3;font-size:13px;line-height:1.6;margin:0}
+#hud .oak-page-subtitle{font-size:11px!important;color:#a8cbb2!important;text-transform:uppercase;letter-spacing:.08em}
+#hud .oak-page-card{padding:16px;border:1px solid #baaa7f66;background:#1d3833;border-radius:10px}
+#hud .oak-page-card strong{display:block;font-size:12px;color:#e8cc94;margin-bottom:7px}
+#hud .oak-page-card .oak-page-progress{margin-top:10px;color:#a8e1af;font-weight:800}
+#hud .oak-region-map{height:min(340px,38dvh);min-height:180px;position:relative;overflow:hidden;border:1px solid #bda97f93;border-radius:11px;background:linear-gradient(to bottom,#28423b 0 26%,#44604c 26% 48%,#66845c 48% 70%,#9aa679 70% 100%)}
+#hud .oak-region-map .region{position:absolute;left:12px;font-size:11px;font-weight:800;color:#fcf5de;text-shadow:0 1px 4px #071513;letter-spacing:.04em}
+#hud .oak-region-map .deep{top:9%}#hud .oak-region-map .road{top:34%}#hud .oak-region-map .greenbelt{top:58%}#hud .oak-region-map .village{top:83%}
+#hud .oak-region-map .player-marker{position:absolute;left:var(--map-x,50%);top:var(--map-y,85%);transform:translate(-50%,-50%);height:24px;width:24px;display:grid;place-items:center;border:2px solid #fff5cd;border-radius:50%;background:#1b564b;color:#fff4c8;font-size:13px;box-shadow:0 0 0 4px #0b222555,0 3px 8px #0009;z-index:1}
+#hud .oak-region-map .north{position:absolute;right:12px;top:10px;font-size:13px;font-weight:bold;color:#f9e8c8}
+.oak-menu-open #hud .touch-look-zone,.oak-menu-open #hud .touch-controls,.oak-menu-open #hud .combatbar,.oak-menu-open #hud .loot-prompt,.oak-menu-open #hud .opening-panel{visibility:hidden;pointer-events:none}
+#hud .skill-detail{z-index:3}
+@media (hover:none),(pointer:coarse){
+ #hud .combatbar{display:none!important}
+ #hud .touch-actions{z-index:5}
+ #hud .vitals{width:min(223px,calc(100vw - 125px));padding:7px}
+ #hud .vitals-portrait{width:38px;height:38px}
+ #hud #loadout-button{min-height:44px}
+}
+@media (max-width:620px){
+ #hud .progression-panel{left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));top:max(62px,calc(env(safe-area-inset-top) + 54px));width:auto;height:calc(100dvh - 74px - env(safe-area-inset-top));max-height:none}
+ #hud .vitals{width:min(194px,calc(100vw - 118px));gap:6px}
+ #hud .vitals-portrait{width:34px;height:34px;font-size:20px}
+ #hud #loadout-button{min-width:72px;padding:0 8px}
+ #hud .progression-content .camera-tune-grid{grid-template-columns:1fr}
+ #hud .progression-tabs button{min-width:76px}
+ #hud .progression-content{padding:10px}
+ #hud .oak-region-map{height:190px}
+}
+@media(max-height:500px) and (orientation:landscape){
+ #hud .vitals{top:max(5px,env(safe-area-inset-top))}
+ #hud .topbar{padding-top:max(5px,env(safe-area-inset-top))}
+ #hud .progression-panel{top:max(51px,calc(env(safe-area-inset-top) + 44px));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));height:calc(100dvh - 57px - env(safe-area-inset-top));max-height:none;width:auto}
+ #hud .progression-header{padding:5px 10px}
+ #hud .progression-header #close-progression{min-height:35px}
+ #hud .progression-tabs{padding:5px 10px}
+ #hud .progression-tabs button{min-height:36px}
+ #hud .progression-content{padding:7px 12px}
+}
+@media(prefers-reduced-motion:reduce){#hud .progression-panel,#hud .oak-menu-backdrop{transition:none}}
