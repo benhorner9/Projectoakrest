@@ -110,6 +110,24 @@ export function graphicsProfile(quality){
  * the entire city. Never changes the gameplay camera or world collision.
  * Two recycled non-shadow-casting lights illuminate only nearby lanterns.
  */
+/**
+ * Find the closest two world-space lanterns without allocating on each frame.
+ * The caller owns the two-item output buffer, including when no light is near.
+ * Strict distance cutoff and stable source ordering match the old stable-sort
+ * selection. Keep the radius squared to avoid square-root work.
+ */
+export function selectPracticalLightIndices(positions,x,z,out,maxDistanceSq=196){
+ if(!out||out.length<2)throw new RangeError('Expected a two-index scratch buffer');
+ let a=-1,b=-1,da=maxDistanceSq,db=maxDistanceSq;
+ for(let i=0;i<positions.length;i++){
+  const pair=positions[i],dx=pair[0]-x,dz=pair[1]-z,d=dx*dx+dz*dz;
+  if(d>=maxDistanceSq)continue;
+  if(d<da){b=a;db=da;a=i;da=d;}
+  else if(d<db){b=i;db=d;}
+ }
+ out[0]=a;out[1]=b;
+ return out;
+}
 export function createOakrestLighting({THREE,scene,sun,quality='balanced',terrainHeight}){
   const practicals=[0,1].map(()=>{
     const p=new THREE.PointLight('#ffcb87',13,10,2);
@@ -124,6 +142,7 @@ export function createOakrestLighting({THREE,scene,sun,quality='balanced',terrai
   const halfWidth=25;
   Object.assign(sun.shadow.camera,{left:-halfWidth,right:halfWidth,top:halfWidth,bottom:-halfWidth});
   sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.025;sun.shadow.bias=-.0001;
+  const lightIndices=new Int32Array(2);
   let level='balanced',anchorX=NaN,anchorZ=NaN,activeLights=0;
   function setQuality(next){
     level=GRAPHICS_QUALITY[next]?next:'balanced';
@@ -156,15 +175,16 @@ export function createOakrestLighting({THREE,scene,sun,quality='balanced',terrai
     if(building){
       interior.position.set(building.x,terrainHeight(building.x,building.z)+3,building.z);
     }
-    const nearby=positions
-      .map(([lx,lz])=>({x:lx,z:lz,d:(lx-x)**2+(lz-z)**2}))
-      .filter(l=>l.d<196)
-      .sort((a,b)=>a.d-b.d);
     activeLights=0;
+    const budget=building?0:graphicsProfile(level).practicalLights;
+    if(budget)selectPracticalLightIndices(positions,x,z,lightIndices);
     for(let i=0;i<practicals.length;i++){
-      const p=practicals[i],match=nearby[i];
-      p.visible=!building&&i<graphicsProfile(level).practicalLights&&!!match;
-      if(p.visible){p.position.set(match.x,terrainHeight(match.x,match.z)+2.72,match.z);activeLights++;}
+      const p=practicals[i],index=budget>i?lightIndices[i]:-1;
+      p.visible=index>=0;
+      if(p.visible){
+        const pair=positions[index],lx=pair[0],lz=pair[1];
+        p.position.set(lx,terrainHeight(lx,lz)+2.72,lz);activeLights++;
+      }
     }
   }
   return {update,setQuality,metrics:()=>({shadowResolution:sun.shadow.mapSize.x,practicalLights:activeLights,interiorLight:interior.visible})};
