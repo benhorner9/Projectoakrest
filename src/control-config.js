@@ -1,6 +1,6 @@
 /** Independent camera and standard Gamepad API input model. Browser-safe, no dependency on Three.js. */
 export const CAMERA_DEFAULTS=Object.freeze({
- sensitivity:1,zoom:7.8,height:2.8,fov:62,smoothing:10,invertY:false,gamepadDeadzone:.18
+ sensitivity:1,zoom:7.8,height:2.8,fov:62,smoothing:10,invertY:false,gamepadDeadzone:.18,mode:'free'
 });
 export const CAMERA_LIMITS=Object.freeze({
  sensitivity:[.6,1.8],zoom:[4,13],height:[1,5],fov:[50,85],smoothing:[4,20],gamepadDeadzone:[.1,.35]
@@ -13,6 +13,7 @@ export function normalizeCameraSettings(raw={}){
    ?clampCamera(input,min,max):CAMERA_DEFAULTS[key];
  }
  settings.invertY=raw.invertY===true||raw.invertY==='true';
+ settings.mode=raw.mode==='follow'?'follow':'free';
  return settings;
 }
 export function readCameraSettings(store,key){

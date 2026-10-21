@@ -38,6 +38,10 @@
       <p class="desktop-help">WASD move · T interact with townsfolk · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
       <label for="look-speed">Camera speed <output id="look-speed-value">1.0×</output></label>
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
+      <label class="camera-mode-label" for="camera-mode">Camera mode
+        <select id="camera-mode" aria-describedby="camera-mode-help"><option value="free">Free Look</option><option value="follow">Follow Player (locked behind)</option></select>
+      </label>
+      <p id="camera-mode-help" class="camera-mode-help">Follow Player keeps the camera behind your character. Moving sideways or backwards won't swing the camera around; looking left or right turns the character with it.</p>
       <div class="camera-tune-grid">
         <label for="camera-zoom">Camera distance <output id="camera-zoom-value">7.8</output><input id="camera-zoom" type="range" min="4" max="13" step="0.2" value="7.8" /></label>
         <label for="camera-height">Camera height <output id="camera-height-value">2.8</output><input id="camera-height" type="range" min="1" max="5" step="0.2" value="2.8" /></label>

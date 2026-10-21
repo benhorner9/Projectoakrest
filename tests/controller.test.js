@@ -13,6 +13,10 @@ test('camera settings validate and clamp extreme or corrupt persisted values',()
  const settings=normalizeCameraSettings({zoom:500,fov:5,height:0,invertY:'true',smoothing:200,gamepadDeadzone:.01});
  assert.equal(settings.zoom,13);assert.equal(settings.fov,50);assert.equal(settings.height,1);
  assert.equal(settings.smoothing,20);assert.equal(settings.gamepadDeadzone,.1);assert.equal(settings.invertY,true);
+ assert.equal(settings.mode,'free');
+ assert.equal(normalizeCameraSettings({mode:'follow'}).mode,'follow');
+ assert.equal(normalizeCameraSettings({mode:'locked'}).mode,'free');
+ assert.equal(readCameraSettings({getItem:()=>JSON.stringify({mode:'follow',zoom:10})},'saved').mode,'follow');
  assert.deepEqual(readCameraSettings({getItem:()=>'{broken'},'test'),CAMERA_DEFAULTS);
  assert.deepEqual(readCameraSettings({getItem:()=>JSON.stringify({zoom:10})},'test').zoom,10);
 });

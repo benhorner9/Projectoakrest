@@ -6,6 +6,10 @@
 .camera-tune-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;border-top:1px solid #c1ab8270;padding-top:9px;margin-top:11px}
 .camera-tune-grid label{font-size:12px;line-height:1.4}
 .camera-tune-grid output,.controls-panel label output{float:right;color:#ead9b5}
+.camera-mode-label{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:13px;margin-top:11px}
+.camera-mode-label select{font:inherit;min-height:44px;flex:1;max-width:280px;padding:9px 10px;background:#233a33;color:#f4dfae;border:1px solid #c7ab77;border-radius:7px;touch-action:manipulation}
+.camera-mode-label select:focus-visible{outline:2px solid #f1d99f;outline-offset:2px}
+.camera-mode-help{font-size:11px;line-height:1.5;color:#c6d0c7;margin:7px 0 12px}
 .camera-check{display:flex!important;gap:10px;align-items:center;font-size:13px}
 .camera-check input{width:20px;height:20px;accent-color:#d5bc81;touch-action:manipulation}
 .camera-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}

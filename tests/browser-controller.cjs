@@ -44,8 +44,33 @@ let browser;
   await page.locator('#camera-height').fill('4');
   await page.locator('#camera-fov').fill('75');
   await page.locator('#camera-invert-y').check();
+  await page.locator('#camera-mode').selectOption('follow');
   assert.equal((await page.evaluate(()=>oakrestQA.state().cameraSettings)).zoom,11);
   assert.equal((await page.evaluate(()=>oakrestQA.state().cameraSettings)).invertY,true);
+  assert.equal((await page.evaluate(()=>oakrestQA.state().cameraSettings)).mode,'follow');
+  await page.locator('#close-progression').click();
+  // In locked mode moving sideways/back does not turn the character toward the camera.
+  const locked=await page.evaluate(()=>{
+   oakrestQA.teleport(0,11,0);window.virtualPad.axes=[0,0,0,0];oakrestQA.step(.15);
+   const start=oakrestQA.state();
+   window.virtualPad.axes=[0,0,.7,0];oakrestQA.step(.35);
+   const turned=oakrestQA.state();
+   window.virtualPad.axes=[0,0,0,0];oakrestQA.step(.08);
+   return {start,turned};
+  });
+  assert.ok(Math.abs(locked.turned.yaw-locked.start.yaw)>.1,'right stick turns character in follow mode');
+  assert.ok(Math.abs(locked.turned.heroHeading+locked.turned.yaw)<.02,'character faces forward along locked camera');
+  const f={x:Math.sin(locked.turned.yaw),z:-Math.cos(locked.turned.yaw)};
+  const behind=(locked.turned.cameraPosition.x-locked.turned.hero.x)*f.x+
+   (locked.turned.cameraPosition.z-locked.turned.hero.z)*f.z;
+  assert.ok(behind< -1,'camera stays behind the character after turning');
+  const strafe=await page.evaluate(()=>{
+   const before=oakrestQA.state();window.virtualPad.axes=[.85,0,0,0];oakrestQA.step(.38);
+   const after=oakrestQA.state();window.virtualPad.axes=[0,0,0,0];return {before,after};
+  });
+  assert.ok(Math.hypot(strafe.after.hero.x-strafe.before.hero.x,strafe.after.hero.z-strafe.before.hero.z)>.2,'sideways movement works');
+  assert.ok(Math.abs(strafe.after.yaw-strafe.before.yaw)<.0001,'sideways movement never rotates locked camera');
+  assert.ok(Math.abs(strafe.after.heroHeading+strafe.after.yaw)<.02,'sideways movement does not turn avatar');
   await page.evaluate(()=>{window.virtualPad.axes=[0,0,0,0];window.padAttached=false;oakrestQA.step(.1);});
   assert.equal((await page.evaluate(()=>oakrestQA.state())).gamepadConnected,false);
   assert.match(await page.locator('#gamepad-status').textContent(),/No compatible/);
@@ -53,7 +78,7 @@ let browser;
   await page.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
   const restored=await page.evaluate(()=>oakrestQA.state().cameraSettings);
   assert.equal(restored.zoom,11);assert.equal(restored.height,4);
-  assert.equal(restored.fov,75);assert.equal(restored.invertY,true);
+  assert.equal(restored.fov,75);assert.equal(restored.invertY,true);assert.equal(restored.mode,'follow');
   assert.deepEqual(errors,[]);
   console.log('PASS: simulated iPad gamepad movement, camera, disconnect and persisted camera settings.');
   await ctx.close();
