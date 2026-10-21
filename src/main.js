@@ -410,6 +410,7 @@ function spawnMonsterLoot(enemy){
  save();
 }
 function pickupNearby(){
+ if(woodcuttingTarget)stopWoodcutting();
  if(!started||hp<=0||data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm')return;
  const nearest=closestDrop(data.groundLoot,hero.position.x,hero.position.z,3.3);
  if(!nearest||!collectDrop(data,nearest))return;
@@ -509,7 +510,7 @@ function updateWoodcutting(dt,t,manualInput){
   return;
  }
  tree.approaching=false;
- if(!woodcuttingSwingStart){woodcuttingSwingStart=t;woodcuttingNextChop=t+WOODCUTTING_SWING_SECONDS;}
+ if(!woodcuttingSwingStart){woodcuttingSwingStart=t;woodcuttingNextChop=t+WOODCUTTING_SWING_SECONDS*.48;}
  if(t+1e-6<woodcuttingNextChop)return;
  woodcuttingNextChop+=WOODCUTTING_SWING_SECONDS;
  const outcome=chopOnce(data,tree.state,t,random);
@@ -809,6 +810,7 @@ function slashEffect(reach=3){
  visuals.arc(hero.position,heading,reach,STYLE_COLOURS[style],comboStage);
 }
 function doBasic(){
+ if(woodcuttingTarget)stopWoodcutting();
  if(isGameplayMenuOpen())return;const t=now();if(!started||hp<=0||dodgeTravel||pendingAbility||t<switchUntil||!basicAttackReady(t,attackUntil,!!pendingBasic))return;
  if(data.onboarding?.area!=='tutorial'&&style!=='melee'&&!ownsWeapon(data,style,data.gear[style])){toast('You need a weapon to use this combat style.');return;}
  const w=getWeapon();
@@ -844,6 +846,7 @@ function resolveBasicAttack(t){
 }
 function shiftHero(dist){const f=forward();dodgeTravel={dir:{x:f.x*Math.sign(dist),z:f.z*Math.sign(dist)},speed:Math.abs(dist)/.32,start:now(),end:now()+.32};addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
 function useAbility(index,fromQueue=false){
+ if(woodcuttingTarget)stopWoodcutting();
  if(isGameplayMenuOpen()||!started||hp<=0||dodgeTravel||(data.onboarding?.area!=='tutorial'&&!ownsWeapon(data,style,data.gear[style])))return;
  const a=activeSkillCache[index];if(!a)return;
  const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),a);
