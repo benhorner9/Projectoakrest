@@ -15,7 +15,19 @@ const ROUTES=[
   {name:'Tobin',role:'Local farmer',colour:'#a2a070',line:'It is good to see adventurers walking through Oakrest again.',path:[[-22,20],[-5,20],[-5,6],[-22,0]]},
   {name:'Sela',role:'Village watch',colour:'#657983',line:'Keep your weapons ready on the forest road. You are safe inside the palisade.',path:[[4.4,-7],[4.4,4],[4.4,17],[4.4,27]]},
   {name:'Bren',role:'Wandering resident',colour:'#9f7e89',line:'The bank keeps a secure vault for your coins and equipment.',path:[[-4.5,51],[-4.5,34],[-4.5,20],[-23,20],[-23,14]]},
-  {name:'Nell',role:'Craftswoman',colour:'#647c67',line:'Not all the best equipment is found in a shop.',path:[[5,53],[18,53],[22,54],[22,42],[5,42]]}
+  {name:'Nell',role:'Craftswoman',colour:'#647c67',line:'Not all the best equipment is found in a shop.',path:[[5,53],[18,53],[22,54],[22,42],[5,42]]},
+  {name:'Orin',role:'Warden courier',colour:'#678d83',line:"The Warden's Hall keeps the peace from the Southgate to the forest.",path:[[-22,75],[-12,75],[-12,69],[-6,69],[-6,76]]},
+  {name:'Edda',role:'Garden keeper',colour:'#9d9567',line:'The great oak was here long before the city walls. Its roots shaped the first paths.',path:[[13,58],[18,58],[18,68],[13,73],[9,73]]},
+  {name:'Crispin',role:'Market porter',colour:'#af8062',line:"Darrin's deliveries usually come through the Southgate.",path:[[19,17],[19,22],[19,31],[23,33]]},
+  {name:'Vera',role:'City watch',colour:'#5e8291',line:'The south road is safe until the woodland thins out. Past that, keep watch.',path:[[-37,-7],[-37,3],[-37,19],[-37,34]]},
+  {name:'Hettie',role:'Local resident',colour:'#a77d92',line:'Meet your friends at the Heartwood. No one in Oakrest ever gets lost for long.',path:[[4.7,51],[4.7,43],[4.7,34],[4.7,25]]},
+  {name:'Joss',role:'Old traveller',colour:'#998068',line:'I still remember when these walls were timber. The square was just a clearing.',path:[[-5.0,75],[-5,63],[-5,52],[-5,47]]}
+];
+const AMBIENT_STAFF=[
+ {name:'Captain Halden',role:'Southgate watch',colour:'#647c8d',x:-13,z:-7,line:'Welcome to Oakrest. There is an open road through the gate, but trouble starts well beyond the greenbelt.'},
+ {name:'Seren',role:'Gate sentry',colour:'#687f87',x:13,z:-7,line:'The city gates are always open to peaceful travellers.'},
+ {name:'Archivist Fenn',role:'Hall steward',colour:'#917f66',x:-29,z:76,line:"The Heartwood's age is marked in the hall's oldest records."},
+ {name:'Gilda',role:'Garden volunteer',colour:'#788f67',x:9,z:58,line:'Please mind the flowerbeds. The forester has training pines a short walk north.'}
 ];
 const STAFF={
   bank:{name:'Mara',role:'Banker',colour:'#577b90'},
@@ -62,6 +74,10 @@ export function createOakrestTownLife(scene){
     const c=STAFF[s.id];
     return person(scene,c.name,c.role,c.colour,s.npcX,s.npcZ,true);
   });
+  const standing=AMBIENT_STAFF.map((c,i)=>{
+    const npc=person(scene,c.name,c.role,c.colour,c.x,c.z,true);
+    return {...npc,line:c.line,seed:i};
+  });
   const villagers=ROUTES.map((route,i)=>{
     const start=route.path[0];
     const citizen=person(scene,route.name,route.role,route.colour,start[0],start[1]);
@@ -72,13 +88,20 @@ export function createOakrestTownLife(scene){
     if(!enabled)return;
     for(let i=0;i<villagers.length;i++){
       const v=villagers[i];
-      if(v.wait>0){v.wait-=dt;continue;}
+      // Full movement stops when the player is far away, but idle gestures
+      // still indicate occupation without requiring daily NPC teleportation.
+      if(v.wait>0){
+        v.wait-=dt;
+        v.arms[0].rotation.x=Math.sin(time*.83+i)*.13;
+        v.arms[1].rotation.x=-v.arms[0].rotation.x;
+        continue;
+      }
       let [tx,tz]=v.route.path[v.index];
       const dx=tx-v.x,dz=tz-v.z,length=Math.hypot(dx,dz);
       if(length<.32){
         if(v.index===v.route.path.length-1)v.forward=false;
         else if(v.index===0)v.forward=true;
-        v.index+=v.forward?1:-1;v.wait=.35+(i%3)*.32;v.stuck=0;continue;
+        v.index+=v.forward?1:-1;v.wait=.8+(i%3)*.55;v.stuck=0;continue;
       }
       const speed=Math.min(v.speed*dt,length),nx=dx/length*speed,nz=dz/length*speed;
       const pos=moveOnGround(v.root.position,nx,nz,.35);
@@ -100,6 +123,10 @@ export function createOakrestTownLife(scene){
         v.wait=Math.max(v.wait,.24);
       }
     }
+    for(let i=0;i<standing.length;i++){
+      const npc=standing[i];npc.arms[0].rotation.x=Math.sin(time*.7+i*2)*.11;
+      npc.arms[1].rotation.x=-npc.arms[0].rotation.x;
+    }
     for(let i=0;i<attendants.length;i++){
       const npc=attendants[i];
       npc.arms[0].rotation.x=Math.sin(time*.9+i)*.065;
@@ -112,8 +139,12 @@ export function createOakrestTownLife(scene){
       const d=Math.hypot(x-v.x,z-v.z);
       if(d<dist){nearest=v;dist=d;}
     }
+    for(const citizen of standing){
+      const d=Math.hypot(x-citizen.x,z-citizen.z);
+      if(d<dist){return {type:'citizen',id:citizen.name,label:citizen.name,role:citizen.role,line:citizen.line,distance:d};}
+    }
     return nearest?{type:'citizen',id:nearest.name,label:nearest.name,role:nearest.role,line:nearest.route.line,distance:dist}:null;
   }
-  return {update:step,nearby,count:villagers.length,staff:attendants.length,
+  return {update:step,nearby,count:villagers.length,staff:attendants.length,ambientStaff:standing.length,
     snapshot:()=>villagers.map(v=>({name:v.name,x:v.x,z:v.z}))};
 }

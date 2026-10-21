@@ -98,6 +98,7 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   for(let i=0;i<38;i++){
     const sign=random()>.5?1:-1;
     const x=sign*(8+random()*45),z=(random()-.5)*105;
+    if(Math.abs(x)<43&&z>-14&&z<90)continue;
     const r=.5+random()*.95;
     const rock=add(sphere,i%3?materials.stone:materials.stoneLight,x,r*.43-.03,z,r,r*.72,r*.8);
     rock.rotation.y=random()*Math.PI;addWorldObstacle({x,z,r:r*.85,height:r*1.15});

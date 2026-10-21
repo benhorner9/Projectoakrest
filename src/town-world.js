@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
+import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
 
 /**
  * Walkable starter town. Every building has a real doorway, four separate
@@ -18,7 +19,11 @@ export const OAKREST_BUILDINGS=Object.freeze([
   {id:'north-home',x:29,z:42,w:8,d:7,face:'west',kind:'home'},
   {id:'north-workshop',x:29,z:58,w:8,d:7,face:'north',kind:'workshop'},
   {id:'west-house',x:-29,z:-2,w:8,d:7,face:'east',kind:'home'},
-  {id:'east-guardhouse',x:29,z:-2,w:8,d:7,face:'south',kind:'guard'}
+  {id:'east-guardhouse',x:29,z:-2,w:8,d:7,face:'south',kind:'guard'},
+  {id:'merchant-home',x:29,z:30,w:8,d:7,face:'west',kind:'home'},
+  {id:'west-terrace',x:-29,z:31,w:8,d:7,face:'east',kind:'home'},
+  {id:'wardens-hall',x:-30,z:76,w:12,d:11,face:'east',kind:'hall'},
+  {id:'garden-house',x:29,z:75,w:8,d:8,face:'west',kind:'home'}
 ]);
 export const OAKREST_PATHS=Object.freeze([
   [[0,-13],[0,29]], [[-4.6,29],[-4.6,50]], [[4.6,29],[4.6,50]], [[0,50],[0,69]],
@@ -27,7 +32,10 @@ export const OAKREST_PATHS=Object.freeze([
   [[0,12],[-9.4,12]], [[0,8],[9.4,8]], [[0,28],[-9.4,28]], [[0,27],[9.4,27]],
   [[0,0],[-24.4,0],[-24.4,-2]], [[0,2.8],[29,2.8],[29,1.6]],
   [[4.6,54],[20,54],[29,54.4]],
-  [[-4.6,57],[-13,57]]
+  [[-4.6,57],[-13,57]],
+  [[0,69],[0,86]], [[0,76],[-22.9,76]], [[0,75],[24.4,75]],
+  [[-4.6,31],[-24.4,31]], [[4.6,30],[24.4,30]],
+  [[-4.6,65],[-4.6,79]],[[4.6,65],[4.6,79]]
 ]);
 const FACING={north:Math.PI,south:0,east:Math.PI/2,west:-Math.PI/2};
 const shared={
@@ -49,11 +57,31 @@ const shared={
   glow:new THREE.MeshBasicMaterial({color:'#ffd58e'})
 };
 const cube=new THREE.BoxGeometry(1,1,1);
-const roofColours={bank:shared.slate,store:shared.red,forester:shared.moss,home:shared.slate,workshop:shared.red,guard:shared.moss};
-const bodyColours={bank:shared.stone,store:shared.plaster,forester:shared.plaster,home:shared.plaster,workshop:shared.stone,guard:shared.stone};
+const roofColours={bank:shared.slate,store:shared.red,forester:shared.moss,home:shared.slate,workshop:shared.red,guard:shared.moss,hall:shared.slate};
+const bodyColours={bank:shared.stone,store:shared.plaster,forester:shared.plaster,home:shared.plaster,workshop:shared.stone,guard:shared.stone,hall:shared.stone};
 function block(g,m,x,y,z,w,h,d,shadow=true){
   const item=new THREE.Mesh(cube,m);item.position.set(x,y,z);item.scale.set(w,h,d);
   item.castShadow=shadow;item.receiveShadow=true;g.add(item);return item;
+}
+const signCache=new Map();
+function makeBuildingNameplate(group,label,y,z){
+  if(typeof document==='undefined')return;
+  let material=signCache.get(label);
+  if(!material){
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)return;
+    ctx.fillStyle='#3e4637';ctx.fillRect(0,0,512,96);
+    ctx.fillStyle='#cbb785';ctx.fillRect(8,8,496,80);
+    ctx.fillStyle='#2c3229';ctx.fillRect(12,12,488,72);
+    ctx.font='bold 35px Georgia,serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#eedbb1';ctx.fillText(label,256,49,465);
+    const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+    material=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+    signCache.set(label,material);
+  }
+  const panel=new THREE.Mesh(new THREE.PlaneGeometry(2.84,.52),material);
+  panel.position.set(0,y,z);group.add(panel);
 }
 function transform(build,x,z){
   const angle=FACING[build.face],s=Math.sin(angle),c=Math.cos(angle);
@@ -97,6 +125,12 @@ function makeRoof(group,build,h){
     block(roof,shared.wood,s*(w*.49),h+.35,0,.08,.1,d+1.28,false);
   }
   block(roof,shared.trim,0,h+1.73,0,.25,.24,d+1.3);
+  // An upper crest, chimney and staggered eaves give important buildings their own silhouette.
+  if(build.kind==='hall'){
+    block(roof,shared.stone,0,h+2.6,-1.4,2.1,2.5,2.0);
+    block(roof,shared.trim,0,h+4.15,-1.4,2.7,.36,2.7);
+    block(roof,shared.gold,0,h+4.65,-1.4,.8,.7,.18);
+  }
   if(build.kind==='bank')block(roof,shared.stone,-w*.30,h+1.4,-1,.9,1.8,.9);
   // Rooftops must remain independent when static town geometry is batched.
   roof.traverse(o=>{if(o.isMesh)o.userData.animated=true;});
@@ -141,6 +175,26 @@ function makeInteriors(group,build){
       block(group,shared.stone,w*.20,.64,-d*.27,1.3,1,.7);
       block(group,shared.gold,w*.20,1.26,-d*.27,.5,.15,.42);
     }
+    if(kind==='hall'){
+      block(group,shared.stone,0,.55,-d*.30,w*.53,1.0,1.25);
+      block(group,shared.trim,0,1.12,-d*.30,w*.56,.16,1.37);
+      for(const side of [-1,1]){
+        block(group,shared.wood,side*w*.31,.46,-.1,1.1,.52,2.5);
+        block(group,shared.gold,side*w*.39,2.35,-d*.33,.50,1.7,.12);
+      }
+    }
+    if(kind==='guard'){
+      for(const side of [-1,1]){
+        block(group,shared.timber,side*w*.32,1.5,-d*.28,.55,2.4,.55);
+        block(group,shared.stone,side*w*.32,2.75,-d*.28,.80,.14,.80);
+      }
+    }
+    if(kind==='home'){
+      const hearth=block(group,shared.stone,w*.33,.80,-d*.35,1.18,1.3,.7);
+      block(group,shared.glow,w*.33,.58,-d*.20,.44,.37,.12,false);
+      const shelf=block(group,shared.wood,-w*.30,2.5,-d*.39,1.65,.17,.4);
+      for(let i=0;i<5;i++)block(group,i%2?shared.red:shared.blue,-w*.30-.55+i*.27,2.78,-d*.39,.16,.46,.21,false);
+    }
   }
   // Warm candle glow, window sills and contrasting wall beams.
   block(group,shared.glow,w*.34,2,-d*.35,.25,.38,.21,false);
@@ -158,6 +212,8 @@ function decorateFacade(group,build,h){
     block(group,shared.trim,side*(w/2-.75),h*.52,d/2+.42,.74,.10,.16);
   }
   const plaque=block(group,kind==='bank'?shared.gold:kind==='store'?shared.red:kind==='forester'?shared.moss:shared.trim,0,h+.20,d/2+.28,3,.52,.23);
+  const labels={bank:'OAKREST BANK',store:'GENERAL STORE',forester:'FORESTER',hall:"WARDEN'S HALL",workshop:'WORKSHOP',guard:'CITY WATCH'};
+  if(labels[kind])makeBuildingNameplate(group,labels[kind],h+.21,d/2+.45);
   if(kind==='bank'){
     const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.14,8,18),shared.gold);
     ring.position.set(0,h+.99,d/2+.33);group.add(ring);
@@ -173,7 +229,7 @@ function buildHouse(scene,build){
   const g=new THREE.Group();
   g.position.set(build.x,terrainHeight(build.x,build.z),build.z);
   g.rotation.y=FACING[build.face];scene.add(g);
-  const {w,d,kind}=build,h=['bank','store','forester'].includes(kind)?5.15:4.15;
+  const {w,d,kind}=build,h=['bank','store','forester','hall'].includes(kind)?5.15:4.15;
   const wall=.36,opening=3.15,edge=(w-opening)/2;
   const base=bodyColours[kind];
   // Four physical walls with a front opening. These shape meshes and collision
@@ -199,16 +255,10 @@ export function buildOakrestTown(scene){
   makeRoad(scene,OAKREST_PATHS,5.4,'#86795f',.018);
   makeRoad(scene,OAKREST_PATHS,4.35,'#b49c75',.034);
   const buildings=OAKREST_BUILDINGS.map(b=>buildHouse(scene,b));
-  // Historic central square, deliberately walkable on both sides of the well.
-  const plaza=new THREE.Group();plaza.position.set(0,terrainHeight(0,39),39);scene.add(plaza);
-  block(plaza,shared.dirt,0,.015,0,15,.025,12,false);
-  const rim=new THREE.Mesh(new THREE.CylinderGeometry(2.06,2.18,1.20,12),shared.stone);
-  rim.position.set(0,.60,0);rim.castShadow=true;plaza.add(rim);
-  const water=new THREE.Mesh(new THREE.CylinderGeometry(1.65,1.65,.06,12),shared.dark);
-  water.position.set(0,1.23,0);plaza.add(water);
-  for(const x of [-1.7,1.7])block(plaza,shared.timber,x,2.5,0,.2,3.2,.23);
-  block(plaza,shared.moss,0,4.1,0,4.3,.26,3.1);
-  addWorldObstacle({x:0,z:39,r:2.2,height:4.4});
+  const cityIdentity=buildCityIdentity(scene);
+  // Historic Heartwood Square is built in city-identity.js. The broad ancient
+  // oak trunk uses a matching collision footprint with a passable paved ring.
+  addWorldObstacle({x:0,z:39,r:2.2,height:15});
   // Distinct market corners outside the pedestrian path.
   for(const [x,z,colour] of [[-9,43,shared.red],[9,49,shared.blue],[9,17,shared.moss]]){
     const stall=new THREE.Group();stall.position.set(x,terrainHeight(x,z),z);scene.add(stall);
@@ -256,7 +306,9 @@ export function buildOakrestTown(scene){
   }
   return {
     buildings:buildings.length,services:OAKREST_SERVICES.length,groves:OAKREST_GROVES.length,
-    update(player){
+    districts:CITY_DISTRICTS,landmark:cityIdentity.landmark,ambientCount:cityIdentity.ambientCount,
+    update(player,time=0){
+      cityIdentity.update(time,player);
       for(const {build,roof} of buildings){
         const {x,z}=player,dx=x-build.x,dz=z-build.z,angle=FACING[build.face];
         const localX=dx*Math.cos(angle)-dz*Math.sin(angle),localZ=dx*Math.sin(angle)+dz*Math.cos(angle);

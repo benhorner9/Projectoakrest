@@ -262,7 +262,7 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
  function interact({x,z,allowed,time}){
   if(!allowed||!panel.hidden)return false;
   const candidate=townInteraction(x,z)||getVillager(x,z);if(!candidate)return false;
-  if(candidate.type==='citizen'){notify(candidate.label+' · '+candidate.line);return true;}
+  if(candidate.type==='citizen'||candidate.type==='notice'){notify(candidate.label+' · '+candidate.line);return true;}
   if(candidate.type==='grove'){
    const result=harvestStarterGrove(getData(),candidate.id,time,cooldowns);
    if(result.ok){onChange();notify('Woodcutting +35 XP · Softwood logs +1');}
@@ -277,9 +277,10 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   prompt.hidden=!target;
   if(target){
    $('town-interact-description').textContent=target.type==='citizen'?target.label+' · '+target.role:
+    target.type==='notice'?target.label+' · Read town news':
     target.type==='grove'?target.label+' · '+(getData().professions?.woodcuttingLearned?'Collect logs':'Woodcutting lesson needed'):
     target.label+' · Speak to '+target.attendant;
-   $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='citizen'?'TALK · T':'SPEAK · T';
+   $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='notice'?'READ · T':target.type==='citizen'?'TALK · T':'SPEAK · T';
   }
  }
  $('town-interact-button').addEventListener('click',()=>{
