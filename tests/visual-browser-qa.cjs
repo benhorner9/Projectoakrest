@@ -12,6 +12,11 @@ mkdirSync(path.join(root,'qa'),{recursive:true});
 const server=spawn('python3',['-m','http.server','5173'],{cwd:root,stdio:'ignore'});
 const report={browser:'Chromium headless SwiftShader',shots:[],profiles:[],errors:[]};
 let browser;
+// On headless software WebGL a rendered frame may take over a second. A
+// fixed sleep can sample the previously rendered bank or wilderness scene.
+async function awaitFreshFrame(page){
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+}
 (async()=>{
   try{
     browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
@@ -40,14 +45,15 @@ let browser;
       ['wilderness',0,-42]
     ]){
       await page.evaluate(([x,z])=>{oakrestQA.teleport(x,z);oakrestQA.step(.1);},[x,z]);
-      await page.waitForTimeout(350);
+      await awaitFreshFrame(page);
       const diagnostics=await page.evaluate(()=>oakrestDiagnostics());
       assert.ok(diagnostics.drawCalls>0,name+' should render real 3D geometry');
+      if(name==='wilderness')assert.equal(diagnostics.graphics.interiorLight,false,'wilderness must not reuse indoor lighting');
       report.shots.push({name,...diagnostics});
       await page.screenshot({path:path.join(root,'qa','visual-'+name+'.png')});
     }
     await page.evaluate(()=>{oakrestQA.teleport(-30,14);oakrestQA.step(.1);});
-    await page.waitForTimeout(300);
+    await awaitFreshFrame(page);
     const inside=await page.evaluate(()=>({town:oakrestQA.state().town.inside,graphics:oakrestDiagnostics().graphics}));
     assert.equal(inside.town,'bank','inside bank should still be a physical interior');
     assert.ok(inside.graphics.interiorLight,'interior light should follow enterable room');
@@ -56,7 +62,7 @@ let browser;
         const selector=document.getElementById('quality');
         selector.value=v;selector.dispatchEvent(new Event('change',{bubbles:true}));
       },quality);
-      await page.waitForTimeout(450);
+      await awaitFreshFrame(page);
       const metrics=await page.evaluate(()=>oakrestDiagnostics());
       assert.equal(metrics.graphics.shadowResolution,resolution);
       assert.ok(metrics.graphics.practicalLights<=maxLanterns);
