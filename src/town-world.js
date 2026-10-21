@@ -8,7 +8,7 @@ import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
  * collidable walls and an interior; roofs lift away while the player is inside.
  * Building orientation is independent of door and service interaction rules.
  */
-import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_MARKET_STALLS} from './town-layout.js';
+import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_MARKET_STALLS,roadCrossSections} from './town-layout.js';
 export {OAKREST_BUILDINGS,OAKREST_PATHS} from './town-layout.js';
 const shared={
   plaster:new THREE.MeshLambertMaterial({color:'#d1c4a6'}),
@@ -128,14 +128,19 @@ function makeRoad(scene,segments,width,color,offset){
     const n=1+Math.sin(x*.81+z*1.37)*.045;
     colours.push(tint.r*n,tint.g*n,tint.b*n);
   };
-  for(const route of segments)for(let k=1;k<route.length;k++){
-    const [ax,az]=route[k-1],[bx,bz]=route[k],len=Math.hypot(bx-ax,bz-az);
-    const steps=Math.max(1,Math.ceil(len/1.2)),px=-(bz-az)/len*width/2,pz=(bx-ax)/len*width/2;
-    for(let i=0;i<steps;i++){
-      const a=i/steps,b=(i+1)/steps,base=verts.length/3;
-      const x1=ax+(bx-ax)*a,z1=az+(bz-az)*a,x2=ax+(bx-ax)*b,z2=az+(bz-az)*b;
-      add(x1+px,z1+pz);add(x1-px,z1-pz);add(x2+px,z2+pz);add(x2-px,z2-pz);
-      indices.push(base,base+1,base+2,base+1,base+3,base+2);
+  for(const route of segments){
+    const sections=roadCrossSections(route,width);
+    for(let k=1;k<route.length;k++){
+      const [ax,az]=route[k-1],[bx,bz]=route[k],len=Math.hypot(bx-ax,bz-az);
+      const steps=Math.max(1,Math.ceil(len/1.2)),start=sections[k-1],end=sections[k];
+      for(let i=0;i<steps;i++){
+        const t=i/steps,u=(i+1)/steps,base=verts.length/3;
+        const interpolate=(p,q,v)=>[p[0]+(q[0]-p[0])*v,p[1]+(q[1]-p[1])*v];
+        const l1=interpolate(start.left,end.left,t),r1=interpolate(start.right,end.right,t);
+        const l2=interpolate(start.left,end.left,u),r2=interpolate(start.right,end.right,u);
+        add(...l1);add(...r1);add(...l2);add(...r2);
+        indices.push(base,base+1,base+2,base+1,base+3,base+2);
+      }
     }
   }
   const geo=new THREE.BufferGeometry();
