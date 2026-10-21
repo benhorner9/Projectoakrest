@@ -140,7 +140,7 @@ function makeRoof(group,build,h){
 }
 function makeInteriors(group,build){
   const {w,d,kind}=build;
-  block(group,shared.wood,0,.08,0,w-.45,.16,d-.45,false);
+  block(group,shared.wood,0,.08,0,w+.16,.16,d+.16,false);
   for(let i=0;i<Math.floor(w-1);i++){
     const x=-w/2+.75+i*.96;
     block(group,shared.cloth,x,.176,0,.035,.025,d-.7,false);
@@ -258,7 +258,7 @@ function buildHouse(scene,build){
   }
   // Interior floor and porch share a level terrain foundation with the real
   // gameplay ground (not a high floating platform hiding grass beneath it).
-  block(g,shared.stone,0,.032,0,w-.44,.10,d-.44,false);
+  block(g,shared.stone,0,.032,0,w+.16,.10,d+.16,false);
   block(g,shared.stone,0,.045,d/2+.45,opening-.12,.12,.95,false);
   block(g,shared.trim,0,.14,d/2+.27,opening-.08,.10,.22,false);
   // Above-door lintel must not seal the player-height doorway.
