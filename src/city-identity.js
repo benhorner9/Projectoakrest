@@ -136,12 +136,12 @@ function cityWalls(scene){
  // entrance or long invisible collision strips across the arrival road.
  for(const side of [-1,1]){
   const group=at(scene,side*44,37,'Outer city wall');
-  for(let z=-46;z<=46;z+=3.9){
+  for(let z=-50;z<=50;z+=3.9){
    block(group,mat.stone,0,2.05,z,.95,4.1,3.8);
    block(group,mat.pale,0,4.35,z,1.30,.55,3.7);
    for(const dz of [-1.3,1.3])block(group,mat.stone,0,4.95,z+dz,1.36,.64,1.05);
   }
-  addWorldObstacle({x:side*44,z:37,hx:.6,hz:48,height:5});
+  addWorldObstacle({x:side*44,z:36.5,hx:.70,hz:50,height:5});
  }
  const rear=at(scene,0,86,'North wall walks');
  for(const side of [-1,1]){
@@ -155,11 +155,12 @@ function gardens(scene,animation){
  // Thin grass and stone beds, with paving routes remaining unobstructed.
  const areas=[[-.5,-3.2],[3.9,-.8],[.4,4.7]];
  for(const [x,z] of areas){
-  mesh(plot,new THREE.CylinderGeometry(2.65,2.8,.16,12),mat.stone,x,.10,z,1,.80,.78);
-  mesh(plot,new THREE.CylinderGeometry(2.40,2.45,.09,12),mat.leaf,x,.20,z,1,.75,.73,false);
+  const bed=at(scene,12+x,63+z,'Green Quarter planted bed');
+  mesh(bed,new THREE.CylinderGeometry(2.65,2.8,.16,12),mat.stone,0,.10,0,1,.80,.78);
+  mesh(bed,new THREE.CylinderGeometry(2.40,2.45,.09,12),mat.leaf,0,.20,0,1,.75,.73,false);
   for(let i=0;i<9;i++){
-   const a=i*Math.PI*2/9;const fx=x+Math.sin(a)*1.9,fz=z+Math.cos(a)*1.6;
-   mesh(plot,new THREE.IcosahedronGeometry(.16,0),i%3?mat.flower:mat.flowerBlue,fx,.44,fz,1,.8,1,false);
+   const a=i*Math.PI*2/9;const fx=Math.sin(a)*1.9,fz=Math.cos(a)*1.6;
+   mesh(bed,new THREE.IcosahedronGeometry(.16,0),i%3?mat.flower:mat.flowerBlue,fx,.44,fz,1,.8,1,false);
   }
  }
  // Pond tucked away from the central street and north exit.
