@@ -84,6 +84,8 @@ function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
 groundScenery(THREE,scene,[ground]);addLandmarks(scene);batchScenery(scene);
 const expandedTown=buildOakrestTown(scene);
+// Merge static facade/interior materials without merging removable roofs or villagers.
+batchScenery(scene);
 const townLife=createOakrestTownLife(scene);
 const visuals=createCombatVisuals(THREE,scene);
 
