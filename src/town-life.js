@@ -17,7 +17,7 @@ const ROUTES=[
   {name:'Bren',role:'Wandering resident',colour:'#9f7e89',line:'The bank keeps a secure vault for your coins and equipment.',path:[[-4.5,51],[-4.5,34],[-4.5,20],[-23,20],[-23,14]]},
   {name:'Nell',role:'Craftswoman',colour:'#647c67',line:'Not all the best equipment is found in a shop.',path:[[5,53],[18,53],[22,54],[22,42],[5,42]]},
   {name:'Orin',role:'Warden courier',colour:'#678d83',line:"The Warden's Hall keeps the peace from the Southgate to the forest.",path:[[-22,75],[-12,75],[-12,69],[-6,69],[-6,76]]},
-  {name:'Edda',role:'Garden keeper',colour:'#9d9567',line:'The great oak was here long before the city walls. Its roots shaped the first paths.',path:[[34.5,64],[38,65],[38,69],[37,73],[36,78]]},
+  {name:'Edda',role:'Garden keeper',colour:'#9d9567',line:'The great oak was here long before the city walls. Its roots shaped the first paths.',path:[[41,63],[41,68],[41,72],[41,76],[41,80]]},
   {name:'Crispin',role:'Market porter',colour:'#af8062',line:"Darrin's deliveries usually come through the Southgate.",path:[[19,17],[19,22],[19,31],[23,33]]},
   {name:'Vera',role:'City watch',colour:'#5e8291',line:'The south road is safe until the woodland thins out. Past that, keep watch.',path:[[-37,-7],[-37,3],[-37,19],[-37,34]]},
   {name:'Hettie',role:'Local resident',colour:'#a77d92',line:'Meet your friends at the Heartwood. No one in Oakrest ever gets lost for long.',path:[[4.7,51],[4.7,43],[4.7,34],[4.7,25]]},
