@@ -137,7 +137,7 @@ try{
 function equipVisual(style,weaponId){
  const practice=data.onboarding?.area==='tutorial';
  const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
- equipActor(hero,style,slotFamily(style,weaponId),protection);
+ equipActor(hero,style,weaponId?.endsWith('-axe')?'woodaxe':slotFamily(style,weaponId),protection);
  if(!practice&&!ownsWeapon(data,style,weaponId)){hero.userData.weapon.clear();hero.userData.offhand.clear();}
  else applyEquipmentVariant(hero,style,weaponId);
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
