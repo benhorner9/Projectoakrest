@@ -111,7 +111,7 @@ let browser;
     await page.locator('#town-close').click();
     await walkTo(-18,60.5);
     await page.getByRole('button',{name:'CUT WOOD'}).click();
-    await page.waitForFunction(()=>oakrestQA.state().data.inventory.materials['softwood-logs']>=1,{timeout:25000});
+    await page.waitForFunction(()=>oakrestQA.state().data.inventory.materials['softwood-logs']>=1,null,{timeout:25000});
     // Four-column inventory must let its user swap positions on iPad-size UI.
     await page.locator('#loadout-button').click();
     await page.locator('#progression-inventory').click();
