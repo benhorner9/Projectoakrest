@@ -5,7 +5,7 @@ import {MINIMAP_SPAN,mapPoint,minimapArea,isNearbyMinimapPoint,drawMinimap,creat
 function fakeContext(){
  const calls=[];
  const ctx={calls,canvas:{width:160,height:160}};
- for(const fn of ['clearRect','save','restore','beginPath','arc','clip','fill','moveTo','lineTo','stroke','strokeRect','fillRect','translate','rotate','fillText','setTransform'])
+ for(const fn of ['clearRect','save','restore','beginPath','closePath','arc','clip','fill','moveTo','lineTo','stroke','strokeRect','fillRect','translate','rotate','fillText','setTransform'])
   ctx[fn]=(...args)=>calls.push([fn,...args]);
  return ctx;
 }
