@@ -24,7 +24,7 @@ let browser;
   await page.goto('http://127.0.0.1:5173/?qa=1',{waitUntil:'domcontentloaded',timeout:20000});
   await page.waitForFunction(()=>!!window.oakrestQA,{timeout:20000});
   await page.locator('#begin').click();
-  await page.locator('#gear-button').click();
+  await page.locator('#loadout-button').click();await page.locator('#progression-equipment').click();
   assert.equal(await page.locator('.oak-gear-slot').count(),9,'all nine equipment slots display');
   await page.locator('#progression-inventory').click();
   assert.ok((await page.locator('.oak-inventory-grid > *').count())>=28,'inventory keeps its 28-cell base');

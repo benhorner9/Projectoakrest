@@ -23,6 +23,7 @@ import {setupTownUI} from './town-ui.js';
 import {equipSlotItem,equipmentModifiers} from './equipment-slots.js';
 import {renderInventoryGrid,renderEquipmentPaperDoll,renderExamine} from './equipment-ui.js';
 import {isOakrestSafe,townInteraction} from './town-services.js';
+import {renderQuestPage,renderWorldPage} from './ui-pages.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
@@ -139,17 +140,42 @@ const forward=()=>new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
 const directions={ArrowUp:'w',ArrowDown:'s'};
 let bookStyle='melee',bookTab='skills',bookSlot=0,skillDetail=null;
 const progressPanel=$('progression-panel'),detailPanel=$('skill-detail');
-function bookOpen(tab='skills',toggle=false){
+function bookOpen(tab='inventory',toggle=false){
  if(toggle&&!progressPanel.hidden&&bookTab===tab){bookClose();return;}
  bookStyle=style;bookTab=tab;bookSlot=0;skillDetail=null;detailPanel.hidden=true;
  progressPanel.hidden=false;$('equipment-picker').hidden=true;
- $('loadout-button').setAttribute('aria-expanded','true');renderBook();
+ $('menu-backdrop').hidden=false;document.documentElement.classList.add('oak-menu-open');
+ $('loadout-button').setAttribute('aria-expanded','true');
+ $('loadout-button').setAttribute('aria-label','Close character menu');
+ document.exitPointerLock?.();renderBook();
+ $(bookTabs[tab])?.focus({preventScroll:true});
 }
-function bookClose(){skillDetail=null;detailPanel.hidden=true;progressPanel.hidden=true;$('loadout-button').setAttribute('aria-expanded','false');}
+function bookClose(){
+ if(progressPanel.hidden)return;
+ skillDetail=null;detailPanel.hidden=true;progressPanel.hidden=true;
+ $('controls-panel').hidden=true;
+ $('menu-backdrop').hidden=true;document.documentElement.classList.remove('oak-menu-open');
+ $('loadout-button').setAttribute('aria-expanded','false');
+ $('loadout-button').setAttribute('aria-label','Open character menu');
+ $('loadout-button').focus({preventScroll:true});
+}
 $('close-progression').addEventListener('click',bookClose);
-const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills'};
-for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();});
-$('loadout-button').addEventListener('click',()=>bookOpen('skills',true));
+$('menu-backdrop').addEventListener('click',bookClose);
+const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills',quests:'progression-quests',map:'progression-map',settings:'progression-settings'};
+for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();$('progression-content').scrollTop=0;});
+$('loadout-button').addEventListener('click',()=>bookOpen(progressPanel.hidden?'inventory':bookTab,true));
+document.addEventListener('keydown',event=>{
+ if(progressPanel.hidden)return;
+ if(event.key==='Escape'){event.preventDefault();event.stopPropagation();bookClose();return;}
+ if(event.key==='Tab'){
+  const fields=[...progressPanel.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled),a[href]')].filter(x=>x.getClientRects().length);
+  if(fields.length){const first=fields[0],last=fields[fields.length-1];
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  }
+ }
+ event.stopPropagation(); // Menu keys must not also trigger gameplay.
+},true);
 if(devDropEditor){
  setupDropEditor({
   storage:localStorage,key:dropStorageKey,
@@ -218,12 +244,17 @@ function renderBook(){
  $('progression-levels').textContent='COMBAT LV '+combatLevelFromXp(data.xp)+' · '+bookStyle.toUpperCase()+' '+combatLevel+' · '+data.coins+' COINS';
  for(const [tab,id] of Object.entries(bookTabs))$(id).classList.toggle('selected',tab===bookTab);
  const styles=$('progression-styles');styles.replaceChildren();
- styles.hidden=bookTab==='skills'||bookTab==='inventory';
+ styles.hidden=!['equip','abilities'].includes(bookTab);
+ if(bookTab!=='settings')$('controls-panel').hidden=true;
  if(!styles.hidden)for(const s of STYLE_ORDER){
   const b=uiButton(styles,s.toUpperCase()+' '+levelFromXp(data.xp[s]).level,()=>selectStyle(s));
   b.classList.toggle('selected',s===bookStyle);
  }
- const host=$('progression-content');host.replaceChildren();
+ const host=$('progression-content');
+ // Keep the original settings controls in the live DOM between tab changes.
+ const controls=$('controls-panel');
+ if(controls.parentElement===host){controls.hidden=true;$('hud').append(controls);}
+ host.replaceChildren();
  const weaponId=data.gear[bookStyle];
  if(bookTab==='skills'){
   el('p','Overall Combat Level '+combatLevelFromXp(data.xp)+' · Based on your strongest attack style, Vitality and smaller contributions from other styles. Tap a skill to see its unlocks.',host);
@@ -278,7 +309,13 @@ function renderBook(){
   renderEquipmentPaperDoll(host,data,bookStyle,showItemDetail);
  }else if(bookTab==='inventory'){
   renderInventoryGrid(host,data,showItemDetail);
-
+ }else if(bookTab==='quests'){
+  renderQuestPage(host,{area:data.onboarding?.area||'world',defeated:data.defeated||0,quest:$('quest-text').textContent,progress:$('quest-progress').textContent});
+ }else if(bookTab==='map'){
+  renderWorldPage(host,{area:data.onboarding?.area||'world',x:hero.position.x,z:hero.position.z});
+ }else if(bookTab==='settings'){
+  host.append($('controls-panel'));$('controls-panel').hidden=false;
+  $('help-button').setAttribute('aria-expanded','true');
  }
 }
 const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,windup:.25};
@@ -482,7 +519,7 @@ function updatePortalInteraction(){
  const near=Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)<=3.7;
  interact.hidden=!near;if(near){$('opening-interact-description').textContent='Active gateway: '+firstCity.name;$('opening-interact-button').textContent='ENTER '+firstCity.name.toUpperCase()+' · E';}
 }
-function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
+function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('hp-fill').parentElement.setAttribute('aria-valuenow',String(Math.max(0,Math.ceil(hp))));$('hp-fill').parentElement.setAttribute('aria-valuemax',String(max));$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
 function refreshStyles(){const host=$('styles');host.innerHTML='';for(const st of STYLE_ORDER){const b=document.createElement('button');b.className=`style ${st===style?'active':''}`;b.style.borderColor=st===style?STYLE_COLOURS[st]:'';b.innerHTML=`<span class="symbol">${{melee:'⚔',magic:'✦',ranged:'➶'}[st]}</span>${st.toUpperCase()} <small>${levelFromXp(data.xp[st]).level}</small>`;b.addEventListener('click',()=>setStyle(st));host.append(b);}}
 function refreshSkills(){
  const host=$('skills');host.innerHTML='';
@@ -977,7 +1014,7 @@ function isGameplayMenuOpen(){
  return !progressPanel.hidden||!$('controls-panel').hidden||!$('character-creator').hidden||townUI.isOpen();
 }
 function focusGamepadMenu(direction){
- const parent=townUI.isOpen()?$('town-panel'):!$('controls-panel').hidden?$('controls-panel'):progressPanel;
+ const parent=townUI.isOpen()?$('town-panel'):progressPanel;
  const fields=[...parent.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled)')]
   .filter(el=>el.getClientRects().length>0);
  if(!fields.length)return;
@@ -999,12 +1036,8 @@ function pollGamepad(dt){
  padState=current;
  if(!current){padPrevious=null;return;}
  const menus=isGameplayMenuOpen();
- if(edges.menu){
-  $('controls-panel').hidden=menus;
-  $('help-button').setAttribute('aria-expanded',String(!menus));
-  if(menus)bookClose();
-  document.exitPointerLock?.();
- }else if(edges.inventory){if(menus){bookClose();closeControls();}else bookOpen('inventory',true);}
+ if(edges.menu){if(menus){bookClose();closeControls();}else bookOpen('settings');}
+ else if(edges.inventory){if(menus){bookClose();closeControls();}else bookOpen('inventory');}
  else if(started){
   if(menus){
    if(edges.abilities[0]||edges.abilities[2])focusGamepadMenu(-1);
@@ -1026,12 +1059,8 @@ function pollGamepad(dt){
  padPrevious=current;
 }
 function closeControls(){$('controls-panel').hidden=true;$('help-button').setAttribute('aria-expanded','false');}
-$('help-button').addEventListener('click',()=>{
-  const panel=$('controls-panel');panel.hidden=!panel.hidden;
-  $('help-button').setAttribute('aria-expanded',String(!panel.hidden));
-  document.exitPointerLock?.();
-});
-$('close-controls').addEventListener('click',closeControls);
+$('help-button').addEventListener('click',()=>bookOpen('settings',true));
+$('close-controls').addEventListener('click',()=>{if(!progressPanel.hidden)bookClose();else closeControls();});
 addEventListener('blur',()=>{
   holdingAttack=false;attackId=null;attackButton.classList.remove('held');
   joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';

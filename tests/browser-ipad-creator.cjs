@@ -61,7 +61,7 @@ async function testStandalone(label,viewport,legacyBad){
   assert.equal(saved.roster.length,1);assert.equal(saved.save.onboarding.area,'tutorial');
   assert.deepEqual(saved.save.inventory.weapons,{melee:[],magic:[],ranged:[]});
   if(legacyBad)assert.equal(saved.legacy,'{bad old save');
-  await page.locator('#help-button').click();
+  await page.locator('#loadout-button').click();await page.locator('#progression-settings').click();
   await page.locator('#character-switch').click();
   await page.waitForURL('**/oakrest-dev/characters.html',{timeout:20000});
   assert.ok(await page.locator('#saved-character-slots').getByText(saved.roster[0].name).isVisible());
