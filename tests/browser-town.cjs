@@ -56,11 +56,13 @@ let browser;
       const a=await from.boundingBox(),b=await to.boundingBox();
       assert.ok(a&&b,'both drag slots must be visible');
       const ax=a.x+a.width/2,ay=a.y+a.height/2,bx=b.x+b.width/2,by=b.y+b.height/2;
+      console.log('Oakrest drag bounds',JSON.stringify({source:{ax,ay},dest:{bx,by},viewport:{width:1024,height:768},hit:await page.evaluate(({bx,by})=>{const e=document.elementFromPoint(bx,by);return {label:e?.getAttribute('aria-label'),className:e?.className,tag:e?.tagName,scope:e?.closest('[data-scope]')?.dataset.scope};},{bx,by})}));
       await page.mouse.move(ax,ay);await page.mouse.down();
       await page.mouse.move(bx,by,{steps:7});await page.mouse.up();
     }
     await drag(page.getByRole('button',{name:'Select Gold Coins in backpack, quantity 120'}),
       page.locator('.town-vault .town-item-empty').nth(6));
+    console.log('Bank drag state',JSON.stringify(await page.evaluate(()=>({coins:oakrestQA.state().data.coins,stored:oakrestQA.state().data.bank.coins,selected:document.querySelector('.town-item-tile.is-selected')?.dataset.canonical,fromCount:document.querySelectorAll('.town-backpack .town-item-tile').length,active:document.activeElement?.outerHTML.slice(0,180)}))));
     assert.equal(await page.evaluate(()=>oakrestQA.state().data.bank.coins),120,'drag deposit must store coins');
     assert.equal(await page.evaluate(()=>oakrestQA.state().data.coins),0);
     await drag(page.getByRole('button',{name:'Select Gold Coins in bank, quantity 120'}),
