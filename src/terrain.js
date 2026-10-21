@@ -1,10 +1,37 @@
 import {segmentBox,segmentCylinder} from './combat-physics.js';
+import {OAKREST_BUILDINGS,localBuildingPosition} from './town-layout.js';
 /** One continuous height field for geometry, actors, loot and telegraphs. */
 const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-export function terrainHeight(x,z){
+function naturalTerrainHeight(x,z){
  const wilderness=smooth((-z-5)/24),edge=smooth((Math.abs(x)-18)/22);
  const hills=1.5+Math.sin(x*.068+z*.032)*1.7+Math.sin(z*.105)*.9+Math.cos(x*.12-z*.045)*.55;
  return (wilderness+edge*(1-wilderness))*hills;
+}
+/** Flatten the actual ground inside *every* building, then ease back to hills
+ * beyond the exterior foundation. The renderer, character and loot all sample
+ * the same height function so grass cannot poke through a raised floor.
+ */
+const townBuildingLevels=OAKREST_BUILDINGS.map(b=>naturalTerrainHeight(b.x,b.z));
+export function terrainHeight(x,z){
+ const natural=naturalTerrainHeight(x,z),blendRadius=12;
+ let weighted=natural,total=1;
+ for(let i=0;i<OAKREST_BUILDINGS.length;i++){
+   const b=OAKREST_BUILDINGS[i];
+   const lateral=b.face==='east'||b.face==='west';
+   if(Math.abs(x-b.x)>(lateral?b.d:b.w)*.5+blendRadius||
+      Math.abs(z-b.z)>(lateral?b.w:b.d)*.5+blendRadius)continue;
+   const p=localBuildingPosition(b,x,z);
+   const dx=Math.max(0,Math.abs(p.x)-b.w*.5),dz=Math.max(0,Math.abs(p.z)-b.d*.5);
+   const distance=Math.hypot(dx,dz);
+   if(distance<1e-7)return townBuildingLevels[i]; // exact flat interior
+   if(distance>=blendRadius)continue;
+   // Smooth compact support with a dominant weight at the wall. This avoids
+   // hard switches between nearby foundations at different elevations.
+   const t=distance/blendRadius;
+   const influence=(1-smooth(t))/t,weight=influence*influence;
+   weighted+=townBuildingLevels[i]*weight;total+=weight;
+ }
+ return weighted/total;
 }
 export function terrainNormal(x,z){const e=.08,dx=(terrainHeight(x+e,z)-terrainHeight(x-e,z))/(2*e),dz=(terrainHeight(x,z+e)-terrainHeight(x,z-e))/(2*e),len=Math.hypot(dx,1,dz);return {x:-dx/len,y:1/len,z:-dz/len};}
 export function roadCentre(z){return z> -8?0:Math.sin((z+8)*.07)*1.2;}
