@@ -4,7 +4,7 @@
  * elevations from drifting away from the actual building meshes.
  */
 export const OAKREST_BUILDINGS=Object.freeze([
-  {id:'bank',x:-30,z:14,w:10,d:9,face:'east',kind:'bank'},
+  {id:'bank',x:-30,z:14,w:14,d:12,face:'east',kind:'bank'},
   {id:'store',x:30,z:14,w:10,d:9,face:'west',kind:'store'},
   {id:'forester',x:-30,z:46,w:11,d:9,face:'east',kind:'forester'},
   {id:'cottage-a',x:-14,z:12,w:8,d:7,face:'east',kind:'home'},
