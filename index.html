@@ -34,8 +34,8 @@
     </header>
     <section id="controls-panel" class="controls-panel" hidden aria-label="Controls and camera settings">
       <div class="settings-heading"><strong>CONTROLS & CAMERA</strong><button id="close-controls" type="button" aria-label="Close controls">✕</button></div>
-      <p class="touch-help">Left thumb: move. Hold ATTACK and slide to turn the camera. Move near glowing monster drops and tap PICK UP. Open MENU → INVENTORY to see your collected items.</p>
-      <p class="desktop-help">WASD move · T interact with townsfolk · Drag or move mouse to look · Arrow keys turn camera · J / Enter attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
+      <p class="touch-help">Left thumb: move. Tap ATTACK once to lock a monster and automatically attack. Tap STOP to disengage. You can slide on the attack button to turn the camera, use abilities and switch styles while attacking. Move near glowing monster drops and tap PICK UP. Open MENU → INVENTORY to see your collected items.</p>
+      <p class="desktop-help">WASD move · T interact with townsfolk · Drag or move mouse to look · Arrow keys turn camera · J / Enter toggle auto-attack · Q E R F skills · G pick up · Tab switch · Space dodge.</p>
       <label for="look-speed">Camera speed <output id="look-speed-value">1.0×</output></label>
       <input id="look-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" />
       <label class="camera-mode-label" for="camera-mode">Camera mode
@@ -51,7 +51,7 @@
       <label class="camera-check"><input id="camera-invert-y" type="checkbox"/> Invert vertical look</label>
       <div class="camera-actions"><button id="camera-recenter" type="button">RECENTRE CAMERA</button><button id="camera-reset" type="button">RESET CAMERA SETTINGS</button></div>
       <div class="gamepad-heading"><strong>CONTROLLER</strong><output id="gamepad-status" aria-live="polite">No controller detected</output></div>
-      <p class="gamepad-help">Xbox / PlayStation standard mapping: left stick move · right stick look · A / Cross attack · B / Circle dodge · X / Square switch style · Y / Triangle interact · L1 / R1 previous / next style · D-pad abilities · Start settings · Select inventory.</p>
+      <p class="gamepad-help">Xbox / PlayStation standard mapping: left stick move · right stick look · A / Cross toggle attack · B / Circle dodge · X / Square switch style · Y / Triangle interact · L1 / R1 previous / next style · D-pad abilities · Start settings · Select inventory.</p>
       <label for="gamepad-deadzone">Controller stick deadzone <output id="gamepad-deadzone-value">0.18</output></label>
       <input id="gamepad-deadzone" type="range" min="0.10" max="0.35" step="0.01" value="0.18" />
       <label for="quality">Graphics quality</label><select id="quality"><option value="low">Performance</option><option value="balanced">Balanced</option><option value="high">High</option></select>
@@ -106,7 +106,7 @@
     <footer class="combatbar">
       <div class="equipment-picker" id="equipment-picker" hidden></div>
       <div class="styles" id="styles"></div>
-      <div class="weaponline"><span class="weapon-summary"><span id="weapon-name">Iron Longsword</span><small id="weapon-cycle">ATTACK READY</small></span><div class="loadout-actions"><button id="gear-button" type="button">EQUIP</button></div></div>
+      <div class="weaponline"><span class="weapon-summary"><span id="weapon-name">Iron Longsword</span><small id="weapon-cycle">SELECT A TARGET</small></span><div class="loadout-actions"><button id="gear-button" type="button">EQUIP</button></div></div>
           <div class="skills" id="skills"></div>
       <div class="bottom-hint">WASD move · Mouse or drag to look · Arrow keys turn · J attack · Q E R F skills · TAB switch · SPACE dodge</div>
     </footer>
@@ -116,7 +116,7 @@
         <div class="touch-skill-dock" id="touch-skill-dock"></div>
         <button id="touch-dodge" type="button" aria-label="Dodge">↝<small>DODGE</small></button>
         <button id="touch-swap" type="button" aria-label="Switch combat style">⇄<small>SWAP</small></button>
-        <button id="touch-attack" type="button" aria-label="Hold to attack at weapon speed and slide sideways to turn camera">⚔<small>ATTACK</small><span id="attack-timer" class="attack-timer">READY</span></button>
+        <button id="touch-attack" type="button" aria-label="Select an enemy and toggle automatic combat">⚔<small>ATTACK</small><span id="attack-timer" class="attack-timer">READY</span></button>
       </div>
     </div>
     <section id="loot-prompt" class="loot-prompt" hidden aria-label="Nearby dropped item">

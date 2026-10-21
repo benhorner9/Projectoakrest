@@ -51,15 +51,15 @@ let browser;
   await page.locator('#close-progression').click();
   // In locked mode moving sideways/back does not turn the character toward the camera.
   const locked=await page.evaluate(()=>{
-   oakrestQA.teleport(0,11,0);window.virtualPad.axes=[0,0,0,0];oakrestQA.step(.15);
+   oakrestQA.teleport(0,11,0);window.virtualPad.axes=[0,0,0,0];oakrestQA.step(.8);
    const start=oakrestQA.state();
    window.virtualPad.axes=[0,0,.7,0];oakrestQA.step(.35);
    const turned=oakrestQA.state();
    window.virtualPad.axes=[0,0,0,0];oakrestQA.step(.08);
    return {start,turned};
   });
-  assert.ok(Math.abs(locked.turned.yaw-locked.start.yaw)>.1,'right stick turns character in follow mode');
-  assert.ok(Math.abs(locked.turned.heroHeading+locked.turned.yaw)<.02,'character faces forward along locked camera');
+  assert.ok(Math.abs(locked.turned.yaw-locked.start.yaw)>.1,'right stick turns follow camera');
+  assert.ok(Math.abs(locked.turned.heroHeading-locked.start.heroHeading)<.02,'stationary character keeps facing when camera turns');
   const f={x:Math.sin(locked.turned.yaw),z:-Math.cos(locked.turned.yaw)};
   const behind=(locked.turned.cameraPosition.x-locked.turned.hero.x)*f.x+
    (locked.turned.cameraPosition.z-locked.turned.hero.z)*f.z;

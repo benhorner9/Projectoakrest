@@ -112,3 +112,6 @@
 #target-name[data-threat="easy"]{color:#bfe7b8}
 @media(max-width:600px){.enemy-world-label{font-size:10px;padding:5px 7px}
  .combat-level-badge{top:-13px;font-size:9px;padding:3px 6px}.combat-level-badge strong{font-size:12px}}
+
+/* Interactive world labels allow direct enemy selection on touch and desktop. */
+#enemy-level-layer .enemy-world-label{pointer-events:auto;cursor:crosshair;touch-action:manipulation}

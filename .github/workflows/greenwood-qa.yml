@@ -53,6 +53,9 @@ jobs:
       - name: Combat Reborn real simulation scenarios
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-combat-reborn.cjs
+      - name: Auto combat targeting and three-style switching in Chromium
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-auto-combat.cjs
       - name: Compare combat performance against starting dev
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-combat-performance.cjs
