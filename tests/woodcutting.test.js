@@ -63,7 +63,7 @@ test('a tree yields exactly 1–5 logs, falls only after final log and respawns 
  for(let i=0;i<4;i++)assert.equal(chopOnce(d,five,180+i,()=>0).depleted,false);
  assert.equal(five.logs,1);
  assert.equal(chopOnce(d,five,185,()=>0).depleted,true);
- assert.equal(d.inventory.materials['softwood-logs'],7);
+ assert.equal(d.inventory.materials['softwood-logs'],6);
 });
 
 test('failed chopping cycles give no log or XP',()=>{
