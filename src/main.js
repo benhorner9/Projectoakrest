@@ -68,7 +68,7 @@ function ball(parent,x,y,z,sx,sy,sz,m){return put(parent,ballGeom,m,x,y,z,sx,sy,
 function cylinder(parent,x,y,z,r,h,m){return put(parent,new THREE.CylinderGeometry(r,r,h,8),m,x,y,z);}
 const ground=createTerrain(THREE,scene);
 let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));addWorldObstacle({x,z,r:.3*height,height:3.3*height});}
-for(let i=0;i<155;i++){let x=(random()-.5)*178,z=(random()-.5)*230;if(Math.abs(x)<45&&z>-30&&z<72)continue;if(Math.abs(x)<9&&z< -12)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
+for(let i=0;i<155;i++){let x=(random()-.5)*178,z=(random()-.5)*230;if(Math.abs(x)<47&&z>-30&&z<91)continue;if(Math.abs(x)<9&&z< -12)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
 // The original sealed cottages are replaced by walkable homes in town-world.js.
 function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}addWorldObstacle({x:x+len-1,z,hx:len-1+.14,hz:.14,height:1.4});}
 fence(-40,67,12);fence(17,67,12);fence(-8,-8,3);fence(5,-8,4);
@@ -893,7 +893,7 @@ function animate(dt,t){
   const r=Math.hypot(hero.position.x,hero.position.z);
   if(r>15.5){hero.position.x*=15.5/r;hero.position.z*=15.5/r;}
  }
- expandedTown.update(hero.position);
+ expandedTown.update(hero.position,t);
   townLife.update(dt,t,hero.position,(data.onboarding?.area||'world')==='world');
   const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||activeStrikes.length||t<attackUntil;
@@ -1149,7 +1149,7 @@ requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',s
 window.oakrestDiagnostics=()=>({...stats,quality,version:'combat-reborn-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
- state:()=>({data:structuredClone(data),style,hp,heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z)},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
+ state:()=>({data:structuredClone(data),style,hp,city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z)},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};expandedTown.update(hero.position);},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
  receiveDamage(amount){applyEnemyDamage(null,{damage:amount},now());},
