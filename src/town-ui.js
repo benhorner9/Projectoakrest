@@ -1,7 +1,8 @@
 import {LOADOUTS,ARMOUR,STYLE_ORDER,levelFromXp} from './rules.js';
+import {woodcuttingLevel,WOODCUTTING_LEVEL_XP} from './woodcutting.js';
 import {SLOT_ITEMS,STARTER_SETS} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
-import {SHOP_STOCK,missingStarterSetPieces,starterSetPrice,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
+import {SHOP_STOCK,missingStarterSetPieces,starterSetPrice,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,claimTrainingAxe} from './town-services.js';
 import {positionedEntries,reorderSlot,positionTransfer,BAG_MIN_SLOTS,VAULT_MIN_SLOTS,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from './item-slot-layout.js';
 import {bindSlotDrag} from './slot-drag.js';
 
@@ -68,9 +69,8 @@ export function shopGridEntries(data){
  });
 }
 
-export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEquipmentChange,notify,onOpen}){
+export function setupTownUI({getData,getTime,getVillager=()=>null,getTree=()=>null,onCutTree=()=>false,onChange,onEquipmentChange,notify,onOpen}){
  const panel=$('town-panel'),prompt=$('town-interact'),body=$('town-content');
- const cooldowns=new Map();
  let service=null,lastPosition=null,tab='all',search='',selected=null;
  const entryKey=e=>[e.scope,e.kind,e.style||'',e.id].join('/');
  const stockKey=s=>'stock/'+s.id;
@@ -272,15 +272,18 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   node('p','For now, visit the General Store for starter equipment or the Bank to keep your belongings safe.',body);
  }
  function foresterView(data){
-  const level=levelFromXp(data.professions?.woodcuttingXp||0).level;
-  node('p','The Forester’s Lodge teaches beginner Woodcutting only. Other skills have their own towns and trainers.',body);
-  node('h3','Woodcutting — Level '+level,body);
-  node('p',(data.professions?.woodcuttingXp||0)+' / '+STARTER_GROVE_XP_CAP+' starter XP. Practice on the training pines north of the plaza.',body);
+  const info=woodcuttingLevel(data.professions?.woodcuttingXp||0);
+  node('p','Alden teaches Woodcutting. Find an axe, select a tree and your character will keep chopping until it falls or you move.',body);
+  node('h3','Woodcutting — Level '+info.level,body);
+  node('p',info.maxed?'Master Woodcutter · Level 99':info.remaining.toLocaleString()+' XP to the next level · '+Math.floor(info.progress*100)+'% progress',body);
   const learned=data.professions?.woodcuttingLearned===true;
-  button(body,learned?'LEARNED':'LEARN WOODCUTTING',()=>{
-   if(teachWoodcutting(data))changed('Learned Woodcutting. Find the pines north of the plaza.');
+  button(body,learned?'LESSON COMPLETE':'LEARN WOODCUTTING + BRONZE AXE',()=>{
+   if(teachWoodcutting(data))changed('Woodcutting learned · Bronze Axe received');
   },'town-lesson-button',learned);
-  if(level>=5)node('p','You have outgrown these trees. Higher-level forestry requires travelling to other regions.',body,'town-notice');
+  if(learned)button(body,'CLAIM REPLACEMENT BRONZE AXE',()=>{
+   if(claimTrainingAxe(data))changed('Received Bronze Axe');else notify('You already have an axe in your bag or bank');
+  },'town-lesson-button');
+  node('p','Seven tree species: Softwood (1), Pine (10), Oak (20), Willow (35), Ironbark (50), Moonwood (70), Elderwood (85). Upgrade axes to cut familiar trees faster.',body,'town-notice');
  }
  function render(){
   if(!service||panel.hidden)return;
@@ -292,24 +295,22 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
  }
  function interact({x,z,allowed,time}){
   if(!allowed||!panel.hidden)return false;
-  const candidate=townInteraction(x,z)||getVillager(x,z);if(!candidate)return false;
+  const candidate=townInteraction(x,z)||getTree(x,z)||getVillager(x,z);if(!candidate)return false;
   if(candidate.type==='citizen'||candidate.type==='notice'){notify(candidate.label+' · '+candidate.line);return true;}
   if(candidate.type==='grove'){
-   const result=harvestStarterGrove(getData(),candidate.id,time,cooldowns);
-   if(result.ok){onChange();notify('Woodcutting +35 XP · Softwood logs +1');}
-   else notify(result.reason);
+   onCutTree(candidate.id);
    return true;
   }
   service=candidate;tab='all';search='';selected=null;panel.hidden=false;onOpen();render();return true;
  }
  function update({x,z,allowed}){
   lastPosition={x,z};
-  const target=allowed&&panel.hidden?(townInteraction(x,z)||getVillager(x,z)):null;
+  const target=allowed&&panel.hidden?(townInteraction(x,z)||getTree(x,z)||getVillager(x,z)):null;
   prompt.hidden=!target;
   if(target){
    $('town-interact-description').textContent=target.type==='citizen'?target.label+' · '+target.role:
     target.type==='notice'?target.label+' · Read town news':
-    target.type==='grove'?target.label+' · '+(getData().professions?.woodcuttingLearned?'Collect logs':'Woodcutting lesson needed'):
+    target.type==='grove'?target.label+' · Lv '+(target.level||1)+' · Cut with axe':
     target.label+' · Speak to '+target.attendant;
    $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='notice'?'READ · T':target.type==='citizen'?'TALK · T':'SPEAK · T';
   }
