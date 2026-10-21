@@ -12,12 +12,12 @@ function world(build,x,z){
  return {x:build.x+x*Math.cos(a)+z*Math.sin(a),
          z:build.z-x*Math.sin(a)+z*Math.cos(a)};
 }
-test('all 15 town buildings allow view-dependent roof/front/near-wall cutaways without losing collision',()=>{
+test('all town buildings allow view-dependent roof/front/near-wall cutaways without losing collision',()=>{
  clearWorldObstacles();
  const scene=new THREE.Scene(),town=buildOakrestTown(scene);
  try{
   scene.updateMatrixWorld(true);
-  assert.equal(town.buildings,15);
+  assert.equal(town.buildings,OAKREST_BUILDINGS.length);
   for(const b of OAKREST_BUILDINGS){
    const player=world(b,0,0),camera=world(b,b.w+2,b.d+4);
    const roof=scene.getObjectByName(b.id+' removable roof');
