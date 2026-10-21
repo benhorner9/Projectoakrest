@@ -1,0 +1,83 @@
+/* Compact RuneScape-inspired field HUD: health and menu grouped left, live
+   minimap right. This stylesheet intentionally comes after minimal-hud.css. */
+#hud .player-hud{
+  position:absolute;z-index:10;
+  top:max(10px,env(safe-area-inset-top));
+  left:max(14px,env(safe-area-inset-left));
+  width:min(238px,calc(100vw - 164px));
+  display:flex;flex-direction:column;align-items:flex-start;gap:7px;
+  pointer-events:none;
+}
+#hud .player-hud .vitals{
+  position:relative;inset:auto;top:auto;left:auto;
+  width:100%;min-width:0;max-width:none;float:none;margin:0;
+}
+#hud .player-hud #loadout-button{
+  position:relative;inset:auto;align-self:flex-start;
+  display:flex;min-width:118px;width:128px;min-height:44px;height:44px;
+  justify-content:center;gap:8px;
+  pointer-events:auto;touch-action:manipulation;
+}
+#hud .minimap-button{
+  --oak-map-size:clamp(108px,14vw,164px);
+  position:absolute;z-index:10;
+  top:max(10px,env(safe-area-inset-top));
+  right:max(14px,env(safe-area-inset-right));
+  width:var(--oak-map-size);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  border:0;padding:0;margin:0;background:transparent;
+  cursor:pointer;color:#f1dfb7;font:700 10px/1.2 ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.07em;text-shadow:0 2px 5px #041a17;
+  pointer-events:auto;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+#hud .minimap-face{
+  position:relative;display:block;width:100%;aspect-ratio:1;
+  border:3px solid #c4ad77;border-radius:50%;
+  background:#536b55;
+  box-shadow:0 0 0 2px #172e2bdc,0 5px 19px #001713b0,inset 0 0 0 2px #162d29;
+  overflow:hidden;isolation:isolate;
+}
+#hud .minimap-face canvas{
+  display:block;width:100%;height:100%;
+  border-radius:50%;pointer-events:none;
+}
+#hud .minimap-north{
+  position:absolute;left:50%;top:3px;transform:translateX(-50%);
+  z-index:2;display:grid;place-items:center;
+  min-width:18px;height:18px;border-radius:50%;
+  color:#f6df9f;background:#102c29d9;
+  font-size:10px;font-weight:900;
+  border:1px solid #e0c78b66;
+}
+#hud .minimap-area{
+  display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;padding:4px 8px;
+  border:1px solid #b8a2737c;border-radius:6px;
+  background:linear-gradient(145deg,#173630e9,#102522ee);
+  box-shadow:0 2px 9px #03171480;font-size:10px;
+}
+#hud .minimap-button:focus-visible,#hud .player-hud #loadout-button:focus-visible{
+  outline:3px solid #ffe4a6;outline-offset:3px;
+}
+#hud .minimap-button:active .minimap-face{border-color:#f6db9a}
+@media (hover:none),(pointer:coarse){
+  #hud .player-hud{width:min(223px,calc(100vw - 160px));}
+  #hud .player-hud .vitals{width:100%}
+}
+@media (max-width:620px){
+  #hud .player-hud{width:min(194px,calc(100vw - 148px));gap:5px;}
+  #hud .player-hud .vitals{width:100%}
+  #hud .player-hud #loadout-button{width:112px;min-width:112px;height:44px;}
+  #hud .minimap-button{--oak-map-size:108px}
+  #hud .minimap-area{font-size:9px;padding:3px 5px}
+}
+@media (max-width:380px){
+  #hud .player-hud{width:min(194px,calc(100vw - 142px));}
+  #hud .minimap-button{--oak-map-size:98px;}
+}
+@media (max-height:500px) and (orientation:landscape){
+  #hud .player-hud,#hud .minimap-button{top:max(5px,env(safe-area-inset-top));}
+  #hud .player-hud #loadout-button{height:40px;min-height:40px}
+  #hud .minimap-button{--oak-map-size:108px}
+}
