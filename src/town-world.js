@@ -471,15 +471,8 @@ export function buildOakrestTown(scene){
       block(curtain,shared.stone,off,4.9,0,1.04,.66,1.30);
     addWorldObstacle({x,z:-13,hx:19,hz:.58,height:5});
   }
-  for(const tree of OAKREST_GROVES){
-    const g=new THREE.Group();g.position.set(tree.x,terrainHeight(tree.x,tree.z),tree.z);scene.add(g);
-    block(g,shared.wood,0,1.75,0,.67,3.5,.67);
-    for(const [xx,yy,zz,scale] of [[0,4,0,1],[.6,3.45,-.1,.7],[-.6,3.55,.1,.72]]){
-      const m=new THREE.Mesh(new THREE.IcosahedronGeometry(1.42*scale,1),shared.moss);
-      m.position.set(xx,yy,zz);m.castShadow=true;g.add(m);
-    }
-    addWorldObstacle({x:tree.x,z:tree.z,r:.5,height:4});
-  }
+  // Harvestable village trees are now created by the Woodcutting controller,
+  // which owns their falling meshes, depletion and removable colliders.
   // Lanterns mark the road towards the first safe adventure.
   for(const z of [-18,-27,-37,-46])for(const x of [-5.8,5.8]){
     const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);scene.add(g);
