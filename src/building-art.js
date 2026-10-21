@@ -30,7 +30,7 @@ export function addArchitecturalFinish(g,build,h,mat){
   const mesh=make(g,m,x,y,z,sx,sy,sz);
   marked.push({mesh,side});return mesh;
  };
- const palace=['bank','hall','guard'].includes(kind);
+ const palace=['trade','bank','hall','guard'].includes(kind);
  // Height and corner framing are controlled by the actual building geometry.
  // Low masonry stays in place during cutaway; only the upper elevations lift.
  const cornice=palace?mat.pale:mat.trim;
@@ -96,7 +96,7 @@ export function addArchitecturalFinish(g,build,h,mat){
 }
 export function furnishDistinctInterior(g,build,mat){
  const {w,d,kind}=build;
- if(kind==='bank')return;
+ if(['trade','bank'].includes(kind))return;
  const table=(x,z)=>{
   make(g,mat.timber,x,.91,z,1.38,.18,.93);
   for(const xx of [-.52,.52])for(const zz of [-.30,.30])

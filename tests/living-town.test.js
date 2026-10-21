@@ -11,7 +11,7 @@ test('Oakrest has varied building orientation and continuous pedestrian streets'
   assert.ok(new Set(OAKREST_BUILDINGS.map(b=>b.face)).size>=3,'town should not be one straight line of identical facades');
   assert.ok(OAKREST_PATHS.some(p=>p.some(([x])=>x< -15)));
   assert.ok(OAKREST_PATHS.some(p=>p.some(([x])=>x>15)));
-  assert.deepEqual(OAKREST_SERVICES.map(s=>s.attendant),['Mara the Banker','Darrin the Shopkeeper','Alden the Forester']);
+  assert.deepEqual(OAKREST_SERVICES.map(s=>s.attendant),['Mara the Banker','Tessa the Trade Steward','Darrin the Shopkeeper','Alden the Forester']);
 });
 
 test('every house opens into a navigable interior through a physical doorway',()=>{
@@ -56,7 +56,7 @@ test('staff stand at counters and villagers traverse town routes without vanishi
   const scene=new THREE.Scene();buildOakrestTown(scene);
   const life=createOakrestTownLife(scene);
   try{
-    assert.equal(life.staff,3);
+    assert.equal(life.staff,OAKREST_SERVICES.length);
     assert.ok(life.count>=6);
     const initial=life.snapshot();
     for(let i=0;i<170;i++)life.update(.1,i*.1,{x:0,z:-6},true);

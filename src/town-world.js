@@ -6,6 +6,7 @@ import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
 import {furnishGrandBank,buildGrandBankFacade} from './bank-architecture.js';
 import {buildingCutaway,playerInBuilding} from './building-visibility.js';
 import {addArchitecturalFinish,furnishDistinctInterior} from './building-art.js';
+import {furnishTradeHall,finishTradeHouseFacade,finishTradeHouseRoof} from './trade-house-art.js';
 
 /**
  * Walkable starter town. Every building has a real doorway, four separate
@@ -89,8 +90,8 @@ const floorFinishes={
   stone:new THREE.MeshLambertMaterial({color:'#c0b9aa',map:stonePattern})
 };
 const cube=new THREE.BoxGeometry(1,1,1);
-const roofColours={bank:shared.slate,store:shared.red,forester:shared.moss,home:shared.slate,workshop:shared.red,guard:shared.moss,hall:shared.slate};
-const bodyColours={bank:shared.stone,store:shared.plaster,forester:shared.plaster,home:shared.plaster,workshop:shared.stone,guard:shared.stone,hall:shared.stone};
+const roofColours={trade:shared.blue,bank:shared.slate,store:shared.red,forester:shared.moss,home:shared.slate,workshop:shared.red,guard:shared.moss,hall:shared.slate};
+const bodyColours={trade:shared.pale,bank:shared.stone,store:shared.plaster,forester:shared.plaster,home:shared.plaster,workshop:shared.stone,guard:shared.stone,hall:shared.stone};
 for(const [kind,source] of Object.entries(roofColours))roofFinishes[kind]=new THREE.MeshLambertMaterial({color:source.color,map:roofPattern});
 function block(g,m,x,y,z,w,h,d,shadow=true){
   const item=new THREE.Mesh(cube,m);item.position.set(x,y,z);item.scale.set(w,h,d);
@@ -165,7 +166,7 @@ function gableMaterial(kind){
 }
 function makeRoof(group,build,h){
   const roof=new THREE.Group();roof.name=build.id+' removable roof';group.add(roof);
-  const {w,d,kind}=build,overhang=.48,rise=1.72,run=w/2+overhang;
+  const {w,d,kind}=build,overhang=.48,rise=kind==='trade'?2.24:1.72,run=w/2+overhang;
   const span=Math.hypot(run,rise),slope=Math.atan2(rise,run),depth=d+1.05;
   // Two slopes meet on the exact ridge line; eaves sit at the same height on
   // both sides. Unlike arbitrary rotated cubes there are no open roof seams.
@@ -201,15 +202,18 @@ function makeRoof(group,build,h){
     block(roof,shared.gold,0,h+rise+2.57,-1.4,.70,.50,.15);
   }
   if(kind==='bank')block(roof,shared.stone,-w*.30,h+rise+.42,-1,.84,1.4,.86);
+  if(kind==='trade')finishTradeHouseRoof(roof,build,h,shared,block);
   roof.traverse(o=>{if(o.isMesh)o.userData.animated=true;});
   return roof;
 }
 function makeInteriors(group,build){
   const {w,d,kind}=build;
-  const floorMaterial=['bank','hall','guard'].includes(kind)?floorFinishes.stone:floorFinishes.wood;
+  const floorMaterial=['trade','bank','hall','guard'].includes(kind)?floorFinishes.stone:floorFinishes.wood;
   const floor=block(group,floorMaterial,0,-.095,0,w+.16,.22,d+.16,false);
   floor.name=build.id+' finished interior floor';
-  if(kind==='bank'){
+  if(kind==='trade'){
+    furnishTradeHall(group,build,shared,block,wallCollider);
+  }else if(kind==='bank'){
     furnishGrandBank(group,build,shared,block,wallCollider);
   }else if(['store','forester'].includes(kind)){
     // Counter lies behind the reachable front half, with space to walk inside.
@@ -283,9 +287,11 @@ function decorateFacade(group,build,h){
     for(const sx of [-1,1])block(group,shared.wood,wx+sx*.78,wy,d/2+.25,.34,1.17,.16);
   }
   const plaque=block(group,kind==='bank'?shared.gold:kind==='store'?shared.red:kind==='forester'?shared.moss:shared.trim,0,h+.20,d/2+.28,3,.52,.23);
-  const labels={bank:'OAKREST BANK',store:'GENERAL STORE',forester:'FORESTER',hall:"WARDEN'S HALL",workshop:'WORKSHOP',guard:'CITY WATCH'};
+  const labels={trade:'OAKREST TRADE HOUSE',bank:'OAKREST BANK',store:'GENERAL STORE',forester:'FORESTER',hall:"WARDEN'S HALL",workshop:'WORKSHOP',guard:'CITY WATCH'};
   if(labels[kind])makeBuildingNameplate(group,labels[kind],h+.21,d/2+.45);
-  if(kind==='bank'){
+  if(kind==='trade'){
+    finishTradeHouseFacade(group,build,h,shared,block,wallCollider);
+  }else if(kind==='bank'){
     buildGrandBankFacade(group,build,h,shared,block,wallCollider);
   }else if(kind==='store'){
     for(let i=-3;i<=3;i++)block(group,i%2?shared.red:shared.cloth,i*.47,3.33,d/2+.85,.46,.28,1.4);
@@ -330,7 +336,7 @@ function buildHouse(scene,build){
   const g=new THREE.Group();
   g.position.set(build.x,terrainHeight(build.x,build.z),build.z);
   g.rotation.y=FACING[build.face];scene.add(g);
-  const {w,d,kind}=build,h=kind==='bank'?6.05:['store','forester','hall'].includes(kind)?5.15:4.15;
+  const {w,d,kind}=build,h=kind==='trade'?6.55:kind==='bank'?6.05:['store','forester','hall'].includes(kind)?5.15:4.15;
   const wall=.36,opening=3.15,edge=(w-opening)/2;
   // These meshes MUST stay separate when static scenery is batched; a player
   // looking into a room needs an unobstructed cutaway, not solid walls.
