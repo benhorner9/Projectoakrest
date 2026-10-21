@@ -5,7 +5,7 @@ import {selectPracticalLightIndices} from '../src/visual-fidelity.js';
 test('nearby lanterns are returned in stable nearest-first order',()=>{
  const locations=[[0,0],[4,0],[-4,0],[9,9],[6,0]];
  const buffer=new Int32Array(2);
- assert.equal(selectPracticalLightIndices(locations,3,0,buffer),buffer);
+ assert.equal(selectPracticalLightIndices(locations,4.5,0,buffer),buffer);
  assert.deepEqual(Array.from(buffer),[1,4]);
  selectPracticalLightIndices(locations,0,0,buffer);
  assert.deepEqual(Array.from(buffer),[0,1],'equal-distance ties preserve array ordering');
