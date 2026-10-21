@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {damp} from './motion.js';
 import {attackPose} from './gameplay-math.js';
+import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
 const sphere=new THREE.SphereGeometry(1,12,8),box=new THREE.BoxGeometry(1,1,1);
@@ -103,6 +104,10 @@ export function applyEquipmentVariant(g,style,itemId){
  const gemMaterial=new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL((seed%360)/360,.42,.62),metalness:.45,roughness:.28});
  const geometry=new THREE.OctahedronGeometry(.085+(seed%4)*.019,0);
  const gemstone=new THREE.Mesh(geometry,gemMaterial);gemstone.position.set(.16,-.06,-.25-(seed%3)*.13);u.weapon.add(gemstone);
+ const axe=AXE_BY_ID[itemId];
+ if(axe&&style==='melee')for(const [index,part] of u.weapon.children.entries()){
+  if(index===1||index===2)part.material.color.set(axe.colour);
+ }
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
 export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
