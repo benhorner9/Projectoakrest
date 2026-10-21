@@ -89,7 +89,7 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   }
   for(const grid of body.querySelectorAll('.town-item-grid')){
    const empty=grid.nextElementSibling;
-   if(empty?.classList.contains('town-grid-empty'))empty.hidden=[...grid.children].some(c=>!c.hidden);
+   if(empty?.classList.contains('town-grid-empty'))empty.hidden=[...grid.querySelectorAll('.town-item-tile')].some(c=>!c.hidden);
   }
  }
  function tabs(host,choices){
