@@ -339,7 +339,8 @@ function buildHouse(scene,build){
   const base=bodyColours[kind];
   // Four physical walls with a front opening. These shape meshes and collision
   // prisms agree, so the hero walks through the opening and stops at the walls.
-  mark(block(g,base,0,h/2,-d/2,w,h,wall),'back');
+  const rearWall=mark(block(g,base,0,h/2,-d/2,w,h,wall),'back');
+  rearWall.name=build.id+' rear structural wall';
   wallCollider(build,0,-d/2,w,wall,h);
   for(const side of [-1,1]){
     mark(block(g,base,side*w/2,h/2,0,wall,h,d),side<0?'left':'right');
