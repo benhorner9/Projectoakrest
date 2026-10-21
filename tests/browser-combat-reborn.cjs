@@ -27,8 +27,17 @@ let browser,server;
   // be expected to home towards a monster behind the player.
   const e=target();oakrestQA.teleport(e.x,e.z+2);oakrestQA.aim(e.x,.75,e.z);
   if(!oakrestQA.target('mossling'))throw Error('Failed to acquire mossling for beginner auto-combat');
-  for(let i=0;i<25&&!target().dead&&oakrestQA.state().hp>0;i++)oakrestQA.step(.65);
-  const after=oakrestQA.state();if(!target().dead||after.data.xp.melee<=initial.data.xp.melee)throw Error('Mossling kill and melee XP missing');
+  // Early-game fights can take longer when the real accuracy roll misses.
+  // Keep a finite upper bound and fail with player/enemy/target diagnostics
+  // rather than conflating a slow-but-valid kill with broken auto-combat.
+  for(let i=0;i<50&&!target().dead&&oakrestQA.state().hp>0;i++)oakrestQA.step(.65);
+  const after=oakrestQA.state();
+  if(!target().dead||after.data.xp.melee<=initial.data.xp.melee){
+   throw Error('Beginner mossling combat did not finish within 32.5s: '+JSON.stringify({
+    target:target(),hp:after.hp,hero:after.hero,style:after.style,
+    locked:after.autoCombat,xpBefore:initial.data.xp.melee,xpAfter:after.data.xp.melee
+   }));
+  }
   oakrestQA.dodge();const at=oakrestQA.state().hero;oakrestQA.step(.15);if(oakrestQA.state().hero.z>=at.z)throw Error('Dodge did not move');
   return {xp:after.data.xp,health:after.hp,loot:after.data.groundLoot.length};
  }),true);
