@@ -11,7 +11,8 @@ export const CITY_DISTRICTS=Object.freeze([
   {id:'arrival',name:'Southgate Approach',x:0,z:-7,description:'A guarded road into the city'},
   {id:'market',name:'Merchant Quarter',x:0,z:19,description:'Bank, general shop and covered market'},
   {id:'heartwood',name:'Heartwood Square',x:0,z:39,description:'A great oak surrounded by the old city'},
-  {id:'green',name:'The Green Quarter',x:8,z:63,description:'Gardens and the woodland lodge'},
+  {id:'exchange',name:'Trade Quarter',x:15,z:64.5,description:'The Trade House and future auction exchange'},
+  {id:'green',name:'The Green Quarter',x:37,z:68,description:'The ornamental gardens east of the Trade House'},
   {id:'wardens',name:"Warden's Hall",x:-29,z:76,description:"The city's civic and defensive heart"}
 ]);
 const mat={
@@ -151,11 +152,11 @@ function cityWalls(scene){
  }
 }
 function gardens(scene,animation){
- const plot=at(scene,12,63,'Green Quarter park');
+ const plot=at(scene,37,68,'Green Quarter park');
  // Thin grass and stone beds, with paving routes remaining unobstructed.
- const areas=[[-.5,-3.2],[3.9,-.8],[.4,4.7]];
+ const areas=[[-1,-4],[1,1]];
  for(const [x,z] of areas){
-  const bed=at(scene,12+x,63+z,'Green Quarter planted bed');
+  const bed=at(scene,37+x,68+z,'Green Quarter planted bed');
   mesh(bed,new THREE.CylinderGeometry(2.65,2.8,.16,12),mat.stone,0,.10,0,1,.80,.78);
   mesh(bed,new THREE.CylinderGeometry(2.40,2.45,.09,12),mat.leaf,0,.20,0,1,.75,.73,false);
   for(let i=0;i<9;i++){
@@ -164,10 +165,10 @@ function gardens(scene,animation){
   }
  }
  // Pond tucked away from the central street and north exit.
- const pond=at(scene,22,66,'Garden reflection pond');
+ const pond=at(scene,38,82,'Garden reflection pond');
  mesh(pond,new THREE.CylinderGeometry(2.3,2.6,.32,20),mat.stone,0,.14,0,1,.75,.8);
  mesh(pond,new THREE.CylinderGeometry(1.95,2,.06,20),mat.water,0,.34,0,1,1,.72,false);
- addWorldObstacle({x:22,z:66,r:2.35,height:.4});
+ addWorldObstacle({x:38,z:82,r:2.35,height:.4});
  for(const {x,z,angle:a} of OAKREST_GARDEN_BENCHES){
   const g=at(scene,x,z,'Garden resting place');bench(g,0,0,a);
   addWorldObstacle({x,z,hx:Math.abs(Math.cos(a))*1.39+Math.abs(Math.sin(a))*.42,
@@ -175,7 +176,7 @@ function gardens(scene,animation){
  }
  const leaves=[];
  for(let i=0;i<12;i++){
-  const a=i*2.39996,r=4.0+(i%3)*1.65;
+  const a=i*2.39996,r=2.5+(i%3)*.95;
   const leaf=mesh(plot,sphere,i%4?mat.leafGold:mat.leaf,Math.sin(a)*r,2+i%4*.4,Math.cos(a)*r,.15,.045,.35,false);
   leaf.userData.animated=true;leaves.push({mesh:leaf,seed:i,baseY:leaf.position.y});
  }
