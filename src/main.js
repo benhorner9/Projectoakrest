@@ -12,7 +12,7 @@ import {maxHitFor,accuracyFor,rollHit,maxHitForAction,acquireEnemy,targetValid,i
 import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
-import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,segmentWorldHit,groundSegmentClear,setCollisionArea } from './terrain.js';
+import { createTerrain,terrainHeight,groundScenery,moveOnGround,blocked,safeCamera,addWorldObstacle,registerWorldObstacle,removeWorldObstacle,segmentWorldHit,groundSegmentClear,setCollisionArea } from './terrain.js';
 import { createActor,equipActor,applyEquipmentVariant,applyCharacterAppearance,animateActor,createCreature,animateCreature } from './actors.js';
 import { readCharacters,createCharacter } from './characters.js';
 import { setupCharacterCreator } from './character-creator.js';
@@ -25,7 +25,9 @@ import { createOakrestTownLife } from './town-life.js';
 import {setupTownUI} from './town-ui.js';
 import {equipSlotItem,equipmentModifiers} from './equipment-slots.js';
 import {renderInventoryGrid,renderEquipmentPaperDoll,renderExamine} from './equipment-ui.js';
-import {isOakrestSafe,townInteraction} from './town-services.js';
+import {isOakrestSafe,townInteraction,OAKREST_GROVES} from './town-services.js';
+import {TREE_BY_ID,WOODCUTTING_SWING_SECONDS,canCutTree,chopOnce,newTreeState,respawnTree,woodcuttingLevel} from './woodcutting.js';
+import {createWoodcuttingTree} from './woodcutting-art.js';
 import {renderQuestPage,renderWorldPage} from './ui-pages.js';
 import {createOakrestMinimap} from './minimap.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
@@ -70,7 +72,22 @@ function block(parent,x,y,z,sx,sy,sz,m){return put(parent,boxGeom,m,x,y,z,sx,sy,
 function ball(parent,x,y,z,sx,sy,sz,m){return put(parent,ballGeom,m,x,y,z,sx,sy,sz);}
 function cylinder(parent,x,y,z,r,h,m){return put(parent,new THREE.CylinderGeometry(r,r,h,8),m,x,y,z);}
 const ground=createTerrain(THREE,scene);
-let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));addWorldObstacle({x,z,r:.3*height,height:3.3*height});}
+const woodcuttingTrees=[],woodcuttingTreeMap=new Map();
+function registerWoodcuttingTree(x,z,height,species,id){
+ const group=createWoodcuttingTree(species,height,random()*Math.PI*2);
+ group.position.set(x,terrainHeight(x,z),z);scene.add(group);
+ const state=newTreeState(species,random);
+ const entry={id,x,z,species,group,state,height,obstacle:registerWorldObstacle({x,z,r:.33*height,height:7*height}),approaching:false};
+ woodcuttingTrees.push(entry);woodcuttingTreeMap.set(id,entry);return entry;
+}
+let treeIndex=0;
+function tree(x,z,height=1){
+ const i=treeIndex++,roll=random();
+ const species=z> -25?(roll<.63?'softwood':roll<.85?'pine':'oak'):
+  z> -72?(roll<.2?'pine':roll<.45?'oak':roll<.70?'willow':roll<.9?'ironbark':'moonwood'):
+  roll<.12?'oak':roll<.28?'willow':roll<.52?'ironbark':roll<.77?'moonwood':'elderwood';
+ registerWoodcuttingTree(x,z,height,species,'wild-'+i);
+}
 for(let i=0;i<155;i++){let x=(random()-.5)*178,z=(random()-.5)*230;if(Math.abs(x)<47&&z>-30&&z<91)continue;if(Math.abs(x)<9&&z< -12)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
 // The original sealed cottages are replaced by walkable homes in town-world.js.
 // Restrained, fixed approach stones instead of random debris spawning through
@@ -84,6 +101,7 @@ for(const [x,z] of [[-12,-28],[13,-30],[-10,-42],[12,-43]]){
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
 groundScenery(THREE,scene,[ground]);addLandmarks(scene);batchScenery(scene);
 const expandedTown=buildOakrestTown(scene);
+for(const spot of OAKREST_GROVES)registerWoodcuttingTree(spot.x,spot.z,.98,'softwood',spot.id);
 // Merge static facade/interior materials without merging removable roofs or villagers.
 batchScenery(scene);
 const townLife=createOakrestTownLife(scene);
@@ -147,6 +165,7 @@ const directions={ArrowUp:'w',ArrowDown:'s'};
 let bookStyle='melee',bookTab='skills',bookSlot=0,skillDetail=null;
 const progressPanel=$('progression-panel'),detailPanel=$('skill-detail');
 function bookOpen(tab='inventory',toggle=false){
+ if(woodcuttingTarget)stopWoodcutting();
  if(toggle&&!progressPanel.hidden&&bookTab===tab){bookClose();return;}
  bookStyle=style;bookTab=tab;bookSlot=0;skillDetail=null;detailPanel.hidden=true;
  progressPanel.hidden=false;$('equipment-picker').hidden=true;
@@ -281,8 +300,8 @@ function renderBook(){
   const woodCard=el('div',null,grid,'level-card level-woodcutting');
   const woodTop=el('div',null,woodCard,'level-card-title');
   el('strong','🌲 Woodcutting',woodTop);
-  el('span',learned?'Level '+levelFromXp(wcXp).level:'LOCKED',woodTop);
-  el('small',learned?'Oakrest beginner practice '+wcXp+' / 710 XP':'Learn at Oakrest Forester’s Lodge',woodCard);
+  el('span',learned?'Level '+woodcuttingLevel(wcXp).level:'LOCKED',woodTop);
+  el('small',learned?'Total XP '+wcXp.toLocaleString()+' · '+woodcuttingLevel(wcXp).remaining.toLocaleString()+' to next level':'Learn at Oakrest Forester’s Lodge',woodCard);
   el('small','Other gathering and crafting skills have their own towns and trainers.',woodCard,'level-meta');
  }else if(bookTab==='abilities'){
   el('p','Select a slot, then choose an unlocked ability. Each weapon family remembers its four slots.',host);
@@ -334,7 +353,7 @@ const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:1.08
 function getWeapon(){if(data.onboarding?.area==='tutorial'&&LOADOUTS[style][data.gear[style]])return LOADOUTS[style][data.gear[style]];if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
 function save(){if(!saveWritable)return;try{localStorage.setItem(activeCharacter?saveKeyFor(activeCharacter.id):oldSaveKey,JSON.stringify(data));}catch{saveWritable=false;}}
 function useCharacter(profile,loaded){
- stopCombat();
+ stopWoodcutting();stopCombat();
  // Switching a saved character must also switch its physical ground drops.
  for(const id of [...lootModels.keys()])discardLootModel(id);
  activeCharacter=profile;data=loaded;style='melee';hp=maxHealth(levelFromXp(data.xp.vitality).level);
@@ -437,6 +456,92 @@ d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);
  return d;
 }
 makeEnemy('dummy',-6,-3);
+
+let woodcuttingTarget=null,woodcuttingSwingStart=0,woodcuttingNextChop=0;
+function nearbyWoodcuttingTree(x,z){
+ let best=null,distance=4.2;
+ for(const tree of woodcuttingTrees){
+  if(tree.state.respawnAt)continue;
+  const d=Math.hypot(x-tree.x,z-tree.z);
+  if(d<distance){best=tree;distance=d;}
+ }
+ return best?{id:best.id,x:best.x,z:best.z,type:'grove',label:TREE_BY_ID[best.species].name+' tree',level:TREE_BY_ID[best.species].level,reach:4.2}:null;
+}
+function stopWoodcutting(){
+ if(!woodcuttingTarget)return;
+ woodcuttingTarget.approaching=false;woodcuttingTarget=null;
+ woodcuttingSwingStart=0;woodcuttingNextChop=0;
+ equipVisual(style,data.gear[style]);
+}
+function startWoodcutting(id){
+ const tree=woodcuttingTreeMap.get(id);
+ if(!started||hp<=0||(data.onboarding?.area||'world')!=='world'||!tree)return false;
+ if(tree.state.respawnAt){toast('This '+TREE_BY_ID[tree.species].name+' tree is regrowing');return true;}
+ const allowed=canCutTree(data,tree.species);
+ if(!allowed.ok){toast(allowed.reason);return true;}
+ if(pendingBasic||pendingAbility||dodgeTravel){toast('Finish your action before cutting wood');return true;}
+ stopWoodcutting();stopCombat();
+ woodcuttingTarget=tree;tree.approaching=true;woodcuttingSwingStart=0;woodcuttingNextChop=0;
+ const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
+ equipActor(hero,'melee','woodaxe',protection);
+ applyEquipmentVariant(hero,'melee',allowed.axe.id);
+ if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
+ toast('Cutting '+allowed.tree.name+' · '+allowed.axe.name);
+ return true;
+}
+function updateWoodcutting(dt,t,manualInput){
+ const tree=woodcuttingTarget;
+ if(!tree)return;
+ if(manualInput||hp<=0||combatTarget||dodgeTravel||isGameplayMenuOpen()||
+    (data.onboarding?.area||'world')!=='world'||tree.state.respawnAt){
+  stopWoodcutting();return;
+ }
+ const dist=Math.hypot(tree.x-hero.position.x,tree.z-hero.position.z);
+ if(dist>4.4){stopWoodcutting();return;}
+ const dx=tree.x-hero.position.x,dz=tree.z-hero.position.z;
+ if(dist>1.32){
+  tree.approaching=true;woodcuttingSwingStart=0;woodcuttingNextChop=0;
+  const step=Math.min(3.5*dt,Math.max(0,dist-1.30));
+  const next=moveOnGround(hero.position,dx/dist*step,dz/dist*step,.42);
+  const moved=Math.hypot(next.x-hero.position.x,next.z-hero.position.z);
+  hero.position.set(next.x,next.y,next.z);
+  if(moved<.001&&step>.001){stopWoodcutting();toast('Cannot reach that tree');}
+  return;
+ }
+ tree.approaching=false;
+ if(!woodcuttingSwingStart){woodcuttingSwingStart=t;woodcuttingNextChop=t+WOODCUTTING_SWING_SECONDS;}
+ if(t+1e-6<woodcuttingNextChop)return;
+ woodcuttingNextChop+=WOODCUTTING_SWING_SECONDS;
+ const outcome=chopOnce(data,tree.state,t,random);
+ if(!outcome.ok){stopWoodcutting();toast(outcome.reason);return;}
+ sparks(new THREE.Vector3(tree.x,terrainHeight(tree.x,tree.z)+1.12,tree.z),'#d6b68b',2);
+ if(!outcome.success)return;
+ floating('+'+outcome.xp+' WC XP · '+TREE_BY_ID[tree.species].name+' log','#c5ed97',
+  hero.position.clone().add(new THREE.Vector3(0,2.7,0)));
+ if(outcome.levelUp)toast('WOODCUTTING LEVEL '+outcome.newLevel+'!');
+ save();if(!progressPanel.hidden)renderBook();
+ if(outcome.depleted){
+  if(tree.obstacle){removeWorldObstacle(tree.obstacle);tree.obstacle=null;}
+  stopWoodcutting();
+  toast(TREE_BY_ID[tree.species].name+' tree fell · Regrowing');
+ }
+}
+function updateWoodcuttingTrees(t){
+ for(const tree of woodcuttingTrees){
+  const state=tree.state;
+  if(!state.respawnAt)continue;
+  if(respawnTree(state,t,random)){
+   tree.group.rotation.set(0,0,0);
+   tree.group.visible=(data.onboarding?.area||'world')==='world';
+   tree.obstacle=registerWorldObstacle({x:tree.x,z:tree.z,r:.33*tree.height,height:7*tree.height});
+   continue;
+  }
+  const elapsed=t-state.fallAt;
+  tree.group.rotation.z=-Math.min(1,Math.max(0,elapsed)/1.18)*Math.PI*.49;
+  tree.group.visible=elapsed<1.32&&(data.onboarding?.area||'world')==='world';
+ }
+}
+
 // First hostile encounters are a journey beyond the safe town and approach.
 makeEnemy('mossling',-4,-55);makeEnemy('mossling',6,-62);makeEnemy('mossling',-9,-70);
 makeEnemy('boar',5,-77);makeEnemy('boar',11,-83);
@@ -447,10 +552,11 @@ const worldLayer=scene.children.filter(obj=>obj!==hero&&!obj.isLight);
 const openingWorld=createOpeningLocations(scene);
 const townUI=setupTownUI({
  getData:()=>data,getTime:now,getVillager:(x,z)=>townLife.nearby(x,z),
+ getTree:nearbyWoodcuttingTree,onCutTree:startWoodcutting,
  onChange:()=>{save();updateHpUI();if(!progressPanel.hidden)renderBook();},
  onEquipmentChange:()=>{equipVisual(style,data.gear[style]);refreshSkills();},
  notify:message=>toast(message),
- onOpen:()=>{bookClose();$('controls-panel').hidden=true;document.exitPointerLock?.();}
+ onOpen:()=>{stopWoodcutting();bookClose();$('controls-panel').hidden=true;document.exitPointerLock?.();}
 });
 const practiceDummy=makeEnemy('dummy',0,-7);
 practiceDummy.onboardingDummy=true;
@@ -550,7 +656,7 @@ function refreshSkills(){
  const swap=$('touch-swap'),upcoming=nextStyle(style);
  swap.querySelector('small').textContent=upcoming.toUpperCase();swap.setAttribute('aria-label',`Switch to ${upcoming}`);
 }
-function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if((pendingBasic||pendingAbility||activeStrikes.length)&&!instant){queuedStyle=which;return;}if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.12;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
+function setStyle(which,instant=false){if(!STYLE_ORDER.includes(which)||which===style)return;if(woodcuttingTarget)stopWoodcutting();if((pendingBasic||pendingAbility||activeStrikes.length)&&!instant){queuedStyle=which;return;}if(!instant && now()<switchUntil)return;style=which;switchUntil=now()+.12;equipVisual(style,data.gear[style]);refreshSkills();addRing(hero.position.clone(),'#e7ca81',1.8,.38);toast(`${{melee:'⚔',magic:'✦',ranged:'➶'}[style]} ${style.toUpperCase()} · ${getWeapon().title}`);}
 function gearMenu(){bookOpen('equip',true);}
 $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){if(rings.length>=32)return;const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=terrainHeight(pos.x,pos.z)+.065;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
@@ -587,12 +693,14 @@ function stopCombat(){combatTarget=null;combatPath=null;combatPathGoal=null;$('t
 function selectCombatTarget(enemy){
  if(!started||hp<=0||isGameplayMenuOpen()||!targetValid(enemy,activeEnemies(),hero.position,30))return false;
  if(!clearCombatLine({x:hero.position.x,y:hero.position.y+1.25,z:hero.position.z},enemyCentre(enemy)))return false;
+ if(woodcuttingTarget)stopWoodcutting();
  combatTarget=enemy;combatPath=null;combatPathGoal=null;
  $('touch-attack').classList.add('auto-locked');toast('Target locked · '+ENEMY_COMBAT[enemy.type].name);
  return true;
 }
 function toggleCombat(){
  if(isGameplayMenuOpen()||!started||hp<=0)return;
+ if(woodcuttingTarget)stopWoodcutting();
  if(combatTarget){stopCombat();return;}
  const target=acquireEnemy(activeEnemies(),hero.position,forward(),enemy=>clearCombatLine(
   {x:hero.position.x,y:hero.position.y+1.25,z:hero.position.z},enemyCentre(enemy)));
@@ -975,6 +1083,8 @@ function animate(dt,t){
  if(dodgeTravel){const remaining=Math.max(0,Math.min(dt,dodgeTravel.end-t+dt));const next=moveOnGround(hero.position,dodgeTravel.dir.x*(dodgeTravel.speed||12.5)*remaining,dodgeTravel.dir.z*(dodgeTravel.speed||12.5)*remaining);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);if(t>=dodgeTravel.end)dodgeTravel=null;}
  else {const next=moveOnGround(hero.position,motion.x*dt,motion.z*dt);hero.position.set(next.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:next.y,next.z);}
  updateAutoCombat(dt,t,Math.hypot(v,h)>.12);
+ updateWoodcutting(dt,t,Math.hypot(v,h)>.12);
+ updateWoodcuttingTrees(t);
  // Dedicated areas are finite islands; never let players walk off their floor.
  if(data.onboarding?.area==='tutorial'){
   hero.position.x=clamp(hero.position.x,-25,25);
@@ -986,14 +1096,15 @@ function animate(dt,t){
  // Keep cutaway in sync with the actual rendered camera, updated below.
   townLife.update(dt,t,hero.position,(data.onboarding?.area||'world')==='world');
   audio.cityAmbience(t,(data.onboarding?.area||'world')==='world'&&isOakrestSafe(hero.position.x,hero.position.z));
-  const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
+  const gait=Math.hypot(motion.x,motion.z)+(woodcuttingTarget?.approaching?3.5:0);stride+=gait*dt*2.6;
  const combatFacing=!!combatTarget||holdingAttack||pendingBasic||pendingAbility||activeStrikes.length||t<attackUntil;
  const aimingAt=combatTarget&&targetValid(combatTarget,activeEnemies(),hero.position)?combatTarget:null;
  const lockYaw=aimingAt?Math.atan2(aimingAt.x-hero.position.x,-(aimingAt.z-hero.position.z)):null;
- const heading=lockYaw!==null&&Math.hypot(v,h)<.12?-lockYaw:characterFacingTarget({mode:cameraSettings.mode,lastHeading:visualHeading,cameraYaw:yaw,strikeYaw:activeStrikes.length?activeStrikes[0].yaw:null,velocityX:motion.x,velocityZ:motion.z,combatFacing});
+ const chopYaw=woodcuttingTarget?Math.atan2(woodcuttingTarget.x-hero.position.x,-(woodcuttingTarget.z-hero.position.z)):null;
+ const heading=chopYaw!==null?-chopYaw:lockYaw!==null&&Math.hypot(v,h)<.12?-lockYaw:characterFacingTarget({mode:cameraSettings.mode,lastHeading:visualHeading,cameraYaw:yaw,strikeYaw:activeStrikes.length?activeStrikes[0].yaw:null,velocityX:motion.x,velocityZ:motion.z,combatFacing});
  visualHeading=cameraSettings.mode==='follow'?(gait>.3||combatFacing?heading:visualHeading):dampAngle(visualHeading,heading,19,dt);
  hero.rotation.y=visualHeading;
- animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
+ animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const indoor=(data.onboarding?.area||'world')==='world'?expandedTown.interior(hero.position.x,hero.position.z):null;
@@ -1189,14 +1300,14 @@ function closeControls(){$('controls-panel').hidden=true;$('help-button').setAtt
 $('help-button').addEventListener('click',()=>bookOpen('settings',true));
 $('close-controls').addEventListener('click',()=>{if(!progressPanel.hidden)bookClose();else closeControls();});
 addEventListener('blur',()=>{
-  holdingAttack=false;attackId=null;attackButton.classList.remove('held');
+  stopWoodcutting();holdingAttack=false;attackId=null;attackButton.classList.remove('held');
   joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';
   lookPointer=null;keys.clear();
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){keys.clear();holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
+  if(document.hidden){stopWoodcutting();keys.clear();holdingAttack=false;attackId=null;attackButton.classList.remove('held');joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';lookPointer=null;}
 });
-document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key.toLowerCase()==='m'&&started&&progressPanel.hidden)bookOpen('map');if(e.key==='j'||e.key==='J'||e.code==='Enter')toggleCombat();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
+document.addEventListener('keydown',e=>{if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add((directions[e.key]||e.key).toLowerCase());if(e.repeat)return;if(e.code==='Tab')setStyle(nextStyle(style));if(e.key.toLowerCase()==='m'&&started&&progressPanel.hidden)bookOpen('map');if(e.key==='j'||e.key==='J'||e.code==='Enter')toggleCombat();if(e.key.toLowerCase()==='e'&&data.onboarding?.area==='realm')enterCityPortal();if(e.key.toLowerCase()==='t'&&started)townUI.interact({x:hero.position.x,z:hero.position.z,allowed:hp>0&&(data.onboarding?.area||'world')==='world',time:now()});if(e.code==='Escape'){stopWoodcutting();document.exitPointerLock?.();closeControls();bookClose();townUI.close();}if((e.key==='g'||e.key==='G')&&!e.repeat)pickupNearby();if(e.key==='1'||e.key==='2'||e.key==='3')setStyle(STYLE_ORDER[Number(e.key)-1]);if('qerf'.includes(e.key.toLowerCase())&&e.key.length===1)useAbility('qerf'.indexOf(e.key.toLowerCase()));if(e.code==='Space')dodge();});document.addEventListener('keyup',e=>keys.delete((directions[e.key]||e.key).toLowerCase()));addEventListener('blur',()=>keys.clear());
 function startGameplay(){
  if(started)return;
  if(!activeCharacter&&!legacySave)return;
@@ -1259,7 +1370,8 @@ requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',s
 window.oakrestDiagnostics=()=>({...stats,quality,version:'auto-combat-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
- state:()=>({data:structuredClone(data),style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
+ state:()=>({data:structuredClone(data),woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
+ woodcut:id=>startWoodcutting(id),learnWoodcutting(){data.professions.woodcuttingLearned=true;if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');save();},
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};expandedTown.update(hero.position);},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,target:(type)=>{const e=activeEnemies().find(m=>m.type===type&&!m.dead);return e?selectCombatTarget(e):false;},toggleCombat,stopCombat,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
  receiveDamage(amount){applyEnemyDamage(null,{damage:amount},now());},
