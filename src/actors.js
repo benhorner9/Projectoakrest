@@ -67,7 +67,13 @@ export function applyCharacterAppearance(g,appearance={}){
 }
 export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();for(const mat of u.ownedMaterials||[])mat.dispose();u.ownedMaterials=[];u.owned=[];u.weapon.clear();u.offhand.clear();u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
  const w=u.weapon;function blade(group,heavy=false,dagger=false){block(group,'#54402f',0,0,.02,.105,.11,.38);block(group,'#c4a466',0,0,-.18,dagger?.26:heavy?.55:.40,.09,.10,true);taperedBlade(group,dagger?.52:heavy?1.45:1.03,dagger?.15:heavy?.30:.20);ball(group,'#c4a466',0,0,.24,.08,.08,.08);}
- if(style==='melee'){blade(w,family==='greatsword',family==='daggers');if(family==='daggers')blade(u.offhand,false,true);}
+ if(style==='melee'){
+   if(family==='woodaxe'){
+    block(w,'#745235',0,0,-.49,.12,.12,1.15);
+    block(w,'#c0c9c7',-.25,0,-.96,.58,.15,.38,true);
+    block(w,'#e2e5dc',-.51,0,-.97,.085,.16,.4,true);
+   }else{blade(w,family==='greatsword',family==='daggers');if(family==='daggers')blade(u.offhand,false,true);}
+  }
  else if(style==='magic'){const shaft=tube(w,'#604d36',0,0,-.65,.055,.075,1.75);shaft.rotation.x=Math.PI/2;const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.23),material(family==='frost'?'#8fcde3':'#ecaa69'));crystal.position.z=-1.58;w.add(crystal);for(const s of [-1,1]){const prong=block(w,'#baa775',s*.15,0,-1.43,.07,.10,.42,true);prong.rotation.y=s*-.35;}}
  else {const bow=family!=='crossbow',size=family==='shortbow'?.55:.8;
  if(bow){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,-size,.12),new THREE.Vector3(0,-size*.7,-.22),new THREE.Vector3(0,0,-.38),new THREE.Vector3(0,size*.7,-.22),new THREE.Vector3(0,size,.12)]);mesh(w,new THREE.TubeGeometry(curve,16,.045,5,false),'#946c42',0,0,-.28);block(w,'#d8cdb4',0,0,-.16,.018,size*2,.018);}
@@ -99,20 +105,25 @@ export function applyEquipmentVariant(g,style,itemId){
  const gemstone=new THREE.Mesh(geometry,gemMaterial);gemstone.position.set(.16,-.06,-.25-(seed%3)*.13);u.weapon.add(gemstone);
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;
  u.rig.rotation.z=damp(u.rig.rotation.z,dead?-1.5:hit?.13:-side*.06,12,dt);u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05,22,dt);
  let right=-.12+s*.25*strength,left=-.1-s*.30*strength,elbow=-.2;
- if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
+ if(chopping){
+  const period=Math.max(.6,chopping.period||1.18),phase=((t-chopping.start)/period%1+1)%1;
+  const strike=phase<.48?phase/.48:1-(phase-.48)/.52;
+  right=-.9+strike*2.7;left=right*.78-.28;elbow=.35+strike*.42;
+  u.rig.rotation.x=damp(u.rig.rotation.x,-strike*.13,18,dt);
+ }else if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
  else if(['frost','ember'].includes(family)){right=.38+wind*.8+release*.3;left=.35+wind*.45;elbow=.35;}
  else {right+=wind*1.6+release*.32;elbow=.15+wind*.35;left=family==='greatsword'?right*.8:family==='daggers'?.25-wind*.4+release*.55:left;}
  u.rightArm.rotation.x=pose.phase==='release'&&pose.amount>.93?right:damp(u.rightArm.rotation.x,right,35,dt);u.leftArm.rotation.x=damp(u.leftArm.rotation.x,left,25,dt);
  const contact=attack?.contactDuration?Math.max(0,Math.min(1,(t-attack.impactAt)/attack.contactDuration)):0;
  const swing=attack?.halfAngle?(-attack.halfAngle+2*attack.halfAngle*contact)*(attack.reverse?-1:1):0;
- u.rightArm.rotation.y=damp(u.rightArm.rotation.y,pose.phase==='release'?swing:0,35,dt);
- u.rightArm.rotation.z=damp(u.rightArm.rotation.z,pose.phase==='idle'?-.1:-wind*.7+release*.5,30,dt);
+ u.rightArm.rotation.y=damp(u.rightArm.rotation.y,chopping?-.33*Math.sin(((t-chopping.start)/(chopping.period||1.18))*Math.PI*2):pose.phase==='release'?swing:0,35,dt);
+ u.rightArm.rotation.z=damp(u.rightArm.rotation.z,chopping?-.2:pose.phase==='idle'?-.1:-wind*.7+release*.5,30,dt);
  u.rightElbow.rotation.x=damp(u.rightElbow.rotation.x,elbow,25,dt);u.leftElbow.rotation.x=damp(u.leftElbow.rotation.x,['bow','shortbow','crossbow'].includes(family)?.6:.25,20,dt);
  u.cape.rotation.x=damp(u.cape.rotation.x,.08+strength*.27+Math.sin(t*5)*.025,6,dt);
 }
