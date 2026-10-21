@@ -43,12 +43,15 @@ export const OBSTACLES=[];
 const worldObstacles=[];let collisionArea='world',solidCache=null,grid=null;
 export function setCollisionArea(area){collisionArea=['world','tutorial','realm'].includes(area)?area:'world';solidCache=null;grid=null;}
 const groundHeight=(x,z)=>collisionArea==='world'?terrainHeight(x,z):0;
-export function addWorldObstacle(o){
+export function registerWorldObstacle(o){
  if(!o||![o.x,o.z,o.height].every(Number.isFinite)||o.height<=0)return false;
  if(!(o.r>0)&&!(o.hx>0&&o.hz>0))return false;
- solidCache=null;grid=null;worldObstacles.push({area:o.area||'world',x:o.x,z:o.z,height:o.height,...(o.r>0?{r:o.r}:{hx:o.hx,hz:o.hz})});
- return true;
+ const handle={area:o.area||'world',x:o.x,z:o.z,height:o.height,...(o.r>0?{r:o.r}:{hx:o.hx,hz:o.hz})};
+ solidCache=null;grid=null;worldObstacles.push(handle);
+ return handle;
 }
+export function addWorldObstacle(o){return !!registerWorldObstacle(o);}
+export function removeWorldObstacle(handle){const i=worldObstacles.indexOf(handle);if(i<0)return false;worldObstacles.splice(i,1);solidCache=null;grid=null;return true;}
 export function clearWorldObstacles(){worldObstacles.length=0;setCollisionArea('world');}
 function footprintsOverlap(o,x,z,r=0){
  if(o.r)return Math.hypot(x-o.x,z-o.z)<o.r+r;
