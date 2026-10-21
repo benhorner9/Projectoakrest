@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {MELEE_PROFILES,sweptStrikeHit,movingSphereHit,abilityCooldownKey,groundPath,DODGE,dodgeInvulnerable,withinChargeLane} from './combat-physics.js';
 import { storageKey } from './storage-key.js';
 import {CAMERA_DEFAULTS,normalizeCameraSettings,readCameraSettings,firstStandardGamepad,gamepadEdges,cameraOrbitVector,frameDamping} from './control-config.js';
+import {indoorViewHeight} from './building-visibility.js';
 import { STYLE_ORDER,STYLE_COLOURS,LOADOUTS,XP_BY_MOB,nextStyle,levelFromXp,maxHealth,damageAfterArmour,meleeTarget,clamp,defaultSave,validSave,freshCharacterSave,xpProgress,combatLevelFromXp,ARMOUR,SKILLS_OVERVIEW,skillMilestones,awardTrainingGear,ownsWeapon,ownsArmour,skillCatalogue,equippedSkills,equipSkill,canEquipWeapon,canEquipArmour,slotFamily,outgoingMultiplier,defenceFor,equipPrimaryItem } from './rules.js';
 import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta } from './controls.js';
 import { installGameZoomGuard } from './touch-gestures.js';
@@ -136,6 +137,7 @@ const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],float
 let respawnAt=0,lastHurt=-100;let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
 let motion={x:0,z:0},stride=0,visualHeading=0;
 const cameraFocus=new THREE.Vector3(0,1.6,7.8);
+ let interiorCameraBlend=0;
 const forward=()=>new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
 const directions={ArrowUp:'w',ArrowDown:'s'};
 let bookStyle='melee',bookTab='skills',bookSlot=0,skillDetail=null;
@@ -890,7 +892,7 @@ function animate(dt,t){
   const r=Math.hypot(hero.position.x,hero.position.z);
   if(r>15.5){hero.position.x*=15.5/r;hero.position.z*=15.5/r;}
  }
- expandedTown.update(hero.position,t);
+ expandedTown.update(hero.position,t,camera.position);
   townLife.update(dt,t,hero.position,(data.onboarding?.area||'world')==='world');
   audio.cityAmbience(t,(data.onboarding?.area||'world')==='world'&&isOakrestSafe(hero.position.x,hero.position.z));
   const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
@@ -901,18 +903,30 @@ function animate(dt,t){
  animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
- const ideal=look.clone().add(new THREE.Vector3(orbit.x,orbit.y,orbit.z));
- cameraJolt=Math.max(0,cameraJolt-dt*.85);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)ideal.y+=cameraJolt*Math.sin(elapsed*95)*.25;
- const safe=safeCamera(look,ideal);ideal.set(safe.x,safe.y,safe.z);
- // Follow mode never lets camera smoothing orbit past the hero's shoulder
- // while turning: it is always behind the character's facing direction.
- if(cameraSettings.mode==='follow')camera.position.copy(ideal);
- else camera.position.lerp(ideal,frameDamping(cameraSettings.smoothing,dt));
- const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
- const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*4,0));
- if(cameraSettings.mode==='follow')cameraFocus.copy(cameraAim);
- else cameraFocus.lerp(cameraAim,frameDamping(cameraSettings.smoothing+3,dt));
+ const indoor=(data.onboarding?.area||'world')==='world'?expandedTown.interior(hero.position.x,hero.position.z):null;
+ // Smoothly reveal the whole room in a raised three-quarter view; never
+ // let the indoor camera collide with walls hidden by the cutaway effect.
+ interiorCameraBlend+=(Number(!!indoor)-interiorCameraBlend)*frameDamping(8,dt);
+ const exterior=look.clone().add(new THREE.Vector3(orbit.x,orbit.y,orbit.z));
+ const height=indoor?indoorViewHeight(indoor):8.5;
+ const elevated=look.clone().add(new THREE.Vector3(orbit.x*.74,height,orbit.z*.74));
+ const ideal=exterior.lerp(elevated,interiorCameraBlend);
+ cameraJolt=Math.max(0,cameraJolt-dt*.85);
+ if(interiorCameraBlend<.08&&!matchMedia('(prefers-reduced-motion: reduce)').matches)ideal.y+=cameraJolt*Math.sin(elapsed*95)*.25;
+ if(interiorCameraBlend<.02){
+  const safe=safeCamera(look,ideal);ideal.set(safe.x,safe.y,safe.z);
+ }
+ if(cameraSettings.mode==='follow'&&interiorCameraBlend<.01)camera.position.copy(ideal);
+ else camera.position.lerp(ideal,frameDamping(interiorCameraBlend>.01?12:cameraSettings.smoothing,dt));
+ if(interiorCameraBlend<.02){
+  const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
+ }
+ const cameraAim=look.clone().addScaledVector(front,2.8*(1-interiorCameraBlend)).add(
+  new THREE.Vector3(0,-pitch*4*(1-interiorCameraBlend)+.65*interiorCameraBlend,0));
+ if(cameraSettings.mode==='follow'&&interiorCameraBlend<.01)cameraFocus.copy(cameraAim);
+ else cameraFocus.lerp(cameraAim,frameDamping(12,dt));
  camera.lookAt(cameraFocus);
+ expandedTown.update(hero.position,t,camera.position);
  for(let i=groundEffects.length-1;i>=0;i--){const field=groundEffects[i];if(t>=field.until){groundEffects.splice(i,1);continue;}
   for(const e of activeEnemies())if(!e.dead&&!e.retreating&&Math.hypot(e.x-field.origin.x,e.z-field.origin.z)<=field.radius&&clearCombatLine(field.origin,enemyCentre(e)))e.slowUntil=Math.max(e.slowUntil,t+.15);
  }
@@ -1147,7 +1161,7 @@ requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',s
 window.oakrestDiagnostics=()=>({...stats,quality,version:'combat-reborn-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
- state:()=>({data:structuredClone(data),style,hp,city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z)},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
+ state:()=>({data:structuredClone(data),style,hp,city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};expandedTown.update(hero.position);},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
  receiveDamage(amount){applyEnemyDamage(null,{damage:amount},now());},
