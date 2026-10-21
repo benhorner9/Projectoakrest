@@ -31,8 +31,13 @@ const errors=[],report={viewport:'iPad 13-inch landscape proxy (Chromium SwiftSh
   await page.goto('http://127.0.0.1:5173/?qa=1',{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForFunction(()=>!!window.oakrestQA,null,{timeout:30000});
   await page.locator('#begin').click();
-  const buildings=await page.evaluate(async()=>{const mod=await import('/src/town-layout.js');return mod.OAKREST_BUILDINGS});
-  assert.equal(buildings.length,16,'all starter-town structures must be audited');
+  const allBuildings=await page.evaluate(async()=>{const mod=await import('/src/town-layout.js');return mod.OAKREST_BUILDINGS});
+  assert.equal(allBuildings.length,16,'all starter-town structures must be audited');
+  const shard=Number(process.env.OAKREST_BUILDING_SHARD);
+  assert.ok(Number.isInteger(shard)&&shard>=0&&shard<4,'building QA must run each of the 4 shards');
+  const buildings=allBuildings.filter((_,i)=>i%4===shard);
+  assert.equal(buildings.length,4,'every shard must check 4 different buildings');
+  report.shard=shard;
   const orient={north:Math.PI,south:0,east:Math.PI/2,west:-Math.PI/2};
   function point(b,x,z){const a=orient[b.face],co=Math.cos(a),si=Math.sin(a);
    return{x:b.x+x*co+z*si,z:b.z-x*si+z*co};
@@ -67,9 +72,9 @@ const errors=[],report={viewport:'iPad 13-inch landscape proxy (Chromium SwiftSh
    report.buildings.push({...note,exterior:true,corner:true,interior:true});
    console.log('PASS shell browser audit '+b.id+' ('+b.kind+', '+b.face+')');
   }
-  assert.equal(report.buildings.length,16);
+  assert.equal(report.buildings.length,4);
   assert.deepEqual(errors,[],'no JavaScript errors during complete town walkthrough');
-  console.log('PASS 16 Oakrest facades, corners, interiors; 48 visual captures.');
+  console.log('PASS shard '+shard+': 4 Oakrest facades, corners and interiors; 12 visual captures.');
   await context.close();
  }catch(e){report.failure=e.stack||String(e);console.error(e.stack||String(e));process.exitCode=1;}
  finally{writeFileSync(join(out,'report.json'),JSON.stringify(report,null,2));await browser?.close();server.kill();}
