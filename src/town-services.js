@@ -9,6 +9,12 @@ export const OAKREST_SERVICES=Object.freeze([
   Object.freeze({id:'store',label:'Oakrest General Store',x:30,z:14,npcX:32.7,npcZ:14,reach:3.6,kind:'store',attendant:'Darrin the Shopkeeper'}),
   Object.freeze({id:'forester',label:"Forester's Lodge",x:-30,z:46,npcX:-32.7,npcZ:46,reach:3.6,kind:'skill',skill:'woodcutting',attendant:'Alden the Forester'})
 ]);
+export const OAKREST_NOTICES=Object.freeze([
+ Object.freeze({id:'heartwood-notice',label:'Heartwood Noticeboard',x:-12,z:49,reach:2.4,type:'notice',
+  line:'The old oak marks the centre of Oakrest. Bank your belongings, visit the market and find the Warden’s Hall along the north-west lane.'}),
+ Object.freeze({id:'wardens-notice',label:'Warden’s Notices',x:-13,z:42,reach:2.4,type:'notice',
+  line:'The Southgate road remains safe for new travellers. Keep training beyond the greenbelt; the deeper forest is no place for an unprepared adventurer.'})
+]);
 export const OAKREST_GROVES=Object.freeze([
   Object.freeze({id:'pine-west',x:-18,z:59,reach:2.6}),
   Object.freeze({id:'pine-east',x:-8,z:56,reach:2.6}),
@@ -32,7 +38,8 @@ export function townInteraction(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return null;
   const options=[
     ...OAKREST_SERVICES.map(s=>({...s,type:'service',x:s.npcX??s.x,z:s.npcZ??s.z})),
-    ...OAKREST_GROVES.map(s=>({...s,type:'grove',label:'Training pine'}))
+    ...OAKREST_GROVES.map(s=>({...s,type:'grove',label:'Training pine'})),
+    ...OAKREST_NOTICES
   ].map(point=>({...point,distance:Math.hypot(x-point.x,z-point.z)}))
    .filter(point=>point.distance<=point.reach)
    .sort((a,b)=>a.distance-b.distance);
