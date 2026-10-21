@@ -126,7 +126,7 @@ function equipVisual(style,weaponId){
 }
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
-let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,lastAttackInterval=0.95,dodgeTravel=null;
+let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,queuedAbility=null,lastAttackInterval=0.95,dodgeTravel=null;
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
 const cameraStorageKey=oakrestKey('oakrest-camera-settings-v1');
 let cameraSettings=readCameraSettings(localStorage,cameraStorageKey);
@@ -735,7 +735,18 @@ function resolveBasicAttack(t){
  }
 }
 function shiftHero(dist){const f=forward();dodgeTravel={dir:{x:f.x*Math.sign(dist),z:f.z*Math.sign(dist)},speed:Math.abs(dist)/.32,start:now(),end:now()+.32};addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
-function useAbility(index){if(isGameplayMenuOpen())return;if(!started||hp<=0||dodgeTravel||pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic||(data.onboarding?.area!=='tutorial'&&!ownsWeapon(data,style,data.gear[style])))return;const a=activeSkillCache[index];if(!a)return;const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),a);if(now()<(cooldowns.get(id)||0))return;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(slotFamily(style,data.gear[style])==='greatsword'?.6:.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
+function useAbility(index,fromQueue=false){
+ if(isGameplayMenuOpen()||!started||hp<=0||dodgeTravel||(data.onboarding?.area!=='tutorial'&&!ownsWeapon(data,style,data.gear[style])))return;
+ const a=activeSkillCache[index];if(!a)return;
+ const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),a);
+ if(now()<(cooldowns.get(id)||0))return;
+ // Players must be able to activate abilities DURING auto-attack recovery.
+ // Buffer the selected ability for the next legal opening instead of ignoring it.
+ if(pendingAbility||now()<switchUntil||now()<attackUntil||pendingBasic){
+  if(!fromQueue)queuedAbility={index,style,weapon:data.gear[style]};
+  return;
+ }
+ queuedAbility=null;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(slotFamily(style,data.gear[style])==='greatsword'?.6:.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28)};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
 function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;const {a,style:castStyle}=pendingAbility;pendingAbility=null;if(hp<=0||style!==castStyle)return;audio.play(style==='magic'?'magic':'attack');
   if(a.kind==='hit'||a.kind==='execute'){beginStrike(a.damage,a.reach,a);}
   else if(a.kind==='sweep'){
@@ -798,7 +809,7 @@ function applyEnemyDamage(e,spec,t){
  $('damage-flash').classList.remove('hit');void $('damage-flash').offsetWidth;$('damage-flash').classList.add('hit');
  floating('-'+harm,'#ff948d',hero.position.clone().add(new THREE.Vector3(0,2.8,0)));
  updateHpUI();
- if(hp<=0){stopCombat();activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
+ if(hp<=0){stopCombat();queuedAbility=null;activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
   toast('<b>YOU WERE DEFEATED</b> · Respawning in Oakrest');
   respawnAt=t+2.1;
  }
@@ -944,7 +955,12 @@ function updateEnemyLevelLabels(){
  }
 }
 function animate(dt,t){
- elapsed+=dt;resolveBasicAttack(t);resolveAbility(t);if(queuedStyle&&!pendingBasic&&!pendingAbility&&!activeStrikes.length){const next=queuedStyle;queuedStyle=null;setStyle(next);}if(hp<=0&&respawnAt&&t>=respawnAt){const point=START_POINTS[data.onboarding?.area||'world'];hero.position.set(point.x,terrainHeight(point.x,point.z),point.z);hp=maxHealth(levelFromXp(data.xp.vitality).level);respawnAt=0;updateHpUI();}
+ elapsed+=dt;resolveBasicAttack(t);resolveAbility(t);if(queuedStyle&&!pendingBasic&&!pendingAbility&&!activeStrikes.length){const next=queuedStyle;queuedStyle=null;setStyle(next);}
+ if(queuedAbility){
+  if(queuedAbility.style!==style||queuedAbility.weapon!==data.gear[style]||hp<=0||isGameplayMenuOpen())queuedAbility=null;
+  else if(!pendingBasic&&!pendingAbility&&t>=attackUntil&&t>=switchUntil)useAbility(queuedAbility.index,true);
+ }
+ if(hp<=0&&respawnAt&&t>=respawnAt){const point=START_POINTS[data.onboarding?.area||'world'];hero.position.set(point.x,terrainHeight(point.x,point.z),point.z);hp=maxHealth(levelFromXp(data.xp.vitality).level);respawnAt=0;updateHpUI();}
  pollGamepad(dt);
  // Automatic basics run from the selected target; input is edge-triggered.
  const turn=cameraKeyDirection(keys.has('arrowleft'),keys.has('arrowright'));
@@ -1038,7 +1054,7 @@ const timer=attackCooldown(attackUntil,lastAttackInterval,t);
  $('weapon-cycle').textContent=combatTarget?(timer.ready?'AUTO-ATTACK ACTIVE':'AUTO · '+timer.remaining.toFixed(1)+'s recovery'):'SELECT AN ENEMY · ATTACK';
  if(attackTimer)attackTimer.textContent=combatTarget?(timer.ready?'AUTO':timer.remaining.toFixed(1)+'s'):(timer.ready?'READY':timer.remaining.toFixed(1)+'s');
  const remainingDodge=Math.max(0,dodgeUntil-t);$('touch-dodge').classList.toggle('unavailable',remainingDodge>0);$('touch-swap').classList.toggle('queued',!!queuedStyle);const dodgeLabel=$('touch-dodge').querySelector('small');if(dodgeLabel)dodgeLabel.textContent=remainingDodge>0?remainingDodge.toFixed(1)+'s':'DODGE';
- for(const [i,b] of [...$('skills').children].entries()){const ability=activeSkillCache[i];const until=ability?cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability))||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('cooling',remaining>0);const unavailable=!!ability&&(remaining>0||t<attackUntil||!!dodgeTravel||t<switchUntil);b.classList.toggle('unavailable',unavailable);b.setAttribute('aria-disabled',String(unavailable));b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
+ for(const [i,b] of [...$('skills').children].entries()){const ability=activeSkillCache[i];const until=ability?cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability))||0:0;const remaining=Math.max(0,until-t);b.classList.toggle('queued',queuedAbility?.style===style&&queuedAbility.index===i);b.classList.toggle('cooling',remaining>0);const unavailable=!!ability&&(remaining>0||t<attackUntil||!!dodgeTravel||t<switchUntil);b.classList.toggle('unavailable',unavailable);b.setAttribute('aria-disabled',String(unavailable));b.querySelector('.cooldown').textContent=remaining>0?remaining.toFixed(1):'';}
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);
 const canvas=renderer.domElement;
