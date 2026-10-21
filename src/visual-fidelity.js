@@ -129,8 +129,12 @@ export function createOakrestLighting({THREE,scene,sun,quality='balanced',terrai
     level=GRAPHICS_QUALITY[next]?next:'balanced';
     const size=graphicsProfile(level).shadowSize;
     if(sun.shadow.mapSize.x!==size){
-      sun.shadow.mapSize.set(size,size);
+      // Release the old render target before the renderer allocates the new
+      // resolution; keeping a disposed target attached causes resize faults.
       sun.shadow.dispose();
+      sun.shadow.map=null;
+      sun.shadow.mapPass=null;
+      sun.shadow.mapSize.set(size,size);
       sun.shadow.needsUpdate=true;
     }
     practicals.forEach((p,i)=>{if(i>=graphicsProfile(level).practicalLights)p.visible=false;});
