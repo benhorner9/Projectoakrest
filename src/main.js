@@ -1010,7 +1010,7 @@ function isGameplayMenuOpen(){
  return !progressPanel.hidden||!$('controls-panel').hidden||!$('character-creator').hidden||townUI.isOpen();
 }
 function focusGamepadMenu(direction){
- const parent=townUI.isOpen()?$('town-panel'):!$('controls-panel').hidden?$('controls-panel'):progressPanel;
+ const parent=townUI.isOpen()?$('town-panel'):progressPanel;
  const fields=[...parent.querySelectorAll('button:not(:disabled),select:not(:disabled),input:not(:disabled)')]
   .filter(el=>el.getClientRects().length>0);
  if(!fields.length)return;
@@ -1032,12 +1032,8 @@ function pollGamepad(dt){
  padState=current;
  if(!current){padPrevious=null;return;}
  const menus=isGameplayMenuOpen();
- if(edges.menu){
-  $('controls-panel').hidden=menus;
-  $('help-button').setAttribute('aria-expanded',String(!menus));
-  if(menus)bookClose();
-  document.exitPointerLock?.();
- }else if(edges.inventory){if(menus){bookClose();closeControls();}else bookOpen('inventory',true);}
+ if(edges.menu){if(menus){bookClose();closeControls();}else bookOpen('settings');}
+ else if(edges.inventory){if(menus){bookClose();closeControls();}else bookOpen('inventory');}
  else if(started){
   if(menus){
    if(edges.abilities[0]||edges.abilities[2])focusGamepadMenu(-1);
@@ -1059,12 +1055,8 @@ function pollGamepad(dt){
  padPrevious=current;
 }
 function closeControls(){$('controls-panel').hidden=true;$('help-button').setAttribute('aria-expanded','false');}
-$('help-button').addEventListener('click',()=>{
-  const panel=$('controls-panel');panel.hidden=!panel.hidden;
-  $('help-button').setAttribute('aria-expanded',String(!panel.hidden));
-  document.exitPointerLock?.();
-});
-$('close-controls').addEventListener('click',closeControls);
+$('help-button').addEventListener('click',()=>bookOpen('settings',true));
+$('close-controls').addEventListener('click',()=>{if(!progressPanel.hidden)bookClose();else closeControls();});
 addEventListener('blur',()=>{
   holdingAttack=false;attackId=null;attackButton.classList.remove('held');
   joyId=null;joystick.x=0;joystick.y=0;stick.style.transform='';
