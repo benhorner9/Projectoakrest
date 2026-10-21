@@ -57,10 +57,10 @@ test('named city NPCs are visible and offer meaningful local dialogue',()=>{
  const scene=new THREE.Scene();buildOakrestTown(scene);
  const life=createOakrestTownLife(scene);
  try{
-  assert.equal(life.staff,3,'preserve banker, merchant and forester');
+  assert.equal(life.staff,OAKREST_SERVICES.length,'retain existing staff and add the Trade Steward');
   assert.ok(life.count>=13,'more residents than the original starter village');
   assert.ok(life.ambientStaff>=4,'guards, steward and gardeners');
-  for(const [x,z] of [[-13,-7],[13,-7],[-29,76],[9,58]]){
+  for(const [x,z] of [[-13,-7],[13,-7],[-29,76],[36,72]]){
    const npc=life.nearby(x,z);
    assert.equal(npc?.type,'citizen');
    assert.ok(npc.line.length>30);
