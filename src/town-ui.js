@@ -265,6 +265,12 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   }else {node('h3','EXAMINE AN ITEM',inspect);node('p','Tap an item to see what it is, its price and whether you can buy it.',inspect);}
   filterTiles();
  }
+ function tradeHouseView(){
+  node('h3','THE OAKREST EXCHANGE',body);
+  node('p','Welcome to the Trade House. The merchant galleries and auction registry are being prepared for future player trading.',body);
+  node('p','The auction house is not open yet. No listings, bids, purchases or item transfers can be made here.',body,'town-notice');
+  node('p','For now, visit the General Store for starter equipment or the Bank to keep your belongings safe.',body);
+ }
  function foresterView(data){
   const level=levelFromXp(data.professions?.woodcuttingXp||0).level;
   node('p','The Forester’s Lodge teaches beginner Woodcutting only. Other skills have their own towns and trainers.',body);
@@ -281,6 +287,7 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   const data=getData();body.replaceChildren();$('town-title').textContent=service.label;
   if(service.id==='bank')bankView(data);
   else if(service.id==='store')shopView(data);
+  else if(service.id==='trade-house')tradeHouseView();
   else foresterView(data);
  }
  function interact({x,z,allowed,time}){
