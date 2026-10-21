@@ -81,7 +81,7 @@ LOADOUTS.ranged.shortbow={
   requiredLevel:3,family:'shortbow'
 };
 for(const axe of WOODCUTTING_AXES)LOADOUTS.melee[axe.id]={
- ...LOADOUTS.melee.sword,title:axe.name,icon:'🪓',family:'woodaxe',requiredLevel:1,
+ ...LOADOUTS.melee.sword,title:axe.name,icon:'🪓',family:'sword',requiredLevel:1,
  basic:12,interval:1.25,windup:.35
 };
 export const ARMOUR={
