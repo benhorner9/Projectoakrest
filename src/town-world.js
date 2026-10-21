@@ -98,6 +98,8 @@ function makeRoof(group,build,h){
   }
   block(roof,shared.trim,0,h+1.73,0,.25,.24,d+1.3);
   if(build.kind==='bank')block(roof,shared.stone,-w*.30,h+1.4,-1,.9,1.8,.9);
+  // Rooftops must remain independent when static town geometry is batched.
+  roof.traverse(o=>{if(o.isMesh)o.userData.animated=true;});
   return roof;
 }
 function makeInteriors(group,build){
