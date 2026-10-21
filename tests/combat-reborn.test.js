@@ -82,8 +82,8 @@ test('invulnerability is limited to the active dodge window',()=>{
 });
 
 test('hidden world scenery never blocks tutorial or portal courtyard',()=>{
- assert.equal(blocked(-14,12,.42),true);
- setCollisionArea('tutorial');assert.equal(blocked(-14,12,.42),false);
+ assert.equal(blocked(6,19,.42),true);
+ setCollisionArea('tutorial');assert.equal(blocked(6,19,.42),false);
  addWorldObstacle({x:20,z:0,r:1,height:3,area:'tutorial'});assert.equal(blocked(20,0),true);
  setCollisionArea('world');assert.equal(blocked(20,0),false);
 });
