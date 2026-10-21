@@ -65,15 +65,16 @@ let browser,server;
     }
    oakrestQA.step(22);oakrestQA.style('magic');oakrestQA.step(1);oakrestQA.equip('weapon','frost');oakrestQA.slot(0,'w2');
    const e=oakrestQA.state().enemies.find(e=>e.type==='mossling'),{terrainHeight}=await import('/src/terrain.js');
-   oakrestQA.teleport(e.x,e.z+3);oakrestQA.aim(e.x,terrainHeight(e.x,e.z)+.75,e.z);oakrestQA.step(.4);
-   if(!oakrestQA.target('mossling'))throw Error('Cannot acquire real mossling for root test');
-   for(let tries=0;tries<8;tries++){
-    oakrestQA.ability(0);
-    // A buffered ability waits behind the ongoing auto-attack recovery.
-    // Allow the queued cast/windup/projectile to resolve before checking root.
-    oakrestQA.step(1.6);
+   oakrestQA.teleport(e.startX,e.startZ+3);oakrestQA.aim(e.startX,terrainHeight(e.startX,e.startZ)+.75,e.startZ);
+   for(let tries=0;tries<9;tries++){
+    // Reacquire the living enemy explicitly before the spell. A failed roll may
+    // require a new attempt; don't let 12 idle seconds of hostile attacks kill
+    // the tester, drag the monster outside its leash, or auto-kill the target.
+    if(!oakrestQA.target('mossling'))throw Error('Cannot acquire real mossling for root test');
+    oakrestQA.ability(0);oakrestQA.step(1.6);
     if(oakrestQA.state().enemies.find(m=>m.type==='mossling').rootUntil>oakrestQA.state().time)break;
-    oakrestQA.step(12);
+    oakrestQA.stopCombat();oakrestQA.teleport(0,11);oakrestQA.step(14);
+    oakrestQA.teleport(e.startX,e.startZ+3);oakrestQA.aim(e.startX,terrainHeight(e.startX,e.startZ)+.75,e.startZ);
    }
    const rooted=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(rooted.rootUntil<=oakrestQA.state().time)throw Error('Live mossling was not rooted after repeated fair accuracy rolls');
    oakrestQA.step(.5);const held=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(Math.hypot(held.x-rooted.x,held.z-rooted.z)>.01)throw Error('Root did not stop enemy simulation');
