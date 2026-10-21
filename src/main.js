@@ -551,17 +551,25 @@ $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){if(rings.length>=32)return;const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=terrainHeight(pos.x,pos.z)+.065;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
 function sparks(pos,color,count=10){count=Math.min(count,Math.max(0,120-projectiles.length));for(let i=0;i<count;i++){const sphere=put(scene,ballGeom.clone(),new THREE.MeshBasicMaterial({color}),pos.x,pos.y,pos.z,.07,.07,.07,false);const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
 function gainXp(type,sourceStyle=style){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[sourceStyle]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[sourceStyle]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[sourceStyle]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(sourceStyle,data.gear[sourceStyle]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${sourceStyle.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
-function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power}){if(!e||e.dead||e.hp<=0||e.retreating||!activeEnemies().includes(e))return;
+function hitEnemy(e,damage,ability,source=sourceSnapshot()){
+ if(!e||e.dead||e.hp<=0||e.retreating||!activeEnemies().includes(e))return;
+ if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}
+ const periodic=ability?.periodic===true;
+ const maximum=periodic?Math.max(1,Math.floor(damage)):maxHitForAction(source.maxHit||maxHitFor(source.level,source.weaponBasic,source.power),source.weaponBasic,damage);
+ const result=periodic?{hit:true,damage:maximum}:rollHit({maxHit:maximum,accuracy:accuracyFor(source.level,e.level,source.weaponBasic,{dummy:0,mossling:0,boar:.04,bandit:.08}[e.type]||0)});
+ if(e.type!=='dummy'){const cfg=ENEMY_COMBAT[e.type];if(Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)<=cfg.leash)e.aggro=true;}
+ if(!result.hit){floating('0','#c4d2d7',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));return;}
  if(e.onboardingDummy&&data.onboarding?.area==='tutorial'){
   const hits=data.onboarding.tutorial.hitStyles;
   if(!hits.includes(source.style)){hits.push(source.style);save();renderOpeningGuide();}
- }if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}const amount=Math.round(damage*(1+Math.min(24,source.level-1)*.025)*source.power);audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
+ }
+ const amount=result.damage;audio.play('hit',amount>25);e.plate.visible=true;e.hp-=amount;e.hitFlashUntil=now()+.16;
  if(e.type!=='dummy'&&!e.retreating){
   const cfg=ENEMY_COMBAT[e.type],heroHome=Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ);
   if(heroHome<=cfg.leash)e.aggro=true;
  }
  floating(`-${amount}`,'#fff0a0',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));
- if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[source.style],4);visuals.impact(e.group.position,STYLE_COLOURS[source.style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;e.bleedSource=source;}if(ability?.stun){e.stunUntil=now()+ability.stun;cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.lastAttack=now();}if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root){e.rootUntil=now()+ability.root;e.charge=null;e.pounce=null;}if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.aiState='dead';audio.play('death');if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.deathAt=now();addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type,source.style);}}
+ if(e.type!=='dummy'){sparks(e.group.position.clone().add(new THREE.Vector3(0,.9,0)),STYLE_COLOURS[source.style],4);visuals.impact(e.group.position,STYLE_COLOURS[source.style],amount>25);}if(ability?.bleed){e.bleedUntil=now()+ability.bleed;e.nextBleed=now()+1;e.bleedSource=source;}if(ability?.stun){e.stunUntil=now()+ability.stun;cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.lastAttack=now();}if(ability?.slow)e.slowUntil=now()+ability.slow;if(ability?.root){e.rootUntil=now()+ability.root;e.charge=null;e.pounce=null;}if(ability?.swapLock)e.swapLockedUntil=now()+ability.swapLock;if(e.hp<=0){if(e===combatTarget)stopCombat();cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.aiState='dead';audio.play('death');if(e.type==='dummy'){e.hp=e.max;toast('Training dummy · practice any style here');return;}e.hp=0;e.dead=true;e.aggro=false;e.retreating=false;e.levelLabel.hidden=true;e.respawn=now()+12;e.deathAt=now();addRing(e.group.position,'#e9bb76',2,.55);sparks(e.group.position.clone().add(new THREE.Vector3(0,.7,0)),'#ecd39b',9);spawnMonsterLoot(e);gainXp(e.type,source.style);}}
 function enemyCentre(e){return {x:e.x,y:e.group.position.y+(e.type==='mossling'?.75:1.25),z:e.z};}
 function enemyRadius(e){return e.type==='mossling'?.6:e.type==='boar'?.8:.65;}
 function clearCombatLine(a,b,r=.05){return segmentWorldHit(a,b,r)===null;}
@@ -616,7 +624,9 @@ function beginStrike(damage,reach,ability={},family=slotFamily(style,data.gear[s
  if(ability.kind==='sweep'){profile.halfAngle=1.15;profile.multi=true;}
  if(ability.kind==='hit'||ability.kind==='execute'){profile.halfAngle=Math.min(.48,profile.halfAngle);profile.multi=false;}
  const origin=hero.position.clone();origin.y+=1.1;
- const strike={origin,yaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set()};
+ const target=combatTarget&&targetValid(combatTarget,activeEnemies(),hero.position)?combatTarget:null;
+ const strikeYaw=target?Math.atan2(target.x-hero.position.x,-(target.z-hero.position.z)):yaw;
+ const strike={origin,yaw:strikeYaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set()};
  if(ability.strikes===2){strike.damage=damage/2;activeStrikes.push({...strike,start:now()+profile.duration+.035,previous:0,hits:new Set(),reverse:!strike.reverse,visualPending:true});}
  activeStrikes.push(strike);visuals.sweep(strike,STYLE_COLOURS[style]);
  if(attackAnimation){attackAnimation.contactDuration=profile.duration;attackAnimation.halfAngle=profile.halfAngle;attackAnimation.reverse=strike.reverse;}
@@ -654,13 +664,15 @@ function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWea
   if(hit!==null&&hit<nearest)nearest=hit;
  }
  aimPoint.copy(camera.position).lerp(rayEnd,nearest);
+ const locked=combatTarget&&targetValid(combatTarget,activeEnemies(),hero.position)&&Math.hypot(combatTarget.x-hero.position.x,combatTarget.z-hero.position.z)<=maxRange?combatTarget:null;
+ if(locked){const c=enemyCentre(locked);aimPoint.set(c.x,c.y,c.z);}
  const origin=new THREE.Vector3();hero.userData.weapon.getWorldPosition(origin);
  // Keep the muzzle outside the body while retaining the rig's actual hand elevation.
- const facing=forward();origin.addScaledVector(facing,.35);
+ const facing=locked?new THREE.Vector3(locked.x-hero.position.x,0,locked.z-hero.position.z).normalize():forward();origin.addScaledVector(facing,.35);
  const chest=hero.position.clone().add(new THREE.Vector3(0,1.3,0));
  if(!clearCombatLine(chest,origin,.08)){sparks(chest,colour,3);return;}
  let dir=aimPoint.clone().sub(origin).normalize();
- if(dir.dot(facing)<.08)dir.copy(cameraDirection);
+ if(dir.dot(facing)<.08&&!locked)dir.copy(cameraDirection);
  if(isTouch){
   let candidate=null,score=.996; // At most ~5 degrees; only visible targets ahead of the muzzle.
   for(const e of activeEnemies()){
@@ -701,7 +713,9 @@ function doBasic(){
 function resolveBasicAttack(t){
  if(!pendingBasic||t<pendingBasic.impactAt)return;
  const attack=pendingBasic;pendingBasic=null;
- if(!started||hp<=0||style!==attack.style)return;audio.play(style==='magic'?'magic':'attack',getWeapon().basic>25);
+ if(!started||hp<=0||style!==attack.style)return;
+ if(combatTarget&&!targetValid(combatTarget,activeEnemies(),hero.position)){stopCombat();return;}
+ audio.play(style==='magic'?'magic':'attack',getWeapon().basic>25);
  const w=(data.onboarding?.area==='tutorial'||ownsWeapon(data,attack.style,attack.weapon))?LOADOUTS[attack.style][attack.weapon]:attack.style==='melee'?UNARMED:null;
  if(!w)return;
  hero.userData.rightArm.rotation.x=-1.5;
@@ -771,17 +785,21 @@ function startEnemyWarning(e,t){
 }
 function applyEnemyDamage(e,spec,t){
  if(hp<=0||dodgeInvulnerable(t,dodgeStarted)){floating('EVADED','#a8f2be',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));return;}
- const harm=Math.max(1,Math.round(damageAfterArmour(spec.damage,shieldUntil>t,data.armour[style])*(1-equipmentModifiers(data,style).guard)));
+ const vitality=levelFromXp(data.xp.vitality).level,sourceLevel=e?.level||vitality;
+ const result=rollHit({maxHit:Math.max(1,Math.round(spec.damage)),accuracy:accuracyFor(sourceLevel,vitality,19,equipmentModifiers(data,style).guard)});
+ if(!result.hit){floating('0','#c4d2d7',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));return;}
+ const harm=Math.max(1,Math.round(damageAfterArmour(result.damage,shieldUntil>t,data.armour[style])*(1-equipmentModifiers(data,style).guard)));
  hp=Math.max(0,hp-harm);lastHurt=t;cameraJolt=.13;audio.play('hurt');
  $('damage-flash').classList.remove('hit');void $('damage-flash').offsetWidth;$('damage-flash').classList.add('hit');
  floating('-'+harm,'#ff948d',hero.position.clone().add(new THREE.Vector3(0,2.8,0)));
  updateHpUI();
- if(hp<=0){activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
+ if(hp<=0){stopCombat();activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
   toast('<b>YOU WERE DEFEATED</b> · Respawning in Oakrest');
   respawnAt=t+2.1;
  }
 }
 function disengageEnemy(e,t){
+ if(e===combatTarget)stopCombat();
  // Never carry a queued hit or charge across the leash boundary.
  cancelEnemyWarning(e);e.charge=null;e.pounce=null;e.path=null;e.aiState='disengage';e.aggro=false;e.retreating=true;e.acquireAfter=t+2;
  e.hp=e.max;e.bleedUntil=0;e.nextBleed=0;e.slowUntil=0;
@@ -819,7 +837,7 @@ function updateEnemy(e,dt,t){
   }
   return;
  }
- if(e.bleedUntil>t&&t>=e.nextBleed){e.nextBleed=t+1;hitEnemy(e,3,null,e.bleedSource);}
+ if(e.bleedUntil>t&&t>=e.nextBleed){e.nextBleed=t+1;hitEnemy(e,3,{periodic:true},e.bleedSource);}
  if(e.dead)return;
  e.bar.scale.x=clamp(e.hp/e.max,.001,1);e.bar.position.x=-.68*(1-e.hp/e.max);e.plate.lookAt(camera.position);
  animateCreature(e.group,e.type,t,dt,e.charge?10:e.aggro?2:0,e.warning?e.attackWindup:0,e.hitFlashUntil>t,0);
