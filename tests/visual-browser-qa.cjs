@@ -64,8 +64,11 @@ let browser;
       report.profiles.push({quality,metrics});
       await page.screenshot({path:path.join(root,'qa','visual-preset-'+quality+'.png')});
     }
-    await page.evaluate(()=>{oakrestQA.teleport(-22,9);oakrestQA.step(.1);});
-    await page.waitForTimeout(300);
+    // The lantern at (-22,9) can overlap a building's indoor cutaway:
+    // use the open southern street, still within 14m of nearby fixtures.
+    await page.evaluate(()=>{oakrestQA.teleport(0,9);oakrestQA.step(.1);});
+    assert.equal(await page.evaluate(()=>oakrestQA.state().town.inside),null,'street fixture test must be outdoors');
+    await page.waitForFunction(()=>oakrestDiagnostics()?.graphics?.practicalLights>0,{timeout:20000});
     const street=await page.evaluate(()=>oakrestDiagnostics().graphics);
     assert.ok(street.practicalLights>0,'high quality should light nearby lantern');
     assert.equal(street.interiorLight,false);
