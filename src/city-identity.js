@@ -185,25 +185,30 @@ function market(scene,animation){
  // Stone pavers outside the walking lanes: no collision under pedestrians.
  for(let i=0;i<10;i++){
   const a=i*Math.PI*2/10,rad=8.7;
-  const stone=mesh(sq,cyl,mat.cobble,Math.sin(a)*rad,.055,Math.cos(a)*rad,.8,.10,1.0,false);
+  const px=Math.sin(a)*rad,pz=Math.cos(a)*rad;
+  const stone=mesh(sq,cyl,mat.cobble,px,terrainHeight(px,39+pz)-sq.position.y+.055,pz,.8,.10,1.0,false);
   stone.rotation.y=a;
  }
  for(const [x,zWorld,a] of OAKREST_SQUARE_BENCHES){
-  const z=zWorld-39;
-  const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);bench(g,0,0,a);
-  addWorldObstacle({x,z:z+39,hx:1.42,hz:.76,height:1.5});
+  // Furniture has its own true ground anchor, not the square centre's
+  // elevation. Otherwise benches float as streets approach the hills.
+  const g=at(scene,x,zWorld,'Square resting place');
+  bench(g,0,0,a);
+  addWorldObstacle({x,z:zWorld,hx:1.42,hz:.76,height:1.5});
  }
- for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]])pot(sq,x,z);
+ for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]]){
+  const group=at(scene,x,39+z,'Square flower urn');pot(group,0,0);
+ }
  const boards=[[-12,10],[12,10],[-13,3]];
  for(const [x,z] of boards){
-  const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);
+  const g=at(scene,x,39+z,'Civic noticeboard');
   block(g,mat.wood,0,1.7,0,2.6,2,.18);
   block(g,mat.pale,0,1.7,.12,2.35,1.6,.1);
   addWorldObstacle({x,z:z+39,hx:1.30,hz:.22,height:2.8});
   for(let i=0;i<4;i++)block(g,mat.clay,-.72+i*.47,1.55+(i%2)*.33,.22,.36,.22,.035,false);
  }
  for(const [x,z] of [[-14,7],[14,-7]]){
-  const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);
+  const g=at(scene,x,39+z,'Square hanging lantern');
   block(g,mat.wood,0,1.2,0,.15,2.4,.15);
   const lantern=mesh(g,foliage,mat.light,0,2.55,0,.24,.36,.24,false);
   lantern.userData.animated=true;
