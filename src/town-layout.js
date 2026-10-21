@@ -26,7 +26,7 @@ export const OAKREST_BUILDINGS=Object.freeze([
  */
 export const OAKREST_WELL=Object.freeze({x:18,z:36,r:1.7,roofRadius:2.30,courtyardRadius:3.10,roadSetback:1.25});
 /** Small pedestrian stepping stones deliberately stop at the well's circular apron. */
-export const OAKREST_WELL_STEPS=Object.freeze([[18,30.1],[18,31.2],[18,32.25],[18,39.75],[18,40.8],[18,41.9],[18,42.9]]);
+export const OAKREST_WELL_STEPS=Object.freeze([[18,29],[18,30.1],[18,31.2],[18,32.25],[18,39.75],[18,40.8],[18,41.9],[18,42.9]]);
 export const OAKREST_MARKET_STALLS=Object.freeze([
  Object.freeze({x:-16,z:38,colour:'red'}),
  Object.freeze({x:-18,z:-7,colour:'blue'}),
@@ -50,7 +50,7 @@ export const OAKREST_MARKET_CRATES=Object.freeze([
  [-7,16,.88],[-8.2,16.6,.6],[7.1,22.9,1],[7,21,.6],[-22,36,.85],[23,36,.7]
 ]);
 export const OAKREST_MARKET_BARRELS=Object.freeze([
- [-18.5,15],[-18.5,16.2],[20,20.8],[21.1,20.5],[-12,39],[10.2,-5]
+ [-18.5,15],[-18.5,16.2],[20,20.8],[21.1,20.5],[-15,35],[10.2,-5]
 ]);
 export const OAKREST_VEGETABLE_BEDS=Object.freeze([[-10,51],[21,58],[-22,54]]);
 export const OAKREST_PATHS=Object.freeze([
@@ -106,6 +106,7 @@ function distanceToSegment(x,z,a,b){
 export function reservedTownGround(x,z){
   if(buildingAt(x,z,1.15))return true;
   if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.courtyardRadius+.40)return true;
+  for(const [sx,sz] of OAKREST_WELL_STEPS)if(Math.hypot(x-sx,z-sz)<.78)return true;
   if(Math.hypot(x,z-39)<10)return true; // paved Heartwood Square
   for(const path of OAKREST_PATHS)for(let i=1;i<path.length;i++)
     if(distanceToSegment(x,z,path[i-1],path[i])<3.25)return true;
