@@ -71,6 +71,7 @@ let browser;
     assert.equal(street.interiorLight,false);
     assert.deepEqual(report.errors,[],'no shader compilation or runtime errors');
     report.passed=true;
+    console.log('GRAPHICS_QA_DIAGNOSTICS '+JSON.stringify(report.shots.map(({name,fps,p95,drawCalls,triangles,textures,graphics})=>({name,fps,p95,drawCalls,triangles,textures,graphics}))));
     console.log('PASS: starter city/wilderness renders, enterable bank, 3 quality profiles, no shader errors');
   }catch(error){
     report.passed=false;report.errors.push(String(error.stack||error));
