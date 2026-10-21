@@ -22,7 +22,12 @@ let browser,server;
  }
  await scenario('A beginner melee',async page=>page.evaluate(()=>{
   const target=()=>oakrestQA.state().enemies.find(e=>e.type==='mossling');
-  const initial=oakrestQA.state();for(let i=0;i<50&&!target().dead;i++){const e=target();oakrestQA.teleport(e.x,e.z+2);oakrestQA.step(.2);oakrestQA.basic();oakrestQA.step(1.1);}
+  const initial=oakrestQA.state();
+  // New combat is target driven. A legacy un-aimed QA.basic() swipe should not
+  // be expected to home towards a monster behind the player.
+  const e=target();oakrestQA.teleport(e.x,e.z+2);oakrestQA.aim(e.x,.75,e.z);
+  if(!oakrestQA.target('mossling'))throw Error('Failed to acquire mossling for beginner auto-combat');
+  for(let i=0;i<25&&!target().dead&&oakrestQA.state().hp>0;i++)oakrestQA.step(.65);
   const after=oakrestQA.state();if(!target().dead||after.data.xp.melee<=initial.data.xp.melee)throw Error('Mossling kill and melee XP missing');
   oakrestQA.dodge();const at=oakrestQA.state().hero;oakrestQA.step(.15);if(oakrestQA.state().hero.z>=at.z)throw Error('Dodge did not move');
   return {xp:after.data.xp,health:after.hp,loot:after.data.groundLoot.length};
@@ -61,10 +66,14 @@ let browser,server;
    oakrestQA.step(22);oakrestQA.style('magic');oakrestQA.step(1);oakrestQA.equip('weapon','frost');oakrestQA.slot(0,'w2');
    const e=oakrestQA.state().enemies.find(e=>e.type==='mossling'),{terrainHeight}=await import('/src/terrain.js');
    oakrestQA.teleport(e.x,e.z+3);oakrestQA.aim(e.x,terrainHeight(e.x,e.z)+.75,e.z);oakrestQA.step(.4);
-   for(let tries=0;tries<16;tries++){
-    oakrestQA.ability(0);oakrestQA.step(.7);
+   if(!oakrestQA.target('mossling'))throw Error('Cannot acquire real mossling for root test');
+   for(let tries=0;tries<8;tries++){
+    oakrestQA.ability(0);
+    // A buffered ability waits behind the ongoing auto-attack recovery.
+    // Allow the queued cast/windup/projectile to resolve before checking root.
+    oakrestQA.step(1.6);
     if(oakrestQA.state().enemies.find(m=>m.type==='mossling').rootUntil>oakrestQA.state().time)break;
-    oakrestQA.step(14);
+    oakrestQA.step(12);
    }
    const rooted=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(rooted.rootUntil<=oakrestQA.state().time)throw Error('Live mossling was not rooted after repeated fair accuracy rolls');
    oakrestQA.step(.5);const held=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(Math.hypot(held.x-rooted.x,held.z-rooted.z)>.01)throw Error('Root did not stop enemy simulation');
@@ -128,7 +137,11 @@ let browser,server;
    for(const [type,weapon] of [['mossling','sword'],['boar','greatsword'],['bandit','daggers'],['mossling','forged_sword']]){
     oakrestQA.teleport(0,11);oakrestQA.step(13);oakrestQA.equip('weapon',weapon);
     const target=()=>oakrestQA.state().enemies.find(e=>e.type===type);
-    for(let i=0;i<55&&!target().dead;i++){const e=target();oakrestQA.teleport(e.x,e.z+1.6);oakrestQA.basic();oakrestQA.step(1.8);}
+    for(let i=0;i<55&&!target().dead;i++){
+     const e=target();oakrestQA.teleport(e.x,e.z+1.6);oakrestQA.aim(e.x,1.2,e.z);
+     if(!oakrestQA.state().autoCombat)oakrestQA.target(type);
+     oakrestQA.step(1.4);
+    }
     if(!target().dead)throw Error('Repeated fight failed: '+type);kills.push(type);
     for(const drop of oakrestQA.state().data.groundLoot){oakrestQA.teleport(drop.x,drop.z);oakrestQA.pickup();}
    }
