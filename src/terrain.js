@@ -8,7 +8,9 @@ export function terrainHeight(x,z){
 }
 export function terrainNormal(x,z){const e=.08,dx=(terrainHeight(x+e,z)-terrainHeight(x-e,z))/(2*e),dz=(terrainHeight(x,z+e)-terrainHeight(x,z-e))/(2*e),len=Math.hypot(dx,1,dz);return {x:-dx/len,y:1/len,z:-dz/len};}
 export function roadCentre(z){return z> -8?0:Math.sin((z+8)*.07)*1.2;}
-export const OBSTACLES=[{x:-14,z:12,hx:4.8,hz:3.8,height:7},{x:14,z:8,hx:4.8,hz:3.8,height:7},{x:-14,z:28,hx:4.8,hz:3.8,height:7},{x:14,z:27,hx:4.8,hz:3.8,height:7},{x:6,z:19,r:2.6,height:6}];
+// Legacy cottages were solid blocks. Their enterable replacements register
+// accurate individual walls in town-world.js; retain only the older well.
+export const OBSTACLES=[{x:6,z:19,r:2.6,height:6}];
 // World geometry can register lightweight solid footprints without expensive mesh physics.
 // Radius-aware collision prevents the hero's body clipping through walls and trunks.
 const worldObstacles=[];let collisionArea='world',solidCache=null,grid=null;
