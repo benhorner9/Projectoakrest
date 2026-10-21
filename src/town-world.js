@@ -3,6 +3,7 @@ import {terrainHeight,addWorldObstacle} from './terrain.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
 import {furnishGrandBank,buildGrandBankFacade} from './bank-architecture.js';
+import {buildingCutaway,playerInBuilding} from './building-visibility.js';
 
 /**
  * Walkable starter town. Every building has a real doorway, four separate
@@ -298,13 +299,17 @@ function buildHouse(scene,build){
   g.rotation.y=FACING[build.face];scene.add(g);
   const {w,d,kind}=build,h=kind==='bank'?6.05:['store','forester','hall'].includes(kind)?5.15:4.15;
   const wall=.36,opening=3.15,edge=(w-opening)/2;
+  // These meshes MUST stay separate when static scenery is batched; a player
+  // looking into a room needs an unobstructed cutaway, not solid walls.
+  const cutaway={front:[],back:[],left:[],right:[]};
+  const mark=(mesh,side)=>{mesh.userData.animated=true;mesh.userData.cutawaySide=side;cutaway[side].push(mesh);return mesh;};
   const base=bodyColours[kind];
   // Four physical walls with a front opening. These shape meshes and collision
   // prisms agree, so the hero walks through the opening and stops at the walls.
-  block(g,base,0,h/2,-d/2,w,h,wall);
+  mark(block(g,base,0,h/2,-d/2,w,h,wall),'back');
   wallCollider(build,0,-d/2,w,wall,h);
   for(const side of [-1,1]){
-    block(g,base,side*w/2,h/2,0,wall,h,d);
+    mark(block(g,base,side*w/2,h/2,0,wall,h,d),side<0?'left':'right');
     wallCollider(build,side*w/2,0,wall,d,h);
     const px=side*(opening/2+edge/2);
     // Solid collider retains the facade shape; the visible stone/plaster now
@@ -315,14 +320,14 @@ function buildHouse(scene,build){
     const a=apertureCenter-apertureWidth/2,b=apertureCenter+apertureWidth/2;
     for(const [left,right] of [[lo,a],[b,hi]]){
       const width=right-left;
-      if(width>.01)block(g,base,side*(left+right)/2,h/2,d/2,width+.025,h,wall);
+      if(width>.01)mark(block(g,base,side*(left+right)/2,h/2,d/2,width+.025,h,wall),'front');
     }
-    block(g,base,side*apertureCenter,windowBottom/2,d/2,apertureWidth+.045,windowBottom,wall);
-    block(g,base,side*apertureCenter,(windowTop+h)/2,d/2,apertureWidth+.045,h-windowTop,wall);
+    mark(block(g,base,side*apertureCenter,windowBottom/2,d/2,apertureWidth+.045,windowBottom,wall),'front');
+    mark(block(g,base,side*apertureCenter,(windowTop+h)/2,d/2,apertureWidth+.045,h-windowTop,wall),'front');
     wallCollider(build,px,d/2,edge,wall,h);
-    block(g,shared.trim,side*(w/2-.19),h*.52,0,.18,h*.9,d+.25);
+    mark(block(g,shared.trim,side*(w/2-.19),h*.52,0,.18,h*.9,d+.25),side<0?'left':'right');
   }
-  block(g,base,0,h-.35,d/2,opening,.70,wall);
+  mark(block(g,base,0,h-.35,d/2,opening,.70,wall),'front');
   // Continuous masonry course along the foot of every wall; cut out the
   // actual doorway so the hero never steps across an invisible solid block.
   const footing=.42;
@@ -338,10 +343,12 @@ function buildHouse(scene,build){
   block(g,shared.stone,0,-.045,d/2+.45,opening-.12,.15,.95,false);
   block(g,shared.trim,0,.035,d/2+.27,opening-.08,.06,.22,false);
   // Above-door lintel must not seal the player-height doorway.
+  const facadeStart=g.children.length;
   decorateFacade(g,build,h);
+  for(const piece of g.children.slice(facadeStart))mark(piece,'front');
   makeInteriors(g,build);
   const roof=makeRoof(g,build,h);
-  return {build,roof};
+  return {build,roof,cutaway};
 }
 function buildMerchantWell(scene){
   const {x,z,r,roofRadius,courtyardRadius}=OAKREST_WELL;
@@ -439,16 +446,18 @@ export function buildOakrestTown(scene){
   return {
     buildings:buildings.length,services:OAKREST_SERVICES.length,groves:OAKREST_GROVES.length,
     districts:CITY_DISTRICTS,landmark:cityIdentity.landmark,ambientCount:cityIdentity.ambientCount,
-    update(player,time=0){
+    update(player,time=0,camera=null){
       cityIdentity.update(time,player);
-      for(const {build,roof} of buildings){
-        const {x:localX,z:localZ}=localBuildingPosition(build,player.x,player.z);
-        roof.visible=!(Math.abs(localX)<build.w*.48&&Math.abs(localZ)<build.d*.48);
+      for(const {build,roof,cutaway} of buildings){
+        const state=buildingCutaway(build,player,camera);
+        roof.visible=!state.active;
+        for(const [side,meshes] of Object.entries(cutaway)){
+          const visible=!state.active||!state.hidden.includes(side);
+          for(const mesh of meshes)mesh.visible=visible;
+        }
       }
     },
-    inside(x,z){return buildings.find(({build})=>{
-      const p=localBuildingPosition(build,x,z);
-      return Math.abs(p.x)<build.w*.48&&Math.abs(p.z)<build.d*.48;
-    })?.build.id||null;}
+    interior(x,z){return buildings.find(({build})=>playerInBuilding(build,x,z))?.build||null;},
+    inside(x,z){return buildings.find(({build})=>playerInBuilding(build,x,z))?.build.id||null;}
   };
 }
