@@ -320,7 +320,17 @@ function buildHouse(scene,build){
     wallCollider(build,px,d/2,edge,wall,h);
     mark(block(g,shared.trim,side*(w/2-.19),h*.52,0,.18,h*.9,d+.25),side<0?'left':'right');
   }
-  mark(block(g,base,0,h-.35,d/2,opening,.70,wall),'front');
+  // Finish the *entire* wall above the working doorway. The old fixed .70m
+  // cap ended at h-.70: that left open holes of up to 2.65m between the door
+  // trim (y=3.2) and roof on tall Bank/Trade/Shop/Forester/Hall facades.
+  // A continuous real structural mesh, not decorative trim or a collider,
+  // spans from the 3.15m clear opening to the roofline on ALL 16 buildings.
+  // The slight roof and lintel overlap closes bright seams at either join.
+  const clearDoorHeight=3.15,roofOverlap=.04;
+  const upperFacade=mark(block(g,base,0,
+    (clearDoorHeight+h+roofOverlap)/2,d/2,
+    opening+.035,h-clearDoorHeight+roofOverlap,wall+.035),'front');
+  upperFacade.name=build.id+' completed doorway header';
   // Continuous masonry course along the foot of every wall; cut out the
   // actual doorway so the hero never steps across an invisible solid block.
   const footing=.42;
