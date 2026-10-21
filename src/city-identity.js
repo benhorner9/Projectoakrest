@@ -189,11 +189,12 @@ function market(scene,animation){
   const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);bench(g,0,0,a);
  }
  for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]])pot(sq,x,z);
- const boards=[[-12,10],[12,10],[-13,7]];
+ const boards=[[-12,10],[12,10],[-13,3]];
  for(const [x,z] of boards){
   const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);
   block(g,mat.wood,0,1.7,0,2.6,2,.18);
   block(g,mat.pale,0,1.7,.12,2.35,1.6,.1);
+  addWorldObstacle({x,z:z+39,hx:1.30,hz:.22,height:2.8});
   for(let i=0;i<4;i++)block(g,mat.clay,-.72+i*.47,1.55+(i%2)*.33,.22,.36,.22,.035,false);
  }
  for(const [x,z] of [[-14,7],[14,-7]]){
