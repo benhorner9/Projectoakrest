@@ -41,6 +41,9 @@ jobs:
       - name: Town bank, shop and specialist skilling in Chromium
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-town.cjs
+      - name: Woodcutting skill XP and persistent iPad backpack
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-woodcutting-ui.cjs
       - name: Equipment, inventory Examine and starter item persistence
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-equipment.cjs
