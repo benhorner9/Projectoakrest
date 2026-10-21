@@ -8,36 +8,8 @@ import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
  * collidable walls and an interior; roofs lift away while the player is inside.
  * Building orientation is independent of door and service interaction rules.
  */
-export const OAKREST_BUILDINGS=Object.freeze([
-  {id:'bank',x:-30,z:14,w:10,d:9,face:'east',kind:'bank'},
-  {id:'store',x:30,z:14,w:10,d:9,face:'west',kind:'store'},
-  {id:'forester',x:-30,z:46,w:11,d:9,face:'east',kind:'forester'},
-  {id:'cottage-a',x:-14,z:12,w:8,d:7,face:'east',kind:'home'},
-  {id:'cottage-b',x:14,z:8,w:8,d:7,face:'west',kind:'home'},
-  {id:'cottage-c',x:-14,z:28,w:8,d:7,face:'east',kind:'home'},
-  {id:'cottage-d',x:14,z:27,w:8,d:7,face:'west',kind:'home'},
-  {id:'north-home',x:29,z:42,w:8,d:7,face:'west',kind:'home'},
-  {id:'north-workshop',x:29,z:58,w:8,d:7,face:'north',kind:'workshop'},
-  {id:'west-house',x:-29,z:-2,w:8,d:7,face:'east',kind:'home'},
-  {id:'east-guardhouse',x:29,z:-2,w:8,d:7,face:'south',kind:'guard'},
-  {id:'merchant-home',x:29,z:30,w:8,d:7,face:'west',kind:'home'},
-  {id:'west-terrace',x:-29,z:31,w:8,d:7,face:'east',kind:'home'},
-  {id:'wardens-hall',x:-30,z:76,w:12,d:11,face:'east',kind:'hall'},
-  {id:'garden-house',x:29,z:75,w:8,d:8,face:'west',kind:'home'}
-]);
-export const OAKREST_PATHS=Object.freeze([
-  [[0,-13],[0,29]], [[-4.6,29],[-4.6,50]], [[4.6,29],[4.6,50]], [[0,50],[0,69]],
-  [[0,20],[-23,20],[-23,14]], [[0,17],[23,17],[24.4,14]],
-  [[-4.6,46],[-24.4,46]], [[4.6,42],[24.4,42]],
-  [[0,12],[-9.4,12]], [[0,8],[9.4,8]], [[0,28],[-9.4,28]], [[0,27],[9.4,27]],
-  [[0,0],[-24.4,0],[-24.4,-2]], [[0,2.8],[29,2.8],[29,1.6]],
-  [[4.6,54],[20,54],[29,54.4]],
-  [[-4.6,57],[-13,57]],
-  [[0,69],[0,86]], [[0,76],[-22.9,76]], [[0,75],[24.4,75]],
-  [[-4.6,31],[-24.4,31]], [[4.6,30],[24.4,30]],
-  [[-4.6,65],[-4.6,79]],[[4.6,65],[4.6,79]]
-]);
-const FACING={north:Math.PI,south:0,east:Math.PI/2,west:-Math.PI/2};
+import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition} from './town-layout.js';
+export {OAKREST_BUILDINGS,OAKREST_PATHS} from './town-layout.js';
 const shared={
   plaster:new THREE.MeshLambertMaterial({color:'#d1c4a6'}),
   stone:new THREE.MeshLambertMaterial({color:'#939b8b'}),
@@ -116,23 +88,53 @@ function makeRoad(scene,segments,width,color,offset){
   const road=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide,depthWrite:true}));
   road.receiveShadow=true;scene.add(road);
 }
+const gableMaterials=new Map();
+function gableMaterial(kind){
+  if(!gableMaterials.has(kind)){
+    const base=bodyColours[kind];
+    const mat=base.clone();mat.side=THREE.DoubleSide;
+    gableMaterials.set(kind,mat);
+  }
+  return gableMaterials.get(kind);
+}
 function makeRoof(group,build,h){
-  const roof=new THREE.Group();group.add(roof);
-  const w=build.w,d=build.d;
-  for(const s of [-1,1]){
-    const half=block(roof,roofColours[build.kind],s*w*.25,h+.72,0,w*.55,.24,d+1.2);
-    half.rotation.z=-s*.38;
-    block(roof,shared.wood,s*(w*.49),h+.35,0,.08,.1,d+1.28,false);
+  const roof=new THREE.Group();roof.name=build.id+' removable roof';group.add(roof);
+  const {w,d,kind}=build,overhang=.48,rise=1.72,run=w/2+overhang;
+  const span=Math.hypot(run,rise),slope=Math.atan2(rise,run),depth=d+1.05;
+  // Two slopes meet on the exact ridge line; eaves sit at the same height on
+  // both sides. Unlike arbitrary rotated cubes there are no open roof seams.
+  for(const side of [-1,1]){
+    const panel=block(roof,roofColours[kind],side*run/2,h+rise/2,0,span+.12,.23,depth);
+    panel.rotation.z=-side*slope;
+    const fascia=block(roof,shared.trim,side*run,h-.04,0,.16,.17,depth+.06);
+    fascia.rotation.z=-side*slope*.15;
+    // Small longitudinal timber edging makes the roof read as one structure.
+    const end=block(roof,shared.wood,side*(run-.06),h+.08,0,.13,.17,depth+.06);
+    end.rotation.z=-side*slope;
   }
-  block(roof,shared.trim,0,h+1.73,0,.25,.24,d+1.3);
-  // An upper crest, chimney and staggered eaves give important buildings their own silhouette.
-  if(build.kind==='hall'){
-    block(roof,shared.stone,0,h+2.6,-1.4,2.1,2.5,2.0);
-    block(roof,shared.trim,0,h+4.15,-1.4,2.7,.36,2.7);
-    block(roof,shared.gold,0,h+4.65,-1.4,.8,.7,.18);
+  block(roof,shared.trim,0,h+rise+.035,0,.34,.27,depth+.08);
+  // Gables close the triangular holes beneath the sloping roof, while the
+  // whole upper assembly hides when the player steps indoors.
+  const outline=new THREE.Shape();
+  outline.moveTo(-w/2,h-.02);outline.lineTo(w/2,h-.02);
+  outline.lineTo(0,h+rise);outline.closePath();
+  const triangle=new THREE.ShapeGeometry(outline);
+  for(const side of [-1,1]){
+    const end=new THREE.Mesh(triangle,gableMaterial(kind));
+    end.position.z=side*d/2;end.castShadow=true;end.receiveShadow=true;roof.add(end);
+    for(const x of [-w*.36,0,w*.36]){
+      // Flat gable studs stop at the point where roofline meets the wall.
+      const height=rise*(1-Math.abs(x)/(w/2));
+      if(height<=.20)continue;
+      block(roof,shared.timber,x,h+height/2,side*(d/2+.025),.10,height,.10);
+    }
   }
-  if(build.kind==='bank')block(roof,shared.stone,-w*.30,h+1.4,-1,.9,1.8,.9);
-  // Rooftops must remain independent when static town geometry is batched.
+  if(kind==='hall'){
+    block(roof,shared.stone,0,h+rise+1.10,-1.4,1.90,2,1.70);
+    block(roof,shared.trim,0,h+rise+2.20,-1.4,2.3,.26,2);
+    block(roof,shared.gold,0,h+rise+2.57,-1.4,.70,.50,.15);
+  }
+  if(kind==='bank')block(roof,shared.stone,-w*.30,h+rise+.42,-1,.84,1.4,.86);
   roof.traverse(o=>{if(o.isMesh)o.userData.animated=true;});
   return roof;
 }
@@ -245,6 +247,20 @@ function buildHouse(scene,build){
     block(g,shared.trim,side*(w/2-.19),h*.52,0,.18,h*.9,d+.25);
   }
   block(g,base,0,h-.35,d/2,opening,.70,wall);
+  // Continuous masonry course along the foot of every wall; cut out the
+  // actual doorway so the hero never steps across an invisible solid block.
+  const footing=.42;
+  block(g,shared.stone,0,footing/2,-d/2,w+.16,footing,.55);
+  for(const side of [-1,1]){
+    block(g,shared.stone,side*w/2,footing/2,0,.54,footing,d+.22);
+    block(g,shared.stone,side*(opening/2+edge/2),footing/2,d/2,edge,footing,.55);
+    block(g,shared.trim,side*(w/2-.14),h/2,0,.13,h-.46,.13);
+  }
+  // Interior floor and porch share a level terrain foundation with the real
+  // gameplay ground (not a high floating platform hiding grass beneath it).
+  block(g,shared.stone,0,.032,0,w-.44,.10,d-.44,false);
+  block(g,shared.stone,0,.045,d/2+.45,opening-.12,.12,.95,false);
+  block(g,shared.trim,0,.14,d/2+.27,opening-.08,.10,.22,false);
   // Above-door lintel must not seal the player-height doorway.
   decorateFacade(g,build,h);
   makeInteriors(g,build);
@@ -310,14 +326,13 @@ export function buildOakrestTown(scene){
     update(player,time=0){
       cityIdentity.update(time,player);
       for(const {build,roof} of buildings){
-        const {x,z}=player,dx=x-build.x,dz=z-build.z,angle=FACING[build.face];
-        const localX=dx*Math.cos(angle)-dz*Math.sin(angle),localZ=dx*Math.sin(angle)+dz*Math.cos(angle);
+        const {x:localX,z:localZ}=localBuildingPosition(build,player.x,player.z);
         roof.visible=!(Math.abs(localX)<build.w*.48&&Math.abs(localZ)<build.d*.48);
       }
     },
     inside(x,z){return buildings.find(({build})=>{
-      const a=FACING[build.face],dx=x-build.x,dz=z-build.z;
-      return Math.abs(dx*Math.cos(a)-dz*Math.sin(a))<build.w*.48&&Math.abs(dx*Math.sin(a)+dz*Math.cos(a))<build.d*.48;
+      const p=localBuildingPosition(build,x,z);
+      return Math.abs(p.x)<build.w*.48&&Math.abs(p.z)<build.d*.48;
     })?.build.id||null;}
   };
 }
