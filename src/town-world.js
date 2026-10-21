@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createSurfaceMaterial} from './visual-fidelity.js';
 import {mergeGeometries} from '../vendor/BufferGeometryUtils.js';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
@@ -15,84 +16,36 @@ import {furnishTradeHall,finishTradeHouseFacade,finishTradeHouseRoof} from './tr
  */
 import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_MARKET_STALLS,roadCrossSections} from './town-layout.js';
 export {OAKREST_BUILDINGS,OAKREST_PATHS} from './town-layout.js';
+// One physically-based art library shared by buildings, floors and removable
+// roofs. The tiny procedural maps are cached globally and never re-generated
+// per building; this also keeps the walkable doorway/cutaway system untouched.
 const shared={
-  plaster:new THREE.MeshLambertMaterial({color:'#d1c4a6'}),
-  stone:new THREE.MeshLambertMaterial({color:'#939b8b'}),
-  pale:new THREE.MeshLambertMaterial({color:'#b7b9a5'}),
-  timber:new THREE.MeshLambertMaterial({color:'#72523a'}),
-  wood:new THREE.MeshLambertMaterial({color:'#553e31'}),
-  trim:new THREE.MeshLambertMaterial({color:'#c49f68'}),
-  slate:new THREE.MeshLambertMaterial({color:'#526d75'}),
-  moss:new THREE.MeshLambertMaterial({color:'#597760'}),
-  red:new THREE.MeshLambertMaterial({color:'#955f50'}),
-  blue:new THREE.MeshLambertMaterial({color:'#758e9a'}),
-  gold:new THREE.MeshLambertMaterial({color:'#dfbb69'}),
-  cloth:new THREE.MeshLambertMaterial({color:'#b29576'}),
-  dirt:new THREE.MeshLambertMaterial({color:'#ac9774'}),
-  dark:new THREE.MeshLambertMaterial({color:'#343c39'}),
-  glass:new THREE.MeshLambertMaterial({color:'#a4c4c0',transparent:true,opacity:.7}),
-  glow:new THREE.MeshBasicMaterial({color:'#ffd58e'})
+ plaster:createSurfaceMaterial(THREE,'#d1c4a6','plaster'),
+ stone:createSurfaceMaterial(THREE,'#939b8b','limestone'),
+ pale:createSurfaceMaterial(THREE,'#b7b9a5','limestone'),
+ timber:createSurfaceMaterial(THREE,'#72523a','timber'),
+ wood:createSurfaceMaterial(THREE,'#553e31','timber'),
+ trim:createSurfaceMaterial(THREE,'#c49f68','timber'),
+ slate:createSurfaceMaterial(THREE,'#526d75','slate'),
+ moss:createSurfaceMaterial(THREE,'#597760','slate'),
+ red:createSurfaceMaterial(THREE,'#955f50','slate'),
+ blue:createSurfaceMaterial(THREE,'#758e9a','slate'),
+ gold:new THREE.MeshStandardMaterial({color:'#dfbb69',roughness:.33,metalness:.65}),
+ cloth:createSurfaceMaterial(THREE,'#b29576','cloth'),
+ dirt:createSurfaceMaterial(THREE,'#ac9774','road'),
+ dark:new THREE.MeshStandardMaterial({color:'#343c39',roughness:.53,metalness:.18}),
+ glass:new THREE.MeshStandardMaterial({color:'#a4c4c0',transparent:true,opacity:.7,roughness:.2,metalness:.03,depthWrite:false}),
+ glow:new THREE.MeshBasicMaterial({color:'#ffd58e'})
 };
-// Draw lightweight original architectural surface patterns once. This avoids
-// hundreds of separate shingle and plank meshes on iPad Safari.
-function surfacePattern(type){
- if(typeof document==='undefined')return null;
- const canvas=document.createElement('canvas');
- canvas.width=256;canvas.height=256;
- const c=canvas.getContext('2d');
- if(!c)return null;
- c.fillStyle='#f3f0e8';c.fillRect(0,0,256,256);
- if(type==='roof'){
-  for(let row=0;row<8;row++){
-   const y=row*32;
-   c.fillStyle=row%2?'#e8e8e5':'#f5f3ec';c.fillRect(0,y,256,32);
-   c.fillStyle='rgba(28,36,33,.25)';c.fillRect(0,y+29,256,3);
-   const offset=row%2?16:0;
-   for(let x=offset-32;x<288;x+=64){
-    c.fillRect(x,y,2,30);
-    c.fillStyle='rgba(255,255,255,.16)';c.fillRect(x+5,y+3,44,2);
-    c.fillStyle='rgba(28,36,33,.25)';
-   }
-  }
- }else if(type==='planks'){
-  c.fillStyle='#d3c1a2';c.fillRect(0,0,256,256);
-  for(let row=0;row<8;row++){
-   const y=row*32;
-   c.fillStyle=row%2?'#a98d6c':'#c7a986';
-   c.fillRect(0,y+30,256,2);
-   for(let x=(row%2?38:0);x<256;x+=100){
-    c.fillRect(x,y,2,30);
-    c.fillStyle='rgba(255,255,255,.21)';c.fillRect(x+7,y+6,46,1);
-    c.fillStyle=row%2?'#a98d6c':'#c7a986';
-   }
-  }
- }else{
-  c.fillStyle='#d7d1c1';c.fillRect(0,0,256,256);
-  c.strokeStyle='rgba(80,78,72,.24)';c.lineWidth=2;
-  for(let row=0;row<8;row++){
-   const y=row*32;c.beginPath();c.moveTo(0,y);c.lineTo(256,y);c.stroke();
-   for(let x=(row%2?32:0);x<256;x+=64){
-    c.beginPath();c.moveTo(x,y);c.lineTo(x,y+32);c.stroke();
-   }
-  }
- }
- const tex=new THREE.CanvasTexture(canvas);
- tex.colorSpace=THREE.SRGBColorSpace;
- tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.RepeatWrapping;
- tex.repeat.set(type==='roof'?1:2,2);
- tex.anisotropy=4;
- return tex;
-}
-const roofPattern=surfacePattern('roof'),plankPattern=surfacePattern('planks'),stonePattern=surfacePattern('stone');
 const roofFinishes={};
 const floorFinishes={
-  wood:new THREE.MeshLambertMaterial({color:'#e3d1b2',map:plankPattern}),
-  stone:new THREE.MeshLambertMaterial({color:'#c0b9aa',map:stonePattern})
+ wood:createSurfaceMaterial(THREE,'#e3d1b2','timber'),
+ stone:createSurfaceMaterial(THREE,'#c0b9aa','limestone')
 };
 const cube=new THREE.BoxGeometry(1,1,1);
 const roofColours={trade:shared.blue,bank:shared.slate,store:shared.red,forester:shared.moss,home:shared.slate,workshop:shared.red,guard:shared.moss,hall:shared.slate};
 const bodyColours={trade:shared.pale,bank:shared.stone,store:shared.plaster,forester:shared.plaster,home:shared.plaster,workshop:shared.stone,guard:shared.stone,hall:shared.stone};
-for(const [kind,source] of Object.entries(roofColours))roofFinishes[kind]=new THREE.MeshLambertMaterial({color:source.color,map:roofPattern});
+for(const [kind,source] of Object.entries(roofColours))roofFinishes[kind]=createSurfaceMaterial(THREE,source.color,'slate');
 function block(g,m,x,y,z,w,h,d,shadow=true){
   const item=new THREE.Mesh(cube,m);item.position.set(x,y,z);item.scale.set(w,h,d);
   item.castShadow=shadow;item.receiveShadow=true;g.add(item);return item;
