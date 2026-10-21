@@ -1,0 +1,33 @@
+name: Oakrest Bank & Drag Smoke
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/town-ui.js'
+      - 'src/equipment-ui.js'
+      - 'src/item-slot-layout.js'
+      - 'src/slot-drag.js'
+      - 'src/bank-architecture.js'
+      - 'src/town-world.js'
+      - 'tests/browser-town.cjs'
+      - 'tests/grand-bank-and-drag.test.js'
+      - '.github/workflows/bank-drag-smoke.yml'
+  push:
+    branches:
+      - feature/oakrest-grand-bank-drag-inventory
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/grand-bank-and-drag.test.js
+      - run: npx playwright install --with-deps chromium
+      - name: Town bank, shop and drag browser walkthrough
+        run: node tests/browser-town.cjs
