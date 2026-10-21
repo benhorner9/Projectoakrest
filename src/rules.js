@@ -3,9 +3,12 @@ import {sanitizeSlotOrder,inventoryKeyList,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from '
 /** Combat and progression rules stay independent from Three.js so they can be tested. */
 export const STYLE_ORDER = ['melee', 'magic', 'ranged'];
 export const STYLE_COLOURS = { melee:'#db9a72', magic:'#9cacf6', ranged:'#9edbb1' };
+// Starter/basic weapons attack deliberately slower than specialist fast-weapon families.
+// Keep individual per-weapon intervals: daggers, wands and shortbows are faster;
+// heavy swords and crossbows retain their slower but harder-hitting cadence.
 export const LOADOUTS = {
   melee: {
-    sword: { title:'Iron Longsword', icon:'⚔', reach:3.1, basic:19, interval:0.95, windup:0.26, abilities:[
+    sword: { title:'Iron Longsword', icon:'⚔', reach:3.1, basic:19, interval:1.15, windup:0.31, abilities:[
       { name:'Heavy Slash', icon:'⚔', kind:'hit', damage:30, reach:3, cooldown:5, note:'A strong forward strike.' },
       { name:'Cleave', icon:'◈', kind:'sweep', damage:19, reach:3.2, cooldown:7, note:'Hit nearby enemies in an arc.' },
       { name:'Guard Break', icon:'⬡', kind:'hit', damage:14, reach:3, cooldown:9, stun:1.3, note:'Stagger an enemy.' },
@@ -19,7 +22,7 @@ export const LOADOUTS = {
     ]},
   },
   magic: {
-    frost: { title:'Frostwood Staff', icon:'✦', reach:18, basic:12, interval:0.92, windup:0.24, abilities:[
+    frost: { title:'Frostwood Staff', icon:'✦', reach:18, basic:12, interval:1.12, windup:0.29, abilities:[
       { name:'Ice Shard', icon:'❄', kind:'bolt', damage:25, speed:19, cooldown:4, slow:2.8, note:'A slowing frost projectile.' },
       { name:'Frost Nova', icon:'✺', kind:'nova', damage:13, reach:5.5, cooldown:9, slow:3.5, note:'Freeze the ground around you.' },
       { name:'Frozen Binding', icon:'◇', kind:'bolt', damage:8, speed:15, cooldown:13, root:2, swapLock:3, note:'Root the enemy; blocks style switches in PvP later.' },
@@ -33,7 +36,7 @@ export const LOADOUTS = {
     ]},
   },
   ranged: {
-    bow: { title:'Oak Longbow', icon:'➶', reach:30, basic:22, interval:1.40, windup:0.46, abilities:[
+    bow: { title:'Oak Longbow', icon:'➶', reach:30, basic:22, interval:1.60, windup:0.50, abilities:[
       { name:'Piercing Arrow', icon:'➶', kind:'bolt', damage:29, speed:28, cooldown:5, note:'Fire a powerful straight arrow.' },
       { name:'Rapid Shot', icon:'≡', kind:'burst', damage:11, speed:26, count:3, cooldown:8, note:'Release three arrows in quick succession.' },
       { name:'Pinning Shot', icon:'⊙', kind:'bolt', damage:13, speed:25, root:1.6, cooldown:10, note:'Temporarily root your target.' },

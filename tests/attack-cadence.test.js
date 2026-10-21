@@ -53,3 +53,32 @@ test('runtime uses pending windup, actual projectile limits and timing UI',()=>{
  const h=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.ok(h.includes('id="attack-timer"'));
 });
+
+test('baseline auto-attacks are slightly slower without flattening weapon identities',()=>{
+ const melee=LOADOUTS.melee,magic=LOADOUTS.magic,ranged=LOADOUTS.ranged;
+ // Deliberate tuning from prior baseline of sword .95s, frost .92s and longbow 1.40s.
+ assert.equal(melee.sword.interval,1.15);
+ assert.equal(magic.frost.interval,1.12);
+ assert.equal(ranged.bow.interval,1.60);
+ assert.ok(melee.sword.interval/.95>=1.15);
+ assert.ok(magic.frost.interval/.92>=1.15);
+ assert.ok(ranged.bow.interval/1.40>=1.1);
+ // Upgraded quality should increase damage, not silently increase attack frequency.
+ assert.equal(melee.forged_sword.interval,melee.sword.interval);
+ assert.equal(magic.runic_frost.interval,magic.frost.interval);
+ assert.equal(ranged.reinforced_bow.interval,ranged.bow.interval);
+ assert.ok(melee.daggers.interval<melee.sword.interval<melee.greatsword.interval);
+ assert.ok(magic.ember.interval<magic.frost.interval);
+ assert.ok(ranged.shortbow.interval<ranged.bow.interval<ranged.crossbow.interval);
+ assert.ok(melee.sword.windup<melee.sword.interval);
+ assert.ok(magic.frost.windup<magic.frost.interval);
+ assert.ok(ranged.bow.windup<ranged.bow.interval);
+});
+test('automatic recovery enforces slower timing through the same readiness rules',()=>{
+ const cadence=LOADOUTS.melee.sword.interval;
+ assert.equal(basicAttackReady(cadence-.001,cadence,false),false);
+ assert.equal(basicAttackReady(cadence,cadence,false),true);
+ const recovering=attackCooldown(cadence,cadence,.5);
+ assert.equal(recovering.ready,false);
+ assert.ok(recovering.progress>.4&&recovering.progress<.5);
+});
