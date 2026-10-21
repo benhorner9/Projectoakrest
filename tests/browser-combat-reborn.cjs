@@ -173,8 +173,22 @@ let browser,server;
    }
    if(oakrestQA.state().data.coins<=initialCoins)throw Error('Physical loot was not collected');
    oakrestQA.teleport(-6,-.8);oakrestQA.equip('weapon','sword');for(let i=0;i<40;i++){oakrestQA.basic();oakrestQA.step(1.1);if(i%8===0)oakrestQA.dodge();}
-   const xp=oakrestQA.state().data.xp;oakrestQA.step(3);oakrestQA.receiveDamage(100000);oakrestQA.step(3);
-   const s=oakrestQA.state();if(s.hp<=0||Math.abs(s.hero.z-11)>.1)throw Error('Death/respawn failed');oakrestQA.save();return {xp,data:s.data,hp:s.hp,kills,coins:s.data.coins,simulatedSeconds:s.time-startedAt};
+   const xp=oakrestQA.state().data.xp;
+   oakrestQA.stopCombat();
+   oakrestQA.step(3);
+   // receiveDamage uses the real accuracy roll, including legitimate 0 hits.
+   // A single missed blow must never be mistaken for a respawn bug.
+   let lethalHit=false;
+   for(let attempts=0;attempts<20;attempts++){
+    oakrestQA.receiveDamage(100000);
+    if(oakrestQA.state().hp<=0){lethalHit=true;break;}
+    oakrestQA.step(.2);
+   }
+   if(!lethalHit)throw Error('Could not produce a lethal hit in 20 independent attempts; inspect damage and dodge state');
+   oakrestQA.step(3);
+   const s=oakrestQA.state();
+   if(s.hp<=0||Math.abs(s.hero.z-11)>.1)throw Error('Death/respawn failed after confirmed lethal hit: '+JSON.stringify({hp:s.hp,hero:s.hero,area:s.area,time:s.time}));
+   oakrestQA.save();return {xp,data:s.data,hp:s.hp,kills,coins:s.data.coins,simulatedSeconds:s.time-startedAt};
   });
   await page.reload();await page.waitForFunction(()=>window.oakrestQA);assert.deepEqual(await page.evaluate(()=>oakrestQA.state().data),result.data);await page.locator('#begin').click();
   await page.waitForTimeout(2500);const initial=await page.evaluate(()=>oakrestDiagnostics());
