@@ -27,8 +27,17 @@ let browser,server;
   // be expected to home towards a monster behind the player.
   const e=target();oakrestQA.teleport(e.x,e.z+2);oakrestQA.aim(e.x,.75,e.z);
   if(!oakrestQA.target('mossling'))throw Error('Failed to acquire mossling for beginner auto-combat');
-  for(let i=0;i<25&&!target().dead&&oakrestQA.state().hp>0;i++)oakrestQA.step(.65);
-  const after=oakrestQA.state();if(!target().dead||after.data.xp.melee<=initial.data.xp.melee)throw Error('Mossling kill and melee XP missing');
+  // A level-1 sword has a real miss chance and variable damage. The 57HP
+  // Mossling must fall during a bounded beginner encounter, not necessarily
+  // in the first 16 simulated seconds of unlucky damage rolls.
+  for(let i=0;i<60&&!target().dead&&oakrestQA.state().hp>0;i++)oakrestQA.step(.65);
+  const after=oakrestQA.state();
+  if(!target().dead||after.data.xp.melee<=initial.data.xp.melee)
+   throw Error('Beginner fight did not produce a living winner and melee XP: '+JSON.stringify({
+    hp:after.hp,mosslingHP:target().hp,mosslingDead:target().dead,
+    meleeXP:after.data.xp.melee,startingXP:initial.data.xp.melee,
+    autoCombat:after.autoCombat,combatTarget:after.combatTarget,time:after.time
+   }));
   oakrestQA.dodge();const at=oakrestQA.state().hero;oakrestQA.step(.15);if(oakrestQA.state().hero.z>=at.z)throw Error('Dodge did not move');
   return {xp:after.data.xp,health:after.hp,loot:after.data.groundLoot.length};
  }),true);
