@@ -17,7 +17,7 @@ const ROUTES=[
   {name:'Bren',role:'Wandering resident',colour:'#9f7e89',line:'The bank keeps a secure vault for your coins and equipment.',path:[[-4.5,51],[-4.5,34],[-4.5,20],[-23,20],[-23,14]]},
   {name:'Nell',role:'Craftswoman',colour:'#647c67',line:'Not all the best equipment is found in a shop.',path:[[5,53],[18,53],[22,54],[22,42],[5,42]]},
   {name:'Orin',role:'Warden courier',colour:'#678d83',line:"The Warden's Hall keeps the peace from the Southgate to the forest.",path:[[-22,75],[-12,75],[-12,69],[-6,69],[-6,76]]},
-  {name:'Edda',role:'Garden keeper',colour:'#9d9567',line:'The great oak was here long before the city walls. Its roots shaped the first paths.',path:[[13,58],[18,58],[18,68],[13,73],[9,73]]},
+  {name:'Edda',role:'Garden keeper',colour:'#9d9567',line:'The great oak was here long before the city walls. Its roots shaped the first paths.',path:[[34.5,64],[38,65],[38,69],[37,73],[36,78]]},
   {name:'Crispin',role:'Market porter',colour:'#af8062',line:"Darrin's deliveries usually come through the Southgate.",path:[[19,17],[19,22],[19,31],[23,33]]},
   {name:'Vera',role:'City watch',colour:'#5e8291',line:'The south road is safe until the woodland thins out. Past that, keep watch.',path:[[-37,-7],[-37,3],[-37,19],[-37,34]]},
   {name:'Hettie',role:'Local resident',colour:'#a77d92',line:'Meet your friends at the Heartwood. No one in Oakrest ever gets lost for long.',path:[[4.7,51],[4.7,43],[4.7,34],[4.7,25]]},
@@ -27,12 +27,13 @@ const AMBIENT_STAFF=[
  {name:'Captain Halden',role:'Southgate watch',colour:'#647c8d',x:-13,z:-7,line:'Welcome to Oakrest. There is an open road through the gate, but trouble starts well beyond the greenbelt.'},
  {name:'Seren',role:'Gate sentry',colour:'#687f87',x:13,z:-7,line:'The city gates are always open to peaceful travellers.'},
  {name:'Archivist Fenn',role:'Hall steward',colour:'#917f66',x:-29,z:76,line:"The Heartwood's age is marked in the hall's oldest records."},
- {name:'Gilda',role:'Garden volunteer',colour:'#788f67',x:9,z:58,line:'Please mind the flowerbeds. The forester has training pines a short walk north.'}
+ {name:'Gilda',role:'Garden volunteer',colour:'#788f67',x:36,z:72,line:'Please mind the flowerbeds by the Trade House. The Forester trains beginners across town.'}
 ];
 const STAFF={
   bank:{name:'Mara',role:'Banker',colour:'#577b90'},
   store:{name:'Darrin',role:'Shopkeeper',colour:'#a57952'},
-  forester:{name:'Alden',role:'Forester',colour:'#61815f'}
+  forester:{name:'Alden',role:'Forester',colour:'#61815f'},
+  'trade-house':{name:'Tessa',role:'Trade Steward',colour:'#8f6c91'}
 };
 const cloth=new Map();
 function material(colour){if(!cloth.has(colour))cloth.set(colour,new THREE.MeshLambertMaterial({color:colour,flatShading:true}));return cloth.get(colour);}
