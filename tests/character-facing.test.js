@@ -17,7 +17,7 @@ test('stopping after diagonal travel does not turn to front or camera',()=>{
  assert.equal(stopped,travelling);
 });
 test('movement faces travel while melee and aiming deliberately face the attack',()=>{
- assert.equal(characterFacingTarget({lastHeading:1,velocityX:0,velocityZ:-5,cameraYaw:1.1}),0);
+ assert.ok(Math.abs(characterFacingTarget({lastHeading:1,velocityX:0,velocityZ:-5,cameraYaw:1.1}))<1e-6);
  assert.equal(characterFacingTarget({lastHeading:1,velocityX:3,velocityZ:0,cameraYaw:0}),-Math.PI/2);
  assert.equal(characterFacingTarget({lastHeading:1,cameraYaw:.4,combatFacing:true}),-.4);
  assert.equal(characterFacingTarget({lastHeading:1,cameraYaw:.4,combatFacing:true,strikeYaw:1.7}),-1.7);
