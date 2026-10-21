@@ -26,6 +26,7 @@ import {equipSlotItem,equipmentModifiers} from './equipment-slots.js';
 import {renderInventoryGrid,renderEquipmentPaperDoll,renderExamine} from './equipment-ui.js';
 import {isOakrestSafe,townInteraction} from './town-services.js';
 import {renderQuestPage,renderWorldPage} from './ui-pages.js';
+import {createOakrestMinimap} from './minimap.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
@@ -89,6 +90,7 @@ const visuals=createCombatVisuals(THREE,scene);
 
 function createHero(){return createActor();}
 const hero=createHero();hero.position.set(0,terrainHeight(0,11),11);scene.add(hero);
+const minimap=createOakrestMinimap($('minimap-canvas'),$('minimap-area'));
 const oldSaveKey=oakrestKey('oakrest-v1'),rosterKey=oakrestKey('oakrest-characters-v1'),activeKey=oakrestKey('oakrest-active-character');
 const saveKeyFor=id=>oakrestKey('oakrest-character-save-'+id);
 let profiles=[],activeCharacter=null,legacySave=null,saveWritable=true,data=defaultSave();
@@ -166,6 +168,7 @@ $('menu-backdrop').addEventListener('click',bookClose);
 const bookTabs={equip:'progression-equipment',inventory:'progression-inventory',skills:'progression-levels-tab',abilities:'progression-skills',quests:'progression-quests',map:'progression-map',settings:'progression-settings'};
 for(const [tab,id] of Object.entries(bookTabs))$(id).addEventListener('click',()=>{bookTab=tab;skillDetail=null;detailPanel.hidden=true;renderBook();$('progression-content').scrollTop=0;});
 $('loadout-button').addEventListener('click',()=>bookOpen(progressPanel.hidden?'inventory':bookTab,true));
+$('minimap-button').addEventListener('click',()=>bookOpen('map'));
 document.addEventListener('keydown',event=>{
  if(progressPanel.hidden)return;
  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();bookClose();return;}
@@ -1155,7 +1158,7 @@ if(new URLSearchParams(location.search).has('autostart')&&(activeCharacter||lega
 if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
 const stats={fps:0,p95:0,drawCalls:0,triangles:0,geometries:0,textures:0,effects:0};
-function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.1,Math.max(0,realDt));if(started){const steps=Math.max(1,Math.ceil(dt/(1/60)));for(let i=0;i<steps;i++){gameTime+=dt/steps;animate(dt/steps,now());}}else pollGamepad(dt);if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
+function loop(time){requestAnimationFrame(loop);const realDt=(time-last)/1000;last=time;if(document.hidden)return;const dt=Math.min(.1,Math.max(0,realDt));if(started){const steps=Math.max(1,Math.ceil(dt/(1/60)));for(let i=0;i<steps;i++){gameTime+=dt/steps;animate(dt/steps,now());}}else pollGamepad(dt);if(data.onboarding?.area!=='tutorial'&&data.onboarding?.area!=='realm')scenery.update(now(),camera);renderer.render(scene,camera);minimap.update(time,{x:hero.position.x,z:hero.position.z,yaw,area:data.onboarding?.area||'world',enemies});frameTimes.push(realDt*1000);if(time-lastMetrics>2000){const sorted=frameTimes.slice().sort((a,b)=>a-b);stats.fps=1000/(frameTimes.reduce((a,b)=>a+b,0)/frameTimes.length);stats.p95=sorted[Math.floor(sorted.length*.95)];stats.drawCalls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.geometries=renderer.info.memory.geometries;stats.textures=renderer.info.memory.textures;stats.effects=projectiles.length+rings.length+visuals.count;frameTimes=[];lastMetrics=time;$('performance-stats').textContent=Math.round(stats.fps)+' FPS · '+stats.drawCalls+' draws · '+quality;}}
 requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',save);
 // Read-only diagnostics for reproducible device measurements. No player identifiers.
 window.oakrestDiagnostics=()=>({...stats,quality,version:'combat-reborn-1'});
