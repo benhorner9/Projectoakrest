@@ -1,12 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import * as THREE from 'three';
+import {buildOakrestTown} from '../src/town-world.js';
+import {clearWorldObstacles} from '../src/terrain.js';
 import {terrainHeight,terrainNormal,moveOnGround,safeCamera,blocked} from '../src/terrain.js';
 import {segmentHit,attackPose,dodgeDirection} from '../src/gameplay-math.js';
 import {createActor,equipActor,animateActor,createCreature,animateCreature} from '../src/actors.js';
 import {LOADOUTS,defaultSave,validSave,equippedSkills} from '../src/rules.js';
 test('village stays level; wilderness has traversable continuous slopes',()=>{for(const [x,z] of [[0,11],[-14,12],[14,27],[6,19]])assert.equal(terrainHeight(x,z),0);let min=100,max=-100;for(let x=-70;x<=70;x+=2)for(let z=-70;z<=70;z+=2){const h=terrainHeight(x,z);min=Math.min(min,h);max=Math.max(max,h);assert.ok(terrainNormal(x,z).y>.85);assert.ok(Math.abs(terrainHeight(x+.01,z)-h)<.01);}assert.ok(max-min>3);});
-test('movement cannot tunnel through houses and follows terrain at multiple rates',()=>{const end=moveOnGround({x:-14,z:20},0,-20);assert.ok(!blocked(end.x,end.z));assert.ok(end.z>=15.8);for(const fps of [30,60,120]){let p={x:0,z:-12};for(let i=0;i<fps*4;i++)p=moveOnGround(p,0,-5/fps);assert.ok(Math.abs(p.z+32)<.001);assert.equal(p.y,terrainHeight(p.x,p.z));}});
-test('camera shortens before walls and never sinks beneath terrain',()=>{const safe=safeCamera({x:-14,y:2,z:19},{x:-14,y:3,z:10});assert.ok(safe.z>15.8);assert.ok(safeCamera({x:0,y:4,z:-30},{x:4,y:0,z:-40}).y>=.65);});
+test('movement cannot tunnel through houses and follows terrain at multiple rates',()=>{buildOakrestTown(new THREE.Scene());const end=moveOnGround({x:-14,z:20},0,-20);assert.ok(!blocked(end.x,end.z));assert.ok(end.z>=15.8);for(const fps of [30,60,120]){let p={x:0,z:-12};for(let i=0;i<fps*4;i++)p=moveOnGround(p,0,-5/fps);assert.ok(Math.abs(p.z+32)<.001);assert.equal(p.y,terrainHeight(p.x,p.z));}clearWorldObstacles();});
+test('camera shortens before walls and never sinks beneath terrain',()=>{buildOakrestTown(new THREE.Scene());const safe=safeCamera({x:-14,y:2,z:19},{x:-14,y:3,z:10});assert.ok(safe.z>15.8);assert.ok(safeCamera({x:0,y:4,z:-30},{x:4,y:0,z:-40}).y>=.65);clearWorldObstacles();});
 test('swept projectiles catch fast crossings, reject misses and identify nearest hit',()=>{assert.equal(segmentHit({x:0,y:1,z:0},{x:0,y:1,z:-5},{x:0,y:1,z:-2},.6),.28);assert.equal(segmentHit({x:0,y:1,z:0},{x:0,y:1,z:-5},{x:2,y:1,z:-2},.6),null);});
 test('every weapon attack animation reaches release exactly at mechanical impact',()=>{for(const weapons of Object.values(LOADOUTS))for(const w of Object.values(weapons)){const a={start:5,impactAt:5+w.windup,interval:w.interval};assert.equal(attackPose(a.impactAt-.001,a).phase,'windup');assert.equal(attackPose(a.impactAt,a).phase,'release');assert.equal(attackPose(5+w.interval+.01,a).phase,'idle');}});
 test('touch dodge follows the joystick in forward, backward and diagonal directions',()=>{assert.deepEqual(dodgeDirection({x:0,z:-1},0),{x:0,z:-1});assert.deepEqual(dodgeDirection({x:0,z:1},0),{x:0,z:1});const d=dodgeDirection({x:1,z:-1},.8);assert.ok(Math.abs(Math.hypot(d.x,d.z)-1)<1e-10);});
