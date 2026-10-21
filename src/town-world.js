@@ -16,7 +16,7 @@ export const OAKREST_BUILDINGS=Object.freeze([
   {id:'cottage-c',x:-14,z:28,w:8,d:7,face:'east',kind:'home'},
   {id:'cottage-d',x:14,z:27,w:8,d:7,face:'west',kind:'home'},
   {id:'north-home',x:29,z:42,w:8,d:7,face:'west',kind:'home'},
-  {id:'north-workshop',x:29,z:58,w:8,d:7,face:'south',kind:'workshop'},
+  {id:'north-workshop',x:29,z:58,w:8,d:7,face:'north',kind:'workshop'},
   {id:'west-house',x:-29,z:-2,w:8,d:7,face:'east',kind:'home'},
   {id:'east-guardhouse',x:29,z:-2,w:8,d:7,face:'west',kind:'guard'}
 ]);
