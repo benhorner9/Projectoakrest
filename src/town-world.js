@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {mergeGeometries} from '../vendor/BufferGeometryUtils.js';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
@@ -294,6 +295,37 @@ function decorateFacade(group,build,h){
     a.rotation.z=.65;b.rotation.z=-.65;
   }else plaque.scale.x*=.55;
 }
+// Collapse decorative cutaway cubes into a handful of material buckets PER
+// wall. They remain individually togglable by wall side while staying cheap
+// enough for iPad Safari; named interactable/unique meshes are left intact.
+function optimizeCutawayMeshes(group,cutaway){
+ for(const [side,items] of Object.entries(cutaway)){
+  const buckets=new Map();
+  for(const mesh of items){
+   if(!mesh.isMesh||mesh.name||mesh.material.transparent||mesh.geometry.type!=='BoxGeometry')continue;
+   const key=mesh.material.uuid+':'+mesh.castShadow;
+   if(!buckets.has(key))buckets.set(key,[]);
+   buckets.get(key).push(mesh);
+  }
+  const deleted=new Set(),added=[];
+  for(const meshes of buckets.values()){
+   if(meshes.length<3)continue;
+   const geometries=meshes.map(mesh=>{
+    mesh.updateMatrix();
+    const geometry=mesh.geometry.clone();geometry.applyMatrix4(mesh.matrix);return geometry;
+   });
+   const geometry=mergeGeometries(geometries);
+   for(const g of geometries)g.dispose();
+   if(!geometry)continue;
+   const merged=new THREE.Mesh(geometry,meshes[0].material);
+   merged.castShadow=meshes[0].castShadow;merged.receiveShadow=true;
+   merged.userData.animated=true;merged.userData.cutawaySide=side;
+   group.add(merged);added.push(merged);
+   for(const mesh of meshes){mesh.removeFromParent();deleted.add(mesh);}
+  }
+  cutaway[side]=[...items.filter(mesh=>!deleted.has(mesh)),...added];
+ }
+}
 function buildHouse(scene,build){
   const g=new THREE.Group();
   g.position.set(build.x,terrainHeight(build.x,build.z),build.z);
@@ -351,6 +383,7 @@ function buildHouse(scene,build){
   makeInteriors(g,build);
   furnishDistinctInterior(g,build,shared);
   const roof=makeRoof(g,build,h);
+  optimizeCutawayMeshes(g,cutaway);
   return {build,roof,cutaway};
 }
 function buildMerchantWell(scene){
