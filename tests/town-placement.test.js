@@ -66,6 +66,8 @@ test('merchant well lives in its own courtyard rather than the east-west street'
   for(const z of [32.8,39.2])assert.equal(blocked(18,z,.30),false,'well access is blocked at '+z);
   assert.equal(blocked(0,-13,.32),false,'the Southgate passage stays open');
   assert.equal(blocked(0,86,.32),false,'the Northgate passage stays open');
+  for(const z of [-13,85])for(const x of [-44,44])
+   assert.equal(blocked(x,z,.30),true,'outer wall corner must be joined at '+x+','+z);
   assert.equal(scene.getObjectByName('Southgate')?.userData.cityLandmark,'southgate');
   assert.equal(scene.getObjectByName('Well cobblestone courtyard')?.geometry.type,'CircleGeometry');
  }finally{clearWorldObstacles();}
