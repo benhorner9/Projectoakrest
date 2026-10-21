@@ -41,6 +41,18 @@ let browser;
   if(qa.state().autoCombat||health()!==stopped)throw new Error('Attacks continued after stop');
   return {initial,melee,magic,ranged,stopped,style:qa.state().style};
  });
+ const buffered=await page.evaluate(()=>{
+  oakrestQA.style('melee');oakrestQA.step(2);
+  oakrestQA.teleport(-6,-1);
+  oakrestQA.basic();
+  if(!oakrestQA.state().pendingBasic)throw Error('Expected basic attack windup before buffering skill');
+  oakrestQA.ability(0);
+  if(oakrestQA.state().queuedAbility!==0)throw Error('Ability tap was swallowed while auto-basic recovering');
+  oakrestQA.step(2.5);
+  const state=oakrestQA.state();
+  if(state.queuedAbility!==null||!Object.values(state.cooldowns).some(v=>v>state.time))throw Error('Queued ability never activated');
+  return {activated:true,queued:false};
+ });
  // Real touch button now changes attack state by tap, not long press.
  await page.evaluate(()=>{oakrestQA.teleport(-6,-1);oakrestQA.step(.1);});
  await page.locator('#touch-attack').tap();
@@ -48,7 +60,7 @@ let browser;
  await page.locator('#touch-attack').tap();
  assert.equal((await page.evaluate(()=>oakrestQA.state())).autoCombat,false,'second tap should stop');
  assert.deepEqual(errors,[],'No runtime JS exceptions');
- console.log('Auto combat browser PASS',JSON.stringify(result));
+ console.log('Auto combat browser PASS',JSON.stringify({...result,buffered}));
  await context.close();
  }catch(e){console.error('Auto combat browser FAIL',e);process.exitCode=1;}
  finally{await browser?.close();server.kill();}
