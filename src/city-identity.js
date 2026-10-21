@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
+import {OAKREST_GARDEN_BENCHES,OAKREST_TRADE_TABLES,OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS} from './town-layout.js';
 
 /**
  * The Heartwood city art pass: original procedural architecture and landscape.
@@ -166,7 +167,7 @@ function gardens(scene,animation){
  mesh(pond,new THREE.CylinderGeometry(2.3,2.6,.32,20),mat.stone,0,.14,0,1,.75,.8);
  mesh(pond,new THREE.CylinderGeometry(1.95,2,.06,20),mat.water,0,.34,0,1,1,.72,false);
  addWorldObstacle({x:22,z:66,r:2.35,height:.4});
- for(const [x,z,a] of [[11,54,.2],[17,74,Math.PI/2]]){
+ for(const {x,z,angle:a} of OAKREST_GARDEN_BENCHES){
   const g=at(scene,x,z,'Garden resting place');bench(g,0,0,a);
  }
  const leaves=[];
@@ -219,7 +220,7 @@ function cobbles(scene){
 }
 function marketGoods(scene){
  // Distinct areas suggest different trades without granting every skill here.
- for(const [x,z] of [[-11,22],[11,22],[-11,35],[12,34]]){
+ for(const {x,z} of OAKREST_TRADE_TABLES){
   const g=at(scene,x,z,'Street trade');
   for(const sx of [-1,1])for(const zz of [-1,1])block(g,mat.wood,sx*.7,.36,zz*.52,.18,.7,.16);
   block(g,mat.barkLight,0,.78,0,2.2,.18,1.5);
@@ -258,7 +259,7 @@ function birds(scene,animation){
  }
 }
 function lamps(scene,animation){
- for(const [x,z] of [[-18,9],[18,9],[-18,33],[18,33],[-18,53],[18,54],[-6,76],[6,76]]){
+ for(const [x,z] of OAKREST_CITY_LAMPS){
   const g=at(scene,x,z,'Bronze city lamp');
   block(g,mat.wood,0,1.55,0,.17,3.1,.17);
   block(g,mat.brass,0,3.05,0,.62,.15,.62);
@@ -273,7 +274,7 @@ export function buildCityIdentity(scene){
  gardens(scene,animations);marketGoods(scene);cobbles(scene);
  townGate(scene,-13,animations,'south');townGate(scene,86,animations,'north');
  cityWalls(scene);chimneys(scene,animations);birds(scene,animations);lamps(scene,animations);
- signpost(scene,-10,33,.18);signpost(scene,10,55,-.6);signpost(scene,-7,69,.4);
+ for(const [x,z,a] of OAKREST_SIGNPOSTS)signpost(scene,x,z,a);
  return {
   districts:CITY_DISTRICTS,
   landmark:{x:0,z:39,name:'Heartwood Oak'},
