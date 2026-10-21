@@ -6,6 +6,7 @@ import {STARTER_SETS,SLOT_ITEMS,EXTRA_SLOTS} from './equipment-slots.js';
 export const TOWN_SPECIALISATIONS=Object.freeze({oakrest:Object.freeze(['woodcutting'])});
 export const OAKREST_SERVICES=Object.freeze([
   Object.freeze({id:'bank',label:'Oakrest Bank',x:-30,z:14,npcX:-32.7,npcZ:14,reach:3.6,kind:'bank',attendant:'Mara the Banker'}),
+  Object.freeze({id:'trade-house',label:'Oakrest Trade House',x:15,z:64.5,npcX:17.6,npcZ:64.5,reach:3.6,kind:'trade',attendant:'Tessa the Trade Steward'}),
   Object.freeze({id:'store',label:'Oakrest General Store',x:30,z:14,npcX:32.7,npcZ:14,reach:3.6,kind:'store',attendant:'Darrin the Shopkeeper'}),
   Object.freeze({id:'forester',label:"Forester's Lodge",x:-30,z:46,npcX:-32.7,npcZ:46,reach:3.6,kind:'skill',skill:'woodcutting',attendant:'Alden the Forester'})
 ]);
