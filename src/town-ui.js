@@ -1,136 +1,289 @@
 import {LOADOUTS,ARMOUR,STYLE_ORDER,levelFromXp} from './rules.js';
-import {SLOT_ITEMS} from './equipment-slots.js';
+import {SLOT_ITEMS,STARTER_SETS} from './equipment-slots.js';
+import {getItem,itemIconUrl} from './items.js';
 import {SHOP_STOCK,missingStarterSetPieces,starterSetPrice,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
 
-/** One accessible overlay for all town services, without server/API dependencies. */
+/**
+ * Classic RPG interfaces: item-icon grids, a selected-item inspection panel
+ * and explicit transaction controls. The existing save, shop and bank logic
+ * remain authoritative; no separate inventory or economy is introduced.
+ */
+const $=id=>document.getElementById(id);
+const node=(tag,value,parent,cls)=>{
+ const e=document.createElement(tag);
+ if(value!==null&&value!==undefined)e.textContent=value;
+ if(cls)e.className=cls;
+ if(parent)parent.append(e);
+ return e;
+};
+const button=(parent,label,fn,cls='',disabled=false)=>{
+ const b=node('button',label,parent,cls);b.type='button';b.disabled=disabled;
+ if(fn)b.addEventListener('click',fn);
+ return b;
+};
+const icon=(parent,id)=>{
+ const src=itemIconUrl(id);
+ if(src){const img=node('img',null,parent,'oak-town-item-icon');img.src=src;img.alt='';img.width=48;img.height=48;img.loading='lazy';img.decoding='async';}
+};
+const normal=id=>id.replaceAll('-',' ').replace(/\b\w/g,c=>c.toUpperCase());
+const canonical=(kind,id,style)=>kind==='weapon'?'weapon.'+style+'.'+id:
+ kind==='armour'?'armour.'+id:kind==='slot'?'slot.'+id:kind==='material'?'material.'+id:'currency.coins';
+const quantity=n=>n>=10000000?Math.floor(n/1000000)+'M':n>=100000?Math.floor(n/1000)+'K':String(n);
+const groupFor=e=>e.kind==='material'||e.kind==='coins'?'supplies':'gear';
+
+/** Real item contents of either bank or backpack; no manufactured ownership. */
+export function bankGridEntries(data,scope){
+ const bag=scope==='vault'?townBank(data):data.inventory;
+ const entries=[];
+ const push=(kind,id,qty,style)=>{
+  const key=canonical(kind,id,style),item=getItem(key);
+  if(!item||qty<=0)return;
+  entries.push({scope,kind,id,style,canonical:key,title:item.title,qty});
+ };
+ if(scope==='vault'){push('coins','coins',townBank(data).coins);}
+ else push('coins','coins',data.coins);
+ for(const style of STYLE_ORDER)for(const id of bag.weapons?.[style]||[])if(LOADOUTS[style]?.[id])push('weapon',id,1,style);
+ for(const id of bag.armour||[])if(ARMOUR[id])push('armour',id,1);
+ for(const id of bag.slotted||[])if(SLOT_ITEMS[id])push('slot',id,1,SLOT_ITEMS[id].style);
+ for(const id of TOWN_MATERIALS)if(bag.materials?.[id]>0)push('material',id,bag.materials[id]);
+ return entries;
+}
+export function shopGridEntries(data){
+ const bank=townBank(data);
+ return SHOP_STOCK.map(stock=>{
+  if(stock.kind==='bundle'){
+   const missing=missingStarterSetPieces(data,stock.style);
+   return {...stock,icon:'weapon.'+stock.style+'.'+STARTER_SETS[stock.style].weapon,
+    missing:missing.length,cost:starterSetPrice(data,stock.style),
+    owned:missing.length===0,banked:false};
+  }
+  const icon=canonical(stock.kind,stock.itemId,stock.style);
+  const owned=stock.kind==='weapon'?data.inventory.weapons[stock.style].includes(stock.itemId):
+   data.inventory.armour.includes(stock.itemId);
+  const banked=stock.kind==='weapon'?bank.weapons[stock.style].includes(stock.itemId):
+   bank.armour.includes(stock.itemId);
+  return {...stock,icon,cost:stock.price,owned,banked,missing:0};
+ });
+}
+
 export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEquipmentChange,notify,onOpen}){
-  const $=id=>document.getElementById(id);
-  const panel=$('town-panel'),prompt=$('town-interact'),body=$('town-content');
-  const node=(tag,value,parent,cls)=>{
-    const e=document.createElement(tag);if(value!==null)e.textContent=value;
-    if(cls)e.className=cls;if(parent)parent.append(e);return e;
-  };
-  const button=(parent,label,fn,disabled=false)=>{
-    const b=node('button',label,parent);b.type='button';b.disabled=disabled;b.addEventListener('click',fn);return b;
-  };
-  const row=(title,subtitle)=>{
-    const wrapper=node('div',null,body,'town-row'),left=node('div',null,wrapper);
-    node('strong',title,left);if(subtitle)node('small',subtitle,left);
-    return node('div',null,wrapper,'town-actions');
-  };
-  const caps=id=>id.replaceAll('-',' ').replace(/\b\w/g,c=>c.toUpperCase());
-  const cooldowns=new Map();let service=null,lastPosition=null;
-  function close(){panel.hidden=true;service=null;}
-  $('town-close').addEventListener('click',close);
-  function changed(message,equipment=false){
-    onChange();
-    if(equipment)onEquipmentChange();
-    if(message)notify(message);
-    render();
+ const panel=$('town-panel'),prompt=$('town-interact'),body=$('town-content');
+ const cooldowns=new Map();
+ let service=null,lastPosition=null,tab='all',search='',selected=null;
+ const entryKey=e=>[e.scope,e.kind,e.style||'',e.id].join('/');
+ const stockKey=s=>'stock/'+s.id;
+ function close(){panel.hidden=true;service=null;selected=null;}
+ $('town-close').addEventListener('click',close);
+ function changed(message,equipment=false){
+  onChange();
+  if(equipment)onEquipmentChange();
+  if(message)notify(message);
+  render();
+ }
+ const visible=(entry)=> (tab==='all'||groupFor(entry)===tab)&&
+  (!search||entry.title.toLowerCase().includes(search));
+ function filterTiles(){
+  for(const tile of body.querySelectorAll('.town-item-tile')){
+   tile.hidden=!((tab==='all'||tile.dataset.group===tab)&&
+    (!search||tile.dataset.search.includes(search)));
   }
-  function render(){
-    if(!service||panel.hidden)return;
-    const data=getData();body.replaceChildren();$('town-title').textContent=service.label;
-    node('p',service.attendant?'Speaking with '+service.attendant+'.':'',body,'town-attendant');
-    if(service.id==='bank'){
-      const bank=townBank(data);
-      node('p','Bank storage is saved with this character. Transfer complete coin or material stacks, and store spare equipment.',body);
-      let actions=row('Coins','On you: '+data.coins+' · Vault: '+bank.coins);
-      button(actions,'DEPOSIT',()=>{const a=bankCoins(data,'deposit');if(a)changed('Deposited '+a+' coins');},data.coins<=0);
-      button(actions,'WITHDRAW',()=>{const a=bankCoins(data,'withdraw');if(a)changed('Withdrew '+a+' coins');},bank.coins<=0);
-      node('h3','Materials',body);
-      for(const id of TOWN_MATERIALS){
-        actions=row(caps(id),'Bag: '+(data.inventory.materials[id]||0)+' · Vault: '+(bank.materials[id]||0));
-        button(actions,'STORE',()=>{const a=bankMaterials(data,id,'deposit');if(a)changed('Stored '+a+' '+caps(id));},!(data.inventory.materials[id]>0));
-        button(actions,'TAKE',()=>{const a=bankMaterials(data,id,'withdraw');if(a)changed('Withdrew '+a+' '+caps(id));},!(bank.materials[id]>0));
-      }
-      node('h3','Weapons and armour',body);
-      for(const style of STYLE_ORDER)for(const id of [...new Set([...data.inventory.weapons[style],...bank.weapons[style]])]){
-        const bagged=data.inventory.weapons[style].includes(id);
-        actions=row(LOADOUTS[style]?.[id]?.title||id,style.toUpperCase()+' · '+(bagged?'Bag':'Vault'));
-        button(actions,bagged?'STORE':'TAKE',()=>{
-          if(bankEquipment(data,'weapon',id,bagged?'deposit':'withdraw',style))changed('Equipment transferred',true);
-          else notify('Unequip this weapon before banking');
-        },bagged&&data.gear[style]===id);
-      }
-      for(const id of [...new Set([...data.inventory.armour,...bank.armour])]){
-        const bagged=data.inventory.armour.includes(id);
-        actions=row(ARMOUR[id]?.title||id,bagged?'Bag':'Vault');
-        button(actions,bagged?'STORE':'TAKE',()=>{
-          if(bankEquipment(data,'armour',id,bagged?'deposit':'withdraw'))changed('Armour transferred',true);
-          else notify('Unequip armour in every style before banking');
-        },bagged&&Object.values(data.armour).includes(id));
-      }
-      for(const id of [...new Set([...(data.inventory.slotted||[]),...(bank.slotted||[])])]){
-        const item=SLOT_ITEMS[id];if(!item)continue;
-        const bagged=data.inventory.slotted.includes(id);
-        actions=row(item.title,item.slot.toUpperCase()+' · '+item.style.toUpperCase()+' · '+(bagged?'Bag':'Vault'));
-        button(actions,bagged?'STORE':'TAKE',()=>{
-          if(bankEquipment(data,'slot',id,bagged?'deposit':'withdraw'))changed('Equipment transferred',true);
-          else notify('Unequip this item before banking');
-        },bagged&&Object.values(data.equipment||{}).some(slots=>slots?.[item.slot]===id));
-      }
-    }else if(service.id==='store'){
-      node('p','Basic equipment for local adventurers. More powerful weapons and profession supplies belong to other settlements.',body);
-      node('p','Coins on you: '+data.coins,body);
-      const bank=townBank(data);
-      node('h3','Beginner combat sets',body);
-      node('p','Each set contains a weapon, chest armour and six matching slot items. Already-owned or banked pieces are deducted from the set price.',body);
-      for(const stock of SHOP_STOCK){
-        if(stock.kind==='bundle'){
-          const missing=missingStarterSetPieces(data,stock.style),price=starterSetPrice(data,stock.style);
-          const actions=row(stock.label,(missing.length?price+' coins · '+missing.length+' pieces needed':'Complete set owned')+' · '+stock.style.toUpperCase());
-          button(actions,missing.length?'BUY SET':'OWNED',()=>{
-            const result=buyStarterStock(data,stock.id);
-            if(result.ok)changed('Purchased '+result.pieces+' pieces from '+stock.label,true);else notify(result.reason);
-          },!missing.length||data.coins<price);
-          continue;
-        }
-      }
-      node('h3','Individual essentials',body);
-      for(const stock of SHOP_STOCK.filter(x=>x.kind!=='bundle')){
-        const bagged=stock.kind==='weapon'?data.inventory.weapons[stock.style].includes(stock.itemId):data.inventory.armour.includes(stock.itemId);
-        const banked=stock.kind==='weapon'?bank.weapons[stock.style].includes(stock.itemId):bank.armour.includes(stock.itemId);
-        const actions=row(stock.label,stock.price+' coins · '+(bagged?'Owned':banked?'Banked':'Available'));
-        button(actions,bagged?'OWNED':banked?'BANKED':'BUY',()=>{
-          const result=buyStarterStock(data,stock.id);
-          if(result.ok)changed('Purchased '+stock.label,true);else notify(result.reason);
-        },bagged||banked||data.coins<stock.price);
-      }
-    }else if(service.id==='forester'){
-      const level=levelFromXp(data.professions?.woodcuttingXp||0).level;
-      node('p','The Forester’s Lodge teaches beginner Woodcutting only. Hunting, Mining, Blacksmithing and Inscription will have their own locations.',body);
-      node('h3','Woodcutting — Level '+level,body);
-      node('p',(data.professions?.woodcuttingXp||0)+' / '+STARTER_GROVE_XP_CAP+' starter XP. Practice on three training pines north of the town plaza and bank your softwood logs.',body);
-      const learned=data.professions?.woodcuttingLearned===true;
-      const actions=row('Forester lesson',learned?'Already learned':'Free beginner training');
-      button(actions,learned?'LEARNED':'LEARN WOODCUTTING',()=>{if(teachWoodcutting(data))changed('Learned Woodcutting. Find the pines north of the plaza.');},learned);
-      if(level>=5)node('p','You have outgrown these trees. Higher-level forestry requires travelling to other regions.',body,'town-notice');
-    }
+  for(const grid of body.querySelectorAll('.town-item-grid')){
+   const empty=grid.nextElementSibling;
+   if(empty?.classList.contains('town-grid-empty'))empty.hidden=[...grid.children].some(c=>!c.hidden);
   }
-  function interact({x,z,allowed,time}){
-    if(!allowed||!panel.hidden)return false;
-    const candidate=townInteraction(x,z)||getVillager(x,z);if(!candidate)return false;
-    if(candidate.type==='citizen'){notify(candidate.label+' · '+candidate.line);return true;}
-    if(candidate.type==='grove'){
-      const result=harvestStarterGrove(getData(),candidate.id,time,cooldowns);
-      if(result.ok){onChange();notify('Woodcutting +35 XP · Softwood logs +1');}
-      else notify(result.reason);
-      return true;
-    }
-    service=candidate;panel.hidden=false;onOpen();render();return true;
+ }
+ function tabs(host,choices){
+  const nav=node('nav',null,host,'town-item-tabs');nav.setAttribute('aria-label','Item categories');
+  for(const [key,label] of choices){
+   const b=button(nav,label,()=>{tab=key;search='';selected=null;render();},'town-tab'+(tab===key?' is-active':''));
+   b.setAttribute('aria-pressed',String(tab===key));
   }
-  function update({x,z,allowed}){
-    lastPosition={x,z};
-    const target=allowed&&panel.hidden?(townInteraction(x,z)||getVillager(x,z)):null;
-    prompt.hidden=!target;
-    if(target){
-      $('town-interact-description').textContent=target.type==='citizen'?target.label+' · '+target.role:target.type==='grove'?target.label+' · '+(getData().professions?.woodcuttingLearned?'Collect logs':'Woodcutting lesson needed'):target.label+' · Speak to '+target.attendant;
-      $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='citizen'?'TALK · T':'SPEAK · T';
-    }
+ }
+ function searchBox(host){
+  const label=node('label','Find an item',host,'town-search-label');
+  const input=node('input',null,label,'town-search');
+  input.type='search';input.placeholder='Search items';input.value=search;
+  input.setAttribute('aria-label','Find a bank item');
+  input.addEventListener('input',()=>{search=input.value.trim().toLowerCase();filterTiles();});
+ }
+ function tile(grid,{name,canonicalId,group='gear',qty=1,key,scope,onChoose,selectedNow,iconIds=[]}){
+  const b=button(grid,null,onChoose,'town-item-tile'+(selectedNow?' is-selected':''));
+  b.dataset.search=name.toLowerCase();b.dataset.group=group;
+  b.title=name+(qty>1?' · '+qty:'');
+  b.setAttribute('aria-label','Select '+name+(scope?' in '+(scope==='vault'?'bank':'backpack'):'')+(qty>1?', quantity '+qty:''));
+  b.setAttribute('aria-pressed',String(!!selectedNow));
+  const art=node('span',null,b,'town-tile-art');
+  icon(art,canonicalId);
+  for(const id of iconIds)icon(art,id);
+  if(qty>1)node('span',quantity(qty),b,'town-tile-qty');
+  return b;
+ }
+ function grid(host,entries,scope=''){
+  const g=node('div',null,host,'town-item-grid'+(scope==='bag'?' town-bag-grid':''));
+  g.setAttribute('role','group');g.setAttribute('aria-label',scope==='vault'?'Stored bank items':scope==='bag'?'Backpack items':'Shop stock');
+  for(const e of entries){
+   if(scope){
+    tile(g,{name:e.title,canonicalId:e.canonical,group:groupFor(e),qty:e.qty,scope,
+      key:entryKey(e),selectedNow:selected===entryKey(e),onChoose:()=>{selected=entryKey(e);render();}});
+   }else{
+    tile(g,{name:e.label,canonicalId:e.icon,group:e.kind==='bundle'?'sets':'gear',
+      iconIds:e.kind==='bundle'?['armour.'+STARTER_SETS[e.style].chest]:[],
+      selectedNow:selected===stockKey(e),onChoose:()=>{selected=stockKey(e);render();}});
+   }
   }
-  $('town-interact-button').addEventListener('click',()=>{
-    if(lastPosition)interact({...lastPosition,allowed:true,time:getTime()});
-  });
-  return {interact,update,close,isOpen:()=>!panel.hidden};
+  // Cells remain visible even in small starter inventories; bank expansion is
+  // organic as the character acquires more gear.
+  const min=scope==='bag'?20:scope==='vault'?32:24;
+  for(let i=entries.length;i<min;i++)node('span',null,g,'town-item-empty').setAttribute('aria-hidden','true');
+  const empty=node('p','No items match this view.',host,'town-grid-empty');empty.hidden=true;
+  return g;
+ }
+ function inspectHeader(host,item,title){
+  const head=node('div',null,host,'town-selected-head');
+  const iconBox=node('span',null,head,'town-selected-icon');icon(iconBox,item);
+  node('strong',title,head);
+ }
+ function details(host,name,description,facts=[]){
+  node('h3','SELECTED ITEM',host);
+  if(description)node('p',description,host,'town-item-description');
+  for(const [label,value] of facts){
+   const line=node('div',null,host,'town-item-fact');
+   node('span',label,line);node('strong',value,line);
+  }
+ }
+ function bankTransfer(entry,amount){
+  const dir=entry.scope==='vault'?'withdraw':'deposit',data=getData();
+  let moved=0,equipment=false;
+  if(entry.kind==='coins')moved=bankCoins(data,dir,amount);
+  else if(entry.kind==='material')moved=bankMaterials(data,entry.id,dir,amount);
+  else {equipment=true;moved=bankEquipment(data,entry.kind,entry.id,dir,entry.style)?1:0;}
+  if(!moved){notify(equipment?'Unequip this item before storing it, or clear space in your backpack.':'Nothing to transfer.');return;}
+  selected=entryKey({...entry,scope:dir==='deposit'?'vault':'bag'});
+  changed((dir==='deposit'?'Stored ':'Withdrew ')+(moved>1?moved+' ':'')+entry.title,equipment);
+ }
+ function bankDetail(host,entry){
+  const item=getItem(entry.canonical);
+  inspectHeader(host,entry.canonical,entry.title);
+  const description=item?.description||(entry.kind==='coins'?'Coins for adventuring and shopping.':
+   entry.kind==='material'?'A useful resource for crafting and trading.':
+   'Equipment for your adventure.');
+  details(host,entry.title,description,[
+   ['Location',entry.scope==='vault'?'Bank':'Backpack'],
+   ['Quantity',String(entry.qty)],
+   ...(entry.style?[['Style',normal(entry.style)]]:[])
+  ]);
+  const action=entry.scope==='vault'?'TAKE':'STORE';
+  const actions=node('div',null,host,'town-transfer-actions');
+  let equipped=false;
+  const data=getData();
+  if(entry.scope==='bag'){
+   if(entry.kind==='weapon')equipped=data.gear?.[entry.style]===entry.id;
+   else if(entry.kind==='armour')equipped=Object.values(data.armour||{}).includes(entry.id);
+   else if(entry.kind==='slot')equipped=Object.values(data.equipment||{}).some(s=>Object.values(s||{}).includes(entry.id));
+  }
+  if(entry.kind==='coins'||entry.kind==='material'){
+   for(const amount of [1,5,10,Infinity]){
+    button(actions,action+' '+(amount===Infinity?'ALL':amount),()=>bankTransfer(entry,amount),'town-transfer-btn',equipped);
+   }
+  }else button(actions,action,()=>bankTransfer(entry,1),'town-transfer-btn',equipped);
+  if(equipped)node('p','Unequip this item before storing it.',host,'town-notice');
+ }
+ function bankView(data){
+  const bank=townBank(data),frame=node('div',null,body,'town-items-view town-bank-view');
+  const top=node('div',null,frame,'town-item-toolbar');
+  node('span','VAULT '+bankGridEntries(data,'vault').length+' slots · '+quantity(bank.coins)+' coins',top);
+  node('span','ON YOU '+quantity(data.coins)+' coins',top);
+  tabs(frame,[['all','ALL'],['gear','EQUIPMENT'],['supplies','SUPPLIES']]);
+  searchBox(frame);
+  const content=node('div',null,frame,'town-bank-layout');
+  const vault=node('section',null,content,'town-vault');
+  node('h3','BANK VAULT',vault);
+  const stored=bankGridEntries(data,'vault');
+  grid(vault,stored,'vault');
+  const bag=node('section',null,content,'town-backpack');
+  node('h3','YOUR BACKPACK',bag);
+  const carried=bankGridEntries(data,'bag');
+  grid(bag,carried,'bag');
+  const inspect=node('aside',null,frame,'town-item-detail');
+  const entry=[...stored,...carried].find(e=>entryKey(e)===selected);
+  if(entry)bankDetail(inspect,entry);
+  else {node('h3','SELECT AN ITEM',inspect);node('p','Tap an item in your bank to withdraw it, or in your backpack to store it.',inspect);}
+  filterTiles();
+ }
+ function shopView(data){
+  const frame=node('div',null,body,'town-items-view town-shop-view');
+  const top=node('div',null,frame,'town-item-toolbar');
+  node('span','DARRIN’S GENERAL STORE',top);
+  node('span',quantity(data.coins)+' COINS',top);
+  tabs(frame,[['all','ALL'],['sets','STARTER SETS'],['gear','EQUIPMENT']]);
+  const content=node('div',null,frame,'town-shop-layout');
+  const shelf=node('section',null,content,'town-shop-shelf');
+  node('h3','ITEMS FOR SALE',shelf);
+  const stock=shopGridEntries(data);grid(shelf,stock);
+  const inspect=node('aside',null,content,'town-item-detail town-shop-detail');
+  const item=stock.find(e=>stockKey(e)===selected);
+  if(item){
+   inspectHeader(inspect,item.icon,item.label);
+   const detail=getItem(item.icon);
+   const missing=item.kind==='bundle'?item.missing:0;
+   details(inspect,item.label,item.kind==='bundle'?'A beginner '+normal(item.style)+' outfit. Only the missing pieces are charged.':detail?.description||'An essential for your journey.',[
+    ['Price',item.cost+' coins'],
+    ['Style',item.style?normal(item.style):'General'],
+    ...(item.kind==='bundle'?[['Still needed',missing+' pieces']]:[]),
+    ['Status',item.owned?'Owned':item.banked?'In bank':data.coins<item.cost?'Not enough coins':'Available']
+   ]);
+   const actionLabel=item.kind==='bundle'?'BUY SET':'BUY';
+   button(inspect,item.owned?'OWNED':item.banked?'BANKED':actionLabel,()=>{
+    const result=buyStarterStock(data,item.id);
+    if(result.ok){changed('Purchased '+item.label,true);}
+    else notify(result.reason);
+   },'town-buy-button',item.owned||item.banked||data.coins<item.cost);
+  }else {node('h3','EXAMINE AN ITEM',inspect);node('p','Tap an item to see what it is, its price and whether you can buy it.',inspect);}
+  filterTiles();
+ }
+ function foresterView(data){
+  const level=levelFromXp(data.professions?.woodcuttingXp||0).level;
+  node('p','The Forester’s Lodge teaches beginner Woodcutting only. Other skills have their own towns and trainers.',body);
+  node('h3','Woodcutting — Level '+level,body);
+  node('p',(data.professions?.woodcuttingXp||0)+' / '+STARTER_GROVE_XP_CAP+' starter XP. Practice on the training pines north of the plaza.',body);
+  const learned=data.professions?.woodcuttingLearned===true;
+  button(body,learned?'LEARNED':'LEARN WOODCUTTING',()=>{
+   if(teachWoodcutting(data))changed('Learned Woodcutting. Find the pines north of the plaza.');
+  },'town-lesson-button',learned);
+  if(level>=5)node('p','You have outgrown these trees. Higher-level forestry requires travelling to other regions.',body,'town-notice');
+ }
+ function render(){
+  if(!service||panel.hidden)return;
+  const data=getData();body.replaceChildren();$('town-title').textContent=service.label;
+  if(service.id==='bank')bankView(data);
+  else if(service.id==='store')shopView(data);
+  else foresterView(data);
+ }
+ function interact({x,z,allowed,time}){
+  if(!allowed||!panel.hidden)return false;
+  const candidate=townInteraction(x,z)||getVillager(x,z);if(!candidate)return false;
+  if(candidate.type==='citizen'){notify(candidate.label+' · '+candidate.line);return true;}
+  if(candidate.type==='grove'){
+   const result=harvestStarterGrove(getData(),candidate.id,time,cooldowns);
+   if(result.ok){onChange();notify('Woodcutting +35 XP · Softwood logs +1');}
+   else notify(result.reason);
+   return true;
+  }
+  service=candidate;tab='all';search='';selected=null;panel.hidden=false;onOpen();render();return true;
+ }
+ function update({x,z,allowed}){
+  lastPosition={x,z};
+  const target=allowed&&panel.hidden?(townInteraction(x,z)||getVillager(x,z)):null;
+  prompt.hidden=!target;
+  if(target){
+   $('town-interact-description').textContent=target.type==='citizen'?target.label+' · '+target.role:
+    target.type==='grove'?target.label+' · '+(getData().professions?.woodcuttingLearned?'Collect logs':'Woodcutting lesson needed'):
+    target.label+' · Speak to '+target.attendant;
+   $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='citizen'?'TALK · T':'SPEAK · T';
+  }
+ }
+ $('town-interact-button').addEventListener('click',()=>{
+  if(lastPosition)interact({...lastPosition,allowed:true,time:getTime()});
+ });
+ return {interact,update,close,isOpen:()=>!panel.hidden};
 }
