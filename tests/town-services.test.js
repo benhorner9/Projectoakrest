@@ -10,7 +10,7 @@ import {blocked,clearWorldObstacles,terrainHeight,moveOnGround} from '../src/ter
 
 test('Oakrest has a protected town, peaceful approach and distributed skilling rules',()=>{
  assert.deepEqual(TOWN_SPECIALISATIONS.oakrest,['woodcutting']);
- assert.deepEqual(OAKREST_SERVICES.map(x=>x.id),['bank','store','forester']);
+ assert.deepEqual(OAKREST_SERVICES.map(x=>x.id),['bank','trade-house','store','forester']);
  assert.equal(OAKREST_GROVES.length,3);
  assert.ok(isOakrestSafe(0,-13),'original gate is in protected zone');
  assert.ok(isOakrestSafe(0,-42),'peaceful approach extends beyond the gate');
@@ -24,7 +24,7 @@ test('Oakrest has a protected town, peaceful approach and distributed skilling r
 test('world extension builds solid services and supports the new frontier',()=>{
  clearWorldObstacles();
  const scene=new THREE.Scene(),world=buildOakrestTown(scene);
- assert.equal(world.services,3);
+ assert.equal(world.services,OAKREST_SERVICES.length);
  assert.ok(world.buildings>=7);
  assert.equal(blocked(-30,14,.35),false,'bank floor is walkable');
  assert.equal(blocked(30,14,.35),false,'shop floor is walkable');
