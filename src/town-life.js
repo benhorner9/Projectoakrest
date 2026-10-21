@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {blocked,moveOnGround,terrainHeight} from './terrain.js';
 import {OAKREST_SERVICES} from './town-services.js';
+import {approachHeading,nearestCitizen} from './npc-motion.js';
 
 /**
  * Deterministic ambient villagers: no networking, no random spawning and no
@@ -93,8 +94,12 @@ export function createOakrestTownLife(scene){
       // still indicate occupation without requiring daily NPC teleportation.
       if(v.wait>0){
         v.wait-=dt;
-        v.arms[0].rotation.x=Math.sin(time*.83+i)*.13;
-        v.arms[1].rotation.x=-v.arms[0].rotation.x;
+        const settle=Math.max(0,Math.min(1,dt*7));
+        for(let j=0;j<2;j++){
+          v.legs[j].rotation.x+=(0-v.legs[j].rotation.x)*settle;
+          const idleSway=Math.sin(time*.83+i)*.13*(j===0?1:-1);
+          v.arms[j].rotation.x+=(idleSway-v.arms[j].rotation.x)*settle;
+        }
         continue;
       }
       let [tx,tz]=v.route.path[v.index];
@@ -113,7 +118,7 @@ export function createOakrestTownLife(scene){
         v.index=(v.index+1)%v.route.path.length;v.stuck=0;v.wait=.5;
       }
       v.x=pos.x;v.z=pos.z;v.root.position.set(v.x,pos.y,v.z);
-      v.root.rotation.y=Math.atan2(-dx,-dz);
+      v.root.rotation.y=approachHeading(v.root.rotation.y,Math.atan2(-dx,-dz),dt,8);
       v.legPhase+=progress*9;
       for(let j=0;j<2;j++){
         v.legs[j].rotation.x=Math.sin(v.legPhase+j*Math.PI)*.45;
@@ -135,16 +140,7 @@ export function createOakrestTownLife(scene){
     }
   }
   function nearby(x,z){
-    let nearest=null,dist=2.7;
-    for(const v of villagers){
-      const d=Math.hypot(x-v.x,z-v.z);
-      if(d<dist){nearest=v;dist=d;}
-    }
-    for(const citizen of standing){
-      const d=Math.hypot(x-citizen.x,z-citizen.z);
-      if(d<dist){return {type:'citizen',id:citizen.name,label:citizen.name,role:citizen.role,line:citizen.line,distance:d};}
-    }
-    return nearest?{type:'citizen',id:nearest.name,label:nearest.name,role:nearest.role,line:nearest.route.line,distance:dist}:null;
+    return nearestCitizen(villagers,standing,x,z,2.7);
   }
   return {update:step,nearby,count:villagers.length,staff:attendants.length,ambientStaff:standing.length,
     snapshot:()=>villagers.map(v=>({name:v.name,x:v.x,z:v.z}))};
