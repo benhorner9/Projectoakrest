@@ -244,7 +244,8 @@ function renderBook(){
  $('progression-levels').textContent='COMBAT LV '+combatLevelFromXp(data.xp)+' · '+bookStyle.toUpperCase()+' '+combatLevel+' · '+data.coins+' COINS';
  for(const [tab,id] of Object.entries(bookTabs))$(id).classList.toggle('selected',tab===bookTab);
  const styles=$('progression-styles');styles.replaceChildren();
- styles.hidden=bookTab==='skills'||bookTab==='inventory';
+ styles.hidden=!['equip','abilities'].includes(bookTab);
+ if(bookTab!=='settings')$('controls-panel').hidden=true;
  if(!styles.hidden)for(const s of STYLE_ORDER){
   const b=uiButton(styles,s.toUpperCase()+' '+levelFromXp(data.xp[s]).level,()=>selectStyle(s));
   b.classList.toggle('selected',s===bookStyle);
@@ -304,7 +305,13 @@ function renderBook(){
   renderEquipmentPaperDoll(host,data,bookStyle,showItemDetail);
  }else if(bookTab==='inventory'){
   renderInventoryGrid(host,data,showItemDetail);
-
+ }else if(bookTab==='quests'){
+  renderQuestPage(host,{area:data.onboarding?.area||'world',defeated:data.defeated||0,quest:$('quest-text').textContent,progress:$('quest-progress').textContent});
+ }else if(bookTab==='map'){
+  renderWorldPage(host,{area:data.onboarding?.area||'world',x:hero.position.x,z:hero.position.z});
+ }else if(bookTab==='settings'){
+  host.append($('controls-panel'));$('controls-panel').hidden=false;
+  $('help-button').setAttribute('aria-expanded','true');
  }
 }
 const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,windup:.25};
@@ -508,7 +515,7 @@ function updatePortalInteraction(){
  const near=Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)<=3.7;
  interact.hidden=!near;if(near){$('opening-interact-description').textContent='Active gateway: '+firstCity.name;$('opening-interact-button').textContent='ENTER '+firstCity.name.toUpperCase()+' · E';}
 }
-function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
+function updateHpUI(){$('combat-level-value').textContent=combatLevelFromXp(data.xp);const vital=levelFromXp(data.xp.vitality);const max=maxHealth(vital.level);$('health-label').textContent=`${Math.ceil(hp)} / ${max} HP`;$('hp-fill').style.width=`${100*hp/max}%`;$('hp-fill').parentElement.setAttribute('aria-valuenow',String(Math.max(0,Math.ceil(hp))));$('hp-fill').parentElement.setAttribute('aria-valuemax',String(max));$('xp-fill').style.width=`${100*levelFromXp(data.xp[style]).progress}%`;$('level-label').textContent=`VITALITY ${vital.level}`;$('style-level').textContent=`${style.toUpperCase()} LEVEL ${levelFromXp(data.xp[style]).level}`;$('coins').textContent=`${data.coins} COINS`;$('quest-progress').textContent=data.defeated<3?`${data.defeated} / 3 defeated`:'✓ 3 / 3 completed';}
 function refreshStyles(){const host=$('styles');host.innerHTML='';for(const st of STYLE_ORDER){const b=document.createElement('button');b.className=`style ${st===style?'active':''}`;b.style.borderColor=st===style?STYLE_COLOURS[st]:'';b.innerHTML=`<span class="symbol">${{melee:'⚔',magic:'✦',ranged:'➶'}[st]}</span>${st.toUpperCase()} <small>${levelFromXp(data.xp[st]).level}</small>`;b.addEventListener('click',()=>setStyle(st));host.append(b);}}
 function refreshSkills(){
  const host=$('skills');host.innerHTML='';
