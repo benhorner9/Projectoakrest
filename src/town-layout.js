@@ -66,6 +66,40 @@ export const OAKREST_PATHS=Object.freeze([
   [[-4.6,65],[-4.6,79]],[[4.6,65],[4.6,79]]
 ]);
 
+/**
+ * The very same mitred cross sections are used by the road renderer and town
+ * placement tests. Joining successive segments at a shared cross section
+ * removes square-end cracks and wedges at street bends.
+ */
+export function roadCrossSections(route,width=5.4){
+ if(!Array.isArray(route)||route.length<2||!(width>0))return [];
+ const normals=[];
+ for(let k=1;k<route.length;k++){
+  const a=route[k-1],b=route[k],dx=b[0]-a[0],dz=b[1]-a[1];
+  const length=Math.hypot(dx,dz);
+  if(length<1e-5)throw new Error('Degenerate Oakrest road segment');
+  normals.push([-dz/length,dx/length]);
+ }
+ return route.map(([x,z],i)=>{
+  const prev=normals[Math.max(0,i-1)],next=normals[Math.min(i,normals.length-1)];
+  const sx=prev[0]+next[0],sz=prev[1]+next[1],length=Math.hypot(sx,sz);
+  const nx=length>1e-5?sx/length:next[0],nz=length>1e-5?sz/length:next[1];
+  const dot=Math.max(.67,nx*next[0]+nz*next[1]);
+  const spread=Math.min(width*.75,width/(2*dot));
+  return {centre:[x,z],left:[x+nx*spread,z+nz*spread],right:[x-nx*spread,z-nz*spread]};
+ });
+}
+export function roadQuads(routes=OAKREST_PATHS,width=5.4){
+ const result=[];
+ for(const route of routes){
+  const section=roadCrossSections(route,width);
+  for(let i=1;i<section.length;i++){
+   const a=section[i-1],b=section[i];
+   result.push([a.left,a.right,b.right,b.left]);
+  }
+ }
+ return result;
+}
 export const FACING=Object.freeze({north:Math.PI,south:0,east:Math.PI/2,west:-Math.PI/2});
 export function localBuildingPosition(build,x,z){
   const a=FACING[build.face],dx=x-build.x,dz=z-build.z;
@@ -109,6 +143,6 @@ export function reservedTownGround(x,z){
   for(const [sx,sz] of OAKREST_WELL_STEPS)if(Math.hypot(x-sx,z-sz)<.78)return true;
   if(Math.hypot(x,z-39)<10)return true; // paved Heartwood Square
   for(const path of OAKREST_PATHS)for(let i=1;i<path.length;i++)
-    if(distanceToSegment(x,z,path[i-1],path[i])<3.25)return true;
+    if(distanceToSegment(x,z,path[i-1],path[i])<4.0)return true;
   return false;
 }
