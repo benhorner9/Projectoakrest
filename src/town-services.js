@@ -49,21 +49,23 @@ export function townBank(data){
   if(!Array.isArray(bank.slotted))bank.slotted=[];
   return bank;
 }
-export function bankCoins(data,direction){
+export function bankCoins(data,direction,requested=Infinity){
   const bank=townBank(data),deposit=direction==='deposit';
   if(!deposit&&direction!=='withdraw')return 0;
   const src=deposit?data:bank,dest=deposit?bank:data;
   const available=Math.max(0,Math.floor(Number(src.coins)||0));
-  const amount=Math.min(available,Math.max(0,10000000-Math.floor(Number(dest.coins)||0)));
+  const limit=requested===Infinity?Infinity:Number.isFinite(requested)?Math.max(0,Math.floor(requested)):0;
+  const amount=Math.min(available,Math.max(0,10000000-Math.floor(Number(dest.coins)||0)),limit);
   if(amount<=0)return 0;
   src.coins-=amount;dest.coins+=amount;return amount;
 }
-export function bankMaterials(data,id,direction){
+export function bankMaterials(data,id,direction,requested=Infinity){
   if(!TOWN_MATERIALS.includes(id)||!['deposit','withdraw'].includes(direction))return 0;
   const bank=townBank(data),inventory=data.inventory;
   const src=direction==='deposit'?inventory.materials:bank.materials;
   const dest=direction==='deposit'?bank.materials:inventory.materials;
-  const amount=Math.min(src[id]||0,9999-(dest[id]||0));
+  const limit=requested===Infinity?Infinity:Number.isFinite(requested)?Math.max(0,Math.floor(requested)):0;
+  const amount=Math.min(src[id]||0,9999-(dest[id]||0),limit);
   if(!Number.isSafeInteger(amount)||amount<=0)return 0;
   src[id]-=amount;if(src[id]===0)delete src[id];
   dest[id]=(dest[id]||0)+amount;

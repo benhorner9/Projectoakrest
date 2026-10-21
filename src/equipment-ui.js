@@ -75,7 +75,8 @@ export function renderEquipmentPaperDoll(host,data,style,examine){
  for(const entry of candidates){
   const item=getItem(entry.canonical);if(!item)continue;
   const tile=button(list,'Examine '+item.title,()=>examine(entry.canonical),'oak-gear-choice');
-  icon(tile,entry.canonical);node('span',item.title,tile);
+  tile.setAttribute('aria-label','Examine '+item.title);
+  icon(tile,entry.canonical);
  }
 }
 export function renderExamine(host,data,currentStyle,itemId,{onGear,onSlot,onTravel}){

@@ -1,20 +1,76 @@
+/* Oakrest's item economy uses neutral slot art, never artificial rarity colours. */
 #town-interact[hidden],#town-panel[hidden]{display:none!important}
 #town-interact{position:fixed;z-index:82;bottom:max(150px,20vh);left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;width:max-content;max-width:85vw;padding:10px 14px;border:1px solid #dfc9959c;border-radius:12px;background:#18302df2;color:#f0e6cb;font-size:13px;text-align:center;pointer-events:auto}
-#town-interact-button,#town-close,.town-actions button{border:1px solid #d5bc86;background:#c9ad77;color:#20322e;font-size:12px;font-weight:800;border-radius:8px;padding:10px 13px;min-height:44px;cursor:pointer}
-#town-panel{position:fixed;z-index:95;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#071a19b8;pointer-events:auto;color:#efebdb;text-shadow:none}
-.town-card{width:min(560px,100%);max-height:min(78vh,650px);display:flex;flex-direction:column;padding:18px;border-radius:16px;background:#172c2af9;border:1px solid #dfc99588;box-shadow:0 15px 80px #081713da}
-.town-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #cbb58b55;padding-bottom:10px}
-.town-header h2{margin:0;color:#e9cc8f;font-size:18px;letter-spacing:.02em}
+#town-interact-button,#town-close,.town-lesson-button{border:1px solid #d5bc86;background:#c9ad77;color:#20322e;font-size:12px;font-weight:800;border-radius:8px;padding:10px 13px;min-height:44px;cursor:pointer}
+#town-panel{position:fixed;z-index:95;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#071a19d4;pointer-events:auto;color:#efebdb;text-shadow:none}
+.town-card{width:min(950px,100%);max-height:min(89dvh,800px);display:flex;flex-direction:column;min-height:0;padding:16px;border-radius:13px;background:linear-gradient(140deg,#303a33,#1c2925);border:2px solid #b8a277;box-shadow:0 15px 80px #081713da}
+.town-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #b6a07670;padding-bottom:10px}
+.town-header h2{margin:0;color:#e9cc8f;font-size:18px;letter-spacing:.03em}
 #town-close{min-width:44px}
-#town-content{overflow-y:auto;overscroll-behavior:contain;padding:8px 1px 4px;font-size:13px;line-height:1.55}
-#town-content h3{font-size:13px;letter-spacing:.08em;color:#e2c98f;margin:17px 0 7px;text-transform:uppercase}
-#town-content p{margin:9px 0;color:#d6d8cd}
-.town-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #c6b58d28}
-.town-row strong{display:block;font-size:13px}
-.town-row small{display:block;color:#c0d4c6}
-.town-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
-.town-actions button{min-height:38px;padding:8px 11px}
-.town-actions button:disabled{opacity:.45;cursor:not-allowed}
-.town-notice{padding:10px;border-radius:9px;background:#304e4380}
-@media (max-width:750px){#town-interact{bottom:135px;font-size:11px;padding:8px 10px}#town-panel{padding:8px}.town-card{max-height:calc(100dvh - 20px);padding:12px}#town-content{font-size:12px}.town-row{padding:7px 0}.town-header h2{font-size:16px}}
-@media (max-height:500px){#town-interact{bottom:100px}.town-card{max-height:94dvh}}
+#town-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px 1px 4px;font-size:13px;line-height:1.45;touch-action:pan-y}
+#town-content h3{font-size:12px;letter-spacing:.10em;color:#e5cc97;margin:7px 0 10px;text-transform:uppercase}
+#town-content p{margin:8px 0;color:#d1d6c9}
+.town-item-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11px;letter-spacing:.05em;font-weight:800;color:#f0dcaa;margin-bottom:8px}
+.town-item-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.town-tab{min-height:40px;padding:7px 14px;border:1px solid #9e8d70;border-radius:6px;color:#e7d8bd;background:#25332d;font-size:11px;font-weight:800;cursor:pointer}
+.town-tab.is-active{background:#af9970;color:#1b2621;border-color:#e4d3ac}
+.town-search-label{display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:11px;color:#d3c7aa}
+.town-search{flex:1;max-width:310px;min-width:80px;min-height:40px;border:1px solid #ac9873;border-radius:6px;background:#101c18;color:#f0e4cb;padding:8px 10px;font-size:13px}
+.town-bank-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(215px,250px);gap:12px}
+.town-bank-layout section,.town-shop-shelf{min-width:0}
+.town-item-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;background:#1a241f;border:1px solid #87785e;padding:7px;border-radius:5px;align-content:start}
+.town-bag-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.town-item-tile,.town-item-empty{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:45px;aspect-ratio:1;border:1px solid #746d5d;background:#343c35;box-shadow:inset 0 1px 5px #070b0c99;border-radius:3px;padding:3px}
+.town-item-tile{cursor:pointer;color:#f7e6c2;touch-action:manipulation}
+.town-item-tile:hover{background:#465046;border-color:#d5b986}
+.town-item-tile.is-selected{outline:2px solid #edcc85;outline-offset:-3px;background:#536052}
+.town-item-tile:focus-visible,.town-tab:focus-visible,.town-buy-button:focus-visible,.town-transfer-btn:focus-visible{outline:2px solid #f7dc9b;outline-offset:1px}
+.town-item-tile[hidden]{display:none!important}
+.town-tile-art{display:flex;align-items:center;justify-content:center;position:relative;width:100%;height:100%;min-width:0;pointer-events:none}
+.oak-town-item-icon{width:100%;height:100%;max-width:48px;max-height:48px;object-fit:contain;pointer-events:none}
+.town-tile-art .oak-town-item-icon:nth-child(2){position:absolute;right:-2px;bottom:-2px;width:53%;height:53%;background:#202c27cc;border:1px solid #bba473;border-radius:3px}
+.town-tile-qty{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:800;color:#f3e797;text-shadow:0 2px 3px #000;pointer-events:none}
+.town-grid-empty{padding:6px 0;color:#d8c6a5}
+.town-item-detail{margin-top:12px;background:#17231e;border:1px solid #80765e;border-radius:7px;padding:10px 12px;min-width:0}
+.town-item-detail h3{margin:0 0 8px!important}
+.town-selected-head{display:flex;align-items:center;gap:9px;margin:5px 0 7px;color:#f4dfae}
+.town-selected-head strong{font-size:16px}
+.town-selected-icon{display:flex;align-items:center;justify-content:center;flex:none;width:56px;height:56px;background:#2f3a32;border:1px solid #a18b62;border-radius:5px}
+.town-selected-icon img{width:54px;height:54px}
+.town-item-description{font-size:12px;line-height:1.5}
+.town-item-fact{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #91866a43;padding:5px 0;color:#cad3c5;font-size:12px}
+.town-item-fact strong{color:#f1d5a4;text-align:right}
+.town-transfer-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.town-transfer-btn,.town-buy-button{border:1px solid #e1c58f;background:#a68a5b;color:#10241d;min-height:44px;padding:9px 13px;border-radius:6px;font-size:11px;font-weight:900;cursor:pointer}
+.town-transfer-btn:disabled,.town-buy-button:disabled,.town-lesson-button:disabled{opacity:.46;cursor:not-allowed}
+.town-notice{padding:10px;border-radius:9px;background:#43513a80}
+.town-shop-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,300px);gap:14px}
+.town-shop-view .town-item-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.town-shop-detail{margin-top:0}
+.town-buy-button{width:100%;margin-top:14px}
+.town-lesson-button{margin-top:12px}
+@media(max-width:740px){
+ #town-interact{bottom:135px;font-size:11px;padding:8px 10px}
+ #town-panel{padding:8px}
+ .town-card{max-height:calc(100dvh - 16px);padding:10px}
+ .town-bank-layout{grid-template-columns:minmax(0,1fr) minmax(164px,195px);gap:8px}
+ .town-shop-layout{grid-template-columns:minmax(0,1fr) minmax(180px,230px);gap:8px}
+ .town-item-grid{grid-template-columns:repeat(6,minmax(0,1fr));padding:5px;gap:3px}
+ .town-bag-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .town-shop-view .town-item-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+ .town-item-tile,.town-item-empty{min-height:40px}
+ .town-transfer-btn{padding:8px 10px}
+}
+@media(max-width:500px){
+ .town-bank-layout,.town-shop-layout{grid-template-columns:1fr}
+ .town-item-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+ .town-item-tile,.town-item-empty{min-height:46px}
+ .town-item-tabs{gap:4px}
+ .town-tab{padding:7px 9px}
+}
+@media(max-height:500px){
+ #town-interact{bottom:100px}
+ .town-card{max-height:96dvh}
+ .town-item-tile,.town-item-empty{min-height:40px}
+}
+@media(prefers-reduced-motion:reduce){.town-item-tile,.town-tab{transition:none}}
