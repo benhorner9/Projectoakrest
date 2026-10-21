@@ -97,6 +97,7 @@ test('all fifteen buildings have genuine recessed window apertures, flush frame 
       const floors=[];scene.traverse(o=>{if(o.name===b.id+' finished interior floor')floors.push(o);});
       assert.equal(floors.length,1,b.id+' missing solid finished floor');
       assert.ok(floors[0].scale.x>b.w&&floors[0].scale.z>b.d,b.id+' floor does not meet walls');
+      assert.ok(floors[0].position.y+floors[0].scale.y/2<.045,b.id+' floors must remain at character ground height');
     }
   }finally{clearWorldObstacles();}
 });
