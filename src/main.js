@@ -895,6 +895,7 @@ function animate(dt,t){
  }
  expandedTown.update(hero.position,t);
   townLife.update(dt,t,hero.position,(data.onboarding?.area||'world')==='world');
+  audio.cityAmbience(t,(data.onboarding?.area||'world')==='world'&&isOakrestSafe(hero.position.x,hero.position.z));
   const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||activeStrikes.length||t<attackUntil;
  const heading=cameraSettings.mode==='follow'?-yaw:activeStrikes.length?-activeStrikes[0].yaw:gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
