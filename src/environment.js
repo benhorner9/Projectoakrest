@@ -25,8 +25,8 @@ export function treeModel(x,z,h,index){const g=new THREE.Group();g.position.set(
  return g;
 }
 export function addLandmarks(scene){
- const ring=new THREE.Mesh(new THREE.RingGeometry(2.3,2.45,32),mat('#c0b28a'));ring.rotation.x=-Math.PI/2;ring.position.set(-6,.015,-3);scene.add(ring);
- for(const s of [-1,1]){const g=new THREE.Group();g.position.set(s*4.1,terrainHeight(s*4.1,-9),-9);block(g,'#8b9380',0,.35,0,1.3,.7,1.3);const flag=block(g,'#527b76',0,3.35,0,.7,1.6,.06);piece(g,orb,'#d8bc79',0,3.35,-.05,.18,.29,.06);scene.add(g);}
+ // Original arrival posts and stone ring were removed; the new Southgate
+ // is a single intentional structure, not several overlapping arches.
  // Far silhouettes establish a valley beyond the playable forest.
  for(let i=0;i<12;i++){const g=new THREE.Group();g.position.set(-74+i*14,0,-145);const ridge=new THREE.ConeGeometry(16,12+i%3*4,9,3);const rp=ridge.attributes.position;for(let j=0;j<rp.count;j++){const x=rp.getX(j),y=rp.getY(j),z=rp.getZ(j);rp.setXYZ(j,x+Math.sin(z*.3+i)*2,y+Math.sin(x*.3+i)*1.1,z);}ridge.computeVertexNormals();piece(g,ridge,i%2?'#68857c':'#728f82',0,2+i%3,0,1,1,.75);scene.add(g);}
 }

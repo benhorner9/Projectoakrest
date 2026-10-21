@@ -70,17 +70,14 @@ const ground=createTerrain(THREE,scene);
 let treeIndex=0;function tree(x,z,height=1){scene.add(treeModel(x,z,height,treeIndex++));addWorldObstacle({x,z,r:.3*height,height:3.3*height});}
 for(let i=0;i<155;i++){let x=(random()-.5)*178,z=(random()-.5)*230;if(Math.abs(x)<47&&z>-30&&z<91)continue;if(Math.abs(x)<9&&z< -12)continue;if(Math.hypot(x,z)<12)continue;tree(x,z,.68+random()*.52);}
 // The original sealed cottages are replaced by walkable homes in town-world.js.
-function fence(x,z,len){for(let i=0;i<len;i++){block(scene,x+i*2,.7,z,.2,1.4,.2,MAT.wood);if(i<len-1){block(scene,x+i*2+1,1.04,z,2,.16,.15,MAT.woodLight);block(scene,x+i*2+1,.54,z,2,.15,.15,MAT.woodLight);}}addWorldObstacle({x:x+len-1,z,hx:len-1+.14,hz:.14,height:1.4});}
-fence(-40,67,12);fence(17,67,12);fence(-8,-8,3);fence(5,-8,4);
-// Village well and a training dummy establish scale and orientation.
-cylinder(scene,6,.7,19,2.1,1.3,MAT.stone);cylinder(scene,6,1.38,19,1.5,.18,MAT.woodLight);
-for(let x of [4,8])block(scene,x,2.6,19,.3,3.8,.3,MAT.wood);
-block(scene,6,4.6,19,4.9,.3,4,MAT.wood);const wellRoof=put(scene,new THREE.ConeGeometry(3.6,2,4),MAT.roof,6,5.25,19);wellRoof.rotation.y=Math.PI/4;
-for(let i=0;i<13;i++){const x=(random()-.5)*85,z=(random()-.5)*90;if(Math.abs(x)<5&&z<40&&z>-60)continue;const m=cylinder(scene,x,.13,z,.25,.26,MAT.stone);m.scale.y=.6;}
-// A landmark to help new players know which way to leave the village.
-for(const x of [-4,4]){block(scene,x,2.35,-9,.7,4.7,.7,MAT.wood);addWorldObstacle({x,z:-9,hx:.35,hz:.35,height:4.7});}block(scene,0,4.7,-9,8.6,.6,.8,MAT.woodLight);
-const banner=block(scene,0,3.9,-9,3.1,.75,.15,mat('#8f7346'));block(scene,0,3.9,-9.1,2.45,.10,.05,MAT.gold);
-function sign(x,z){block(scene,x,1.75,z,.18,3.5,.18,MAT.wood);block(scene,x+.8,2.65,z,1.75,.7,.16,MAT.woodLight);}sign(5,12);
+// Restrained, fixed approach stones instead of random debris spawning through
+// paved streets or over city furniture.
+for(const [x,z] of [[-12,-28],[13,-30],[-10,-42],[12,-43]]){
+  const stone=cylinder(scene,x,.13,z,.25,.26,MAT.stone);
+  stone.scale.y=.6;
+}
+// All wells, city walls, gates, stalls and signs are now authored together in
+// the town layout, so their colliders and visual meshes cannot drift apart.
 const scenery=createOakrestScenery({THREE,scene,random,MAT});
 groundScenery(THREE,scene,[ground]);addLandmarks(scene);batchScenery(scene);
 const expandedTown=buildOakrestTown(scene);

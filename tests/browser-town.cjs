@@ -26,7 +26,7 @@ let browser;
     // Real-rendered city evidence: capture entrance, square and Warden Hall at
     // the iPad landscape reference viewport; no special renderer or mock UI.
     const fs=require('node:fs'),path=require('node:path');fs.mkdirSync(path.resolve(__dirname,'../qa'),{recursive:true});
-    for(const [label,x,z,lookX,lookZ] of [['southgate',0,-26,0,-13],['heartwood',0,25,0,39],['wardens-hall',-19,71,-30,76]]){
+    for(const [label,x,z,lookX,lookZ] of [['southgate',0,-26,0,-13],['heartwood',0,25,0,39],['well-courtyard',14,31,18,36],['wardens-hall',-19,71,-30,76]]){
       await page.evaluate(({x,z,lookX,lookZ})=>{oakrestQA.teleport(x,z,0);oakrestQA.aim(lookX,2.6,lookZ);oakrestQA.step(.6);},{x,z,lookX,lookZ});
       await page.screenshot({path:path.resolve(__dirname,'../qa/oakrest-city-'+label+'.png')});
     }

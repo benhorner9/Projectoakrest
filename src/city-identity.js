@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
+import {OAKREST_GARDEN_BENCHES,OAKREST_SQUARE_BENCHES,OAKREST_TRADE_TABLES,OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS} from './town-layout.js';
 
 /**
  * The Heartwood city art pass: original procedural architecture and landscape.
@@ -135,12 +136,12 @@ function cityWalls(scene){
  // entrance or long invisible collision strips across the arrival road.
  for(const side of [-1,1]){
   const group=at(scene,side*44,37,'Outer city wall');
-  for(let z=-46;z<=46;z+=3.9){
+  for(let z=-50;z<=50;z+=3.9){
    block(group,mat.stone,0,2.05,z,.95,4.1,3.8);
    block(group,mat.pale,0,4.35,z,1.30,.55,3.7);
    for(const dz of [-1.3,1.3])block(group,mat.stone,0,4.95,z+dz,1.36,.64,1.05);
   }
-  addWorldObstacle({x:side*44,z:37,hx:.6,hz:48,height:5});
+  addWorldObstacle({x:side*44,z:36.5,hx:.70,hz:50,height:5});
  }
  const rear=at(scene,0,86,'North wall walks');
  for(const side of [-1,1]){
@@ -154,11 +155,12 @@ function gardens(scene,animation){
  // Thin grass and stone beds, with paving routes remaining unobstructed.
  const areas=[[-.5,-3.2],[3.9,-.8],[.4,4.7]];
  for(const [x,z] of areas){
-  mesh(plot,new THREE.CylinderGeometry(2.65,2.8,.16,12),mat.stone,x,.10,z,1,.80,.78);
-  mesh(plot,new THREE.CylinderGeometry(2.40,2.45,.09,12),mat.leaf,x,.20,z,1,.75,.73,false);
+  const bed=at(scene,12+x,63+z,'Green Quarter planted bed');
+  mesh(bed,new THREE.CylinderGeometry(2.65,2.8,.16,12),mat.stone,0,.10,0,1,.80,.78);
+  mesh(bed,new THREE.CylinderGeometry(2.40,2.45,.09,12),mat.leaf,0,.20,0,1,.75,.73,false);
   for(let i=0;i<9;i++){
-   const a=i*Math.PI*2/9;const fx=x+Math.sin(a)*1.9,fz=z+Math.cos(a)*1.6;
-   mesh(plot,new THREE.IcosahedronGeometry(.16,0),i%3?mat.flower:mat.flowerBlue,fx,.44,fz,1,.8,1,false);
+   const a=i*Math.PI*2/9;const fx=Math.sin(a)*1.9,fz=Math.cos(a)*1.6;
+   mesh(bed,new THREE.IcosahedronGeometry(.16,0),i%3?mat.flower:mat.flowerBlue,fx,.44,fz,1,.8,1,false);
   }
  }
  // Pond tucked away from the central street and north exit.
@@ -166,8 +168,10 @@ function gardens(scene,animation){
  mesh(pond,new THREE.CylinderGeometry(2.3,2.6,.32,20),mat.stone,0,.14,0,1,.75,.8);
  mesh(pond,new THREE.CylinderGeometry(1.95,2,.06,20),mat.water,0,.34,0,1,1,.72,false);
  addWorldObstacle({x:22,z:66,r:2.35,height:.4});
- for(const [x,z,a] of [[11,54,.2],[17,74,Math.PI/2]]){
+ for(const {x,z,angle:a} of OAKREST_GARDEN_BENCHES){
   const g=at(scene,x,z,'Garden resting place');bench(g,0,0,a);
+  addWorldObstacle({x,z,hx:Math.abs(Math.cos(a))*1.39+Math.abs(Math.sin(a))*.42,
+    hz:Math.abs(Math.sin(a))*1.39+Math.abs(Math.cos(a))*.42,height:1.52});
  }
  const leaves=[];
  for(let i=0;i<12;i++){
@@ -182,23 +186,30 @@ function market(scene,animation){
  // Stone pavers outside the walking lanes: no collision under pedestrians.
  for(let i=0;i<10;i++){
   const a=i*Math.PI*2/10,rad=8.7;
-  const stone=mesh(sq,cyl,mat.cobble,Math.sin(a)*rad,.055,Math.cos(a)*rad,.8,.10,1.0,false);
+  const px=Math.sin(a)*rad,pz=Math.cos(a)*rad;
+  const stone=mesh(sq,cyl,mat.cobble,px,terrainHeight(px,39+pz)-sq.position.y+.055,pz,.8,.10,1.0,false);
   stone.rotation.y=a;
  }
- for(const [x,z,a] of [[-8,5,.2],[8,5,-.25],[-8,-5,Math.PI],[8,-5,Math.PI]]){
-  const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);bench(g,0,0,a);
+ for(const [x,zWorld,a] of OAKREST_SQUARE_BENCHES){
+  // Furniture has its own true ground anchor, not the square centre's
+  // elevation. Otherwise benches float as streets approach the hills.
+  const g=at(scene,x,zWorld,'Square resting place');
+  bench(g,0,0,a);
+  addWorldObstacle({x,z:zWorld,hx:1.42,hz:.76,height:1.5});
  }
- for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]])pot(sq,x,z);
+ for(const [x,z] of [[-11,-3],[-11,3],[11,-3],[11,3]]){
+  const group=at(scene,x,39+z,'Square flower urn');pot(group,0,0);
+ }
  const boards=[[-12,10],[12,10],[-13,3]];
  for(const [x,z] of boards){
-  const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);
+  const g=at(scene,x,39+z,'Civic noticeboard');
   block(g,mat.wood,0,1.7,0,2.6,2,.18);
   block(g,mat.pale,0,1.7,.12,2.35,1.6,.1);
   addWorldObstacle({x,z:z+39,hx:1.30,hz:.22,height:2.8});
   for(let i=0;i<4;i++)block(g,mat.clay,-.72+i*.47,1.55+(i%2)*.33,.22,.36,.22,.035,false);
  }
  for(const [x,z] of [[-14,7],[14,-7]]){
-  const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);
+  const g=at(scene,x,39+z,'Square hanging lantern');
   block(g,mat.wood,0,1.2,0,.15,2.4,.15);
   const lantern=mesh(g,foliage,mat.light,0,2.55,0,.24,.36,.24,false);
   lantern.userData.animated=true;
@@ -219,7 +230,7 @@ function cobbles(scene){
 }
 function marketGoods(scene){
  // Distinct areas suggest different trades without granting every skill here.
- for(const [x,z] of [[-11,22],[11,22],[-11,35],[12,34]]){
+ for(const {x,z} of OAKREST_TRADE_TABLES){
   const g=at(scene,x,z,'Street trade');
   for(const sx of [-1,1])for(const zz of [-1,1])block(g,mat.wood,sx*.7,.36,zz*.52,.18,.7,.16);
   block(g,mat.barkLight,0,.78,0,2.2,.18,1.5);
@@ -258,7 +269,7 @@ function birds(scene,animation){
  }
 }
 function lamps(scene,animation){
- for(const [x,z] of [[-18,9],[18,9],[-18,33],[18,33],[-18,53],[18,54],[-6,76],[6,76]]){
+ for(const [x,z] of OAKREST_CITY_LAMPS){
   const g=at(scene,x,z,'Bronze city lamp');
   block(g,mat.wood,0,1.55,0,.17,3.1,.17);
   block(g,mat.brass,0,3.05,0,.62,.15,.62);
@@ -273,7 +284,7 @@ export function buildCityIdentity(scene){
  gardens(scene,animations);marketGoods(scene);cobbles(scene);
  townGate(scene,-13,animations,'south');townGate(scene,86,animations,'north');
  cityWalls(scene);chimneys(scene,animations);birds(scene,animations);lamps(scene,animations);
- signpost(scene,-10,33,.18);signpost(scene,10,55,-.6);signpost(scene,-7,69,.4);
+ for(const [x,z,a] of OAKREST_SIGNPOSTS)signpost(scene,x,z,a);
  return {
   districts:CITY_DISTRICTS,
   landmark:{x:0,z:39,name:'Heartwood Oak'},
