@@ -18,7 +18,7 @@ export function abilityMotion(family,kind='basic',windup=0,release=0,combo=0){
  else if(family==='bow'||family==='shortbow'){motion.left=.12*w;motion.lean=-.04*r;}
  else if(family==='frost'||family==='ember'){motion.head=.045*w;motion.right=.15*r;motion.lean=-.06*w;}
  const k=kind||'basic';
- if(k==='sweep'){motion.right+=.75*w-.43*r;motion.left+=.25*w+.24*r;motion.twist+=-.46*w+.50*r;motion.lean+=-.13*r;}
+ if(k==='sweep'){motion.right+=.75*w-.43*r;motion.left+=.25*w+.24*r;motion.twist+=-.55*w+.15*r;motion.lean+=-.13*r;}
  else if(k==='execute'||k==='hit'){motion.right+=-(k==='execute'?.78:.48)*w+.54*r;motion.left+=-.16*w;motion.lean+=.21*w-.22*r;}
  else if(k==='nova'){motion.right+=-.68*w+.38*r;motion.left+=-.9*w+.52*r;motion.twist+=.16*r;motion.head+=-.08*r;}
  else if(k==='bolt'){motion.right+=.53*w+.25*r;motion.left+=.18*w;motion.lean+=.1*r;}
