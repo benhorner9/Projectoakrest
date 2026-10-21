@@ -8,7 +8,7 @@ import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
  * collidable walls and an interior; roofs lift away while the player is inside.
  * Building orientation is independent of door and service interaction rules.
  */
-import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_MARKET_STALLS} from './town-layout.js';
+import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_MARKET_STALLS} from './town-layout.js';
 export {OAKREST_BUILDINGS,OAKREST_PATHS} from './town-layout.js';
 const shared={
   plaster:new THREE.MeshLambertMaterial({color:'#d1c4a6'}),
@@ -372,6 +372,18 @@ function buildMerchantWell(scene){
   const cap=new THREE.Mesh(new THREE.ConeGeometry(roofRadius,1.45,4),shared.moss);
   cap.position.y=4.10;cap.rotation.y=Math.PI/4;cap.castShadow=true;group.add(cap);
   addWorldObstacle({x,z,r,height:4.8});
+  // Narrow, walkable stepping stones link the two quieter side streets to
+  // the dedicated circular court. Unlike the old 5.4m-wide road spurs, they
+  // never run underneath the well or turn its entire apron into a road.
+  const stoneGeometry=new THREE.CircleGeometry(.39,12);
+  stoneGeometry.rotateX(-Math.PI/2);
+  for(const [px,pz] of OAKREST_WELL_STEPS){
+    const stone=new THREE.Mesh(stoneGeometry,shared.pale);
+    stone.name='Well approach stepping stone';
+    stone.position.set(px,terrainHeight(px,pz)+.07,pz);
+    stone.receiveShadow=true;
+    scene.add(stone);
+  }
 }
 export function buildOakrestTown(scene){
   makeRoad(scene,OAKREST_PATHS,5.4,'#86795f',.018);
