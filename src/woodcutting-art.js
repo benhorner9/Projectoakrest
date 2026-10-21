@@ -13,7 +13,7 @@ function geometry(kind,...args){
 }
 function material(colour){if(!materials.has(colour))materials.set(colour,new THREE.MeshLambertMaterial({color:colour,flatShading:true}));return materials.get(colour);}
 function part(group,geo,colour,x,y,z,sx=1,sy=1,sz=1,rz=0){
- const mesh=new THREE.Mesh(geo,material(colour));mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.rotation.z=rz;mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);return mesh;
+ const mesh=new THREE.Mesh(geo,material(colour));mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.rotation.z=rz;mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.animated=true;group.add(mesh);return mesh;
 }
 function trunk(group,bark,h,r=0.34,x=0,z=0,lean=0){
  return part(group,geometry('cylinder',r*.86,r,h,7),bark,x,h/2,z,1,1,1,lean);
