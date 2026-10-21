@@ -25,7 +25,7 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  async function closeBook(){if(await page.locator('#skill-detail').isVisible())await page.locator('#skill-detail-back').click();await page.locator('#close-progression').click()}
  async function examine(name){await page.getByRole('button',{name:'Examine '+name,exact:true}).click()}
  async function action(name){await page.locator('#skill-detail').getByRole('button',{name,exact:true}).click()}
- async function town(x){await page.evaluate(x=>{oakrestQA.teleport(x,19.5);oakrestQA.step(.1)},x);await page.locator('#town-interact-button').click()}
+ async function town(x){await page.evaluate(x=>{oakrestQA.teleport(x<0?-29.6:29.6,14);oakrestQA.step(.1)},x);await page.locator('#town-interact-button').click()}
  await openInventory();
  const bounds=await page.locator('.oak-inventory-grid').evaluate(e=>{const r=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();return {cols:getComputedStyle(e).gridTemplateColumns.split(' ').length,cells:e.children.length,bottom:r.bottom,parentBottom:p.bottom}});
  assert.equal(bounds.cols,4);assert.equal(bounds.cells,28);assert.ok(bounds.bottom<=bounds.parentBottom,'all 28 positions visible on 13-inch landscape');
