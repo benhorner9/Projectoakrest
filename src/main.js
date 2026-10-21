@@ -8,6 +8,7 @@ import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, ENEMY_COMBAT, enemyBehaviour, enemyThreatTier, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
+import {maxHitFor,accuracyFor,rollHit,maxHitForAction,acquireEnemy,targetValid,inAttackRange} from './auto-combat.js';
 import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import { damp, dampAngle, smoothMotion } from './motion.js';
@@ -135,6 +136,7 @@ camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
 function saveCameraSettings(){try{localStorage.setItem(cameraStorageKey,JSON.stringify(cameraSettings));}catch{}}
 let padState=null,padPrevious=null,padName='';
 let holdingAttack=false;let activeSkillCache=[];let nextLabelUpdate=0;
+let combatTarget=null,combatPath=null,combatPathAt=0,combatPathGoal=null;
 const keys=new Set(),joystick={x:0,y:0},enemies=[],projectiles=[],rings=[],floaters=[],cooldowns=new Map();
 let respawnAt=0,lastHurt=-100;let comboStage=0,lastMeleeAttack=-10,recoilUntil=0,cameraJolt=0;
 let motion={x:0,z:0},stride=0,visualHeading=0;
@@ -327,6 +329,7 @@ const UNARMED={title:'Unarmed',family:'unarmed',basic:6,reach:1.55,interval:.88,
 function getWeapon(){if(data.onboarding?.area==='tutorial'&&LOADOUTS[style][data.gear[style]])return LOADOUTS[style][data.gear[style]];if(ownsWeapon(data,style,data.gear[style]))return LOADOUTS[style][data.gear[style]];return style==='melee'?UNARMED:{...UNARMED,title:'No weapon',basic:0,reach:0};}
 function save(){if(!saveWritable)return;try{localStorage.setItem(activeCharacter?saveKeyFor(activeCharacter.id):oldSaveKey,JSON.stringify(data));}catch{saveWritable=false;}}
 function useCharacter(profile,loaded){
+ stopCombat();
  // Switching a saved character must also switch its physical ground drops.
  for(const id of [...lootModels.keys()])discardLootModel(id);
  activeCharacter=profile;data=loaded;style='melee';hp=maxHealth(levelFromXp(data.xp.vitality).level);
@@ -562,7 +565,52 @@ function hitEnemy(e,damage,ability,source={style,level:levelFromXp(data.xp[style
 function enemyCentre(e){return {x:e.x,y:e.group.position.y+(e.type==='mossling'?.75:1.25),z:e.z};}
 function enemyRadius(e){return e.type==='mossling'?.6:e.type==='boar'?.8:.65;}
 function clearCombatLine(a,b,r=.05){return segmentWorldHit(a,b,r)===null;}
-function sourceSnapshot(){return {style,level:levelFromXp(data.xp[style]).level,power:outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power};}
+function sourceSnapshot(){
+ const level=levelFromXp(data.xp[style]).level,weaponBasic=getWeapon().basic;
+ const power=outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power;
+ return {style,level,power,weaponBasic,maxHit:maxHitFor(level,weaponBasic,power)};
+}
+function stopCombat(){combatTarget=null;combatPath=null;combatPathGoal=null;$('touch-attack').classList.remove('auto-locked');}
+function selectCombatTarget(enemy){
+ if(!started||hp<=0||isGameplayMenuOpen()||!targetValid(enemy,activeEnemies(),hero.position,30))return false;
+ if(!clearCombatLine({x:hero.position.x,y:hero.position.y+1.25,z:hero.position.z},enemyCentre(enemy)))return false;
+ combatTarget=enemy;combatPath=null;combatPathGoal=null;
+ $('touch-attack').classList.add('auto-locked');toast('Target locked · '+ENEMY_COMBAT[enemy.type].name);
+ return true;
+}
+function toggleCombat(){
+ if(isGameplayMenuOpen()||!started||hp<=0)return;
+ if(combatTarget){stopCombat();return;}
+ const target=acquireEnemy(activeEnemies(),hero.position,forward(),enemy=>clearCombatLine(
+  {x:hero.position.x,y:hero.position.y+1.25,z:hero.position.z},enemyCentre(enemy)));
+ if(!target){toast('No enemy in range · Move closer or select an enemy');return;}
+ selectCombatTarget(target);
+}
+function updateAutoCombat(dt,t,manualInput){
+ if(!combatTarget)return;
+ if(!targetValid(combatTarget,activeEnemies(),hero.position)){stopCombat();return;}
+ if(isGameplayMenuOpen()||!started||hp<=0)return;
+ const weapon=getWeapon();if(weapon.reach<=0)return;
+ const origin={x:hero.position.x,y:hero.position.y+1.2,z:hero.position.z};
+ const clear=clearCombatLine(origin,enemyCentre(combatTarget));
+ if(inAttackRange(hero.position,combatTarget,weapon.reach,clear)){doBasic();return;}
+ if(manualInput||dodgeTravel||pendingBasic||pendingAbility||t<switchUntil)return;
+ const goal={x:combatTarget.x,z:combatTarget.z},start={x:hero.position.x,z:hero.position.z};
+ if(!combatPath||t>=combatPathAt||!combatPathGoal||Math.hypot(goal.x-combatPathGoal.x,goal.z-combatPathGoal.z)>1.5){
+  combatPath=groundSegmentClear(start,goal,.45)?[goal]:groundPath(start,goal,(a,b)=>groundSegmentClear(a,b,.45),{within:p=>Math.hypot(p.x-start.x,p.z-start.z)<38,maxNodes:350});
+  combatPathGoal=goal;combatPathAt=t+.7;
+ }
+ while(combatPath?.length>1&&Math.hypot(combatPath[0].x-start.x,combatPath[0].z-start.z)<.4)combatPath.shift();
+ const dest=combatPath?.[0];if(!dest)return;
+ const dx=dest.x-start.x,dz=dest.z-start.z,d=Math.hypot(dx,dz);
+ const stop=clear?Math.min(Math.max(.8,weapon.reach*.70),Math.max(.8,weapon.reach-.4)):.6;
+ const stride=Math.min(4.7*dt,Math.max(0,d-(combatPath.length===1?stop:0)));
+ if(stride<=0)return;
+ const moved=moveOnGround(hero.position,dx/Math.max(.001,d)*stride,dz/Math.max(.001,d)*stride,.45);
+ hero.position.set(moved.x,data.onboarding?.area==='tutorial'||data.onboarding?.area==='realm'?0:moved.y,moved.z);
+ motion={x:dx/Math.max(.001,d)*stride/Math.max(.001,dt),z:dz/Math.max(.001,d)*stride/Math.max(.001,dt)};
+}
+
 function beginStrike(damage,reach,ability={},family=slotFamily(style,data.gear[style])){
  const profile={...(MELEE_PROFILES[family]||MELEE_PROFILES.unarmed)};
  if(ability.kind==='sweep'){profile.halfAngle=1.15;profile.multi=true;}
