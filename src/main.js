@@ -456,7 +456,7 @@ function updateOpeningArea(){
  openingWorld.realm.visible=area==='realm';
  scene.background.set(area==='realm'?'#3b445e':area==='tutorial'?'#9fbf9f':'#a9c8b7');
  scene.fog.color.set(scene.background);
- $('area').textContent=area==='tutorial'?'The First Steps':area==='realm'?'Portal Realm':'Oakrest Village';
+ $('area').textContent=area==='tutorial'?'The First Steps':area==='realm'?'Portal Realm':'Oakrest City';
  $('quest-text').closest('.quest').style.display=area==='world'?'':'none';
  hero.position.set(START_POINTS[area].x,terrainHeight(START_POINTS[area].x,START_POINTS[area].z),START_POINTS[area].z);
  yaw=0;motion={x:0,z:0};queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;
@@ -512,7 +512,7 @@ function useTravelScroll(){
 function enterCityPortal(){
  const o=data.onboarding;
  if(!started||o?.area!=='realm'||Math.hypot(hero.position.x-openingWorld.cityPortal.x,hero.position.z-openingWorld.cityPortal.z)>3.7)return false;
- o.activatedPortals=['oakrest'];o.area='world';style='melee';updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
+ o.activatedPortals=['oakrest'];o.area='world';style='melee';updateOpeningArea();yaw=Math.PI;visualHeading=-Math.PI;hero.rotation.y=visualHeading;equipVisual(style,data.gear[style]);refreshSkills();
  save();toast('Welcome to '+firstCity.name+'! Your adventure begins.');return true;
 }
 $('opening-interact-button').addEventListener('click',enterCityPortal);
