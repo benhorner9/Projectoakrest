@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {terrainHeight,addWorldObstacle} from './terrain.js';
-import {OAKREST_GARDEN_BENCHES,OAKREST_TRADE_TABLES,OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS} from './town-layout.js';
+import {OAKREST_GARDEN_BENCHES,OAKREST_SQUARE_BENCHES,OAKREST_TRADE_TABLES,OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS} from './town-layout.js';
 
 /**
  * The Heartwood city art pass: original procedural architecture and landscape.
@@ -188,7 +188,8 @@ function market(scene,animation){
   const stone=mesh(sq,cyl,mat.cobble,Math.sin(a)*rad,.055,Math.cos(a)*rad,.8,.10,1.0,false);
   stone.rotation.y=a;
  }
- for(const [x,z,a] of [[-10,6,.2],[10,6,-.25],[-10,0,Math.PI],[10,-1.8,Math.PI]]){
+ for(const [x,zWorld,a] of OAKREST_SQUARE_BENCHES){
+  const z=zWorld-39;
   const g=new THREE.Group();g.position.set(x,0,z);sq.add(g);bench(g,0,0,a);
   addWorldObstacle({x,z:z+39,hx:1.42,hz:.76,height:1.5});
  }
