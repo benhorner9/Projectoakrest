@@ -4,6 +4,7 @@ import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
 import {furnishGrandBank,buildGrandBankFacade} from './bank-architecture.js';
 import {buildingCutaway,playerInBuilding} from './building-visibility.js';
+import {addArchitecturalFinish,furnishDistinctInterior} from './building-art.js';
 
 /**
  * Walkable starter town. Every building has a real doorway, four separate
@@ -346,7 +347,9 @@ function buildHouse(scene,build){
   const facadeStart=g.children.length;
   decorateFacade(g,build,h);
   for(const piece of g.children.slice(facadeStart))mark(piece,'front');
+  for(const {mesh,side} of addArchitecturalFinish(g,build,h,shared))mark(mesh,side);
   makeInteriors(g,build);
+  furnishDistinctInterior(g,build,shared);
   const roof=makeRoof(g,build,h);
   return {build,roof,cutaway};
 }
