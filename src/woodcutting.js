@@ -46,6 +46,23 @@ export function woodcuttingLevel(xp){
  return {level,totalXp:safe,required:next,remaining:Math.max(0,next-safe),
   progress:level===99?1:(safe-previous)/(next-previous),maxed:level===99};
 }
+/** Matches the Combat skills card/detail XP units while keeping the slower Woodcutting curve. */
+export function woodcuttingProgress(xp){
+ const info=woodcuttingLevel(xp);
+ const previous=WOODCUTTING_LEVEL_XP[info.level];
+ const required=info.maxed?0:WOODCUTTING_LEVEL_XP[info.level+1]-previous;
+ const current=info.maxed?0:info.totalXp-previous;
+ return {...info,current,required,needed:info.remaining};
+}
+/** One source of truth for the seven tree and axe unlock levels in the Skills menu. */
+export function woodcuttingMilestones(){
+ return [
+  ...TREE_SPECIES.map(tree=>({level:tree.level,type:'Tree',name:tree.name+' Tree',
+   detail:'Cut '+tree.name+' trees · '+tree.xp+' XP per log'})),
+  ...WOODCUTTING_AXES.map(axe=>({level:axe.level,type:'Axe',name:axe.name,
+   detail:'Use this axe from your backpack or weapon slot; higher tiers improve harvesting efficiency'}))
+ ].sort((a,b)=>a.level-b.level||a.type.localeCompare(b.type));
+}
 export function bestWoodcuttingAxe(data){
  const level=woodcuttingLevel(data?.professions?.woodcuttingXp).level;
  const owned=new Set(data?.inventory?.weapons?.melee||[]);
