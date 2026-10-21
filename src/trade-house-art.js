@@ -10,8 +10,8 @@ export function furnishTradeHall(group,build,mat,block,collider){
  const slab=new THREE.MeshLambertMaterial({color:'#d4c5a8'});
  const teal=new THREE.MeshLambertMaterial({color:'#456875'});
  // A continuous stone floor with a bright central runner from the entrance.
- tag('Trade House tiled concourse',slab,0,-.016,0,w-.6,.055,d-.6);
- tag('Trade House entry carpet',mat.red,0,.021,2.3,2.65,.035,7.1);
+ tag('Trade House tiled concourse',slab,0,.027,0,w-.6,.055,d-.6);
+ tag('Trade House entry carpet',mat.red,0,.078,2.3,2.65,.035,7.1);
  for(const side of [-1,1]){
   // Structural gallery columns sit against walls, leaving a five-metre aisle.
   for(const z of [-4.7,0,4.1]){
