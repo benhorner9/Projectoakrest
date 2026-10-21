@@ -10,11 +10,12 @@ const report={screens:[],checks:[],errors:[]};
 let browser;
 (async()=>{try{
  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ // Keep headless software-GPU testing at 1x; test actual high-DPR GPU cost on iPad Safari.
  const configurations=[
-  {name:'ipad-landscape',width:1366,height:1024,touch:true,dpr:2},
-  {name:'phone-portrait',width:390,height:844,touch:true,dpr:2},
-  {name:'phone-landscape',width:844,height:390,touch:true,dpr:2},
-  {name:'compact-phone',width:320,height:640,touch:true,dpr:2},
+  {name:'ipad-landscape',width:1366,height:1024,touch:true,dpr:1},
+  {name:'phone-portrait',width:390,height:844,touch:true,dpr:1},
+  {name:'phone-landscape',width:844,height:390,touch:true,dpr:1},
+  {name:'compact-phone',width:320,height:640,touch:true,dpr:1},
   {name:'desktop',width:1440,height:900,touch:false,dpr:1}
  ];
  for(const config of configurations){
