@@ -513,6 +513,7 @@ function updateWoodcutting(dt,t,manualInput){
  if(!woodcuttingSwingStart){woodcuttingSwingStart=t;woodcuttingNextChop=t+WOODCUTTING_SWING_SECONDS*.48;}
  if(t+1e-6<woodcuttingNextChop)return;
  woodcuttingNextChop+=WOODCUTTING_SWING_SECONDS;
+ audio.play('chop');
  const outcome=chopOnce(data,tree.state,t,random);
  if(!outcome.ok){stopWoodcutting();toast(outcome.reason);return;}
  sparks(new THREE.Vector3(tree.x,terrainHeight(tree.x,tree.z)+1.12,tree.z),'#d6b68b',2);
@@ -523,6 +524,7 @@ function updateWoodcutting(dt,t,manualInput){
  save();if(!progressPanel.hidden)renderBook();
  if(outcome.depleted){
   if(tree.obstacle){removeWorldObstacle(tree.obstacle);tree.obstacle=null;}
+  audio.play('treefall',true);
   stopWoodcutting();
   toast(TREE_BY_ID[tree.species].name+' tree fell · Regrowing');
  }
