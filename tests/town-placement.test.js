@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
- OAKREST_WELL,OAKREST_PATHS,OAKREST_BUILDINGS,OAKREST_MARKET_STALLS,
+ OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_PATHS,OAKREST_BUILDINGS,OAKREST_MARKET_STALLS,roadQuads,roadCrossSections,
  OAKREST_TRADE_TABLES,OAKREST_GARDEN_BENCHES,OAKREST_SQUARE_BENCHES,
  OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS,OAKREST_MARKET_CRATES,
  OAKREST_MARKET_BARRELS,OAKREST_VEGETABLE_BEDS
@@ -12,27 +12,43 @@ import {createOakrestTownLife} from '../src/town-life.js';
 import {OAKREST_SERVICES,townInteraction} from '../src/town-services.js';
 import {blocked,terrainHeight,moveOnGround,clearWorldObstacles} from '../src/terrain.js';
 
-/** Road paving occupies an oriented width-5.4 rectangle, with flat ends. */
-function pointToRoad(x,z,a,b,width=5.4){
- const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
- const ux=dx/len,uz=dz/len,px=x-a[0],pz=z-a[1];
- const longitudinal=px*ux+pz*uz,lateral=Math.abs(px*(-uz)+pz*ux);
- return Math.hypot(Math.max(0,-longitudinal,longitudinal-len),Math.max(0,lateral-width/2));
-}
+/** Paving tests inspect the same mitred polygons as the actual Three.js road renderer. */
+const allRoadQuads=roadQuads();
 function corners(x,z,hx,hz){return [[x-hx,z-hz],[x+hx,z-hz],[x+hx,z+hz],[x-hx,z+hz]];}
-function projections(pts,axis){const p=pts.map(v=>v[0]*axis[0]+v[1]*axis[1]);return [Math.min(...p),Math.max(...p)];}
-function roadIntersectsFixture(x,z,hx,hz,a,b,clearance=.10){
- const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),ux=dx/len,uz=dz/len;
- const nx=-uz, nz=ux,w=2.7;
- const road=[[a[0]+nx*w,a[1]+nz*w],[b[0]+nx*w,b[1]+nz*w],
-  [b[0]-nx*w,b[1]-nz*w],[a[0]-nx*w,a[1]-nz*w]];
+function projections(pts,axis){
+ const values=pts.map(v=>v[0]*axis[0]+v[1]*axis[1]);
+ return [Math.min(...values),Math.max(...values)];
+}
+function pointToSegment(x,z,a,b){
+ const dx=b[0]-a[0],dz=b[1]-a[1],len2=dx*dx+dz*dz;
+ const t=len2?Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/len2)):0;
+ return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz);
+}
+function pointInPolygon(x,z,polygon){
+ let inside=false;
+ for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+  const a=polygon[i],b=polygon[j];
+  if((a[1]>z)!==(b[1]>z) && x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+ }
+ return inside;
+}
+function distanceToPavedRoad(x,z,quad){
+ if(pointInPolygon(x,z,quad))return 0;
+ return Math.min(...quad.map((p,i)=>pointToSegment(x,z,p,quad[(i+1)%quad.length])));
+}
+function roadIntersectsFixture(x,z,hx,hz,road,clearance=.10){
  const item=corners(x,z,hx+clearance,hz+clearance);
- return [[1,0],[0,1],[ux,uz],[nx,nz]].every(axis=>{
+ const axes=[[1,0],[0,1]];
+ for(let i=0;i<road.length;i++){
+  const a=road[i],b=road[(i+1)%road.length];
+  const dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);
+  axes.push([-dz/length,dx/length]);
+ }
+ return axes.every(axis=>{
   const [al,ah]=projections(road,axis),[bl,bh]=projections(item,axis);
   return al<bh&&bl<ah;
  });
 }
-const allSegments=OAKREST_PATHS.flatMap(path=>path.slice(1).map((p,i)=>[path[i],p]));
 const fixtures=[
  ...OAKREST_MARKET_STALLS.map((v,i)=>({name:'canopy '+i,...v,hx:2.05,hz:1.35})),
  ...OAKREST_TRADE_TABLES.map((v,i)=>({name:'trade '+i,...v,hx:1.1,hz:.75})),
@@ -49,10 +65,10 @@ const fixtures=[
 
 test('merchant well lives in its own courtyard rather than the east-west street',()=>{
  assert.deepEqual([OAKREST_WELL.x,OAKREST_WELL.z],[18,36]);
- for(const [a,b] of allSegments){
-  const distance=pointToRoad(OAKREST_WELL.x,OAKREST_WELL.z,a,b);
-  assert.ok(distance>OAKREST_WELL.roofRadius+.30,
-   'well canopy intersects road '+JSON.stringify([a,b])+', distance '+distance);
+ for(const quad of allRoadQuads){
+  const distance=distanceToPavedRoad(OAKREST_WELL.x,OAKREST_WELL.z,quad);
+  assert.ok(distance>OAKREST_WELL.courtyardRadius+OAKREST_WELL.roadSetback,
+   'whole WELL COURTYARD requires a generous verge from the REAL paving polygon '+JSON.stringify(quad)+', distance '+distance);
  }
  clearWorldObstacles();
  const scene=new THREE.Scene();
@@ -70,13 +86,19 @@ test('merchant well lives in its own courtyard rather than the east-west street'
    assert.equal(blocked(x,z,.30),true,'outer wall corner must be joined at '+x+','+z);
   assert.equal(scene.getObjectByName('Southgate')?.userData.cityLandmark,'southgate');
   assert.equal(scene.getObjectByName('Well cobblestone courtyard')?.geometry.type,'CircleGeometry');
+  assert.equal(scene.children.filter(o=>o.name==='Well approach stepping stone').length,OAKREST_WELL_STEPS.length,
+   'approach must use narrow stones rather than full-width paved roads');
+  for(const [sx,sz] of OAKREST_WELL_STEPS){
+   assert.ok(Math.hypot(sx-OAKREST_WELL.x,sz-OAKREST_WELL.z)>OAKREST_WELL.courtyardRadius+.30,
+    'stepping stones must remain outside the well apron');
+  }
  }finally{clearWorldObstacles();}
 });
 test('market furniture, benches and planters have real setbacks from roads and buildings',()=>{
  for(const v of fixtures){
-  for(const [a,b] of allSegments){
-   assert.equal(roadIntersectsFixture(v.x,v.z,v.hx,v.hz,a,b),false,
-    v.name+' intersects the walking path '+JSON.stringify([a,b]));
+  for(const quad of allRoadQuads){
+   assert.equal(roadIntersectsFixture(v.x,v.z,v.hx,v.hz,quad),false,
+    v.name+' intersects the rendered street paving '+JSON.stringify(quad));
   }
   for(const house of OAKREST_BUILDINGS){
    const sideways=house.face==='east'||house.face==='west';
@@ -106,4 +128,35 @@ test("city's main route, both interiors and townfolk remain accessible after pro
   assert.ok(life.snapshot().every(v=>!blocked(v.x,v.z,.22)),
    'townfolk walk through placed obstacles');
  }finally{clearWorldObstacles();}
+});
+
+
+test('decorative props do not overlap one another or the well court',()=>{
+ for(let i=0;i<fixtures.length;i++){
+  const a=fixtures[i];
+  // Check the actual footprint of each prop, not only the point at its centre.
+  const dx=Math.max(0,Math.abs(a.x-OAKREST_WELL.x)-a.hx);
+  const dz=Math.max(0,Math.abs(a.z-OAKREST_WELL.z)-a.hz);
+  assert.ok(Math.hypot(dx,dz)>OAKREST_WELL.courtyardRadius+.30,
+   a.name+' visually crowds or clips into well courtyard');
+  for(let j=i+1;j<fixtures.length;j++){
+   const b=fixtures[j];
+   const touches=Math.abs(a.x-b.x)<a.hx+b.hx+.06&&
+     Math.abs(a.z-b.z)<a.hz+b.hz+.06;
+   assert.equal(touches,false,a.name+' and '+b.name+' overlap or lack a clear visual join');
+  }
+ }
+});
+
+
+test('street bends are connected mitres rather than individually capped rectangles',()=>{
+ for(const route of OAKREST_PATHS){
+  const joins=roadCrossSections(route);
+  assert.equal(joins.length,route.length);
+  for(const section of joins){
+   const width=Math.hypot(section.left[0]-section.right[0],section.left[1]-section.right[1]);
+   assert.ok(width>=5.39&&width<=8.1,'road join is missing or blows up at corner');
+  }
+ }
+ assert.equal(allRoadQuads.length,OAKREST_PATHS.reduce((sum,path)=>sum+path.length-1,0));
 });
