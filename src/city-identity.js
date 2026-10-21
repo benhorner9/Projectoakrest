@@ -133,6 +133,39 @@ function townGate(scene,z,animation,kind){
  for(let i=-6;i<=6;i+=2)block(g,mat.stone,i,6.78,0,1.15,.55,1.8);
  block(g,mat.bronze,0,5.35,-.84,4.35,.43,.18);
 }
+/**
+ * Batch immobile town-wall panels into small cullable stretches.
+ * Instancing preserves box UVs, materials, shadows and local transforms.
+ * Independent collision bodies and all indoor cutaway geometry stay intact.
+ */
+export function batchStaticCityWallPanels(group,span=24){
+ if(!(span>0))throw new RangeError('Wall batch span must be positive');
+ const buckets=new Map();
+ for(const item of [...group.children]){
+  if(!item.isMesh||item.userData.animated||item.geometry.type!=='BoxGeometry'||Array.isArray(item.material)||item.material.transparent)continue;
+  const section=Math.floor(item.position.z/span);
+  const key=section+':'+item.material.uuid+':'+Number(item.castShadow)+':'+Number(item.receiveShadow);
+  if(!buckets.has(key))buckets.set(key,[]);
+  buckets.get(key).push(item);
+ }
+ let instances=0,batches=0;
+ for(const items of buckets.values()){
+  if(items.length<3)continue;
+  const first=items[0];
+  const inst=new THREE.InstancedMesh(first.geometry,first.material,items.length);
+  inst.name='Batched static city wall';
+  inst.castShadow=first.castShadow;inst.receiveShadow=first.receiveShadow;
+  inst.userData.staticCityWall=true;
+  for(let i=0;i<items.length;i++){
+   const item=items[i];item.updateMatrix();inst.setMatrixAt(i,item.matrix);
+  }
+  inst.instanceMatrix.needsUpdate=true;inst.computeBoundingSphere();inst.computeBoundingBox();
+  group.add(inst);
+  for(const item of items)item.removeFromParent();
+  instances+=items.length;batches++;
+ }
+ return {instances,batches,remainingMeshes:group.children.length};
+}
 function cityWalls(scene){
  // A limestone outer shell beyond the older timber palisade; no sealed
  // entrance or long invisible collision strips across the arrival road.
@@ -143,6 +176,8 @@ function cityWalls(scene){
    block(group,mat.pale,0,4.35,z,1.30,.55,3.7);
    for(const dz of [-1.3,1.3])block(group,mat.stone,0,4.95,z+dz,1.36,.64,1.05);
   }
+  // Limit batches to 24m so offscreen wall stretches can still be culled.
+  batchStaticCityWallPanels(group);
   addWorldObstacle({x:side*44,z:36.5,hx:.70,hz:50,height:5});
  }
  const rear=at(scene,0,86,'North wall walks');
