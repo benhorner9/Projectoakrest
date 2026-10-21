@@ -250,7 +250,11 @@ function renderBook(){
   const b=uiButton(styles,s.toUpperCase()+' '+levelFromXp(data.xp[s]).level,()=>selectStyle(s));
   b.classList.toggle('selected',s===bookStyle);
  }
- const host=$('progression-content');host.replaceChildren();
+ const host=$('progression-content');
+ // Keep the original settings controls in the live DOM between tab changes.
+ const controls=$('controls-panel');
+ if(controls.parentElement===host){controls.hidden=true;$('hud').append(controls);}
+ host.replaceChildren();
  const weaponId=data.gear[bookStyle];
  if(bookTab==='skills'){
   el('p','Overall Combat Level '+combatLevelFromXp(data.xp)+' · Based on your strongest attack style, Vitality and smaller contributions from other styles. Tap a skill to see its unlocks.',host);
