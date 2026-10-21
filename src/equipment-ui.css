@@ -19,10 +19,10 @@
 .oak-gear-helm{grid-area:helm}.oak-gear-amulet{grid-area:amulet}.oak-gear-arrows{grid-area:arrows}
 .oak-gear-chest{grid-area:chest}.oak-gear-legs{grid-area:legs}.oak-gear-weapon{grid-area:weapon}
 .oak-gear-offhand{grid-area:offhand}.oak-gear-boots{grid-area:boots}.oak-gear-ring{grid-area:ring}
-.oak-gear-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-bottom:6px}
-.oak-gear-choice{display:flex;align-items:center;text-align:left;gap:4px;min-height:53px;min-width:0;padding:5px;border:1px solid #8c957278;background:#254036;border-radius:7px;color:#f0e2bf}
-.oak-gear-choice .oak-item-icon{width:37px;height:37px;flex-shrink:0}
-.oak-gear-choice span{font-size:10px;line-height:1.2;overflow-wrap:anywhere}
+.oak-gear-choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;padding:8px;border:1px solid #8c957278;background:#172a23;border-radius:8px;margin-bottom:8px}
+.oak-gear-choice{display:flex;align-items:center;justify-content:center;min-height:54px;aspect-ratio:1;min-width:0;padding:3px;border:1px solid #8c957278;background:#254036;border-radius:5px;color:#f0e2bf}
+.oak-gear-choice .oak-item-icon{width:85%;height:85%;max-width:48px;max-height:48px;flex-shrink:0}
+.oak-gear-choice:focus-visible{outline:2px solid #f3d79c;outline-offset:1px}
 .oak-examine-head{display:flex;align-items:center;gap:12px;padding:6px 4px;border-bottom:1px solid #ad9d765c}
 .oak-examine-head .oak-item-icon{min-width:58px;width:58px;height:58px}
 .oak-examine-head strong{display:block;color:#f5d79f;font-size:16px}
@@ -39,10 +39,7 @@
 /* A quiet body silhouette anchors the slot layout without competing with icons. */
 .oak-gear-paperdoll{position:relative;isolation:isolate}
 .oak-gear-paperdoll::before{content:'';position:absolute;z-index:-1;left:27%;right:27%;top:24px;bottom:22px;background:#b5c6aa18;clip-path:polygon(38% 0,62% 0,68% 12%,60% 19%,85% 25%,100% 57%,86% 61%,70% 40%,70% 65%,80% 100%,57% 100%,50% 72%,43% 100%,20% 100%,30% 65%,30% 40%,14% 61%,0 57%,15% 25%,40% 19%,32% 12%)}
-.oak-inventory-item[data-kind=weapon]{border-bottom:3px solid #b28b63}
-.oak-inventory-item[data-kind=armour],.oak-inventory-item[data-kind=slot]{border-bottom:3px solid #89a9bb}
-.oak-inventory-item[data-kind=material]{border-bottom:3px solid #8aa16d}
-.oak-inventory-item[data-kind=scroll]{border-bottom:3px solid #c4a1d4}
+/* Keep slots neutral. Oakrest does not assign equipment value or rarity with colour borders. */
 .oak-examine-action{min-height:44px;touch-action:manipulation}
 @media(min-width:768px) and (min-height:900px){
  .touch-enabled .combatbar{backdrop-filter:none;-webkit-backdrop-filter:none}
