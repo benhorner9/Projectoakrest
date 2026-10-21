@@ -85,7 +85,7 @@ test('market furniture, benches and planters have real setbacks from roads and b
   }
  }
 });
-test('city's main route, both interiors and townfolk remain accessible after prop moves',()=>{
+test("city's main route, both interiors and townfolk remain accessible after prop moves",()=>{
  clearWorldObstacles();
  const scene=new THREE.Scene();buildOakrestTown(scene);
  const life=createOakrestTownLife(scene);
