@@ -897,17 +897,24 @@ function animate(dt,t){
   townLife.update(dt,t,hero.position,(data.onboarding?.area||'world')==='world');
   const gait=Math.hypot(motion.x,motion.z);stride+=gait*dt*2.6;
  const combatFacing=holdingAttack||pendingBasic||pendingAbility||activeStrikes.length||t<attackUntil;
- const heading=activeStrikes.length?-activeStrikes[0].yaw:gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
- visualHeading=dampAngle(visualHeading,heading,19,dt);hero.rotation.y=visualHeading;
+ const heading=cameraSettings.mode==='follow'?-yaw:activeStrikes.length?-activeStrikes[0].yaw:gait>.3&&!combatFacing?Math.atan2(-motion.x,-motion.z):-yaw;
+ visualHeading=cameraSettings.mode==='follow'?heading:dampAngle(visualHeading,heading,19,dt);
+ hero.rotation.y=visualHeading;
  animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const ideal=look.clone().add(new THREE.Vector3(orbit.x,orbit.y,orbit.z));
  cameraJolt=Math.max(0,cameraJolt-dt*.85);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)ideal.y+=cameraJolt*Math.sin(elapsed*95)*.25;
  const safe=safeCamera(look,ideal);ideal.set(safe.x,safe.y,safe.z);
- camera.position.lerp(ideal,frameDamping(cameraSettings.smoothing,dt));const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
+ // Follow mode never lets camera smoothing orbit past the hero's shoulder
+ // while turning: it is always behind the character's facing direction.
+ if(cameraSettings.mode==='follow')camera.position.copy(ideal);
+ else camera.position.lerp(ideal,frameDamping(cameraSettings.smoothing,dt));
+ const actual=safeCamera(look,camera.position);camera.position.set(actual.x,actual.y,actual.z);
  const cameraAim=look.clone().addScaledVector(front,2.8).add(new THREE.Vector3(0,-pitch*4,0));
- cameraFocus.lerp(cameraAim,frameDamping(cameraSettings.smoothing+3,dt));camera.lookAt(cameraFocus);
+ if(cameraSettings.mode==='follow')cameraFocus.copy(cameraAim);
+ else cameraFocus.lerp(cameraAim,frameDamping(cameraSettings.smoothing+3,dt));
+ camera.lookAt(cameraFocus);
  for(let i=groundEffects.length-1;i>=0;i--){const field=groundEffects[i];if(t>=field.until){groundEffects.splice(i,1);continue;}
   for(const e of activeEnemies())if(!e.dead&&!e.retreating&&Math.hypot(e.x-field.origin.x,e.z-field.origin.z)<=field.radius&&clearCombatLine(field.origin,enemyCentre(e)))e.slowUntil=Math.max(e.slowUntil,t+.15);
  }
@@ -995,8 +1002,12 @@ function refreshCameraControls(){
   $(id+'-value').textContent=Number(cfg[key]).toFixed(precision)+suffix;
  }
  $('camera-invert-y').checked=cfg.invertY;
+ $('camera-mode').value=cfg.mode;
 }
 function setCameraOption(key,value){
+ // When locking, follow the existing character facing rather than spinning the
+ // avatar to wherever the freely orbiting camera happened to be pointing.
+ if(key==='mode'&&value==='follow'&&cameraSettings.mode!=='follow')yaw=-hero.rotation.y;
  cameraSettings=normalizeCameraSettings({...cameraSettings,[key]:value});
  lookSensitivity=cameraSettings.sensitivity;
  camera.fov=cameraSettings.fov;camera.updateProjectionMatrix();
@@ -1006,8 +1017,9 @@ refreshCameraControls();
 for(const [id,key] of [['look-speed','sensitivity'],['camera-zoom','zoom'],['camera-height','height'],['camera-fov','fov'],['camera-smoothing','smoothing'],['gamepad-deadzone','gamepadDeadzone']])
  $(id).addEventListener('input',e=>setCameraOption(key,Number(e.target.value)));
 $('camera-invert-y').addEventListener('change',e=>setCameraOption('invertY',e.target.checked));
+ $('camera-mode').addEventListener('change',e=>setCameraOption('mode',e.target.value));
 $('camera-recenter').addEventListener('click',()=>{
- yaw=0;pitch=.12;cameraFocus.copy(hero.position).add(new THREE.Vector3(0,1.65,0));
+ yaw=cameraSettings.mode==='follow'?-hero.rotation.y:0;pitch=.12;cameraFocus.copy(hero.position).add(new THREE.Vector3(0,1.65,0));
  toast('Camera recentred');
 });
 $('camera-reset').addEventListener('click',()=>{
@@ -1137,7 +1149,7 @@ requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',s
 window.oakrestDiagnostics=()=>({...stats,quality,version:'combat-reborn-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
- state:()=>({data:structuredClone(data),style,hp,town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z)},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
+ state:()=>({data:structuredClone(data),style,hp,heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z)},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};expandedTown.update(hero.position);},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,
  receiveDamage(amount){applyEnemyDamage(null,{damage:amount},now());},
