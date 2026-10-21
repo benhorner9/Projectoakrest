@@ -81,6 +81,9 @@ export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEqu
   if(equipment)onEquipmentChange();
   if(message)notify(message);
   render();
+  // Transactions rebuild the slot grids. Never leave them hidden beneath the
+  // modal header after the panel's previous scroll position is restored.
+  body.scrollTop=0;
  }
  const visible=(entry)=> (tab==='all'||groupFor(entry)===tab)&&
   (!search||entry.title.toLowerCase().includes(search));
