@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="./src/equipment-ui.css" />
   <link rel="stylesheet" href="./src/combat-reborn.css" />
   <link rel="stylesheet" href="./src/minimal-hud.css" />
+  <link rel="stylesheet" href="./src/hud-minimap.css" />
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
@@ -30,7 +31,6 @@
       <div class="brand"><span class="rune">✥</span><div><b>OAKREST</b><small>THE GREENWOOD FRONTIER</small></div></div>
       <div class="location"><span class="dot"></span><span id="area">Oakrest Village</span></div>
       <button id="help-button" class="top-button" type="button" aria-label="Controls and camera settings" aria-expanded="false">⚙</button>
-      <button id="loadout-button" class="top-button oak-menu-toggle" type="button" aria-controls="progression-panel" aria-expanded="false" aria-label="Open character menu">☰ <span>MENU</span></button>
     </header>
     <section id="controls-panel" class="controls-panel" hidden aria-label="Controls and camera settings">
       <div class="settings-heading"><strong>CONTROLS & CAMERA</strong><button id="close-controls" type="button" aria-label="Close controls">✕</button></div>
@@ -60,6 +60,7 @@
       <button id="drop-editor-open" class="drop-editor-open" type="button" hidden>EDIT MONSTER DROPS (DEV)</button>
       <output id="performance-stats" aria-label="Measured performance">Measuring performance…</output>
     </section>
+    <div class="player-hud">
     <section class="vitals" aria-label="Player health and combat level">
       <div class="vitals-portrait" aria-hidden="true">✥</div>
       <div class="vitals-info">
@@ -72,6 +73,12 @@
         <div class="stat-line"><span id="style-level">MELEE LEVEL 1</span><span id="coins">0 COINS</span></div>
       </div>
     </section>
+    <button id="loadout-button" class="top-button oak-menu-toggle" type="button" aria-controls="progression-panel" aria-expanded="false" aria-label="Open character menu">☰ <span>MENU</span></button>
+    </div>
+    <button id="minimap-button" class="minimap-button" type="button" aria-controls="progression-panel" aria-label="Open world map" title="Open world map">
+      <span class="minimap-face"><canvas id="minimap-canvas" width="160" height="160" aria-hidden="true"></canvas><span class="minimap-north" aria-hidden="true">N</span></span>
+      <span class="minimap-area" id="minimap-area">OAKREST TOWN</span>
+    </button>
     <aside class="quest"><strong>YOUR FIRST CHALLENGE</strong><div id="quest-text">Explore the Oakrest Bank, General Store and Forester's Lodge. Travel beyond the safe greenbelt to fight your first monsters.</div><div id="quest-progress">0 / 3 defeated</div></aside>
     <div id="enemy-level-layer" aria-hidden="true"></div>
     <div class="targetbox" id="targetbox" hidden><div id="target-name">Field Boar</div><div class="bar enemy-health"><div id="target-hp"></div></div></div>
