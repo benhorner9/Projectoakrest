@@ -1,3 +1,4 @@
+import {abilitySoundProfile} from './ability-audio.js';
 /** Original bounded procedural cues. Settings persist per game environment. */
 export function createAudio(storage=null,key='oakrest-audio'){
  let ctx,enabled=true,volume=.6,voices=0,nextTownPulse=0,townPulseIndex=0;
@@ -24,6 +25,21 @@ export function createAudio(storage=null,key='oakrest-audio'){
   osc.connect(gain);gain.connect(ctx.destination);
   osc.start(t);osc.stop(t+(isBird?.32:.93));
   osc.onended=()=>{voices--;osc.disconnect();gain.disconnect();};
+ },
+ playAbility(style,kind,family){
+  if(!enabled||!volume||!ctx||ctx.state!=='running'||voices>=12)return;
+  const profile=abilitySoundProfile(style,kind,family);
+  const osc=ctx.createOscillator(),gain=ctx.createGain(),t=ctx.currentTime;
+  voices++;
+  osc.type=profile.wave;
+  osc.frequency.setValueAtTime(profile.hz,t);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(1,profile.hz*profile.sweep),t+profile.seconds);
+  gain.gain.setValueAtTime(.001,t);
+  gain.gain.exponentialRampToValueAtTime(Math.max(.001,profile.gain*volume),t+.018);
+  gain.gain.exponentialRampToValueAtTime(.001,t+profile.seconds);
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start(t);osc.stop(t+profile.seconds+.02);
+  osc.onended=()=>{voices=Math.max(0,voices-1);osc.disconnect();gain.disconnect();};
  },
  play(kind,heavy=false){
   if(!enabled||!volume||!ctx||ctx.state!=='running'||voices>=12)return;
