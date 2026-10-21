@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
- OAKREST_WELL,OAKREST_PATHS,OAKREST_BUILDINGS,OAKREST_MARKET_STALLS,
+ OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_PATHS,OAKREST_BUILDINGS,OAKREST_MARKET_STALLS,
  OAKREST_TRADE_TABLES,OAKREST_GARDEN_BENCHES,OAKREST_SQUARE_BENCHES,
  OAKREST_CITY_LAMPS,OAKREST_SIGNPOSTS,OAKREST_MARKET_CRATES,
  OAKREST_MARKET_BARRELS,OAKREST_VEGETABLE_BEDS
@@ -51,8 +51,8 @@ test('merchant well lives in its own courtyard rather than the east-west street'
  assert.deepEqual([OAKREST_WELL.x,OAKREST_WELL.z],[18,36]);
  for(const [a,b] of allSegments){
   const distance=pointToRoad(OAKREST_WELL.x,OAKREST_WELL.z,a,b);
-  assert.ok(distance>OAKREST_WELL.roofRadius+.30,
-   'well canopy intersects road '+JSON.stringify([a,b])+', distance '+distance);
+  assert.ok(distance>OAKREST_WELL.courtyardRadius+OAKREST_WELL.roadSetback,
+   'whole WELL COURTYARD requires a generous verge from the full paved road '+JSON.stringify([a,b])+', distance '+distance);
  }
  clearWorldObstacles();
  const scene=new THREE.Scene();
@@ -70,6 +70,12 @@ test('merchant well lives in its own courtyard rather than the east-west street'
    assert.equal(blocked(x,z,.30),true,'outer wall corner must be joined at '+x+','+z);
   assert.equal(scene.getObjectByName('Southgate')?.userData.cityLandmark,'southgate');
   assert.equal(scene.getObjectByName('Well cobblestone courtyard')?.geometry.type,'CircleGeometry');
+  assert.equal(scene.children.filter(o=>o.name==='Well approach stepping stone').length,OAKREST_WELL_STEPS.length,
+   'approach must use narrow stones rather than full-width paved roads');
+  for(const [sx,sz] of OAKREST_WELL_STEPS){
+   assert.ok(Math.hypot(sx-OAKREST_WELL.x,sz-OAKREST_WELL.z)>OAKREST_WELL.courtyardRadius+.30,
+    'stepping stones must remain outside the well apron');
+  }
  }finally{clearWorldObstacles();}
 });
 test('market furniture, benches and planters have real setbacks from roads and buildings',()=>{
@@ -106,4 +112,22 @@ test("city's main route, both interiors and townfolk remain accessible after pro
   assert.ok(life.snapshot().every(v=>!blocked(v.x,v.z,.22)),
    'townfolk walk through placed obstacles');
  }finally{clearWorldObstacles();}
+});
+
+
+test('decorative props do not overlap one another or the well court',()=>{
+ for(let i=0;i<fixtures.length;i++){
+  const a=fixtures[i];
+  // Check the actual footprint of each prop, not only the point at its centre.
+  const dx=Math.max(0,Math.abs(a.x-OAKREST_WELL.x)-a.hx);
+  const dz=Math.max(0,Math.abs(a.z-OAKREST_WELL.z)-a.hz);
+  assert.ok(Math.hypot(dx,dz)>OAKREST_WELL.courtyardRadius+.30,
+   a.name+' visually crowds or clips into well courtyard');
+  for(let j=i+1;j<fixtures.length;j++){
+   const b=fixtures[j];
+   const touches=Math.abs(a.x-b.x)<a.hx+b.hx+.06&&
+     Math.abs(a.z-b.z)<a.hz+b.hz+.06;
+   assert.equal(touches,false,a.name+' and '+b.name+' overlap or lack a clear visual join');
+  }
+ }
 });
