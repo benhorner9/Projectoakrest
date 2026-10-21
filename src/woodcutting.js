@@ -74,7 +74,7 @@ export function canCutTree(data,species){
 export function harvestChance(level,axe,tree){
  // Both proficiency and axe power make familiar trees substantially easier.
  const mastery=Math.max(0,level-tree.level);
- return Math.max(.12,Math.min(.985,.24+axe.tier*.085+mastery*.0085-tree.difficulty*.017));
+ return Math.max(.12,Math.min(.985,.24+axe.tier*.085+mastery*.0045-tree.difficulty*.017));
 }
 export function newTreeState(species,random=Math.random){
  const tree=TREE_BY_ID[species];
