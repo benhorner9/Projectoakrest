@@ -1,4 +1,6 @@
 import test from 'node:test';
+import * as THREE from 'three';
+import {buildOakrestTown} from '../src/town-world.js';
 import assert from 'node:assert/strict';
 import {
  addWorldObstacle,clearWorldObstacles,blocked,moveOnGround,safeCamera,
@@ -8,14 +10,16 @@ import {
 test.afterEach(()=>clearWorldObstacles());
 
 test('character body has a radius at solid houses and world bounds',()=>{
- assert.equal(blocked(-14,16.1,0),false);
- assert.equal(blocked(-14,16.1,.42),true);
+ buildOakrestTown(new THREE.Scene());
+ assert.equal(blocked(-17.95,12,0),false);
+ assert.equal(blocked(-17.95,12,.42),true);
  assert.equal(blocked(69.8,0,.42),false,'expanded world is navigable beyond the old edge');
  assert.equal(blocked(119.8,0,.42),true);
  assert.equal(blocked(0,11,.42),false);
 });
 
 test('fast movement and dodge cannot tunnel through house walls',()=>{
+ buildOakrestTown(new THREE.Scene());
  for(const stride of [2,10,30]){
   const p=moveOnGround({x:-14,z:20},0,-stride);
   assert.equal(blocked(p.x,p.z,.42),false);
@@ -48,6 +52,7 @@ test('environment collision rejects invalid dynamic shapes safely',()=>{
 });
 
 test('projectiles hit buildings instead of passing through walls',()=>{
+ buildOakrestTown(new THREE.Scene());
  const hit=segmentWorldHit({x:-14,y:2,z:20},{x:-14,y:2,z:5});
  assert.ok(hit!==null && hit>0 && hit<1,`wall hit: ${hit}`);
  assert.equal(segmentWorldHit({x:-14,y:18,z:20},{x:-14,y:18,z:5}),null);

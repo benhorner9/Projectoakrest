@@ -5,9 +5,9 @@ import {STARTER_SETS,SLOT_ITEMS,EXTRA_SLOTS} from './equipment-slots.js';
  */
 export const TOWN_SPECIALISATIONS=Object.freeze({oakrest:Object.freeze(['woodcutting'])});
 export const OAKREST_SERVICES=Object.freeze([
-  Object.freeze({id:'bank',label:'Oakrest Bank',x:-30,z:14,reach:6,kind:'bank'}),
-  Object.freeze({id:'store',label:'Oakrest General Store',x:30,z:14,reach:6,kind:'store'}),
-  Object.freeze({id:'forester',label:"Forester's Lodge",x:-30,z:46,reach:6,kind:'skill',skill:'woodcutting'})
+  Object.freeze({id:'bank',label:'Oakrest Bank',x:-30,z:14,npcX:-32.7,npcZ:14,reach:3.6,kind:'bank',attendant:'Mara the Banker'}),
+  Object.freeze({id:'store',label:'Oakrest General Store',x:30,z:14,npcX:32.7,npcZ:14,reach:3.6,kind:'store',attendant:'Darrin the Shopkeeper'}),
+  Object.freeze({id:'forester',label:"Forester's Lodge",x:-30,z:46,npcX:-32.7,npcZ:46,reach:3.6,kind:'skill',skill:'woodcutting',attendant:'Alden the Forester'})
 ]);
 export const OAKREST_GROVES=Object.freeze([
   Object.freeze({id:'pine-west',x:-18,z:59,reach:2.6}),
@@ -31,7 +31,7 @@ export const isOakrestSafe=(x,z)=>Number.isFinite(x)&&Number.isFinite(z)&&Math.a
 export function townInteraction(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return null;
   const options=[
-    ...OAKREST_SERVICES.map(s=>({...s,type:'service'})),
+    ...OAKREST_SERVICES.map(s=>({...s,type:'service',x:s.npcX??s.x,z:s.npcZ??s.z})),
     ...OAKREST_GROVES.map(s=>({...s,type:'grove',label:'Training pine'}))
   ].map(point=>({...point,distance:Math.hypot(x-point.x,z-point.z)}))
    .filter(point=>point.distance<=point.reach)

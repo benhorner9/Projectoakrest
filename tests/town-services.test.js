@@ -15,9 +15,9 @@ test('Oakrest has a protected town, peaceful approach and distributed skilling r
  assert.ok(isOakrestSafe(0,-13),'original gate is in protected zone');
  assert.ok(isOakrestSafe(0,-42),'peaceful approach extends beyond the gate');
  assert.ok(!isOakrestSafe(0,-55),'monster frontier is beyond the boundary');
- assert.equal(townInteraction(-30,19)?.id,'bank');
- assert.equal(townInteraction(30,19)?.id,'store');
- assert.equal(townInteraction(-30,51)?.id,'forester');
+ assert.equal(townInteraction(-29.6,14)?.id,'bank');
+ assert.equal(townInteraction(29.6,14)?.id,'store');
+ assert.equal(townInteraction(-29.6,46)?.id,'forester');
  assert.equal(townInteraction(-18,60)?.type,'grove');
  assert.equal(townInteraction(0,-35),null);
 });
@@ -26,8 +26,11 @@ test('world extension builds solid services and supports the new frontier',()=>{
  const scene=new THREE.Scene(),world=buildOakrestTown(scene);
  assert.equal(world.services,3);
  assert.ok(world.buildings>=7);
- assert.equal(blocked(-30,14,.35),true,'bank is solid');
- assert.equal(blocked(30,14,.35),true,'shop is solid');
+ assert.equal(blocked(-30,14,.35),false,'bank floor is walkable');
+ assert.equal(blocked(30,14,.35),false,'shop floor is walkable');
+ assert.equal(blocked(-25.5,14,.35),false,'bank doorway is open');
+ assert.equal(blocked(25.5,14,.35),false,'shop doorway is open');
+ assert.equal(blocked(-25.5,17.25,.35),true,'bank facade is a real wall away from doorway');
  assert.equal(blocked(0,-25,.35),false,'central gate road must remain traversable');
  assert.equal(blocked(0,-98,.35),false,'forest bandit area is inside world');
  assert.equal(blocked(0,-121,.35),true,'world is still bounded');

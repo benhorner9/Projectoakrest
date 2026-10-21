@@ -3,7 +3,7 @@ import {SLOT_ITEMS} from './equipment-slots.js';
 import {SHOP_STOCK,missingStarterSetPieces,starterSetPrice,TOWN_MATERIALS,STARTER_GROVE_XP_CAP,townInteraction,townBank,bankCoins,bankMaterials,bankEquipment,buyStarterStock,teachWoodcutting,harvestStarterGrove} from './town-services.js';
 
 /** One accessible overlay for all town services, without server/API dependencies. */
-export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,onOpen}){
+export function setupTownUI({getData,getTime,getVillager=()=>null,onChange,onEquipmentChange,notify,onOpen}){
   const $=id=>document.getElementById(id);
   const panel=$('town-panel'),prompt=$('town-interact'),body=$('town-content');
   const node=(tag,value,parent,cls)=>{
@@ -31,6 +31,7 @@ export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,o
   function render(){
     if(!service||panel.hidden)return;
     const data=getData();body.replaceChildren();$('town-title').textContent=service.label;
+    node('p',service.attendant?'Speaking with '+service.attendant+'.':'',body,'town-attendant');
     if(service.id==='bank'){
       const bank=townBank(data);
       node('p','Bank storage is saved with this character. Transfer complete coin or material stacks, and store spare equipment.',body);
@@ -109,7 +110,8 @@ export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,o
   }
   function interact({x,z,allowed,time}){
     if(!allowed||!panel.hidden)return false;
-    const candidate=townInteraction(x,z);if(!candidate)return false;
+    const candidate=townInteraction(x,z)||getVillager(x,z);if(!candidate)return false;
+    if(candidate.type==='citizen'){notify(candidate.label+' · '+candidate.line);return true;}
     if(candidate.type==='grove'){
       const result=harvestStarterGrove(getData(),candidate.id,time,cooldowns);
       if(result.ok){onChange();notify('Woodcutting +35 XP · Softwood logs +1');}
@@ -120,11 +122,11 @@ export function setupTownUI({getData,getTime,onChange,onEquipmentChange,notify,o
   }
   function update({x,z,allowed}){
     lastPosition={x,z};
-    const target=allowed&&panel.hidden?townInteraction(x,z):null;
+    const target=allowed&&panel.hidden?(townInteraction(x,z)||getVillager(x,z)):null;
     prompt.hidden=!target;
     if(target){
-      $('town-interact-description').textContent=target.label+(target.type==='grove'?' · '+(getData().professions?.woodcuttingLearned?'Collect logs':'Woodcutting lesson needed'):' · Town service');
-      $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':'INTERACT · T';
+      $('town-interact-description').textContent=target.type==='citizen'?target.label+' · '+target.role:target.type==='grove'?target.label+' · '+(getData().professions?.woodcuttingLearned?'Collect logs':'Woodcutting lesson needed'):target.label+' · Speak to '+target.attendant;
+      $('town-interact-button').textContent=target.type==='grove'?'CUT WOOD':target.type==='citizen'?'TALK · T':'SPEAK · T';
     }
   }
   $('town-interact-button').addEventListener('click',()=>{
