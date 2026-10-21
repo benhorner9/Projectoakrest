@@ -48,6 +48,8 @@ test('every extended-city building remains physically enterable with navigable d
   assert.equal(blocked(0,-13,.34),false,'southern gate must stay open');
   for(const s of OAKREST_SERVICES)assert.equal(townInteraction(s.npcX,s.npcZ)?.id,s.id);
   assert.ok(OAKREST_PATHS.some(route=>route.some(([x,z])=>x< -20&&z>65)),'Warden Hall road');
+  assert.equal(townInteraction(-12,49)?.type,'notice','Heartwood noticeboard can be read');
+  assert.equal(townInteraction(-13,42)?.type,'notice','Warden notices can be read');
  }finally{clearWorldObstacles();}
 });
 test('named city NPCs are visible and offer meaningful local dialogue',()=>{
