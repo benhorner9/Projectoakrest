@@ -7,7 +7,7 @@ import {registerWorldObstacle,removeWorldObstacle,blocked,clearWorldObstacles} f
 import {createWoodcuttingTree} from '../src/woodcutting-art.js';
 import {
  TREE_SPECIES,TREE_BY_ID,WOODCUTTING_AXES,WOODCUTTING_LEVEL_XP,
- woodcuttingLevel,bestWoodcuttingAxe,harvestChance,newTreeState,chopOnce,
+ woodcuttingLevel,woodcuttingProgress,woodcuttingMilestones,bestWoodcuttingAxe,harvestChance,newTreeState,chopOnce,
  respawnTree,canCutTree,inventoryCanHoldLog
 } from '../src/woodcutting.js';
 
@@ -108,4 +108,28 @@ test('each species has a distinct low-poly 3D model and removable trunk collisio
  assert.equal(removeWorldObstacle(collider),true);
  assert.equal(blocked(85,-85,.4),false);
  clearWorldObstacles();
+});
+
+test('Woodcutting uses accurate 1–99 skill-card XP and lists all tree and axe level unlocks',()=>{
+ const milestones=woodcuttingMilestones();
+ assert.equal(milestones.length,14);
+ assert.deepEqual(milestones.filter(e=>e.type==='Tree').map(e=>e.level),[1,10,20,35,50,70,85]);
+ assert.deepEqual(milestones.filter(e=>e.type==='Axe').map(e=>e.level),[1,10,20,35,50,70,85]);
+ assert.ok(milestones.some(e=>e.name==='Pryrite Axe'&&e.level===85));
+ assert.ok(milestones.some(e=>e.name==='Elderwood Tree'&&e.level===85));
+ assert.ok(milestones.every((m,i)=>i===0||milestones[i-1].level<=m.level));
+ const levelOne=woodcuttingProgress(0);
+ assert.equal(levelOne.level,1);
+ assert.equal(levelOne.progress,0);
+ assert.equal(levelOne.current,0);
+ assert.equal(levelOne.needed,WOODCUTTING_LEVEL_XP[2]);
+ const firstLog=woodcuttingProgress(TREE_BY_ID.softwood.xp);
+ assert.equal(firstLog.current,TREE_BY_ID.softwood.xp);
+ assert.ok(firstLog.progress>0&&firstLog.progress<1);
+ const next=woodcuttingProgress(WOODCUTTING_LEVEL_XP[20]);
+ assert.equal(next.level,20);
+ assert.equal(next.current,0);
+ assert.equal(next.progress,0);
+ assert.equal(woodcuttingProgress(WOODCUTTING_LEVEL_XP[99]).maxed,true);
+ assert.equal(woodcuttingProgress(WOODCUTTING_LEVEL_XP[99]).progress,1);
 });
