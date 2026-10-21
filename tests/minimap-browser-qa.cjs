@@ -54,6 +54,13 @@ let browser;
   assert.equal(await area.textContent(),'GREENWOOD',config.name+' area must track hero');
   const screenshot1=await page.locator('#minimap-canvas').evaluate(e=>e.toDataURL());
   assert.notEqual(screenshot0,screenshot1,config.name+' map must redraw as hero travels');
+  if(!config.touch){
+   // Desktop uses pointer lock; M must open the map and release the cursor.
+   await page.keyboard.press('m');
+   assert.ok(await page.locator('#progression-panel').isVisible(),'desktop M shortcut should open the map');
+   await page.locator('#close-progression').click();
+   await page.keyboard.press('Escape');
+  }
   await page.locator('#minimap-button').click();
   assert.ok(await page.locator('#progression-panel').isVisible(),config.name+' map tap opens full map menu');
   assert.ok(await page.locator('#progression-map').isVisible());
