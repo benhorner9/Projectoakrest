@@ -37,33 +37,58 @@ let browser,server;
    oakrestQA.style('ranged');oakrestQA.step(1);
    const e=oakrestQA.state().enemies[0];oakrestQA.teleport(e.x,e.z+10);oakrestQA.aim(e.x,1.25,e.z);oakrestQA.step(1);
    const before=oakrestQA.state().enemies[0].hp;
-   oakrestQA.basic();oakrestQA.step(.5);const inFlight=oakrestQA.state().projectiles;oakrestQA.step(.8);
+   oakrestQA.basic();
+   // Projectile may reach the dummy before a 0.5s snapshot; a missing
+   // in-flight arrow is not evidence that the shot failed to launch.
+   const windup=oakrestQA.state().pendingBasic;
+   oakrestQA.step(.5);oakrestQA.step(.8);
    for(let tries=0;tries<16&&oakrestQA.state().enemies[0].hp===before;tries++){
     oakrestQA.step(1.1);oakrestQA.basic();oakrestQA.step(1.2);
    }
    const hit=oakrestQA.state().enemies[0].hp;
    oakrestQA.step(1);oakrestQA.teleport(e.x,e.z+10,Math.PI/2);oakrestQA.step(1);oakrestQA.basic();oakrestQA.step(2);
-   return {before,hit,miss:oakrestQA.state().enemies[0].hp,inFlight};
-  });assert.ok(result.inFlight>0);assert.ok(result.hit<result.before,JSON.stringify(result));assert.equal(result.miss,result.hit);return result;
+   return {before,hit,miss:oakrestQA.state().enemies[0].hp,windup};
+  });assert.ok(result.windup,'A ranged basic must enter its weapon windup');assert.ok(result.hit<result.before,JSON.stringify(result));assert.equal(result.miss,result.hit);return result;
  });
  await scenario('C magic catalogue and status simulation',async page=>{
-  const result=await page.evaluate(async()=>{
-   const {LOADOUTS,skillCatalogue}=await import('/src/rules.js');const checks=[];
-   for(const style of ['melee','ranged','magic'])for(const [id,w] of Object.entries(LOADOUTS[style])){
-    oakrestQA.step(22);oakrestQA.style(style);oakrestQA.step(1);oakrestQA.equip('weapon',id);
+  // Keep all catalogue ability activations, but avoid advancing 22 seconds
+  // of full 60Hz world simulation *before every single ability*. Distinct
+  // abilities have independent cooldowns; shared abilities are allowed to
+  // recover once between weapon families. Per-family evals expose progress.
+  const families=await page.evaluate(async()=>{
+   const {LOADOUTS}=await import('/src/rules.js');
+   return ['melee','ranged','magic'].flatMap(style=>Object.keys(LOADOUTS[style]).map(id=>({style,id})));
+  });
+  const checks=[];
+  for(const family of families){
+   const activated=await page.evaluate(async({style,id})=>{
+    const {skillCatalogue}=await import('/src/rules.js');
+    oakrestQA.stopCombat();oakrestQA.teleport(0,11);
+    oakrestQA.step(style==='melee'?21:13);
+    oakrestQA.style(style);oakrestQA.step(.35);oakrestQA.equip('weapon',id);
+    const names=[];
     for(const ability of skillCatalogue(style,id)){
-     oakrestQA.teleport(-6,-.8);oakrestQA.aim(-6,1.25,-3);oakrestQA.step(22);const slot=checks.length%4;oakrestQA.slot(slot,ability.id);
-     const before=oakrestQA.state();oakrestQA.ability(slot);const queued=oakrestQA.state().pendingAbility;oakrestQA.step(1);
+     oakrestQA.teleport(-6,-.8);oakrestQA.aim(-6,1.25,-3);
+     oakrestQA.step(1.25);const slot=names.length%4;oakrestQA.slot(slot,ability.id);
+     const before=oakrestQA.state();oakrestQA.ability(slot);
+     const queued=oakrestQA.state().pendingAbility;oakrestQA.step(.9);
      const after=oakrestQA.state(),hurt=after.enemies[0].hp!==before.enemies[0].hp;
-     const damaging=['hit','execute','sweep','nova','bolt','burst','retreat'].includes(ability.kind);
-     // Accuracy is probabilistic now. A legal miss is 0 damage with cooldown spent.
+     // An accuracy miss may deal zero. Activation and spending cooldown are
+     // required, and repeating the ability may not bypass its cooldown.
      if(!queued)throw Error(style+'/'+id+'/'+ability.name+' did not activate '+JSON.stringify({before:before.enemies[0],after:after.enemies[0]}));
      if(ability.root&&hurt&&after.enemies[0].rootUntil<=after.time)throw Error('root missing after hit');
-     const clocks=JSON.stringify(after.cooldowns);oakrestQA.ability(slot);if(JSON.stringify(oakrestQA.state().cooldowns)!==clocks)throw Error('cooldown bypass');
-     checks.push(style+'/'+id+'/'+ability.name);
+     const clocks=JSON.stringify(after.cooldowns);oakrestQA.ability(slot);
+     if(JSON.stringify(oakrestQA.state().cooldowns)!==clocks)throw Error('cooldown bypass');
+     names.push(style+'/'+id+'/'+ability.name);
     }
-    }
-   oakrestQA.step(22);oakrestQA.style('magic');oakrestQA.step(1);oakrestQA.equip('weapon','frost');oakrestQA.slot(0,'w2');
+    return names;
+   },family);
+   checks.push(...activated);console.log('PASS catalogue family',family.style,family.id,activated.length);
+  }
+  const rootedResult=await page.evaluate(async()=>{
+   const {skillCatalogue}=await import('/src/rules.js');
+   oakrestQA.stopCombat();oakrestQA.teleport(0,11);oakrestQA.step(22);
+   oakrestQA.style('magic');oakrestQA.step(1);oakrestQA.equip('weapon','frost');oakrestQA.slot(0,'w2');
    const e=oakrestQA.state().enemies.find(e=>e.type==='mossling'),{terrainHeight}=await import('/src/terrain.js');
    oakrestQA.teleport(e.startX,e.startZ+3);oakrestQA.aim(e.startX,terrainHeight(e.startX,e.startZ)+.75,e.startZ);
    for(let tries=0;tries<9;tries++){
@@ -78,8 +103,8 @@ let browser,server;
    }
    const rooted=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(rooted.rootUntil<=oakrestQA.state().time)throw Error('Live mossling was not rooted after repeated fair accuracy rolls');
    oakrestQA.step(.5);const held=oakrestQA.state().enemies.find(e=>e.type==='mossling');if(Math.hypot(held.x-rooted.x,held.z-rooted.z)>.01)throw Error('Root did not stop enemy simulation');
-   return {abilities:checks.length,liveEnemyRoot:true};
-  });return result;
+   return {liveEnemyRoot:true};
+  });return {abilities:checks.length,...rootedResult};
  });
  await scenario('D tribrid recovery',async page=>page.evaluate(()=>{
   oakrestQA.teleport(-6,-.8);oakrestQA.basic();const recovery=oakrestQA.state().attackUntil;oakrestQA.style('magic');oakrestQA.step(.5);
