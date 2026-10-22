@@ -25,3 +25,14 @@ test('release asset import version prevents stale iPad ES modules',()=>{
  const source=readFileSync('src/main.js','utf8');
  assert.ok(source.includes("from './character-creator.js'"));
 });
+
+test('self-hosted CC0 item meshes, icons and texture atlases survive build',()=>{
+ for(const name of ['sword_1handed','dagger','staff','wand','crossbow_2handed','shield_square','axe_1handed','quiver']){
+  assert.ok(existsSync('dist/assets/kaykit-adventurers/'+name+'.gltf'),name+' glTF');
+  assert.ok(existsSync('dist/assets/kaykit-adventurers/'+name+'.bin'),name+' buffer');
+  assert.ok(existsSync('dist/assets/kaykit-adventurers/icons/'+name+'.svg'),name+' inventory icon');
+ }
+ assert.ok(existsSync('dist/assets/kaykit-adventurers/LICENSE.txt'));
+ assert.ok(existsSync('dist/assets/kaykit-adventurers/knight_texture.png'));
+ assert.ok(existsSync('dist/assets/kaykit-adventurers/rogue_texture.png'));
+});

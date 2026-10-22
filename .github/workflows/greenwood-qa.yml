@@ -79,7 +79,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npx playwright install --with-deps chromium
+      # Ubuntu hosted runners already contain Chromium shared libraries; avoid apt mirror stalls.
+      - run: npx playwright install chromium
       - name: Exercise all rendered combat scenarios with bounded runtime
         run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-combat-reborn.cjs
       - name: Cinematic tribrid body-language and event inspector regression
@@ -107,7 +108,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npx playwright install --with-deps chromium
+      # Depend on hosted runner's existing shared libraries; avoid apt mirror stalls.
+      - run: npx playwright install chromium
       - name: Auto combat and three-style switch regression
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-auto-combat.cjs
       - name: Compare combat performance to pinned starting dev
@@ -133,7 +135,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - run: npx playwright install --with-deps chromium webkit
+      # Runner system libraries are already available; provisioning apt fonts can timeout.
+      - run: npx playwright install chromium webkit
       - name: Built dev-path release flow
         run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-release.cjs
       - name: WebKit development-path release flow

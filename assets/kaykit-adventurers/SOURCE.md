@@ -1,0 +1,1 @@
+# KayKit Adventurers — CC0 1.0 Universal\n\nAuthor: Kay Lousberg (KayKit).\nSource: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0\nFree-tier source accessory meshes with original glTF names, BIN geometry buffers and PNG textures. See LICENSE.txt for licence.\nSelected for Oakrest's existing item IDs; not the whole character/outfit pack.\n

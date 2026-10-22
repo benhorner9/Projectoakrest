@@ -37,8 +37,9 @@ jobs:
         run: npm test
       - name: Build static release
         run: npm run build
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Chromium using preinstalled runner system libraries
+        # Avoid apt mirror download stalls; other suites validate the same runner setup.
+        run: npx playwright install chromium
       - name: Chromium gameplay smoke
         run: node tests/browser-smoke.cjs
       - name: Verify real-rig animation inspector and event tracing

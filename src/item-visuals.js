@@ -1,6 +1,7 @@
 /** Procedural, per-item world representations for persistent physical loot. */
 import * as THREE from 'three';
 import {itemFromDrop,itemIconUrl,getItem} from './items.js';
+import {upgradeGroundItem} from './model-assets.js';
 const box=new THREE.BoxGeometry(1,1,1);
 function seed(id){let n=2166136261;for(const char of id)n=Math.imul(n^char.charCodeAt(0),16777619)>>>0;return n;}
 const material=(hex,metalness=0)=>new THREE.MeshStandardMaterial({color:hex,roughness:.62,metalness});
@@ -51,6 +52,7 @@ export function makeWorldItemModel(drop){
  const rune=shape(root,new THREE.OctahedronGeometry(.09+(n%4)*.009,0),main,.3+(n%3)*.045,.83+(n%5)*.045,.13);
  rune.rotation.set((n%7)*.3,(n%5)*.24,0);
  root.rotation.y=(n%13)*.115;
+ upgradeGroundItem(root,item.id);
  return root;
 }
 export function makeInventoryIcon(itemId,cssClass='item-icon'){
