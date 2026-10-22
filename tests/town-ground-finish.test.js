@@ -76,6 +76,10 @@ test('new road and meadow visuals do not change any house access or player colli
  clearWorldObstacles();const scene=new THREE.Scene(),town=buildOakrestTown(scene);
  try{
   assert.equal(town.buildings,16);
+  assert.equal(scene.getObjectByName('City flowers and small details'),undefined,
+   'old floating decorative pavement blocks must not return');
+  assert.equal(scene.children.filter(obj=>obj.name==='Oakrest continuous civic paving').length,1,
+   'road junctions must share a single paved surface');
   assert.ok(town.groundFinish.pavingStones>900);
   assert.ok(town.groundFinish.grassTufts>500);
   for(const b of OAKREST_BUILDINGS){
