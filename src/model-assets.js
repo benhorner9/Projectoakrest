@@ -76,7 +76,7 @@ function sizedModel(template,size){
  const instance=template.clone(true),bounds=new THREE.Box3().setFromObject(instance);
  const ext=new THREE.Vector3(),center=new THREE.Vector3();
  bounds.getSize(ext);bounds.getCenter(center);
- const unit=size/Math.max(.001,ext.y);
+ const unit=size/Math.max(.001,ext.x,ext.y,ext.z);
  instance.scale.setScalar(unit);
  // Retain the original upright source orientation until parent alignment.
  instance.position.set(-center.x*unit,-bounds.min.y*unit,-center.z*unit);
@@ -113,11 +113,12 @@ export function upgradeHeldWeapon(hero,style,weaponId){
   hero.userData.bowString=null;hero.userData.crossbowSlider=null;hero.userData.magicFocus=null;
   const grip=new THREE.Group();
   const height=name==='sword_2handed'?1.95:name==='staff'?1.85:
-   name==='wand'?.92:name==='dagger'?.74:name==='crossbow_2handed'?1.2:1.48;
+   name==='wand'?.92:name==='dagger'?.74:name==='crossbow_2handed'?1.25:1.48;
   const model=sizedModel(template,height);
-  // Model is +Y upright; Oakrest's hand points weapons along -Z.
+  // Most tools point +Y; KayKit crossbows are horizontal and point +Z.
+  // Oakrest's hand uses -Z for weapon direction.
   model.position.y-=height*.23;
-  grip.add(model);grip.rotation.x=-Math.PI/2;
+  grip.add(model);grip.rotation.x=name==='crossbow_2handed'?0:-Math.PI/2;
   hand.add(grip);hand.userData.assetLoaded=name;
   if(name==='dagger'&&!hero.userData.equipmentShield){
    const other=new THREE.Group(),second=sizedModel(template,.74);

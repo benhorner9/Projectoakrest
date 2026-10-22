@@ -73,7 +73,7 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
   const g=group(u,u.rig);g.position.set(.36,1.35,.33);g.rotation.z=-.20;
   mesh(g,box,'#795b3e',[0,0,0],[.22,.63,.24]);
   for(let i=0;i<3;i++)mesh(g,box,'#e5d4a5',[-.065+i*.065,.44,0],[.027,.31,.025]);
-  loadKayKit('quiver').then(template=>{
+  if(typeof window!=='undefined')loadKayKit('quiver').then(template=>{
    if(!template||!g.parent)return;
    g.clear();const model=cloneKayKitModel(template,.79);model.position.y-=.30;g.add(model);
   });
@@ -84,7 +84,7 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
    u.equipmentShield=true;
    mesh(g,box,'#80694d',[0,-.15,-.20],[.56,.65,.14]);
    mesh(g,box,'#b6c0b0',[0,-.15,-.293],[.13,.57,.04]);
-   loadKayKit('shield_square').then(template=>{
+   if(typeof window!=='undefined')loadKayKit('shield_square').then(template=>{
     if(!template||!g.parent)return;
     g.clear();const model=cloneKayKitModel(template,.86);model.position.y-=.40;
     model.rotation.x=-Math.PI/2;g.add(model);
