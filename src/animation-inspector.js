@@ -107,7 +107,7 @@ export function mountAnimationInspector(){
   const t=freeze.checked?pausedAt:elapsedAt(when),wind=current.anticipation.seconds;
   if(!freeze.checked)scrub.value=String(Math.round(t/duration()*1000));
   const preview={start:0,impactAt:wind,interval:duration(),abilityKind:current.motionCue};
-  animateActor(actor,{dt,t,stride:moving.checked?t*10:0,speed:moving.checked?3.1:0,attack:preview,side:moving.checked?.35:0});
+  animateActor(actor,{dt,t,stride:moving.checked?t*10:0,speed:moving.checked?3.1:0,attack:preview,side:moving.checked ? 0.35 : 0});
   actor.updateMatrixWorld(true);
   actor.userData.weapon.getWorldPosition(originPoint);
   originMarker.position.copy(originPoint).z-=.35;
