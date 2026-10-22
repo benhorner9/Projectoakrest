@@ -253,18 +253,6 @@ function market(scene,animation){
   animation.push({mode:'lantern',mesh:lantern,seed:x+z,base:1});
  }
 }
-function cobbles(scene){
- const coords=[];
- // Paths remain readable because their broad paving is authored in town-world.
- // Instanced inset paving gives each district a historical, worn feeling.
- for(let z=-4;z<80;z+=2.8){
-  for(const x of [-7.5,7.5]){
-   if(z>33&&z<46)continue;
-   coords.push([x+(z%3)*.16,z,.70]);
-  }
- }
- instancedScatter(scene,coords,new THREE.BoxGeometry(1,.1,.63),mat.cobble,1,.07);
-}
 function marketGoods(scene){
  // Distinct areas suggest different trades without granting every skill here.
  for(const {x,z} of OAKREST_TRADE_TABLES){
@@ -318,7 +306,7 @@ function lamps(scene,animation){
 export function buildCityIdentity(scene){
  const animations=[];
  treeOak(scene);market(scene,animations);
- gardens(scene,animations);marketGoods(scene);cobbles(scene);
+ gardens(scene,animations);marketGoods(scene);
  townGate(scene,-13,animations,'south');townGate(scene,86,animations,'north');
  cityWalls(scene);chimneys(scene,animations);birds(scene,animations);lamps(scene,animations);
  for(const [x,z,a] of OAKREST_SIGNPOSTS)signpost(scene,x,z,a);
