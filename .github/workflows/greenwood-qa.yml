@@ -12,7 +12,10 @@ permissions:
 jobs:
   regression-and-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Ubuntu apt mirrors can add ~10 minutes to a clean Chromium install; the
+    # full smoke/town/woodcutting/equipment/iPad/controller matrix adds ~7 more.
+    # Preserve the complete integration signal instead of cancelling it mid-test.
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
