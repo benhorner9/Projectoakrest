@@ -54,20 +54,21 @@ export const KAYKIT_MOTION_SOURCE='KayKit Character Animations Free 1.1 — CC0'
 export function kayKitClipFor(family,abilityKind=null,phase='windup'){
  if(abilityKind==='basic'||abilityKind==='')abilityKind=null;
  if(family==='greatsword'&&heavy[abilityKind])return heavy[abilityKind];
- if(abilityKind&&cues[abilityKind])return cues[abilityKind];
  if(phase==='release'&&after[family])return after[family];
+ if(abilityKind&&cues[abilityKind])return cues[abilityKind];
  return before[family]||'Melee_1H_Attack_Slice_Horizontal';
 }
 export function kayKitClipNames(){return Object.keys(KAYKIT_CLIPS);}
 
-function stateFor({t=0,stride=0,speed=0,attack=null,dodge=0,hit=false,dead=false}){
+function stateFor({t=0,stride=0,speed=0,attack=null,dodge=0,hit=false,dead=false,chopping=null},actorFamily=null){
+ if(chopping)return null;
  if(dead)return {clip:'Death_A',phase:1,strength:.85};
  if(hit)return {clip:'Hit_A',phase:.65,strength:.8};
  if(dodge>.035)return {clip:'Dodge_Forward',phase:clamp(1-dodge),strength:.8};
  if(attack&&Number.isFinite(attack.start)&&Number.isFinite(attack.impactAt)){
   const start=attack.start,impact=Math.max(start,attack.impactAt),interval=Math.max(.1,attack.interval||.7);
   if(t>=start&&t<start+interval){
-   const family=attack.family||'sword',kind=attack.abilityKind||null;
+   const family=actorFamily||attack.family||'sword',kind=attack.abilityKind||null;
    const ranged=['bow','shortbow','crossbow','frost','ember'].includes(family);
    const windup=impact-start,afterTime=Math.max(.12,interval-windup);
    if(ranged){
@@ -111,7 +112,8 @@ export function restoreKayKitPose(u){
 /** The caller must first run the normal procedural pose; no gameplay mutations. */
 export function applyKayKitPose(u,info){
  if(u.kaykitDisabled)return false;
- const state=kayKitMotionState({...info,attack:info.attack?{...info.attack,family:u.family}:null});
+ const state=stateFor(info,u.family);
+ if(!state||!KAYKIT_CLIPS[state.clip])return false;
  if(!state)return false;
  const clip=KAYKIT_CLIPS[state.clip];
  const frames=clip.frames,index=clamp(state.phase)*(frames.length-1),lo=Math.floor(index),hi=Math.min(frames.length-1,lo+1),frac=index-lo;
