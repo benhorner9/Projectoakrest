@@ -28,7 +28,7 @@ let browser;
  assert.match(text,/frost:w2/);assert.match(text,/constraining binding gesture/i);
  await scene.locator('[data-name="speed"]').selectOption('0.25');
  await scene.locator('[data-name="freeze"]').check();
- await scene.locator('[data-name="scrub"]').fill('440');
+ await scene.locator('[data-name="scrub"]').evaluate(el=>{el.value='440';el.dispatchEvent(new Event('input',{bubbles:true}));});
  assert.equal(await scene.locator('[data-name="freeze"]').isChecked(),true);
  await scene.locator('[data-name="effects"]').uncheck();
  await scene.locator('[data-name="opponent"]').uncheck();
