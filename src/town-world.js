@@ -7,6 +7,7 @@ import {buildCityIdentity,CITY_DISTRICTS} from './city-identity.js';
 import {furnishGrandBank,buildGrandBankFacade} from './bank-architecture.js';
 import {buildingCutaway,playerInBuilding} from './building-visibility.js';
 import {addArchitecturalFinish,furnishDistinctInterior} from './building-art.js';
+import {buildOakrestCityPaths,buildOakrestCityMeadows} from './town-ground.js';
 import {furnishTradeHall,finishTradeHouseFacade,finishTradeHouseRoof} from './trade-house-art.js';
 
 /**
@@ -14,7 +15,7 @@ import {furnishTradeHall,finishTradeHouseFacade,finishTradeHouseRoof} from './tr
  * collidable walls and an interior; roofs lift away while the player is inside.
  * Building orientation is independent of door and service interaction rules.
  */
-import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_MARKET_STALLS,roadCrossSections} from './town-layout.js';
+import {OAKREST_BUILDINGS,OAKREST_PATHS,FACING,localBuildingPosition,OAKREST_WELL,OAKREST_WELL_STEPS,OAKREST_MARKET_STALLS} from './town-layout.js';
 export {OAKREST_BUILDINGS,OAKREST_PATHS} from './town-layout.js';
 // One physically-based art library shared by buildings, floors and removable
 // roofs. The tiny procedural maps are cached globally and never re-generated
@@ -78,35 +79,6 @@ function wallCollider(build,x,z,w,d,h){
   const world=transform(build,x,z);
   const rotated=build.face==='east'||build.face==='west';
   addWorldObstacle({x:world.x,z:world.z,hx:(rotated?d:w)/2,hz:(rotated?w:d)/2,height:h});
-}
-function makeRoad(scene,segments,width,color,offset){
-  const verts=[],colours=[],indices=[],tint=new THREE.Color(color);
-  const add=(x,z)=>{
-    verts.push(x,terrainHeight(x,z)+offset,z);
-    const n=1+Math.sin(x*.81+z*1.37)*.045;
-    colours.push(tint.r*n,tint.g*n,tint.b*n);
-  };
-  for(const route of segments){
-    const sections=roadCrossSections(route,width);
-    for(let k=1;k<route.length;k++){
-      const [ax,az]=route[k-1],[bx,bz]=route[k],len=Math.hypot(bx-ax,bz-az);
-      const steps=Math.max(1,Math.ceil(len/1.2)),start=sections[k-1],end=sections[k];
-      for(let i=0;i<steps;i++){
-        const t=i/steps,u=(i+1)/steps,base=verts.length/3;
-        const interpolate=(p,q,v)=>[p[0]+(q[0]-p[0])*v,p[1]+(q[1]-p[1])*v];
-        const l1=interpolate(start.left,end.left,t),r1=interpolate(start.right,end.right,t);
-        const l2=interpolate(start.left,end.left,u),r2=interpolate(start.right,end.right,u);
-        add(...l1);add(...r1);add(...l2);add(...r2);
-        indices.push(base,base+1,base+2,base+1,base+3,base+2);
-      }
-    }
-  }
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  geo.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));
-  geo.setIndex(indices);geo.computeVertexNormals();
-  const road=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide,depthWrite:true}));
-  road.receiveShadow=true;scene.add(road);
 }
 const gableMaterials=new Map();
 function gableMaterial(kind){
@@ -401,8 +373,9 @@ function buildMerchantWell(scene){
   }
 }
 export function buildOakrestTown(scene){
-  makeRoad(scene,OAKREST_PATHS,5.4,'#86795f',.018);
-  makeRoad(scene,OAKREST_PATHS,4.35,'#b49c75',.034);
+  // Finished hand-laid paving uses the same geometry and route layout as the
+  // old roads. Its visual detail creates no collision or pathfinding changes.
+  const cityPaths=buildOakrestCityPaths(scene);
   const buildings=OAKREST_BUILDINGS.map(b=>buildHouse(scene,b));
   const cityIdentity=buildCityIdentity(scene);
   // Historic Heartwood Square is built in city-identity.js. The broad ancient
@@ -442,8 +415,12 @@ export function buildOakrestTown(scene){
     block(g,shared.wood,0,1.45,0,.17,2.9,.17);
     block(g,shared.gold,0,2.98,0,.48,.42,.48);
   }
+  // Ground cover comes last: all permanent stalls, buildings and walls have
+  // registered their colliders before sampling safe green land.
+  const cityMeadows=buildOakrestCityMeadows(scene);
   return {
     buildings:buildings.length,services:OAKREST_SERVICES.length,groves:OAKREST_GROVES.length,
+    groundFinish:{pavingStones:cityPaths.stoneCount,grassTufts:cityMeadows.grassCount,wildflowers:cityMeadows.flowerCount},
     districts:CITY_DISTRICTS,landmark:cityIdentity.landmark,ambientCount:cityIdentity.ambientCount,
     update(player,time=0,camera=null){
       cityIdentity.update(time,player);
