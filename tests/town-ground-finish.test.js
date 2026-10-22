@@ -34,7 +34,7 @@ test('every crossroads has one non-overlapping, softly edged road surface',()=>{
  const centre=new Uint8Array(4),outside=new Uint8Array(4),verge=new Uint8Array(4);
  cityRoadColour(0,19,centre);
  cityRoadColour(41,38,outside);
- cityRoadColour(2.43,19,verge);
+ cityRoadColour(2.43,-7,verge);
  assert.equal(centre[3],255,'main crossroads should be fully paved');
  assert.equal(outside[3],0,'grassland must not be paved');
  assert.ok(verge[3]>0&&verge[3]<255,'grass/paving edges should feather');
