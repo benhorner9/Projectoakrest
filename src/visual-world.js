@@ -81,7 +81,11 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   tufts.castShadow=false;tufts.frustumCulled=true;
   for(let i=0;i<1100;i++){
     const {x,z}=wildGround();
-    const sc=.45+random()*1.5;dummy.position.set(x,sc*.26-.01,z);
+    // Settled city meadows are mown and calm; tall wild tufts belong beyond
+    // the gates. Do this at instancing time, with no extra meshes or collision.
+    const city=x>-46&&x<46&&z>-14&&z<91;
+    const sc=(.45+random()*1.5)*(city?0.55:1);
+    dummy.position.set(x,sc*.26-.01,z);
     dummy.rotation.set(0,random()*Math.PI*2,(random()-.5)*.16);
     dummy.scale.setScalar(sc);dummy.updateMatrix();
     tufts.setMatrixAt(i,dummy.matrix);
@@ -93,7 +97,8 @@ export function createOakrestScenery({THREE,scene,random,MAT}){
   const pebbles=new THREE.InstancedMesh(sphere,materials.stone.clone(),115);pebbles.material.color.set('#ffffff');
   for(let i=0;i<115;i++){
     const {x,z}=wildGround();
-    const scale=.13+random()*.42;
+    const city=x>-46&&x<46&&z>-14&&z<91;
+    const scale=(.13+random()*.42)*(city?0.58:1);
     dummy.position.set(x,scale*.24-.005,z);
     dummy.rotation.set(0,random()*6.28,0);
     dummy.scale.set(scale,scale*.43,scale*.7);dummy.updateMatrix();

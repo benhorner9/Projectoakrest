@@ -3,34 +3,51 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {OAKREST_BUILDINGS,OAKREST_PATHS,reservedTownGround,roadCrossSections} from '../src/town-layout.js';
 import {terrainHeight,blocked,clearWorldObstacles,moveOnGround} from '../src/terrain.js';
-import {buildOakrestCityPaths,buildOakrestCityMeadows} from '../src/town-ground.js';
+import {buildOakrestCityPaths,buildOakrestCityMeadows,cityRoadColour,cityRoadDistance} from '../src/town-ground.js';
 import {buildOakrestTown} from '../src/town-world.js';
 
-test('all city roads get complete layered cobbles and terrain-following mortar',()=>{
+test('every crossroads has one non-overlapping, softly edged road surface',()=>{
  const scene=new THREE.Scene(),result=buildOakrestCityPaths(scene);
- assert.equal(scene.children.length,3,'two continuous road strips and one pooled stones draw');
- assert.ok(result.stoneCount>900,'main streets should have many detailed cobblestones');
- assert.ok(result.segments>100);
- for(const mesh of scene.children){
-  assert.ok(mesh.geometry.index.count>1000,mesh.name+' must cover multiple streets');
-  assert.equal(mesh.material.vertexColors,true);
-  assert.equal(mesh.material.transparent,false);
-  assert.equal(mesh.userData.animated,true,'do not re-batch the coloured surface');
-  const vertex=mesh.geometry.getAttribute('position'),colour=mesh.geometry.getAttribute('color');
-  assert.equal(vertex.count,colour.count);
-  for(let i=0;i<vertex.count;i+=Math.max(1,Math.floor(vertex.count/350))){
-   const x=vertex.getX(i),y=vertex.getY(i),z=vertex.getZ(i);
-   assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z),'no broken cobble vertices');
-   const delta=y-terrainHeight(x,z);
-   assert.ok(delta>=.02&&delta<.059,'paving lies directly on real land, not floating '+delta);
-  }
+ assert.equal(scene.children.length,1,'intersections must NEVER overlap independent road meshes');
+ assert.equal(result.roadLayers,1,'all routes share one global paving canvas');
+ assert.ok(result.stoneCount>900,'keep continuous visible civic stones');
+ assert.ok(result.segments>20,'retain authored road sections');
+ const paving=scene.children[0];
+ assert.equal(paving.name,'Oakrest continuous civic paving');
+ assert.ok(paving.isMesh&&paving.material.map?.isDataTexture);
+ assert.ok(paving.material.transparent&&paving.material.alphaTest>0,'verges should blend into terrain');
+ assert.ok(paving.geometry.index.count>1000);
+ assert.equal(paving.userData.animated,true,'world scenery batching must not alter the paving');
+ const vertices=paving.geometry.getAttribute('position');
+ const uvs=paving.geometry.getAttribute('uv');
+ assert.equal(vertices.count,uvs.count);
+ for(let i=0;i<vertices.count;i+=Math.max(1,Math.floor(vertices.count/250))){
+  const x=vertices.getX(i),y=vertices.getY(i),z=vertices.getZ(i);
+  assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z));
+  assert.ok(Math.abs(y-terrainHeight(x,z)-.053)<.001,
+   'paving terrain should not float: '+(y-terrainHeight(x,z)));
  }
- const distinct=new Set();
- const colour=result.stones.geometry.getAttribute('color');
- for(let i=0;i<colour.count;i+=4)distinct.add(colour.getX(i).toFixed(3)+','+colour.getY(i).toFixed(3));
- assert.ok(distinct.size>=5,'individual stones must vary visibly');
- for(const path of OAKREST_PATHS){
-  assert.ok(roadCrossSections(path,5.4).length>=2);
+ const texture=paving.material.map;
+ assert.equal(texture.image.width,1024);
+ assert.equal(texture.image.height,1024);
+ assert.equal(texture.image.data.length,1024*1024*4);
+ const centre=new Uint8Array(4),outside=new Uint8Array(4),verge=new Uint8Array(4);
+ cityRoadColour(0,19,centre);
+ cityRoadColour(41,38,outside);
+ cityRoadColour(2.43,-7,verge);
+ assert.equal(centre[3],255,'main crossroads should be fully paved');
+ assert.equal(outside[3],0,'grassland must not be paved');
+ assert.ok(verge[3]>0&&verge[3]<255,'grass/paving edges should feather');
+ assert.ok(cityRoadDistance(0,19)<.1,'city crossroads follows original routes');
+ const tones=new Set();
+ for(let x=-2;x<=2;x+=.17)for(let z=17;z<=20;z+=.23){
+  cityRoadColour(x,z,centre);tones.add(centre.slice(0,3).join(','));
+ }
+ assert.ok(tones.size>=6,'stone and subtle mortar should remain readable');
+ for(const route of OAKREST_PATHS)for(let k=1;k<route.length;k++){
+  const a=route[k-1],b=route[k];
+  assert.ok(cityRoadDistance((a[0]+b[0])*.5,(a[1]+b[1])*.5)<1e-4,
+   'all authored paths must remain surfaced');
  }
 });
 
@@ -59,6 +76,10 @@ test('new road and meadow visuals do not change any house access or player colli
  clearWorldObstacles();const scene=new THREE.Scene(),town=buildOakrestTown(scene);
  try{
   assert.equal(town.buildings,16);
+  assert.equal(scene.getObjectByName('City flowers and small details'),undefined,
+   'old floating decorative pavement blocks must not return');
+  assert.equal(scene.children.filter(obj=>obj.name==='Oakrest continuous civic paving').length,1,
+   'road junctions must share a single paved surface');
   assert.ok(town.groundFinish.pavingStones>900);
   assert.ok(town.groundFinish.grassTufts>500);
   for(const b of OAKREST_BUILDINGS){

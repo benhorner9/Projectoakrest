@@ -1,108 +1,129 @@
 import * as THREE from 'three';
 import {terrainHeight,blocked} from './terrain.js';
-import {OAKREST_PATHS,roadCrossSections,reservedTownGround} from './town-layout.js';
+import {OAKREST_PATHS,reservedTownGround} from './town-layout.js';
 
 /**
- * The completed Oakrest town has authored, walkable streets. These meshes are
- * visual-only: routing, street widths, foundations and collision remain owned
- * by the canonical town layout and terrain modules.
+ * Civic paving is ONE painted, terrain-following surface. The old three meshes
+ * followed each individual road segment, so crossroads rendered stone faces
+ * repeatedly at almost the same depth (z fighting / checkerboard fragments).
+ * One global, world-aligned material has exactly one answer per ground pixel.
+ * Building access, streets and all physics still use their original layouts.
  */
 const palette={
- earth:['#998b6f','#ab9776','#9d9175','#8f856c'],
- mortar:['#807766','#888070','#797565'],
- stone:['#c3b69b','#b7ae98','#ada78f','#c5bea8','#a99f8b','#bbad91'],
- grass:['#5d854d','#78965d','#8ba56b','#547c52','#9aaa6d','#65885b'],
- flowers:['#e7d590','#f4e3bf','#e2bad3','#c6cadf']
+ mortar:[146,134,112],
+ stone:[[197,188,166],[191,182,161],[186,178,155],[199,189,169],[193,184,164]],
+ earth:[170,154,124],
+ grass:['#678954','#76965d','#839a69','#668958','#91a06c'],
+ flowers:['#e9dcad','#e0c7bf','#e7decd']
 };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const hash=(a,b,c=0)=>{
- const x=Math.sin(a*127.1+b*311.7+c*74.7)*43758.5453;
- return x-Math.floor(x);
-};
-const between=(a,b,t)=>a+(b-a)*t;
-
-function meshFor(scene,name,positions,colors,indices,roughness=1){
- const geo=new THREE.BufferGeometry();
- geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
- geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
- geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingSphere();
- const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness,metalness:0,side:THREE.DoubleSide});
- const mesh=new THREE.Mesh(geo,material);
- mesh.name=name;mesh.receiveShadow=true;mesh.castShadow=false;
- // Keep our four large, already merged surfaces out of scenery re-batching.
- mesh.userData.animated=true;
- scene.add(mesh);return mesh;
+const fract=v=>v-Math.floor(v);
+const hash=(a,b)=>fract(Math.sin(a*127.1+b*311.7)*43758.5453);
+const paintBounds=Object.freeze({minX:-46,maxX:46,minZ:-18,maxZ:91});
+const roadRadius=2.20,vergeRadius=2.72,cellSize=8;
+const gridKey=(x,z)=>x*65536+z;
+const segments=[],cells=new Map();
+for(const route of OAKREST_PATHS)for(let i=1;i<route.length;i++){
+ const [ax,az]=route[i-1],[bx,bz]=route[i],dx=bx-ax,dz=bz-az;
+ const item={ax,az,dx,dz,inv:1/(dx*dx+dz*dz)};
+ segments.push(item);
+ for(let gx=Math.floor((Math.min(ax,bx)-vergeRadius)/cellSize);gx<=Math.floor((Math.max(ax,bx)+vergeRadius)/cellSize);gx++)
+  for(let gz=Math.floor((Math.min(az,bz)-vergeRadius)/cellSize);gz<=Math.floor((Math.max(az,bz)+vergeRadius)/cellSize);gz++){
+   const key=gridKey(gx,gz),cell=cells.get(key)||[];
+   cell.push(item);cells.set(key,cell);
+  }
 }
-function addQuad(points,colours,faces,corners,colour,offset){
- const base=points.length/3,tint=new THREE.Color(colour);
- for(const [x,z] of corners){
-  points.push(x,terrainHeight(x,z)+offset,z);
-  colours.push(tint.r,tint.g,tint.b);
+
+/** Squared distance to the union of authored paths, not to an individual mesh
+ * layer. Crossing streets are never painted twice or flicker at intersections. */
+export function cityRoadDistance(x,z){
+ const cell=cells.get(gridKey(Math.floor(x/cellSize),Math.floor(z/cellSize)));
+ if(!cell)return Infinity;
+ let nearest=Infinity;
+ for(const s of cell){
+  const t=clamp(((x-s.ax)*s.dx+(z-s.az)*s.dz)*s.inv,0,1);
+  const dx=x-(s.ax+t*s.dx),dz=z-(s.az+t*s.dz),d=dx*dx+dz*dz;
+  if(d<nearest)nearest=d;
  }
- faces.push(base,base+1,base+2,base,base+2,base+3);
-}
-function crossSection(ends,from,to,t){
- return {left:[between(from.left[0],to.left[0],t),between(from.left[1],to.left[1],t)],
-         right:[between(from.right[0],to.right[0],t),between(from.right[1],to.right[1],t)]};
-}
-function across(cross,v){
- return [between(cross.left[0],cross.right[0],v),between(cross.left[1],cross.right[1],v)];
-}
-function slab(a,b,start,end,gapU,gapV){
- const u0=start+gapU,u1=end-gapU,v0=gapV,v1=1-gapV;
- return [across(a,u0),across(a,u1),across(b,u1),across(b,u0)];
+ return Math.sqrt(nearest);
 }
 
-/** An efficient pair of continuous terrain-following foundations + a single
- * pooled mesh for thousands of irregular paving stones. */
+/** A pure testable paint function; fills the caller's RGBA buffer in-place. */
+export function cityRoadColour(x,z,out){
+ const distance=cityRoadDistance(x,z);
+ if(distance>=vergeRadius){
+  out[0]=palette.earth[0];out[1]=palette.earth[1];out[2]=palette.earth[2];out[3]=0;return out;
+ }
+ const row=Math.floor(z/.64),col=Math.floor((x+(row&1)*.38)/.76);
+ const u=fract((x+(row&1)*.38)/.76),v=fract(z/.64);
+ // A modest mortar joint is a grounded visual recess, not another polygon.
+ const joint=u<.075||u>.925||v<.080||v>.92;
+ const colour=joint?palette.mortar:palette.stone[Math.floor(hash(col,row)*palette.stone.length)];
+ const variation=joint?1:.97+.055*hash(col+41,row-17);
+ // Toward grass, warm weathered soil softly replaces the clean civic stones.
+ const blend=clamp((distance-roadRadius)/(vergeRadius-roadRadius),0,1);
+ const wear=blend*blend*(3-2*blend);
+ for(let c=0;c<3;c++)out[c]=Math.round(colour[c]*variation*(1-wear)+palette.earth[c]*wear);
+ out[3]=Math.round(255*(1-wear));
+ return out;
+}
+
+/** One mipmapped material and one vertex-following mesh for the whole road
+ * network. No duplicate coplanar quads, scattered tile fragments or z fighting.
+ * The GPU sees only one additional road draw call at intersections. */
 export function buildOakrestCityPaths(scene){
- const layers=[{name:'Oakrest weathered path verges',width:5.4,offset:.023,palette:palette.earth},
-               {name:'Oakrest cobblestone mortar paths',width:4.35,offset:.041,palette:palette.mortar}];
- const surfaces=layers.map(l=>({layer:l,points:[],colours:[],faces:[]}));
- const stones={points:[],colours:[],faces:[]};let stoneCount=0,segments=0;
- OAKREST_PATHS.forEach((route,routeIndex)=>{
-  const cross=layers.map(l=>roadCrossSections(route,l.width));
-  for(let k=1;k<route.length;k++){
-   const d=Math.hypot(route[k][0]-route[k-1][0],route[k][1]-route[k-1][1]);
-   const steps=Math.max(1,Math.ceil(d/1.05));
-   for(let row=0;row<steps;row++){
-    const start=row/steps,end=(row+1)/steps;
-    surfaces.forEach(({layer,points,colours,faces},i)=>{
-     const a=crossSection(cross[i],cross[i][k-1],cross[i][k],start);
-     const b=crossSection(cross[i],cross[i][k-1],cross[i][k],end);
-     addQuad(points,colours,faces,[a.left,a.right,b.right,b.left],
-      layer.palette[Math.floor(hash(routeIndex,k,row+i*17)*layer.palette.length)],layer.offset);
-    });
-    // Each tile is inset into the mortar bed; subtle asymmetric widths,
-    // staggered courses and multiple stone hues read as hand-laid paving.
-    const at=t=>crossSection(cross[1],cross[1][k-1],cross[1][k],t);
-    for(let col=0;col<5;col++){
-     const skew=(hash(routeIndex*41+k,row*7+col,6)-.5)*.035;
-     const inset=.075+.025*hash(routeIndex+k,row,col);
-     const first=start+Math.min(.010,(end-start)*.06);
-     const last=end-Math.min(.010,(end-start)*.06);
-     const u0=col/5+inset/4.35,u1=(col+1)/5-inset/4.35;
-     const front=at(clamp(first+skew*(end-start),start+.005,end-.006));
-     const back=at(clamp(last+skew*(end-start),start+.006,end-.005));
-     const colour=palette.stone[Math.floor(hash(k*29+routeIndex,row,col)*palette.stone.length)];
-     addQuad(stones.points,stones.colours,stones.faces,
-       [across(front,u0),across(front,u1),across(back,u1),across(back,u0)],
-       colour,.056+routeIndex*.00004);
-     stoneCount++;
-    }
-    segments++;
+ const width=1024,height=1024,bounds=paintBounds;
+ const bytes=new Uint8Array(width*height*4),sample=new Uint8Array(4);
+ const painted=new Set();
+ for(let py=0;py<height;py++){
+  const z=bounds.minZ+(py+.5)/height*(bounds.maxZ-bounds.minZ);
+  for(let px=0;px<width;px++){
+   const x=bounds.minX+(px+.5)/width*(bounds.maxX-bounds.minX);
+   cityRoadColour(x,z,sample);
+   const index=(py*width+px)*4;
+   bytes[index]=sample[0];bytes[index+1]=sample[1];bytes[index+2]=sample[2];bytes[index+3]=sample[3];
+   if(sample[3]>225){
+    const row=Math.floor(z/.64),col=Math.floor((x+(row&1)*.38)/.76);
+    painted.add(col*1024+row);
    }
   }
- });
- const verge=surfaces.map(({layer,points,colours,faces})=>
-   meshFor(scene,layer.name,points,colours,faces));
- const paving=meshFor(scene,'Oakrest individual weathered paving stones',stones.points,stones.colours,stones.faces,.94);
- return {verge,mortar:verge[1],stones:paving,stoneCount,segments};
+ }
+ const tex=new THREE.DataTexture(bytes,width,height,THREE.RGBAFormat);
+ tex.colorSpace=THREE.SRGBColorSpace;
+ tex.magFilter=THREE.LinearFilter;tex.minFilter=THREE.LinearMipmapLinearFilter;
+ tex.generateMipmaps=true;tex.anisotropy=4;tex.needsUpdate=true;
+ const nx=92,nz=109,points=[],uvs=[],faces=[];
+ for(let j=0;j<=nz;j++){
+  const z=bounds.minZ+j/nz*(bounds.maxZ-bounds.minZ);
+  for(let i=0;i<=nx;i++){
+   const x=bounds.minX+i/nx*(bounds.maxX-bounds.minX);
+   points.push(x,terrainHeight(x,z)+.053,z);
+   uvs.push(i/nx,j/nz);
+  }
+ }
+ for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){
+  const k=j*(nx+1)+i;
+  faces.push(k,k+nx+1,k+1,k+1,k+nx+1,k+nx+2);
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
+ geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+ geo.setIndex(faces);geo.computeVertexNormals();
+ const paving=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({
+  map:tex,color:'#ffffff',roughness:.98,metalness:0,
+  transparent:true,alphaTest:.09,depthWrite:false,side:THREE.DoubleSide
+ }));
+ paving.name='Oakrest continuous civic paving';paving.receiveShadow=true;paving.castShadow=false;
+ paving.userData.animated=true;paving.frustumCulled=false;
+ scene.add(paving);
+ const stoneCount=painted.size;
+ const segmentCount=OAKREST_PATHS.reduce((sum,route)=>sum+route.length-1,0);
+ return {verge:[paving],mortar:paving,stones:paving,stoneCount,segments:segmentCount,roadLayers:1};
 }
 
 /** Repeatable ground cover placed only on walkable green ground; no spawning
  * inside completed buildings, thresholds, roads, the paved square or well. */
-export function buildOakrestCityMeadows(scene,{seed=26091,grassTarget=820,flowerTarget=160}={}){
+export function buildOakrestCityMeadows(scene,{seed=26091,grassTarget=630,flowerTarget=96}={}){
  let state=seed>>>0;
  const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
  function pick(){
@@ -117,9 +138,9 @@ export function buildOakrestCityMeadows(scene,{seed=26091,grassTarget=820,flower
  // Crossed irregular blades produce volume from several angles without
  // individually drawing each stem.
  tuftGeo.setAttribute('position',new THREE.Float32BufferAttribute([
-  -.16,0,0, .13,0,0, -.015,.61,.04,
-   0,0,-.13, 0,0,.14, .09,.52,.01,
-   -.11,0,-.07, .10,0,.09, -.08,.45,-.04
+  -.115,0,0, .105,0,0, -.015,.34,.03,
+   0,0,-.10, 0,0,.10, .06,.31,.01,
+   -.09,0,-.06, .09,0,.06, -.05,.27,-.04
  ],3));
  tuftGeo.computeVertexNormals();
  const material=new THREE.MeshLambertMaterial({color:'#ffffff',side:THREE.DoubleSide,vertexColors:false});
@@ -132,7 +153,7 @@ export function buildOakrestCityMeadows(scene,{seed=26091,grassTarget=820,flower
  const dummy=new THREE.Object3D();let grassCount=0,flowerCount=0;
  for(let i=0;i<grassTarget;i++){
   const p=pick();if(!p)break;
-  const scale=.58+random()*.94;
+  const scale=.57+random()*.47;
   dummy.position.set(p.x,terrainHeight(p.x,p.z)+.006,p.z);
   dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.setScalar(scale);dummy.updateMatrix();
   grass.setMatrixAt(grassCount,dummy.matrix);
@@ -141,8 +162,8 @@ export function buildOakrestCityMeadows(scene,{seed=26091,grassTarget=820,flower
  }
  for(let i=0;i<flowerTarget;i++){
   const p=pick();if(!p)break;
-  dummy.position.set(p.x,terrainHeight(p.x,p.z)+.23+random()*.14,p.z);
-  dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.setScalar(.72+random()*.65);dummy.updateMatrix();
+  dummy.position.set(p.x,terrainHeight(p.x,p.z)+.095+random()*.06,p.z);
+  dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.setScalar(.58+random()*.48);dummy.updateMatrix();
   flowers.setMatrixAt(flowerCount,dummy.matrix);
   flowers.setColorAt(flowerCount,new THREE.Color(palette.flowers[Math.floor(random()*palette.flowers.length)]));
   flowerCount++;
