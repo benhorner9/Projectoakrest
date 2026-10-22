@@ -66,3 +66,35 @@ test('motion layering never accumulates offsets or replaces the player rig and e
  animateActor(actor,opts);
  assert.ok(u.kaykitOffsets.every(q=>q.x===0&&q.y===0&&q.z===0&&q.w===1),'QA comparison disables only KayKit overlay');
 });
+
+test('KayKit-forward visible poses move the real player arm substantially at game-camera scale',()=>{
+ const actor=createActor(),u=actor.userData;
+ equipActor(actor,'melee','sword','leather');
+ const attack={start:2,impactAt:2.45,interval:1,abilityKind:'overhand'};
+ let peak=0,seen=false;
+ for(const t of [2.08,2.17,2.26,2.34,2.42,2.50,2.62]){
+  animateActor(actor,{t,dt:0,stride:0,speed:0,attack});
+  assert.equal(u.kaykitLastClip,'Melee_1H_Attack_Chop');
+  const withKayKit=u.rightArm.quaternion.clone();
+  restoreKayKitPose(u);
+  const withoutKayKit=u.rightArm.quaternion.clone();
+  const radians=2*Math.acos(Math.min(1,Math.abs(withKayKit.dot(withoutKayKit))));
+  peak=Math.max(peak,radians);
+  seen=seen||u.kaykitLastDegrees>0;
+ }
+ assert.ok(peak>.40,'sword arm must visibly rotate >23 degrees beyond legacy pose, got '+peak.toFixed(3));
+ assert.ok(seen,'dev telemetry must prove KayKit is actively animating joints');
+ u.kaykitDisabled=true;
+ animateActor(actor,{t:2.35,dt:0,attack});
+ assert.equal(u.kaykitLastClip,'');
+ assert.equal(u.kaykitLastDegrees,0);
+});
+
+test('KayKit source animations are active during idle and running, not only timed attacks',()=>{
+ const actor=createActor(),u=actor.userData;
+ animateActor(actor,{t:.52,dt:0,stride:0,speed:0,combat:false});
+ assert.equal(u.kaykitLastClip,'Idle_A');
+ animateActor(actor,{t:1.22,dt:0,stride:3.7,speed:3.4,combat:false});
+ assert.equal(u.kaykitLastClip,'Running_A');
+ assert.ok(u.kaykitLastDegrees>=20,'full-speed source running must change a joint by at least 20 degrees');
+});
