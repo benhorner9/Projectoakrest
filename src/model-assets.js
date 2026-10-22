@@ -118,7 +118,11 @@ export function upgradeHeldWeapon(hero,style,weaponId){
    if(obj.isMesh&&!live.has(obj))obj.visible=false;
   });
   hideStatic(hand);
-  if(name==='dagger')hideStatic(hero.userData.offhand);
+  if(name==='dagger'&&!hero.userData.equipmentShield){
+   // Keep attached equipped shields and focus visible; hide only old dagger art.
+   const worn=new Set(hero.userData.visibleEquipmentNodes||[]);
+   for(const child of hero.userData.offhand.children)if(!worn.has(child))hideStatic(child);
+  }
   const holder=new THREE.Group(),height=name==='sword_2handed'?1.95:
    name==='staff'?1.85:name==='wand'?.92:name==='dagger'?.74:
    name==='crossbow_2handed'?1.2:1.48;
