@@ -79,6 +79,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Exercise all rendered combat scenarios with bounded runtime
         run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-combat-reborn.cjs
+      - name: Cinematic tribrid body-language and event inspector regression
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-animation-inspector.cjs
       - name: Preserve combat scenario diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -138,6 +140,13 @@ jobs:
           mkdir -p qa
           set -o pipefail
           OAKREST_BROWSER=webkit timeout 180s node tests/browser-release.cjs 2>&1 | tee qa/webkit.log
+      - name: Animation inspector under simulated WebKit iPad
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          mkdir -p qa
+          set -o pipefail
+          OAKREST_BROWSER=webkit timeout 180s node tests/browser-animation-inspector.cjs 2>&1 | tee qa/webkit-animation-inspector.log
       - name: Preserve release screenshots and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
