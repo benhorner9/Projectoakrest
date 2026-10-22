@@ -1,0 +1,150 @@
+/** Local CC0 KayKit Adventurers accessory loader. No CDN, build-time services or save changes.
+ * These small, single-mesh glTF 2.0 accessories are loaded on demand and their
+ * geometry/materials are cached; clones MUST NOT dispose shared GPU resources.
+ */
+import * as THREE from 'three';
+
+export const MODEL_NAMES=Object.freeze([
+ 'sword_1handed','sword_2handed','dagger','axe_1handed','crossbow_2handed',
+ 'staff','wand','quiver','shield_square','arrow'
+]);
+const models=new Set(MODEL_NAMES);
+export const MODEL_ITEMS=Object.freeze({
+ 'weapon.melee.sword':'sword_1handed',
+ 'weapon.melee.forged_sword':'sword_1handed',
+ 'weapon.melee.greatsword':'sword_2handed',
+ 'weapon.melee.daggers':'dagger',
+ 'weapon.magic.frost':'staff',
+ 'weapon.magic.ember':'wand',
+ 'weapon.ranged.crossbow':'crossbow_2handed',
+ 'slot.recruit-shield':'shield_square',
+ 'slot.bronze-arrows':'quiver'
+});
+export function modelNameForItem(itemId){
+ if(typeof itemId!=='string')return null;
+ if(MODEL_ITEMS[itemId])return MODEL_ITEMS[itemId];
+ if(/^weapon\.melee\.[a-z0-9-]+-axe$/.test(itemId))return 'axe_1handed';
+ return null;
+}
+const base=new URL('../assets/kaykit-adventurers/',import.meta.url);
+const loaded=new Map();
+const typeMap={5121:Uint8Array,5123:Uint16Array,5125:Uint32Array,5126:Float32Array};
+const componentCounts={SCALAR:1,VEC2:2,VEC3:3,VEC4:4};
+function attribute(doc,buffers,id){
+ const accessor=doc.accessors[id],view=doc.bufferViews[accessor.bufferView];
+ const count=componentCounts[accessor.type],ctor=typeMap[accessor.componentType];
+ if(!count||!ctor||view.byteStride||accessor.sparse)throw Error('Unsupported KayKit accessor');
+ const offset=(view.byteOffset||0)+(accessor.byteOffset||0),len=accessor.count*count*ctor.BYTES_PER_ELEMENT;
+ const bytes=buffers[view.buffer].slice(offset,offset+len);
+ if(bytes.byteLength!==len)throw Error('Truncated KayKit mesh');
+ return {array:new ctor(bytes),count,normalized:accessor.normalized===true};
+}
+async function loadRaw(name){
+ const url=new URL(name+'.gltf',base);
+ const response=await fetch(url);
+ if(!response.ok)throw Error('KayKit model '+name+': HTTP '+response.status);
+ const doc=await response.json();
+ const buffers=await Promise.all(doc.buffers.map(async b=>{
+  const res=await fetch(new URL(b.uri,url));
+  if(!res.ok)throw Error('KayKit geometry missing: '+b.uri);
+  return res.arrayBuffer();
+ }));
+ const textures=await Promise.all((doc.images||[]).map(async img=>{
+  if(!/^[\w.-]+\.png$/i.test(img.uri||''))throw Error('Unexpected texture path');
+  return new Promise((resolve,reject)=>{
+   new THREE.TextureLoader().load(new URL(img.uri,url).href,t=>{
+    t.flipY=false;t.colorSpace=THREE.SRGBColorSpace;resolve(t);
+   },undefined,reject);
+  });
+ }));
+ const result=new THREE.Group();
+ for(const meshDef of doc.meshes||[]){
+  for(const prim of meshDef.primitives||[]){
+   const geo=new THREE.BufferGeometry();
+   for(const [key,attr] of Object.entries({POSITION:'position',NORMAL:'normal',TEXCOORD_0:'uv'})){
+    if(prim.attributes?.[key]===undefined)continue;
+    const data=attribute(doc,buffers,prim.attributes[key]);
+    geo.setAttribute(attr,new THREE.BufferAttribute(data.array,data.count,data.normalized));
+   }
+   if(prim.indices!==undefined)geo.setIndex(new THREE.BufferAttribute(attribute(doc,buffers,prim.indices).array,1));
+   if(!geo.getAttribute('normal'))geo.computeVertexNormals();
+   const materialDef=doc.materials?.[prim.material];
+   const textureIndex=materialDef?.pbrMetallicRoughness?.baseColorTexture?.index;
+   const sourceIndex=doc.textures?.[textureIndex]?.source;
+   const material=new THREE.MeshStandardMaterial({
+    map:sourceIndex===undefined?null:textures[sourceIndex],
+    color:'#ffffff',metalness:0,roughness:.8,side:THREE.DoubleSide,
+   });
+   const obj=new THREE.Mesh(geo,material);
+   obj.castShadow=false;obj.receiveShadow=false;obj.userData.sharedKayKitAsset=true;
+   result.add(obj);
+  }
+ }
+ if(!result.children.length)throw Error('No KayKit mesh: '+name);
+ return result;
+}
+export function loadKayKit(name){
+ if(!models.has(name))return Promise.resolve(null);
+ if(!loaded.has(name))loaded.set(name,loadRaw(name).catch(error=>{
+  console.warn('Oakrest item asset fallback:',name,error);
+  return null;
+ }));
+ return loaded.get(name);
+}
+function sizedModel(template,size){
+ const instance=template.clone(true),bounds=new THREE.Box3().setFromObject(instance);
+ const ext=new THREE.Vector3(),center=new THREE.Vector3();
+ bounds.getSize(ext);bounds.getCenter(center);
+ const unit=size/Math.max(.001,ext.y);
+ instance.scale.setScalar(unit);
+ // Retain the original upright source orientation until parent alignment.
+ instance.position.set(-center.x*unit,-bounds.min.y*unit,-center.z*unit);
+ return instance;
+}
+/** Asynchronous replacement of the procedural fallback, safe if loot was picked up. */
+export function upgradeGroundItem(root,itemId){
+ const name=modelNameForItem(itemId);if(!name)return;
+ const stamp=Symbol();root.userData.assetStamp=stamp;
+ loadKayKit(name).then(template=>{
+  if(!template||root.userData.destroyed||root.userData.assetStamp!==stamp)return;
+  const laid=new THREE.Group(),copy=sizedModel(template,
+   name==='quiver'?.7:name==='shield_square'?.8:1.05);
+  laid.add(copy);
+  laid.rotation.x=-Math.PI/2;
+  laid.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(laid);
+  laid.position.y=-.49-bounds.min.y;
+  for(const child of root.children)child.visible=false;
+  root.add(laid);root.userData.assetLoaded=name;
+ });
+}
+/** Replace only the weapon graphics, not skill timings, weapon logic or animated joints. */
+export function upgradeHeldWeapon(hero,style,weaponId){
+ const hand=hero.userData?.weapon;if(!hand)return;
+ const stamp=Symbol();hand.userData.assetStamp=stamp;
+ const name=modelNameForItem('weapon.'+style+'.'+weaponId);
+ if(!name)return;
+ loadKayKit(name).then(template=>{
+  if(!template||hand.userData.assetStamp!==stamp||hero.userData.weapon!==hand)return;
+  hand.clear();
+  hero.userData.bowString=null;hero.userData.crossbowSlider=null;hero.userData.magicFocus=null;
+  const grip=new THREE.Group();
+  const height=name==='sword_2handed'?1.95:name==='staff'?1.85:
+   name==='wand'?.92:name==='dagger'?.74:name==='crossbow_2handed'?1.2:1.48;
+  const model=sizedModel(template,height);
+  // Model is +Y upright; Oakrest's hand points weapons along -Z.
+  model.position.y-=height*.23;
+  grip.add(model);grip.rotation.x=-Math.PI/2;
+  hand.add(grip);hand.userData.assetLoaded=name;
+  if(name==='dagger'&&!hero.userData.equipmentShield){
+   const other=new THREE.Group(),second=sizedModel(template,.74);
+   second.position.y-=.74*.23;other.add(second);other.rotation.x=-Math.PI/2;
+   hero.userData.offhand.add(other);
+  }
+ });
+}
+/** A different held item invalidates any outstanding async asset request. */
+export function invalidateHeldWeapon(hero){
+ const hand=hero?.userData?.weapon;
+ if(hand)hand.userData.assetStamp=Symbol();
+}

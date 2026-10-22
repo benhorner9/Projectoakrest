@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {join,relative} from 'node:path';
 
 rmSync('dist',{recursive:true,force:true});mkdirSync('dist');
-for(const path of ['index.html','characters.html','src','vendor','.htaccess'])cpSync(path,'dist/'+path,{recursive:true});
+for(const path of ['index.html','characters.html','src','vendor','assets','.htaccess'])cpSync(path,'dist/'+path,{recursive:true});
 
 // Shared-host static assets have stable filenames. Version module *imports*
 // as well as the HTML entry point so iPad/Safari cannot combine a current
