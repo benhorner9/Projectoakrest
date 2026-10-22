@@ -33,7 +33,8 @@ export function mountAnimationInspector(){
   <label>Playback <select data-name="speed"></select></label>
   <label><input type="checkbox" data-name="freeze"> Freeze</label>
   <label><input type="checkbox" data-name="moving"> Move</label></div>
-  <label><input type="checkbox" data-name="kaykit" checked> KayKit licensed motion overlay (compare on/off)</label>
+  <label><input type="checkbox" data-name="kaykit" checked> KayKit animation (compare with original)</label>
+  <div data-name="motion-status" aria-live="polite" style="margin:6px 0;padding:6px 8px;border-radius:4px;background:#254c41;color:#e2f5df;font-size:11px">KayKit animation loading…</div>
   <label>Timeline <input data-name="scrub" type="range" min="0" max="1000" step="1" value="0" style="width:100%"></label>
   <div data-name="time" style="margin-bottom:5px">0.00 s</div>
   <label><input type="checkbox" data-name="hitbox"> Show estimated melee reach</label>
@@ -45,7 +46,7 @@ export function mountAnimationInspector(){
  document.body.append(panel);
  const q=n=>panel.querySelector(`[data-name="${n}"]`);
  const styleInput=q('style'),familyInput=q('family'),skillInput=q('skill'),speedInput=q('speed'),freeze=q('freeze'),moving=q('moving'),scrub=q('scrub'),hitbox=q('hitbox'),muzzle=q('muzzle'),readout=q('readout'),timeText=q('time');
- const canvas=q('canvas'),showOpponent=q('opponent'),showEffects=q('effects'),kaykit=q('kaykit');
+ const canvas=q('canvas'),showOpponent=q('opponent'),showEffects=q('effects'),kaykit=q('kaykit'),motionStatus=q('motion-status');
  for(const s of ['melee','ranged','magic'])option(styleInput,s,s[0].toUpperCase()+s.slice(1));
  for(const speed of SPEEDS)option(speedInput,String(speed),Math.round(speed*100)+'%');
  speedInput.value='1';
@@ -144,6 +145,10 @@ export function mountAnimationInspector(){
   const preview={start:0,impactAt:wind,interval:duration(),abilityKind:current.motionCue};
   actor.userData.kaykitDisabled=!kaykit.checked;
   animateActor(actor,{dt,t,stride:moving.checked?t*10:0,speed:moving.checked?3.1:0,attack:preview,side:moving.checked ? 0.35 : 0});
+  motionStatus.textContent=kaykit.checked?
+   'KAYKIT ACTIVE · '+(actor.userData.kaykitLastClip||'No clip')+
+   ' · max imported joint delta '+(actor.userData.kaykitLastDegrees||0)+'°':
+   'ORIGINAL PROCEDURAL ANIMATION · KayKit disabled';
   actor.updateMatrixWorld(true);
   opponent.visible=showOpponent.checked;
   if(opponent.visible){

@@ -62,9 +62,9 @@ export function kayKitClipNames(){return Object.keys(KAYKIT_CLIPS);}
 
 function stateFor({t=0,stride=0,speed=0,attack=null,dodge=0,hit=false,dead=false,chopping=null},actorFamily=null){
  if(chopping)return null;
- if(dead)return {clip:'Death_A',phase:1,strength:.85};
- if(hit)return {clip:'Hit_A',phase:.65,strength:.8};
- if(dodge>.035)return {clip:'Dodge_Forward',phase:clamp(1-dodge),strength:.8};
+ if(dead)return {clip:'Death_A',phase:1,strength:1};
+ if(hit)return {clip:'Hit_A',phase:.65,strength:.96};
+ if(dodge>.035)return {clip:'Dodge_Forward',phase:clamp(1-dodge),strength:1};
  if(attack&&Number.isFinite(attack.start)&&Number.isFinite(attack.impactAt)){
   const start=attack.start,impact=Math.max(start,attack.impactAt),interval=Math.max(.1,attack.interval||.7);
   if(t>=start&&t<start+interval){
@@ -75,18 +75,21 @@ function stateFor({t=0,stride=0,speed=0,attack=null,dodge=0,hit=false,dead=false
     const isAfter=t>=impact;
     return {clip:kayKitClipFor(family,kind,isAfter?'release':'windup'),
      phase:isAfter?clamp((t-impact)/afterTime):clamp((t-start)/Math.max(.05,windup)),
-     strength:.72};
+     strength:1};
    }
    const progress=t<=impact?.62*clamp((t-start)/Math.max(.05,windup)):
     .62+.38*clamp((t-impact)/afterTime);
-   return {clip:kayKitClipFor(family,kind),phase:progress,strength:.70};
+   return {clip:kayKitClipFor(family,kind),phase:progress,strength:1};
   }
  }
  if(speed>.35){
   const running=speed>2.5;
-  return {clip:running?'Running_A':'Walking_A',phase:mod(stride/(Math.PI*2),1),strength:running?.55:.45};
+  return {clip:running?'Running_A':'Walking_A',phase:mod(stride/(Math.PI*2),1),strength:running?.95:.9};
  }
- return null;
+ // The first release did not play KayKit at idle at all. A character
+ // standing in the village therefore looked EXACTLY like the old version.
+ // Cycle the CC0 source idle clip, with a gentler upper-body influence.
+ return {clip:'Idle_A',phase:mod(t/KAYKIT_CLIPS.Idle_A.seconds,1),strength:.55};
 }
 // Public pure decision helper makes ability/family compatibility testable.
 export function kayKitMotionState(info){
@@ -111,13 +114,13 @@ export function restoreKayKitPose(u){
 }
 /** The caller must first run the normal procedural pose; no gameplay mutations. */
 export function applyKayKitPose(u,info){
- if(u.kaykitDisabled)return false;
+ if(u.kaykitDisabled){u.kaykitLastClip='';u.kaykitLastDegrees=0;return false;}
  const state=stateFor(info,u.family);
- if(!state||!KAYKIT_CLIPS[state.clip])return false;
- if(!state)return false;
+ if(!state||!KAYKIT_CLIPS[state.clip]){u.kaykitLastClip='';u.kaykitLastDegrees=0;return false;}
  const clip=KAYKIT_CLIPS[state.clip];
  const frames=clip.frames,index=clamp(state.phase)*(frames.length-1),lo=Math.floor(index),hi=Math.min(frames.length-1,lo+1),frac=index-lo;
  const first=frames[lo],last=frames[hi],offsets=ensureOffsets(u);
+ u.kaykitLastClip=state.clip;u.kaykitLastDegrees=0;
  for(let i=0;i<CLIP_KEYS.length;i++){
   const target=u[CLIP_KEYS[i]];
   if(!target)continue;
@@ -125,11 +128,18 @@ export function applyKayKitPose(u,info){
   scratchA.set(first[p],first[p+1],first[p+2],first[p+3]).normalize();
   scratchB.set(last[p],last[p+1],last[p+2],last[p+3]).normalize();
   scratchA.slerp(scratchB,frac);
-  // Retargeted skeleton and the existing rigid pivot have different bind
-  // poses; blend the source *delta* over the existing authored weapon pose.
-  // Restraint preserves a recognizable family silhouette and PvP skill tell.
-  const weight=i>=8?state.strength*.35:i>=4?state.strength*.48:state.strength*.68;
+  // KayKit-forward: the old integration only applied ~48% of an attack
+  // shoulder curve (0.70 * 0.68) and skipped idle altogether, making the
+  // commercial-use CC0 pack look unchanged from the gameplay camera.
+  // Apply almost all of the licensed arm motion, leaving a bounded share
+  // of leg/torso/head deltas for the rigid pivot rig, equipment attachments,
+  // authored skill-specific tells and collision-independent root position.
+  const groupWeight=i<2?.96:i<4?.86:i<8?.73:i===8?.46:.30;
+  const weight=clamp(state.strength*groupWeight,0,1);
   scratchMix.identity().slerp(scratchA,weight);
+  u.kaykitLastDegrees=Math.max(u.kaykitLastDegrees,Math.round(
+   2*Math.acos(Math.min(1,Math.abs(scratchMix.w)))*180/Math.PI
+  ));
   target.quaternion.multiply(scratchMix);
   offsets[i].copy(scratchMix);
  }
