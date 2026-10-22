@@ -8,6 +8,8 @@ import { stickFromOffset, cameraKeyDirection, cameraSensitivity, attackDragDelta
 import { installGameZoomGuard } from './touch-gestures.js';
 import { ENEMY_PATTERNS, ENEMY_COMBAT, enemyBehaviour, enemyThreatTier, isThreatened, combatAim, MATERIAL_DROPS, grantMonsterMaterial } from './combat-feel.js';
 import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } from './attack-rules.js';
+import {abilityAnimationSpec,basicAnimationSpec,listAnimationSpecs,createAnimationEventJournal} from './ability-animation.js';
+import {abilityMotion} from './animation-language.js';
 import {maxHitFor,accuracyFor,rollHit,maxHitForAction,acquireEnemy,targetValid,inAttackRange} from './auto-combat.js';
 import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
@@ -147,6 +149,21 @@ function equipVisual(style,weaponId){
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
 let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,queuedAbility=null,lastAttackInterval=1.15,dodgeTravel=null;
+// Instrumentation follows real attack clocks; it is never consulted by hit resolution.
+const animationJournal=createAnimationEventJournal(),animationRecoveries=[];
+let releasingActionId=null, projectileOrdinal=0;
+function beginAnimationAction(spec,at,recoveryAt){
+ const id=animationJournal.begin({specId:spec?.id||'unknown',style:spec?.style||style,family:spec?.weaponFamily||'unknown',at});
+ animationRecoveries.push({id,at:recoveryAt});return id;
+}
+function advanceAnimationJournal(t){
+ for(let i=animationRecoveries.length-1;i>=0;i--)if(t>=animationRecoveries[i].at){
+  const a=animationRecoveries[i];animationJournal.record(a.id,'recovery_end',a.at);animationRecoveries.splice(i,1);
+ }
+}
+function interruptPendingAnimation(t){
+ for(const a of [pendingBasic,pendingAbility])if(a?.animationActionId)animationJournal.record(a.animationActionId,'interrupted',t);
+}
 let yaw=0,pitch=.12,elapsed=0,started=false,questCompleted=false;
 const cameraStorageKey=oakrestKey('oakrest-camera-settings-v1');
 let cameraSettings=readCameraSettings(localStorage,cameraStorageKey);
@@ -787,14 +804,18 @@ function beginStrike(damage,reach,ability={},family=slotFamily(style,data.gear[s
  const origin=hero.position.clone();origin.y+=1.1;
  const target=combatTarget&&targetValid(combatTarget,activeEnemies(),hero.position)?combatTarget:null;
  const strikeYaw=target?Math.atan2(target.x-hero.position.x,-(target.z-hero.position.z)):yaw;
- const strike={origin,yaw:strikeYaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set()};
- if(ability.strikes===2){strike.damage=damage/2;activeStrikes.push({...strike,start:now()+profile.duration+.035,previous:0,hits:new Set(),reverse:!strike.reverse,visualPending:true});}
+ const strike={origin,yaw:strikeYaw,profile,reach,damage,ability,source:sourceSnapshot(),start:now(),previous:0,reverse:comboStage===1,hits:new Set(),animationActionId:releasingActionId,contactIndex:0};
+ if(ability.strikes===2){strike.damage=damage/2;activeStrikes.push({...strike,start:now()+profile.duration+.035,previous:0,hits:new Set(),reverse:!strike.reverse,visualPending:true,contactIndex:1});}
  activeStrikes.push(strike);visuals.sweep(strike,STYLE_COLOURS[style]);
  if(attackAnimation){attackAnimation.contactDuration=profile.duration;attackAnimation.halfAngle=profile.halfAngle;attackAnimation.reverse=strike.reverse;}
 }
 function updateStrikes(t){
  for(let i=activeStrikes.length-1;i>=0;i--){
-  const strike=activeStrikes[i];if(t<strike.start)continue;strike.previousOrigin={...strike.origin};strike.origin={x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z};if(strike.visualPending){visuals.sweep(strike,STYLE_COLOURS[strike.source.style]);strike.visualPending=false;}const progress=clamp((t-strike.start)/strike.profile.duration,0,1);
+  const strike=activeStrikes[i];if(t<strike.start)continue;
+  if(strike.animationActionId&&!strike.contactLogged){
+   animationJournal.record(strike.animationActionId,strike.contactIndex?'contact_window_start_2':'contact_window_start',strike.start);strike.contactLogged=true;
+  }
+  strike.previousOrigin={...strike.origin};strike.origin={x:hero.position.x,y:hero.position.y+1.1,z:hero.position.z};if(strike.visualPending){visuals.sweep(strike,STYLE_COLOURS[strike.source.style]);strike.visualPending=false;}const progress=clamp((t-strike.start)/strike.profile.duration,0,1);
   for(const e of activeEnemies()){
    if(e.dead||e.retreating||strike.hits.has(e)||(!strike.profile.multi&&strike.hits.size))continue;
    const centre=enemyCentre(e);
@@ -803,7 +824,10 @@ function updateStrikes(t){
     cameraJolt=Math.max(cameraJolt,strike.source.style==='melee'?.045:0);
    }
   }
-  strike.previous=progress;if(progress>=1)activeStrikes.splice(i,1);
+  strike.previous=progress;if(progress>=1){
+   if(strike.animationActionId)animationJournal.record(strike.animationActionId,strike.contactIndex?'contact_window_end_2':'contact_window_end',strike.start+strike.profile.duration);
+   activeStrikes.splice(i,1);
+  }
  }
 }
 function areaImpact(origin,radius,damage,ability,source,exclude=null){
@@ -848,6 +872,7 @@ function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWea
  mesh.geometry=mesh.geometry.clone();mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),dir);
  visuals.projectile(mesh,colour,style);audio.play(style==='magic'?'magic':'bow');
  projectiles.push({mesh,dir,speed,damage,opts,life:maxRange/Math.max(1,speed)+.15,age:0,distance:0,maxDistance:maxRange,origin:origin.clone(),style,source:sourceSnapshot(),particle:false});
+ if(releasingActionId){projectileOrdinal++;animationJournal.record(releasingActionId,projectileOrdinal===1?'projectile_spawn':`projectile_spawn_${projectileOrdinal}`,now(),{origin:[origin.x,origin.y,origin.z]});}
 }
 function slashEffect(reach=3){
  const heading=forward();
@@ -864,6 +889,7 @@ function doBasic(){
  attackUntil=t+w.interval;lastAttackInterval=w.interval;
  const windup=Math.min(w.interval*.70,w.windup||w.interval*.25);
  pendingBasic={style,weapon:data.gear[style],impactAt:t+windup,interval:w.interval,start:t};
+ pendingBasic.animationActionId=beginAnimationAction(basicAnimationSpec(style,pendingBasic.weapon),t,attackUntil);
  recoilUntil=t+Math.max(windup+.13,w.interval*.56);attackAnimation=pendingBasic;
  if(style==='melee'){
   comboStage=t-lastMeleeAttack<w.interval*1.8?(comboStage+1)%3:0;
@@ -875,11 +901,13 @@ function doBasic(){
 function resolveBasicAttack(t){
  if(!pendingBasic||t<pendingBasic.impactAt)return;
  const attack=pendingBasic;pendingBasic=null;
- if(!started||hp<=0||style!==attack.style)return;
+ if(!started||hp<=0||style!==attack.style){animationJournal.record(attack.animationActionId,'interrupted',t);return;}
  if(combatTarget&&!targetValid(combatTarget,activeEnemies(),hero.position)){stopCombat();return;}
+ animationJournal.record(attack.animationActionId,'release',attack.impactAt);
+ releasingActionId=attack.animationActionId;projectileOrdinal=0;
  audio.play(style==='magic'?'magic':'attack',getWeapon().basic>25);
  const w=(data.onboarding?.area==='tutorial'||ownsWeapon(data,attack.style,attack.weapon))?LOADOUTS[attack.style][attack.weapon]:attack.style==='melee'?UNARMED:null;
- if(!w)return;
+ if(!w){releasingActionId=null;return;}
  hero.userData.rightArm.rotation.x=-1.5;
  if(attack.style==='melee'){
   beginStrike(Math.round(w.basic*(attack.combo===2?1.21:attack.combo===1?1.09:1)),w.reach,slotFamily(style,attack.weapon)==='daggers'?{bleed:1.5}:slotFamily(style,attack.weapon)==='greatsword'?{stun:.22}:{},slotFamily(style,attack.weapon));
@@ -890,6 +918,7 @@ function resolveBasicAttack(t){
     slotFamily(style,attack.weapon)==='shortbow'?27:slotFamily(style,attack.weapon)==='crossbow'?34:36;
   shoot(w.basic,velocity,attack.style==='magic'?(slotFamily(style,attack.weapon)==='ember'?'#f6b070':'#b6d9ef'):'#e4c292',{},0,w.reach);
  }
+ releasingActionId=null;
 }
 function shiftHero(dist){const f=forward();dodgeTravel={dir:{x:f.x*Math.sign(dist),z:f.z*Math.sign(dist)},speed:Math.abs(dist)/.32,start:now(),end:now()+.32};addRing(hero.position.clone(),'#cce2b1',1.8,.4);}
 function useAbility(index,fromQueue=false){
@@ -904,8 +933,17 @@ function useAbility(index,fromQueue=false){
   if(!fromQueue)queuedAbility={index,style,weapon:data.gear[style]};
   return;
  }
- queuedAbility=null;cooldowns.set(id,now()+a.cooldown);const w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(slotFamily(style,data.gear[style])==='greatsword'?.6:.45,w.windup);pendingAbility={a,style,impactAt:now()+windup};attackAnimation={start:now(),impactAt:now()+Math.max(.01,windup),interval:Math.max(.4,windup+.28),abilityKind:a.kind};attackUntil=now()+Math.max(.4,windup+.28);lastAttackInterval=Math.max(.4,windup+.28);}
-function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;const {a,style:castStyle}=pendingAbility;pendingAbility=null;if(hp<=0||style!==castStyle)return;audio.playAbility(castStyle,a.kind,slotFamily(castStyle,data.gear[castStyle]));
+ queuedAbility=null;const startAt=now(),w=getWeapon(),windup=['shield','heal','dash','dashback'].includes(a.kind)?0:Math.min(slotFamily(style,data.gear[style])==='greatsword'?.6:.45,w.windup);
+ const interval=Math.max(.4,windup+.28),spec=abilityAnimationSpec(style,data.gear[style],a);
+ cooldowns.set(id,startAt+a.cooldown);attackUntil=startAt+interval;lastAttackInterval=interval;
+ pendingAbility={a,style,impactAt:startAt+windup,animationActionId:beginAnimationAction(spec,startAt,attackUntil)};
+ attackAnimation={start:startAt,impactAt:startAt+Math.max(.01,windup),interval,abilityKind:spec?.motionCue||a.kind,abilityId:spec?.id,actionId:pendingAbility.animationActionId};}
+function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;
+ const {a,style:castStyle,animationActionId,impactAt}=pendingAbility;pendingAbility=null;
+ if(hp<=0||style!==castStyle){animationJournal.record(animationActionId,'interrupted',t);return;}
+ animationJournal.record(animationActionId,'release',impactAt);
+ releasingActionId=animationActionId;projectileOrdinal=0;
+ audio.playAbility(castStyle,a.kind,slotFamily(castStyle,data.gear[castStyle]));
   if(a.kind==='hit'||a.kind==='execute'){beginStrike(a.damage,a.reach,a);}
   else if(a.kind==='sweep'){
    if(style==='melee')beginStrike(a.damage,a.reach,a);
@@ -920,9 +958,11 @@ function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;
   else if(a.kind==='dash')shiftHero(a.distance);
   else if(a.kind==='dashback')shiftHero(-a.distance);
   else if(a.kind==='retreat'){shoot(a.damage,26,'#f2d79a');shiftHero(-4);}
-  sparks(hero.position.clone().add(new THREE.Vector3(0,1.15,0)),STYLE_COLOURS[style],5);
+  if(['shield','heal','dash','dashback','nova'].includes(a.kind))animationJournal.record(animationActionId,'ability_effect',impactAt);
+ releasingActionId=null;
+ sparks(hero.position.clone().add(new THREE.Vector3(0,1.15,0)),STYLE_COLOURS[style],5);
 }
-function dodge(){if(isGameplayMenuOpen())return;if(!started||hp<=0||now()<dodgeUntil)return;pendingBasic=null;pendingAbility=null;activeStrikes.length=0;attackAnimation=null;dodgeStarted=now();dodgeUntil=now()+DODGE.cooldown;dodgeMovingUntil=now()+DODGE.startup+DODGE.active;const dir=dodgeDirection({x:Number(keys.has('d'))-Number(keys.has('a'))+joystick.x+(padState?.moveX||0),z:Number(keys.has('s'))-Number(keys.has('w'))+joystick.y+(padState?.moveY||0)},yaw);dodgeTravel={dir,start:now(),end:now()+.32};audio.play('dodge');addRing(hero.position.clone(),'#fff1b8',2,.4);}
+function dodge(){if(isGameplayMenuOpen())return;if(!started||hp<=0||now()<dodgeUntil)return;interruptPendingAnimation(now());pendingBasic=null;pendingAbility=null;activeStrikes.length=0;attackAnimation=null;dodgeStarted=now();dodgeUntil=now()+DODGE.cooldown;dodgeMovingUntil=now()+DODGE.startup+DODGE.active;const dir=dodgeDirection({x:Number(keys.has('d'))-Number(keys.has('a'))+joystick.x+(padState?.moveX||0),z:Number(keys.has('s'))-Number(keys.has('w'))+joystick.y+(padState?.moveY||0)},yaw);dodgeTravel={dir,start:now(),end:now()+.32};audio.play('dodge');addRing(hero.position.clone(),'#fff1b8',2,.4);}
 function collides(x,z){return blocked(x,z);}
 // Attack telegraphs are visible ground geometry and use a frozen target/direction.
 // Moving out of the red shape before it resolves avoids damage.
@@ -967,7 +1007,7 @@ function applyEnemyDamage(e,spec,t){
  $('damage-flash').classList.remove('hit');void $('damage-flash').offsetWidth;$('damage-flash').classList.add('hit');
  floating('-'+harm,'#ff948d',hero.position.clone().add(new THREE.Vector3(0,2.8,0)));
  updateHpUI();
- if(hp<=0){stopCombat();queuedAbility=null;activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
+ if(hp<=0){interruptPendingAnimation(now());stopCombat();queuedAbility=null;activeStrikes.length=0;queuedStyle=null;pendingBasic=null;pendingAbility=null;dodgeTravel=null;attackAnimation=null;groundEffects.length=0;motion={x:0,z:0};
   toast('<b>YOU WERE DEFEATED</b> · Respawning in Oakrest');
   respawnAt=t+2.1;
  }
@@ -1113,7 +1153,7 @@ function updateEnemyLevelLabels(){
  }
 }
 function animate(dt,t){
- elapsed+=dt;resolveBasicAttack(t);resolveAbility(t);if(queuedStyle&&!pendingBasic&&!pendingAbility&&!activeStrikes.length){const next=queuedStyle;queuedStyle=null;setStyle(next);}
+ elapsed+=dt;advanceAnimationJournal(t);resolveBasicAttack(t);resolveAbility(t);if(queuedStyle&&!pendingBasic&&!pendingAbility&&!activeStrikes.length){const next=queuedStyle;queuedStyle=null;setStyle(next);}
  if(queuedAbility){
   if(queuedAbility.style!==style||queuedAbility.weapon!==data.gear[style]||hp<=0||isGameplayMenuOpen())queuedAbility=null;
   else if(!pendingBasic&&!pendingAbility&&t>=attackUntil&&t>=switchUntil)useAbility(queuedAbility.index,true);
@@ -1154,7 +1194,7 @@ function animate(dt,t){
  const heading=chopYaw!==null?-chopYaw:lockYaw!==null&&Math.hypot(v,h)<.12?-lockYaw:characterFacingTarget({mode:cameraSettings.mode,lastHeading:visualHeading,cameraYaw:yaw,strikeYaw:activeStrikes.length?activeStrikes[0].yaw:null,velocityX:motion.x,velocityZ:motion.z,combatFacing});
  visualHeading=cameraSettings.mode==='follow'?(gait>.3||combatFacing?heading:visualHeading):dampAngle(visualHeading,heading,19,dt);
  hero.rotation.y=visualHeading;
- animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
+ animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0,combat:combatFacing});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const indoor=(data.onboarding?.area||'world')==='world'?expandedTown.interior(hero.position.x,hero.position.z):null;
@@ -1421,6 +1461,7 @@ requestAnimationFrame(loop);setInterval(save,6000);addEventListener('pagehide',s
 window.oakrestDiagnostics=()=>({...stats,quality,graphics:visualLighting.metrics(),version:'auto-combat-1'});
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
+ animation:{specs:()=>listAnimationSpecs(),events:()=>animationJournal.latest(),pose:(family,cue,windup=1,release=0)=>abilityMotion(family,cue,windup,release),active:()=>attackAnimation?{...attackAnimation}:null},
  state:()=>({data:structuredClone(data),quickInventory:{open:sideInventoryOpen,items:inventoryEntries(data).length},woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  quickInventory(open){setSideInventoryOpen(open);},woodcut:id=>startWoodcutting(id),learnWoodcutting(){data.professions.woodcuttingLearned=true;if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');save();},
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
@@ -1430,3 +1471,7 @@ if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|
  equip:(kind,id,s=style)=>chooseGear(kind,id,s),slot:(index,id)=>{equipSkill(data,style,data.gear[style],index,id);refreshSkills();},
  step(seconds){for(let i=0;i<Math.round(seconds*60);i++){gameTime+=1/60;animate(1/60,gameTime);}},damage(amount){hp=Math.max(1,hp-amount);updateHpUI();}
 };
+// The real-rig animation viewer is explicitly opt-in for local/dev QA only.
+// This import never runs in production and cannot trigger gameplay effects.
+if(window.oakrestQA?.animation && query.has('animation'))
+ import('./animation-inspector.js').then(m=>m.mountAnimationInspector()).catch(err=>console.warn('Animation QA preview unavailable',err));

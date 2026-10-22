@@ -67,7 +67,7 @@ export function applyCharacterAppearance(g,appearance={}){
  u.outfitTrims.forEach((m,i)=>m.visible=outfit==='scholar'?i===0:outfit==='traveller'?i>0:outfit==='wanderer'?i===1:false);
  u.cape.visible=outfit==='wanderer'&&!u.chestPlate.visible;
 }
-export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();for(const mat of u.ownedMaterials||[])mat.dispose();u.ownedMaterials=[];u.owned=[];u.weapon.clear();u.offhand.clear();u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
+export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();for(const mat of u.ownedMaterials||[])mat.dispose();u.ownedMaterials=[];u.owned=[];u.weapon.clear();u.offhand.clear();u.bowString=null;u.crossbowSlider=null;u.magicFocus=null;u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
  const w=u.weapon;function blade(group,heavy=false,dagger=false){block(group,'#54402f',0,0,.02,.105,.11,.38);block(group,'#c4a466',0,0,-.18,dagger?.26:heavy?.55:.40,.09,.10,true);taperedBlade(group,dagger?.52:heavy?1.45:1.03,dagger?.15:heavy?.30:.20);ball(group,'#c4a466',0,0,.24,.08,.08,.08);}
  if(style==='melee'){
    if(family==='woodaxe'){
@@ -76,10 +76,21 @@ export function equipActor(g,style,family,armour){const u=g.userData;for(const g
     block(w,'#e2e5dc',-.51,0,-.97,.085,.16,.4,true);
    }else{blade(w,family==='greatsword',family==='daggers');if(family==='daggers')blade(u.offhand,false,true);}
   }
- else if(style==='magic'){const shaft=tube(w,'#604d36',0,0,-.65,.055,.075,1.75);shaft.rotation.x=Math.PI/2;const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.23),material(family==='frost'?'#8fcde3':'#ecaa69'));crystal.position.z=-1.58;w.add(crystal);for(const s of [-1,1]){const prong=block(w,'#baa775',s*.15,0,-1.43,.07,.10,.42,true);prong.rotation.y=s*-.35;}}
+ else if(style==='magic'){const shaft=tube(w,'#604d36',0,0,-.65,.055,.075,1.75);shaft.rotation.x=Math.PI/2;const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.23),material(family==='frost'?'#8fcde3':'#ecaa69'));crystal.position.z=-1.58;w.add(crystal);u.magicFocus=crystal;for(const s of [-1,1]){const prong=block(w,'#baa775',s*.15,0,-1.43,.07,.10,.42,true);prong.rotation.y=s*-.35;}}
  else {const bow=family!=='crossbow',size=family==='shortbow'?.55:.8;
- if(bow){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,-size,.12),new THREE.Vector3(0,-size*.7,-.22),new THREE.Vector3(0,0,-.38),new THREE.Vector3(0,size*.7,-.22),new THREE.Vector3(0,size,.12)]);mesh(w,new THREE.TubeGeometry(curve,16,.045,5,false),'#946c42',0,0,-.28);block(w,'#d8cdb4',0,0,-.16,.018,size*2,.018);}
- else{block(w,'#725235',0,0,-.35,.18,.2,.90);const bowMesh=mesh(w,new THREE.TorusGeometry(.46,.045,5,16,Math.PI),'#adb6b0',0,0,-.68);bowMesh.rotation.x=Math.PI/2;bowMesh.rotation.z=Math.PI;block(w,'#c7b999',0,0,-.69,.92,.016,.016);}
+ if(bow){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,-size,.12),new THREE.Vector3(0,-size*.7,-.22),new THREE.Vector3(0,0,-.38),new THREE.Vector3(0,size*.7,-.22),new THREE.Vector3(0,size,.12)]);mesh(w,new THREE.TubeGeometry(curve,16,.045,5,false),'#946c42',0,0,-.28);
+  // Three retained points form a genuine V draw-string. The middle point
+  // follows the actual pending attack wind-up without creating per-frame meshes.
+  const positions=new Float32Array([0,-size,.12,0,0,-.16,0,size,.12]);
+  const stringGeometry=new THREE.BufferGeometry();
+  stringGeometry.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
+  const stringMaterial=new THREE.LineBasicMaterial({color:'#e7dabc'});
+  w.add(new THREE.Line(stringGeometry,stringMaterial));
+  u.bowString={positions,geometry:stringGeometry};
+  u.owned.push(stringGeometry);u.ownedMaterials.push(stringMaterial);}
+ else{block(w,'#725235',0,0,-.35,.18,.2,.90);const bowMesh=mesh(w,new THREE.TorusGeometry(.46,.045,5,16,Math.PI),'#adb6b0',0,0,-.68);bowMesh.rotation.x=Math.PI/2;bowMesh.rotation.z=Math.PI;block(w,'#c7b999',0,0,-.69,.92,.016,.016);
+  // Mechanical catch slides during the crossbow wind-up then snaps forward.
+  u.crossbowSlider=block(w,'#cfbb8b',0,.08,-.57,.14,.10,.14,true);}
  block(w,'#d3bb84',0,0,-.58,.025,.025,.9);}
  // Equipment geometry belongs to this loadout; cached primitive geometry remains shared.
  for(const root of [w,u.offhand])root.traverse(o=>{if(o.isMesh&&o.geometry!==box&&o.geometry!==sphere&&![...geometries.values()].includes(o.geometry))u.owned.push(o.geometry);});
@@ -111,7 +122,7 @@ export function applyEquipmentVariant(g,style,itemId){
  }
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;
@@ -122,11 +133,32 @@ export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0
   const strike=phase<.48?phase/.48:1-(phase-.48)/.52;
   right=-.9+strike*2.7;left=right*.78-.28;elbow=.35+strike*.42;
   u.rig.rotation.x=damp(u.rig.rotation.x,-strike*.13,18,dt);
- }else if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
- else if(['frost','ember'].includes(family)){right=.38+wind*.8+release*.3;left=.35+wind*.45;elbow=.35;}
+ }else if(['bow','shortbow','crossbow'].includes(family)){
+  // In villages, lower raised weapons into a believable relaxed carry.
+  const alert=combat||!!attack;
+  right=(alert?1.1:-.18)+wind*.12-release*.10;
+  left=alert?.95:-.20;elbow=(alert?.55:-.08)+wind*.65;
+ }
+ else if(['frost','ember'].includes(family)){
+  const alert=combat||!!attack;
+  right=(alert?.38:-.13)+wind*.8+release*.3;
+  left=alert?.35:-.12;elbow=alert?.35:-.2;
+ }
  else {right+=wind*1.6+release*.32;elbow=.15+wind*.35;left=family==='greatsword'?right*.8:family==='daggers'?.25-wind*.4+release*.55:left;}
  const cue=chopping?abilityMotion(family,null,0,0):abilityMotion(family,attack?.abilityKind,wind,release,attack?.combo);
  right+=cue.right;left+=cue.left;elbow+=cue.elbow;
+ // Preserve motion tells at low quality: no particle effects are needed to
+ // read shoulder angle, bow draw, crossbow cocking or the staff release.
+ if(u.bowString){
+  const pull=chopping?0:Math.min(1,Math.max(0,wind+.09*release));
+  u.bowString.positions[5]=-.16+.58*pull;
+  u.bowString.geometry.attributes.position.needsUpdate=true;
+ }
+ if(u.crossbowSlider)u.crossbowSlider.position.z=-.57+.26*wind-.04*release;
+ if(u.magicFocus)u.magicFocus.scale.setScalar(1+.13*wind+.08*release);
+ const rangedBow=family==='bow'||family==='shortbow';
+ u.leftArm.rotation.y=damp(u.leftArm.rotation.y,rangedBow&&(combat||!!attack) ? .30+wind*.28 : family==='greatsword'&&combat ? -.28 : 0,18,dt);
+ u.leftArm.rotation.z=damp(u.leftArm.rotation.z,rangedBow&&(combat||!!attack) ? -.18-wind*.34 : family==='greatsword'&&combat ? .20 : -.06,18,dt);
  u.rig.rotation.y=damp(u.rig.rotation.y,cue.twist,15,dt);
  u.head.rotation.z=damp(u.head.rotation.z,cue.head,12,dt);
  if(!chopping)u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05+cue.lean,16,dt);
