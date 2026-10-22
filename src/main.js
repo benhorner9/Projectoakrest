@@ -151,7 +151,7 @@ const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
 let pendingBasic=null,pendingAbility=null,attackAnimation=null,queuedStyle=null,queuedAbility=null,lastAttackInterval=1.15,dodgeTravel=null;
 // Instrumentation follows real attack clocks; it is never consulted by hit resolution.
 const animationJournal=createAnimationEventJournal(),animationRecoveries=[];
-let releasingActionId=null;
+let releasingActionId=null, projectileOrdinal=0;
 function beginAnimationAction(spec,at,recoveryAt){
  const id=animationJournal.begin({specId:spec?.id||'unknown',style:spec?.style||style,family:spec?.weaponFamily||'unknown',at});
  animationRecoveries.push({id,at:recoveryAt});return id;
@@ -872,7 +872,7 @@ function shoot(damage,speed=24,colour='#f4c377',opts={},spread=0,maxRange=getWea
  mesh.geometry=mesh.geometry.clone();mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),dir);
  visuals.projectile(mesh,colour,style);audio.play(style==='magic'?'magic':'bow');
  projectiles.push({mesh,dir,speed,damage,opts,life:maxRange/Math.max(1,speed)+.15,age:0,distance:0,maxDistance:maxRange,origin:origin.clone(),style,source:sourceSnapshot(),particle:false});
- if(releasingActionId)animationJournal.record(releasingActionId,'projectile_spawn',now(),{origin:[origin.x,origin.y,origin.z]});
+ if(releasingActionId){projectileOrdinal++;animationJournal.record(releasingActionId,projectileOrdinal===1?'projectile_spawn':`projectile_spawn_${projectileOrdinal}`,now(),{origin:[origin.x,origin.y,origin.z]});}
 }
 function slashEffect(reach=3){
  const heading=forward();
@@ -904,7 +904,7 @@ function resolveBasicAttack(t){
  if(!started||hp<=0||style!==attack.style){animationJournal.record(attack.animationActionId,'interrupted',t);return;}
  if(combatTarget&&!targetValid(combatTarget,activeEnemies(),hero.position)){stopCombat();return;}
  animationJournal.record(attack.animationActionId,'release',attack.impactAt);
- releasingActionId=attack.animationActionId;
+ releasingActionId=attack.animationActionId;projectileOrdinal=0;
  audio.play(style==='magic'?'magic':'attack',getWeapon().basic>25);
  const w=(data.onboarding?.area==='tutorial'||ownsWeapon(data,attack.style,attack.weapon))?LOADOUTS[attack.style][attack.weapon]:attack.style==='melee'?UNARMED:null;
  if(!w){releasingActionId=null;return;}
@@ -942,7 +942,7 @@ function resolveAbility(t){if(!pendingAbility||t<pendingAbility.impactAt)return;
  const {a,style:castStyle,animationActionId,impactAt}=pendingAbility;pendingAbility=null;
  if(hp<=0||style!==castStyle){animationJournal.record(animationActionId,'interrupted',t);return;}
  animationJournal.record(animationActionId,'release',impactAt);
- releasingActionId=animationActionId;
+ releasingActionId=animationActionId;projectileOrdinal=0;
  audio.playAbility(castStyle,a.kind,slotFamily(castStyle,data.gear[castStyle]));
   if(a.kind==='hit'||a.kind==='execute'){beginStrike(a.damage,a.reach,a);}
   else if(a.kind==='sweep'){
