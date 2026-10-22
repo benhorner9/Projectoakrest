@@ -13,7 +13,7 @@ test('the built release contains verified self-hosted CC0 humanoids and skeleton
  }
  for(const suffix of ['LICENSE-ADVENTURERS.txt','LICENSE-SKELETONS.txt','PROVENANCE.md'])
   assert.ok(fs.existsSync(path.join(root,'dist/assets/kaykit-character-art',suffix)));
- for(const suffix of ['loaders/GLTFLoader.js','utils/BufferGeometryUtils.js'])
+ for(const suffix of ['loaders/GLTFLoader.js','utils/BufferGeometryUtils.js','utils/SkeletonUtils.js'])
   assert.ok(fs.existsSync(path.join(root,'dist/vendor/examples/jsm',suffix)));
  const html=fs.readFileSync(path.join(root,'dist/index.html'),'utf8');
  assert.ok(html.includes('"three/addons/": "./vendor/examples/jsm/"'));

@@ -5,7 +5,8 @@ import {mkdirSync,copyFileSync} from 'node:fs';
 import {prepareCharacterArt} from './fetch-kaykit-character-assets.mjs';
 for(const [source,destination] of [
  ['node_modules/three/examples/jsm/loaders/GLTFLoader.js','vendor/examples/jsm/loaders/GLTFLoader.js'],
- ['node_modules/three/examples/jsm/utils/BufferGeometryUtils.js','vendor/examples/jsm/utils/BufferGeometryUtils.js']
+ ['node_modules/three/examples/jsm/utils/BufferGeometryUtils.js','vendor/examples/jsm/utils/BufferGeometryUtils.js'],
+ ['node_modules/three/examples/jsm/utils/SkeletonUtils.js','vendor/examples/jsm/utils/SkeletonUtils.js']
 ]){
  mkdirSync(destination.substring(0,destination.lastIndexOf('/')),{recursive:true});
  copyFileSync(source,destination);

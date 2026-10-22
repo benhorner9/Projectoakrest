@@ -1,0 +1,54 @@
+// End-to-end town art on the BUILT /oakrest-dev/ game, isolated saves.
+const assert=require('node:assert/strict');
+const {chromium,webkit}=require('playwright');
+const {spawn}=require('node:child_process');
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),engine=process.env.OAKREST_BROWSER||'chromium';
+const base='http://127.0.0.1:5188/oakrest-dev/';
+const mount=path.join(root,'qa','town-citizen-host');
+let server,browser;const errors=[];
+(async()=>{try{
+ fs.mkdirSync(mount,{recursive:true});
+ fs.rmSync(path.join(mount,'oakrest-dev'),{recursive:true,force:true});
+ fs.cpSync(path.join(root,'dist'),path.join(mount,'oakrest-dev'),{recursive:true});
+ server=spawn('python3',['-m','http.server','5188','--bind','127.0.0.1'],{cwd:mount,stdio:'ignore'});
+ await new Promise(r=>setTimeout(r,750));
+ browser=await ({chromium,webkit}[engine]).launch({headless:true,...(engine==='chromium'?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}: {})});
+ const ctx=await browser.newContext({viewport:{width:1366,height:1024},hasTouch:true,isMobile:true,deviceScaleFactor:1});
+ const page=await ctx.newPage();page.setDefaultTimeout(20000);
+ page.on('pageerror',err=>errors.push(err.message));
+ const {defaultSave}=await import('../src/rules.js');
+ const data=defaultSave();
+ await ctx.addInitScript(d=>{
+  localStorage.setItem('oakrest-dev-v1',JSON.stringify(d));
+  localStorage.setItem('oakrest-v1','public-sentinel');
+  localStorage.setItem('oakrest-dev-quality','balanced');
+ },data);
+ await page.goto(base+'?qa=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.oakrestQA?.townCitizenArt);
+ await page.locator('#begin').click();
+ await page.evaluate(()=>{oakrestQA.teleport(0,19);oakrestQA.step(1.5);});
+ await page.waitForFunction(()=>oakrestQA.townCitizenArt().loaded>0,null,{timeout:75000});
+ const first=await page.evaluate(()=>({art:oakrestQA.townCitizenArt(),town:oakrestQA.state().town}));
+ assert.ok(first.art.loaded<=first.art.max,'max eight skinned citizens');
+ assert.ok(first.art.citizens.every(n=>['knight','rogue','mage'].includes(n.model)));
+ assert.equal(first.town.staff,4,'bank/shop/forester/trade-house NPC count still correct');
+ assert.equal(first.town.villagers.length,14,'existing citizens and paths remain');
+ await page.screenshot({path:path.join(root,'qa',engine+'-kaykit-town-citizens.png')});
+ const saveBefore=await page.evaluate(()=>structuredClone(oakrestQA.state().data));
+ await page.locator('#character-art-toggle').evaluate(el=>el.click());
+ await page.waitForFunction(()=>oakrestQA.townCitizenArt().loaded===0);
+ assert.equal((await page.evaluate(()=>oakrestQA.townCitizenArt())).enabled,false);
+ await page.locator('#character-art-toggle').evaluate(el=>el.click());
+ await page.evaluate(()=>oakrestQA.step(.7));
+ await page.waitForFunction(()=>oakrestQA.townCitizenArt().loaded>0,null,{timeout:75000});
+ // Low quality must not spend GPU budget on citizen skins.
+ await page.locator('#loadout-button').click();
+ await page.locator('#progression-settings').click();
+ await page.locator('#quality').selectOption('low');
+ await page.waitForFunction(()=>oakrestQA.townCitizenArt().loaded===0);
+ assert.deepEqual(await page.evaluate(()=>oakrestQA.state().data),saveBefore,'cosmetics never change gameplay save');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-v1')),'public-sentinel');
+ assert.deepEqual(errors,[],'no uncaught renderer/game errors');
+ console.log('PASS',engine,'visible KayKit citizens, culling limit, original fallback, quality gating, unchanged town/save');
+}finally{await browser?.close();server?.kill()}})().catch(e=>{console.error('FAILED KayKit citizens',e.stack,errors);process.exitCode=1});
