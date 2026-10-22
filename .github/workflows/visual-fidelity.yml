@@ -33,8 +33,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Install Chromium with bounded OS dependency provisioning
-        run: timeout --signal=TERM --kill-after=10s 8m npx playwright install --with-deps chromium
+      # ubuntu-latest already ships the Chromium system libraries; avoid slow apt mirrors.
+      # Browser binary download remains version-pinned by package-lock.json.
+      - name: Install pinned Chromium without apt mirror downloads
+        run: timeout --signal=TERM --kill-after=10s 6m npx playwright install chromium
       - run: mkdir -p qa
       - run: node tests/visual-browser-qa.cjs
       - uses: actions/upload-artifact@v4
@@ -57,7 +59,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: mkdir -p qa
       - run: node tests/browser-smoke.cjs
       - uses: actions/upload-artifact@v4
