@@ -117,7 +117,9 @@ jobs:
 
   built-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Browser-engine installs can consume several minutes on busy runners.
+    # Keep an explicit bounded gameplay step instead of killing the whole job.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -128,7 +130,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
       - name: Built dev-path release flow
-        run: node tests/browser-release.cjs
+        run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-release.cjs
       - name: WebKit development-path release flow
         if: ${{ !cancelled() }}
         continue-on-error: true
