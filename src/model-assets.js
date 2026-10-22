@@ -100,7 +100,9 @@ export function upgradeGroundItem(root,itemId){
   root.add(laid);root.userData.assetLoaded=name;
  });
 }
-/** Replace only the weapon graphics, not skill timings, weapon logic or animated joints. */
+/** Keep combat rig's live tells (crystal/bowstring/crossbow catch) when swapping the static prop.
+ * Meshes are shared and cached; never dispose loaded accessory geometry on re-equip.
+ */
 export function upgradeHeldWeapon(hero,style,weaponId){
  if(typeof window==='undefined')return;
  const hand=hero.userData?.weapon;if(!hand)return;
@@ -109,17 +111,20 @@ export function upgradeHeldWeapon(hero,style,weaponId){
  if(!name)return;
  loadKayKit(name).then(template=>{
   if(!template||hand.userData.assetStamp!==stamp||hero.userData.weapon!==hand)return;
-  hand.clear();
-  hero.userData.bowString=null;hero.userData.crossbowSlider=null;hero.userData.magicFocus=null;
-  const grip=new THREE.Group();
-  const height=name==='sword_2handed'?1.95:name==='staff'?1.85:
-   name==='wand'?.92:name==='dagger'?.74:name==='crossbow_2handed'?1.25:1.48;
+  // Hide only the procedural base art, retaining animated live components and
+  // the original motion rig for true in-world combat telegraphs.
+  const live=new Set([hero.userData.crossbowSlider,hero.userData.magicFocus]);
+  const hideStatic=parent=>parent.traverse(obj=>{
+   if(obj.isMesh&&!live.has(obj))obj.visible=false;
+  });
+  hideStatic(hand);
+  if(name==='dagger')hideStatic(hero.userData.offhand);
+  const holder=new THREE.Group(),height=name==='sword_2handed'?1.95:
+   name==='staff'?1.85:name==='wand'?.92:name==='dagger'?.74:
+   name==='crossbow_2handed'?1.2:1.48;
   const model=sizedModel(template,height);
-  // Most tools point +Y; KayKit crossbows are horizontal and point +Z.
-  // Oakrest's hand uses -Z for weapon direction.
-  model.position.y-=height*.23;
-  grip.add(model);grip.rotation.x=name==='crossbow_2handed'?0:-Math.PI/2;
-  hand.add(grip);hand.userData.assetLoaded=name;
+  model.position.y-=height*.23;holder.add(model);holder.rotation.x=-Math.PI/2;
+  hand.add(holder);hand.userData.assetLoaded=name;
   if(name==='dagger'&&!hero.userData.equipmentShield){
    const other=new THREE.Group(),second=sizedModel(template,.74);
    second.position.y-=.74*.23;other.add(second);other.rotation.x=-Math.PI/2;
