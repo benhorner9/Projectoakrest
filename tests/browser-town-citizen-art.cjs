@@ -43,6 +43,8 @@ let server,browser;const errors=[];
  await page.evaluate(()=>oakrestQA.step(.7));
  await page.waitForFunction(()=>oakrestQA.townCitizenArt().loaded>0,null,{timeout:75000});
  // Low quality must not spend GPU budget on citizen skins.
+ await page.locator('#loadout-button').click();
+ await page.locator('#progression-settings').click();
  await page.locator('#quality').selectOption('low');
  await page.waitForFunction(()=>oakrestQA.townCitizenArt().loaded===0);
  assert.deepEqual(await page.evaluate(()=>oakrestQA.state().data),saveBefore,'cosmetics never change gameplay save');
