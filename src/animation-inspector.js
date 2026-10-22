@@ -89,9 +89,25 @@ export function mountAnimationInspector(){
   skillInput.value=skillInput.options[0]?.value||'';
   select();
  }
+ function updateReadout(){
+  if(!current)return;
+  const wind=current.anticipation.seconds;
+  // Update immediately after a <select> change. A WebGL animation frame can be
+  // late or throttled on Safari/iPad/CI, but the inspector's selected ability
+  // and event explanation must never continue to describe the last weapon.
+  readout.textContent=current.id+' · '+current.motionCue+
+   '\\nTell: '+current.tell+
+   '\\nRelease: '+current.release+
+   '\\nGameplay timing: '+current.eventAt+
+   '\\nOrigin: '+current.hitOrigin+
+   (current.instant?'\\nINSTANT effect — no pre-effect telegraph':'')+
+   '\\nPreview events: attack_start 0.00 · '+current.event+' '+wind.toFixed(2)+
+   ' · recovery_end '+duration().toFixed(2);
+ }
  function select(){
   current=specs.find(s=>s.style===styleInput.value&&s.weaponFamily===familyInput.value&&s.id===skillInput.value);
   if(!current)return;
+  updateReadout();
   equipActor(actor,current.style,current.weaponFamily,'none');
  // Opponent always contrasts the active style for silhouette checks.
  const foeStyle=current.style==='melee'?'magic':'melee';
@@ -138,14 +154,7 @@ export function mountAnimationInspector(){
   originMarker.visible=muzzle.checked&&t>=Math.max(0,wind-.08)&&t<=wind+.22;
   if(reachMesh)reachMesh.visible=hitbox.checked&&t>=wind&&t<wind+.24;
   timeText.textContent=t.toFixed(2)+' s / '+duration().toFixed(2)+' s · '+(t<wind?'anticipation':t<wind+.22?'release/contact':'recovery');
-  readout.textContent=current.id+' · '+current.motionCue+
-   '\nTell: '+current.tell+
-   '\nRelease: '+current.release+
-   '\nGameplay timing: '+current.eventAt+
-   '\nOrigin: '+current.hitOrigin+
-   (current.instant?'\nINSTANT effect — no pre-effect telegraph':'')+
-   '\nPreview events: attack_start 0.00 · '+current.event+' '+wind.toFixed(2)+
-   ' · recovery_end '+duration().toFixed(2);
+
   renderer.render(scene,camera);
  }
  function cleanup(){
