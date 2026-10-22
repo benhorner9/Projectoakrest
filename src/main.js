@@ -1471,3 +1471,7 @@ if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|
  equip:(kind,id,s=style)=>chooseGear(kind,id,s),slot:(index,id)=>{equipSkill(data,style,data.gear[style],index,id);refreshSkills();},
  step(seconds){for(let i=0;i<Math.round(seconds*60);i++){gameTime+=1/60;animate(1/60,gameTime);}},damage(amount){hp=Math.max(1,hp-amount);updateHpUI();}
 };
+// The real-rig animation viewer is explicitly opt-in for local/dev QA only.
+// This import never runs in production and cannot trigger gameplay effects.
+if(window.oakrestQA?.animation && query.has('animation'))
+ import('./animation-inspector.js').then(m=>m.mountAnimationInspector()).catch(err=>console.warn('Animation QA preview unavailable',err));
