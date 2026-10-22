@@ -127,7 +127,26 @@ export function safeCamera(focus,desired){
 export function createTerrain(THREE,scene){
  const geo=new THREE.PlaneGeometry(260,260,208,208);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
  const meadow=new THREE.Color('#6b8956'),forest=new THREE.Color('#466c50'),dirt=new THREE.Color('#b3a080'),stone=new THREE.Color('#879087');
- for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),y=terrainHeight(x,z);p.setY(i,y-.055);const c=meadow.clone().lerp(forest,smooth((-z-15)/50)*.52);const n=(Math.sin(x*1.7+z*.9)*Math.sin(z*.73)+1)*.5;c.multiplyScalar(.92+n*.14);const d=Math.abs(x-roadCentre(z));c.lerp(dirt,1-smooth((d-2.5)/2));if(y>3.5)c.lerp(stone,(y-3.5)*.12);colors.push(c.r,c.g,c.b);}
+ const meadowLight=new THREE.Color('#89a56b'),meadowShade=new THREE.Color('#55784e');
+ for(let i=0;i<p.count;i++){
+  const x=p.getX(i),z=p.getZ(i),y=terrainHeight(x,z);p.setY(i,y-.055);
+  const c=meadow.clone().lerp(forest,smooth((-z-15)/50)*.52);
+  const grain=(Math.sin(x*1.7+z*.9)*Math.sin(z*.73)+1)*.5;
+  c.multiplyScalar(.92+grain*.14);
+  // Layer slower, broad natural meadow colour variations inside the city.
+  // These are vertex tints, not new meshes or overlapping ground decals.
+  const city=smooth((z+18)/11)*smooth((94-z)/11)*smooth((46-Math.abs(x))/10);
+  const meadowNoise=Math.sin(x*.26+Math.sin(z*.18)*1.2)*Math.cos(z*.31-x*.13);
+  const tint=meadowNoise>0?meadowLight:meadowShade;
+  c.lerp(tint,city*(.07+Math.abs(meadowNoise)*.20));
+  // The old painted north-south dirt line was incorrectly visible across
+  // grassland even where no city street existed. The authored paving now
+  // supplies city roads; retain the dust trail on the wilderness approach.
+  const d=Math.abs(x-roadCentre(z));
+  c.lerp(dirt,(1-city)*(1-smooth((d-2.5)/2)));
+  if(y>3.5)c.lerp(stone,(y-3.5)*.12);
+  colors.push(c.r,c.g,c.b);
+ }
  geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));mesh.receiveShadow=true;scene.add(mesh);return mesh;
 }
 /** Raise legacy scenery in place; instanced meshes keep their low draw-call cost. */
