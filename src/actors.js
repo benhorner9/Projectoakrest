@@ -148,8 +148,8 @@ export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0
  if(u.crossbowSlider)u.crossbowSlider.position.z=-.57+.26*wind-.04*release;
  if(u.magicFocus)u.magicFocus.scale.setScalar(1+.13*wind+.08*release);
  const rangedBow=family==='bow'||family==='shortbow';
- u.leftArm.rotation.y=damp(u.leftArm.rotation.y,rangedBow?.30+wind*.28:family==='greatsword'?-.28:0,18,dt);
- u.leftArm.rotation.z=damp(u.leftArm.rotation.z,rangedBow?-.18-wind*.34:family==='greatsword'?.20:-.06,18,dt);
+ u.leftArm.rotation.y=damp(u.leftArm.rotation.y,rangedBow ? 0.30+wind*.28 : family==='greatsword' ? -0.28 : 0,18,dt);
+ u.leftArm.rotation.z=damp(u.leftArm.rotation.z,rangedBow ? -.18-wind*.34 : family==='greatsword' ? .20 : -.06,18,dt);
  u.rig.rotation.y=damp(u.rig.rotation.y,cue.twist,15,dt);
  u.head.rotation.z=damp(u.head.rotation.z,cue.head,12,dt);
  if(!chopping)u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05+cue.lean,16,dt);
