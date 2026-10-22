@@ -79,7 +79,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npx playwright install --with-deps chromium
+      # Ubuntu hosted runners already contain Chromium shared libraries; avoid apt mirror stalls.
+      - run: npx playwright install chromium
       - name: Exercise all rendered combat scenarios with bounded runtime
         run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-combat-reborn.cjs
       - name: Cinematic tribrid body-language and event inspector regression
