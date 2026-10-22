@@ -52,11 +52,15 @@ test('motion layering never accumulates offsets or replaces the player rig and e
  assert.ok(active,'source KayKit joint movement is actually applied');
  restoreKayKitPose(u);
  assert.ok(u.kaykitOffsets.every(q=>q.x===0&&q.y===0&&q.z===0&&q.w===1));
- animateActor(actor,opts);
+ // At zero elapsed time the underlying damped pose is fixed; repeating the
+ // additive overlay must be exactly reversible (the ordinary dt>0 animation
+ // is intentionally allowed to continue smoothing toward its target).
+ const repeat={...opts,dt:0};
+ animateActor(actor,repeat);
  const snapshot=u.rightArm.quaternion.clone();
  restoreKayKitPose(u);
- animateActor(actor,opts);
- assert.ok(Math.abs(snapshot.dot(u.rightArm.quaternion))>.9999,'replaying same frame is stable');
+ animateActor(actor,repeat);
+ assert.ok(Math.abs(snapshot.dot(u.rightArm.quaternion))>.9999,'KayKit layer is stable on an unchanged base frame');
  u.kaykitDisabled=true;
  restoreKayKitPose(u);
  animateActor(actor,opts);
