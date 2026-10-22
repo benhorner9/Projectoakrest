@@ -139,6 +139,14 @@ jobs:
       - run: npx playwright install chromium webkit
       - name: Built dev-path release flow
         run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-release.cjs
+      - name: KayKit player and forest enemy live-model integration
+        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-character-art.cjs
+      - name: KayKit models under simulated WebKit iPad
+        continue-on-error: true
+        run: |
+          mkdir -p qa
+          set -o pipefail
+          OAKREST_BROWSER=webkit timeout 180s node tests/browser-character-art.cjs 2>&1 | tee qa/webkit-character-art.log
       - name: WebKit development-path release flow
         if: ${{ !cancelled() }}
         continue-on-error: true

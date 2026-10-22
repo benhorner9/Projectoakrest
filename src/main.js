@@ -38,6 +38,8 @@ import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
 import {upgradeHeldWeapon,invalidateHeldWeapon} from './model-assets.js';
 import {applyVisibleEquipment} from './character-equipment-art.js';
+import {characterModelForAppearance} from './character-asset-catalog.js';
+import {requestCharacterArt,beforeActorEquipment,afterActorEquipment,mountedArtState} from './character-art-bridge.js';
 import {cloneDropTables,readDropTables} from './drop-tables.js';
 import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 
@@ -61,6 +63,8 @@ try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 catch(err){$('error').hidden=false;throw err;}
 function applyQuality(value){quality=value;renderer.setPixelRatio(Math.min(devicePixelRatio,graphicsProfile(quality).pixelRatio));visualLighting?.setQuality(quality);renderer.shadowMap.enabled=quality!=='low';renderer.setSize(innerWidth,innerHeight);try{localStorage.setItem(oakrestKey('oakrest-quality'),quality);}catch{}}applyQuality(quality);$('quality').value=quality;$('quality').addEventListener('change',e=>applyQuality(e.target.value));$('sound-enabled').addEventListener('change',e=>{audio.setEnabled(e.target.checked);audio.unlock();});
 $('sound-enabled').checked=audio.enabled;
+let enhancedBodies=true;try{enhancedBodies=localStorage.getItem(oakrestKey('oakrest-enhanced-characters'))!=='off';}catch{}
+const showEnhancedBodies=()=>enhancedBodies&&quality!=='low';
 const soundVolume=document.createElement('input');soundVolume.id='combat-volume';soundVolume.type='range';soundVolume.min='0';soundVolume.max='1';soundVolume.step='.05';soundVolume.value=audio.volume;soundVolume.setAttribute('aria-label','Combat sound volume');
 soundVolume.addEventListener('input',()=>{audio.setVolume(soundVolume.value);audio.unlock();});
 $('sound-enabled').parentElement.append(soundVolume);
@@ -141,6 +145,7 @@ try{
  }
 }catch{saveWritable=false;}
 function equipVisual(style,weaponId){
+ beforeActorEquipment(hero);
  invalidateHeldWeapon(hero);
  const practice=data.onboarding?.area==='tutorial';
  const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
@@ -151,6 +156,7 @@ function equipVisual(style,weaponId){
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
  applyVisibleEquipment(hero,protection,data.equipment?.[style],style);
  if(owns)upgradeHeldWeapon(hero,style,weaponId);
+ afterActorEquipment(hero);
 }
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
@@ -428,6 +434,7 @@ function useCharacter(profile,loaded){
  for(const drop of data.groundLoot||[]){makeLootModel(drop);worldLayer.push(lootModels.get(drop.id).group);}
  hero.position.set(0,terrainHeight(0,11),11);
  updateOpeningArea();equipVisual(style,data.gear[style]);refreshSkills();
+ requestCharacterArt(hero,showEnhancedBodies()?characterModelForAppearance(profile):null);
  $('character-name-label').hidden=!profile;$('character-name-label').textContent=profile?.name||'';
  $('begin').textContent=profile?'PLAY AS '+profile.name.toUpperCase():'CONTINUE ORIGINAL ADVENTURE';
  $('quest-text').textContent=data.defeated>=3?'Master all three styles and defeat the bandit on the forest road.':'Explore the Bank, General Store and Forester\'s Lodge. Then follow the protected greenbelt to the monsters in the Greenwood.';
@@ -514,7 +521,10 @@ function updateLoot(dt,t){
 }
 
 function makeEnemy(type,x,z){const g=type==='bandit'?createActor(true):createCreature(type);g.position.set(x,terrainHeight(x,z),z);const d={type,x,z,startX:x,startZ:z,group:g,level:ENEMY_COMBAT[type].level,aggro:false,retreating:false,hp:1,max:1,dead:false,respawn:0,lastAttack:0,attackWindup:0,warning:null,warningMesh:null,charge:null,hitFlashUntil:0,bleedUntil:0,nextBleed:0,slowUntil:0,rootUntil:0,stunUntil:0,swapLockedUntil:0,rot:random()*Math.PI*2};
-d.max={dummy:1200,mossling:57,boar:90,bandit:125}[type];d.hp=d.max;if(type==='bandit')equipActor(g,'melee','sword','leather');
+d.max={dummy:1200,mossling:57,boar:90,bandit:125}[type];d.hp=d.max;if(type==='bandit'){
+  equipActor(g,'melee','sword','leather');
+  if(showEnhancedBodies())requestCharacterArt(g,'skeleton');
+ }
  const plate=new THREE.Group();plate.position.y=type==='dummy'?3.15:type==='mossling'?1.5:2.55;g.add(plate);
  const frame=block(plate,0,0,-.05,1.55,.24,.07,MAT.gold);
  const bg=block(plate,0,0,0,1.40,.14,.06,MAT.black);
@@ -1461,6 +1471,19 @@ const query=new URLSearchParams(location.search);
 if(query.has('characters'))characterUI.show();
 $('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){location.assign(new URL('./characters.html',location.href).href);return;}startGameplay();});
 equipVisual(style,data.gear[style]);refreshSkills();
+const characterArtToggle=$('character-art-toggle');
+characterArtToggle.checked=enhancedBodies;
+function syncCharacterArtPreference(){
+ requestCharacterArt(hero,showEnhancedBodies()?characterModelForAppearance(activeCharacter):null);
+ for(const enemy of enemies)if(enemy.type==='bandit')requestCharacterArt(enemy.group,showEnhancedBodies()?'skeleton':null);
+}
+characterArtToggle.addEventListener('change',()=>{
+ enhancedBodies=characterArtToggle.checked;
+ try{localStorage.setItem(oakrestKey('oakrest-enhanced-characters'),enhancedBodies?'on':'off');}catch{}
+ syncCharacterArtPreference();
+});
+$('quality').addEventListener('change',syncCharacterArtPreference);
+syncCharacterArtPreference();
 if(new URLSearchParams(location.search).has('autostart')&&(activeCharacter||legacySave))startGameplay();
 if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
@@ -1472,7 +1495,8 @@ window.oakrestDiagnostics=()=>({...stats,quality,graphics:visualLighting.metrics
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
  animation:{specs:()=>listAnimationSpecs(),events:()=>animationJournal.latest(),pose:(family,cue,windup=1,release=0)=>abilityMotion(family,cue,windup,release),active:()=>attackAnimation?{...attackAnimation}:null},
- state:()=>({data:structuredClone(data),quickInventory:{open:sideInventoryOpen,items:inventoryEntries(data).length},woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
+ characterArt:()=>({hero:mountedArtState(hero),bandits:enemies.filter(e=>e.type==='bandit').map(e=>mountedArtState(e.group))}),
+  state:()=>({data:structuredClone(data),quickInventory:{open:sideInventoryOpen,items:inventoryEntries(data).length},woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  quickInventory(open){setSideInventoryOpen(open);},woodcut:id=>startWoodcutting(id),learnWoodcutting(){data.professions.woodcuttingLearned=true;if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');save();},
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
  teleport(x,z,angle=0){hero.position.set(x,terrainHeight(x,z),z);yaw=angle;motion={x:0,z:0};expandedTown.update(hero.position);},travel:useTravelScroll,enterCity:enterCityPortal,basic:doBasic,target:(type)=>{const e=activeEnemies().find(m=>m.type===type&&!m.dead);return e?selectCombatTarget(e):false;},toggleCombat,stopCombat,ability:useAbility,dodge,style:setStyle,pickup:pickupNearby,save,

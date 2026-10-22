@@ -5,3 +5,7 @@ dist/
 .env*
 
 qa/
+
+# Generated copies of immutable CC0 models and Three.js runtime modules
+assets/kaykit-character-art/*.glb
+vendor/examples/
