@@ -122,7 +122,7 @@ export function applyEquipmentVariant(g,style,itemId){
  }
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;
@@ -133,8 +133,17 @@ export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0
   const strike=phase<.48?phase/.48:1-(phase-.48)/.52;
   right=-.9+strike*2.7;left=right*.78-.28;elbow=.35+strike*.42;
   u.rig.rotation.x=damp(u.rig.rotation.x,-strike*.13,18,dt);
- }else if(['bow','shortbow','crossbow'].includes(family)){right=1.1+wind*.12-release*.10;left=.95;elbow=.55+wind*.65;}
- else if(['frost','ember'].includes(family)){right=.38+wind*.8+release*.3;left=.35+wind*.45;elbow=.35;}
+ }else if(['bow','shortbow','crossbow'].includes(family)){
+  // In villages, lower raised weapons into a believable relaxed carry.
+  const alert=combat||!!attack;
+  right=(alert?1.1:-.18)+wind*.12-release*.10;
+  left=alert?.95:-.20;elbow=(alert?.55:-.08)+wind*.65;
+ }
+ else if(['frost','ember'].includes(family)){
+  const alert=combat||!!attack;
+  right=(alert?.38:-.13)+wind*.8+release*.3;
+  left=alert?.35:-.12;elbow=alert?.35:-.2;
+ }
  else {right+=wind*1.6+release*.32;elbow=.15+wind*.35;left=family==='greatsword'?right*.8:family==='daggers'?.25-wind*.4+release*.55:left;}
  const cue=chopping?abilityMotion(family,null,0,0):abilityMotion(family,attack?.abilityKind,wind,release,attack?.combo);
  right+=cue.right;left+=cue.left;elbow+=cue.elbow;
@@ -148,8 +157,8 @@ export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0
  if(u.crossbowSlider)u.crossbowSlider.position.z=-.57+.26*wind-.04*release;
  if(u.magicFocus)u.magicFocus.scale.setScalar(1+.13*wind+.08*release);
  const rangedBow=family==='bow'||family==='shortbow';
- u.leftArm.rotation.y=damp(u.leftArm.rotation.y,rangedBow ? 0.30+wind*.28 : family==='greatsword' ? -0.28 : 0,18,dt);
- u.leftArm.rotation.z=damp(u.leftArm.rotation.z,rangedBow ? -.18-wind*.34 : family==='greatsword' ? .20 : -.06,18,dt);
+ u.leftArm.rotation.y=damp(u.leftArm.rotation.y,rangedBow&&(combat||!!attack) ? .30+wind*.28 : family==='greatsword'&&combat ? -.28 : 0,18,dt);
+ u.leftArm.rotation.z=damp(u.leftArm.rotation.z,rangedBow&&(combat||!!attack) ? -.18-wind*.34 : family==='greatsword'&&combat ? .20 : -.06,18,dt);
  u.rig.rotation.y=damp(u.rig.rotation.y,cue.twist,15,dt);
  u.head.rotation.z=damp(u.head.rotation.z,cue.head,12,dt);
  if(!chopping)u.rig.rotation.x=damp(u.rig.rotation.x,dodge*1.05+cue.lean,16,dt);
