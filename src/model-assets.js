@@ -4,28 +4,9 @@
  */
 import * as THREE from 'three';
 
-export const MODEL_NAMES=Object.freeze([
- 'sword_1handed','sword_2handed','dagger','axe_1handed','crossbow_2handed',
- 'staff','wand','quiver','shield_square','arrow'
-]);
+import {MODEL_NAMES,modelNameForItem} from './item-model-registry.js';
+export {MODEL_NAMES,modelNameForItem} from './item-model-registry.js';
 const models=new Set(MODEL_NAMES);
-export const MODEL_ITEMS=Object.freeze({
- 'weapon.melee.sword':'sword_1handed',
- 'weapon.melee.forged_sword':'sword_1handed',
- 'weapon.melee.greatsword':'sword_2handed',
- 'weapon.melee.daggers':'dagger',
- 'weapon.magic.frost':'staff',
- 'weapon.magic.ember':'wand',
- 'weapon.ranged.crossbow':'crossbow_2handed',
- 'slot.recruit-shield':'shield_square',
- 'slot.bronze-arrows':'quiver'
-});
-export function modelNameForItem(itemId){
- if(typeof itemId!=='string')return null;
- if(MODEL_ITEMS[itemId])return MODEL_ITEMS[itemId];
- if(/^weapon\.melee\.[a-z0-9-]+-axe$/.test(itemId))return 'axe_1handed';
- return null;
-}
 const base=new URL('../assets/kaykit-adventurers/',import.meta.url);
 const loaded=new Map();
 const typeMap={5121:Uint8Array,5123:Uint16Array,5125:Uint32Array,5126:Float32Array};
@@ -103,6 +84,7 @@ function sizedModel(template,size){
 }
 /** Asynchronous replacement of the procedural fallback, safe if loot was picked up. */
 export function upgradeGroundItem(root,itemId){
+ if(typeof window==='undefined')return;
  const name=modelNameForItem(itemId);if(!name)return;
  const stamp=Symbol();root.userData.assetStamp=stamp;
  loadKayKit(name).then(template=>{
@@ -120,6 +102,7 @@ export function upgradeGroundItem(root,itemId){
 }
 /** Replace only the weapon graphics, not skill timings, weapon logic or animated joints. */
 export function upgradeHeldWeapon(hero,style,weaponId){
+ if(typeof window==='undefined')return;
  const hand=hero.userData?.weapon;if(!hand)return;
  const stamp=Symbol();hand.userData.assetStamp=stamp;
  const name=modelNameForItem('weapon.'+style+'.'+weaponId);
@@ -143,6 +126,7 @@ export function upgradeHeldWeapon(hero,style,weaponId){
   }
  });
 }
+export const cloneKayKitModel=(template,height)=>sizedModel(template,height);
 /** A different held item invalidates any outstanding async asset request. */
 export function invalidateHeldWeapon(hero){
  const hand=hero?.userData?.weapon;

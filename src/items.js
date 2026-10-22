@@ -3,6 +3,7 @@ import {LOADOUTS,ARMOUR,STYLE_ORDER} from './rules.js';
 import {MATERIAL_DROPS} from './combat-feel.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
 import {TREE_SPECIES,WOODCUTTING_AXES} from './woodcutting.js';
+import {modelNameForItem} from './item-model-registry.js';
 const catalogue=[];
 const add=(id,kind,title,legacy,accent,shape,extra={})=>{
  catalogue.push(Object.freeze({id,kind,title,legacy:Object.freeze({...legacy}),accent,shape,dropAllowed:true,...extra}));
@@ -74,5 +75,8 @@ export function itemIconSvg(itemId){
  return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img"><rect x="2" y="2" width="60" height="60" rx="10" fill="#1a2d31" stroke="${tone}" stroke-width="2"/><circle cx="32" cy="32" r="25" fill="${tone}" opacity=".16"/><g transform="rotate(${angle} 32 32)">${inner}</g><circle cx="${12+seed%7}" cy="13" r="3.3" fill="${tone}"/><text x="50" y="56" font-size="11" font-family="serif" fill="${tone}" text-anchor="middle">${emblem}</text></svg>`;
 }
 export function itemIconUrl(itemId){
- const svg=itemIconSvg(itemId);return svg?'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg):null;
+ const svg=itemIconSvg(itemId);if(!svg)return null;
+ const model=modelNameForItem(itemId);
+ return model?new URL('../assets/kaykit-adventurers/icons/'+model+'.svg',import.meta.url).href:
+  'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 }
