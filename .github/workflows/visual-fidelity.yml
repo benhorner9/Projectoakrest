@@ -33,7 +33,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Install Chromium with bounded OS dependency provisioning
+        run: timeout --signal=TERM --kill-after=10s 8m npx playwright install --with-deps chromium
       - run: mkdir -p qa
       - run: node tests/visual-browser-qa.cjs
       - uses: actions/upload-artifact@v4
