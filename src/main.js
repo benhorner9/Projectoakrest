@@ -36,6 +36,8 @@ import {createOakrestMinimap} from './minimap.js';
 import { MAX_GROUND_LOOT,createMonsterDrops,closestDrop,collectDrop,lootName } from './loot.js';
 import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
+import {upgradeHeldWeapon,invalidateHeldWeapon} from './model-assets.js';
+import {applyVisibleEquipment} from './character-equipment-art.js';
 import {cloneDropTables,readDropTables} from './drop-tables.js';
 import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 
@@ -139,12 +141,16 @@ try{
  }
 }catch{saveWritable=false;}
 function equipVisual(style,weaponId){
+ invalidateHeldWeapon(hero);
  const practice=data.onboarding?.area==='tutorial';
  const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
  equipActor(hero,style,weaponId?.endsWith('-axe')?'woodaxe':slotFamily(style,weaponId),protection);
- if(!practice&&!ownsWeapon(data,style,weaponId)){hero.userData.weapon.clear();hero.userData.offhand.clear();}
+ const owns=practice||ownsWeapon(data,style,weaponId);
+ if(!owns){hero.userData.weapon.clear();hero.userData.offhand.clear();}
  else applyEquipmentVariant(hero,style,weaponId);
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
+ applyVisibleEquipment(hero,protection,data.equipment?.[style],style);
+ if(owns)upgradeHeldWeapon(hero,style,weaponId);
 }
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
@@ -309,7 +315,7 @@ function chooseGear(kind,id,selectedStyle=bookStyle){
 function chooseSlotGear(selectedStyle,slot,id){
  if(selectedStyle===style&&(pendingBasic||pendingAbility||activeStrikes.length)){toast('Finish your attack before changing equipment.');return;}
  if(!equipSlotItem(data,selectedStyle,slot,id))return;
- save();renderBook();
+ save();if(selectedStyle===style)equipVisual(style,data.gear[style]);renderBook();
 }
 function showItemDetail(itemId){
  skillDetail=null;detailPanel.hidden=false;
@@ -454,7 +460,8 @@ function makeLootModel(drop){
 }
 function discardLootModel(id){
  const m=lootModels.get(id);if(!m)return;
- scene.remove(m.group);m.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
+ scene.remove(m.group);m.core.userData.destroyed=true;
+ m.group.traverse(o=>{if(o.isMesh&&!o.userData.sharedKayKitAsset){o.geometry.dispose();o.material.dispose();}});
  lootModels.delete(id);
 }
 for(const drop of data.groundLoot||[])makeLootModel(drop);
@@ -546,9 +553,12 @@ function startWoodcutting(id){
  stopWoodcutting();stopCombat();
  woodcuttingTarget=tree;tree.approaching=true;woodcuttingSwingStart=0;woodcuttingNextChop=0;
  const protection=ownsArmour(data,data.armour[style])?data.armour[style]:'none';
+ invalidateHeldWeapon(hero);
  equipActor(hero,'melee','woodaxe',protection);
  applyEquipmentVariant(hero,'melee',allowed.axe.id);
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
+ applyVisibleEquipment(hero,protection,data.equipment?.[style],style);
+ upgradeHeldWeapon(hero,'melee',allowed.axe.id);
  toast('Cutting '+allowed.tree.name+' · '+allowed.axe.name);
  return true;
 }
