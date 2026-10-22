@@ -33,6 +33,7 @@ export function mountAnimationInspector(){
   <label>Playback <select data-name="speed"></select></label>
   <label><input type="checkbox" data-name="freeze"> Freeze</label>
   <label><input type="checkbox" data-name="moving"> Move</label></div>
+  <label><input type="checkbox" data-name="kaykit" checked> KayKit licensed motion overlay (compare on/off)</label>
   <label>Timeline <input data-name="scrub" type="range" min="0" max="1000" step="1" value="0" style="width:100%"></label>
   <div data-name="time" style="margin-bottom:5px">0.00 s</div>
   <label><input type="checkbox" data-name="hitbox"> Show estimated melee reach</label>
@@ -44,7 +45,7 @@ export function mountAnimationInspector(){
  document.body.append(panel);
  const q=n=>panel.querySelector(`[data-name="${n}"]`);
  const styleInput=q('style'),familyInput=q('family'),skillInput=q('skill'),speedInput=q('speed'),freeze=q('freeze'),moving=q('moving'),scrub=q('scrub'),hitbox=q('hitbox'),muzzle=q('muzzle'),readout=q('readout'),timeText=q('time');
- const canvas=q('canvas'),showOpponent=q('opponent'),showEffects=q('effects');
+ const canvas=q('canvas'),showOpponent=q('opponent'),showEffects=q('effects'),kaykit=q('kaykit');
  for(const s of ['melee','ranged','magic'])option(styleInput,s,s[0].toUpperCase()+s.slice(1));
  for(const speed of SPEEDS)option(speedInput,String(speed),Math.round(speed*100)+'%');
  speedInput.value='1';
@@ -141,10 +142,12 @@ export function mountAnimationInspector(){
   const t=freeze.checked?pausedAt:elapsedAt(when),wind=current.anticipation.seconds;
   if(!freeze.checked)scrub.value=String(Math.round(t/duration()*1000));
   const preview={start:0,impactAt:wind,interval:duration(),abilityKind:current.motionCue};
+  actor.userData.kaykitDisabled=!kaykit.checked;
   animateActor(actor,{dt,t,stride:moving.checked?t*10:0,speed:moving.checked?3.1:0,attack:preview,side:moving.checked ? 0.35 : 0});
   actor.updateMatrixWorld(true);
   opponent.visible=showOpponent.checked;
   if(opponent.visible){
+   opponent.userData.kaykitDisabled=!kaykit.checked;
    animateActor(opponent,{dt,t,stride:0,speed:0,attack:{start:0,impactAt:Math.max(.08,current.anticipation.seconds),interval:duration(),abilityKind:foeStyleCue(current.style)}});
   }
   effectMesh.visible=showEffects.checked&&t>=wind&&t<Math.min(duration(),wind+.24);

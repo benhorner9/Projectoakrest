@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {damp} from './motion.js';
 import {attackPose} from './gameplay-math.js';
 import {abilityMotion} from './animation-language.js';
+import {restoreKayKitPose,applyKayKitPose} from './kaykit-motion.js';
 import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
@@ -122,7 +123,7 @@ export function applyEquipmentVariant(g,style,itemId){
  }
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData,strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData;restoreKayKitPose(u);const strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;
@@ -169,6 +170,7 @@ export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0
  u.rightArm.rotation.z=damp(u.rightArm.rotation.z,chopping?-.2:pose.phase==='idle'?-.1:-wind*.7+release*.5,30,dt);
  u.rightElbow.rotation.x=damp(u.rightElbow.rotation.x,elbow,25,dt);u.leftElbow.rotation.x=damp(u.leftElbow.rotation.x,['bow','shortbow','crossbow'].includes(family)?.6:.25,20,dt);
  u.cape.rotation.x=damp(u.cape.rotation.x,.08+strength*.27+Math.sin(t*5)*.025,6,dt);
+ applyKayKitPose(u,{t,stride,speed,attack,dodge,hit,dead,chopping,combat});
 }
 export function createCreature(type){const g=new THREE.Group(),body=pivot(g,0,0,0),legs=[];g.userData={body,legs};
  if(type==='mossling'){ball(body,'#567e44',0,.62,0,.62,.56,.52);ball(body,'#86a65f',0,.61,-.34,.47,.39,.24);for(const s of [-1,1]){ball(body,'#253a2b',s*.19,.75,-.54,.09,.11,.05);ball(body,'#eef1bd',s*.2,.78,-.58,.025,.03,.02);const foot=pivot(body,s*.38,.23,0);ball(foot,'#495f39',0,0,-.15,.23,.18,.3);legs.push(foot);ball(body,'#647f45',s*.65,.52,0,.19,.27,.2);}for(let i=0;i<7;i++){const leaf=ball(body,i%2?'#7fa458':'#426d48',Math.sin(i*2.4)*.27,1.04+Math.cos(i)*.1,Math.cos(i*2.4)*.20,.13,.34,.08);leaf.rotation.z=Math.sin(i)*.75;}for(const s of [-1,1]){tube(body,'#d7c797',s*.35,1.12,.12,.055,.06,.3);ball(body,'#cd9863',s*.35,1.3,.12,.19,.08,.17);}}
