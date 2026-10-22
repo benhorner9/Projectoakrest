@@ -23,7 +23,12 @@ let browser;
  await scene.locator('[data-name="style"]').selectOption('magic');
  await scene.locator('[data-name="family"]').selectOption('frost');
  await scene.locator('[data-name="skill"]').selectOption('frost:w2');
- await page.waitForTimeout(400);
+ // Selection state and explanatory text must change synchronously, even
+ // when software WebGL throttles/loses a preview frame under CI or Safari.
+ assert.equal(await scene.locator('[data-name="style"]').inputValue(),'magic');
+ assert.equal(await scene.locator('[data-name="family"]').inputValue(),'frost');
+ assert.equal(await scene.locator('[data-name="skill"]').inputValue(),'frost:w2');
+ await page.waitForFunction(()=>document.querySelector('#oakrest-animation-inspector [data-name="readout"]')?.textContent?.includes('frost:w2'),null,{timeout:5000});
  const text=await scene.locator('[data-name="readout"]').textContent();
  assert.match(text,/frost:w2/);assert.match(text,/constraining binding gesture/i);
  await scene.locator('[data-name="speed"]').selectOption('0.25');
