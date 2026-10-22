@@ -1194,7 +1194,7 @@ function animate(dt,t){
  const heading=chopYaw!==null?-chopYaw:lockYaw!==null&&Math.hypot(v,h)<.12?-lockYaw:characterFacingTarget({mode:cameraSettings.mode,lastHeading:visualHeading,cameraYaw:yaw,strikeYaw:activeStrikes.length?activeStrikes[0].yaw:null,velocityX:motion.x,velocityZ:motion.z,combatFacing});
  visualHeading=cameraSettings.mode==='follow'?(gait>.3||combatFacing?heading:visualHeading):dampAngle(visualHeading,heading,19,dt);
  hero.rotation.y=visualHeading;
- animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0});
+ animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0,combat:combatFacing});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const indoor=(data.onboarding?.area||'world')==='world'?expandedTown.interior(hero.position.x,hero.position.z):null;
