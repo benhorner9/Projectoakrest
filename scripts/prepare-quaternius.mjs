@@ -32,13 +32,15 @@ export async function prepareAssets(){
   if(error)throw Error('Cannot fetch verified CC0 model '+item.id+': '+error.message);
   console.log('Quaternius verified',item.id,Math.round(item.size/1024)+' KiB');
  }
- // Keep source glTF geometry and node transforms, but omit GPU-expensive
- // normal/roughness textures. Base-colour maps remain authoritative.
+ // Keep source glTF geometry and node transforms, omit unavailable oversized
+ // source texture atlases, then shade from original material colour where possible.
  for(const item of VILLAGE_MODULE_FILES.filter(x=>x.file.endsWith('.gltf'))){
   const path=targetFor(item),obj=JSON.parse(await readFile(path,'utf8'));
   for(const m of obj.materials||[]){
    delete m.normalTexture;delete m.occlusionTexture;
    if(m.pbrMetallicRoughness)delete m.pbrMetallicRoughness.metallicRoughnessTexture;
+   if(m.pbrMetallicRoughness)delete m.pbrMetallicRoughness.baseColorTexture;
+   delete m.emissiveTexture;
   }
   // Original bytes were verified above before transformation.
   await writeFile(path,JSON.stringify(obj));
