@@ -9,6 +9,9 @@ on:
       - 'src/classic.css'
       - 'scripts/build.mjs'
       - 'tests/classic-presentation.test.js'
+      - 'tests/classic-interactions.test.js'
+      - 'tests/classic-combat.test.js'
+      - 'tests/classic-items.test.js'
       - 'tests/browser-classic.cjs'
       - '.github/workflows/classic-prototype-qa.yml'
   workflow_dispatch:
@@ -31,7 +34,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
-      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js
+      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js tests/classic-items.test.js
       - run: npm run build
       - name: Verify prototype copied and fingerprinted
         run: |
