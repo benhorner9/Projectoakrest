@@ -348,7 +348,31 @@ function moveGame(dt){
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
 function draw(dt){
- moveGame(dt);
+ const movement=moveGame(dt);
+ if(dodgeTravel&&dt>0){
+  const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
+  const moved=slideMove(player,direction.x*slice*12.5,direction.z*slice*12.5);
+  player.x=moved.x;player.z=moved.z;
+  dodgeTravel.remaining-=slice;if(dodgeTravel.remaining<=0)dodgeTravel=null;
+ }
+ const before=combat.getState(),target=before.target;
+ if(target&&movement.kind==='idle'&&!navigation.state().waypoints.length&&
+  !keys.size&&Math.hypot(input.x,input.z)<.12&&before.weapon!=='No equipped weapon'){
+  const dx=target.x-player.x,dz=target.z-player.z,range=
+   before.style==='melee'?2.2:before.style==='magic'?14:20;
+  if(Math.hypot(dx,dz)>range+.5){
+   const d=Math.hypot(dx,dz);
+   navigation.moveTo(player,{x:target.x-dx/d*range,z:target.z-dz/d*range});
+  }
+ }
+ const events=combat.tick(dt,player);
+ combatEvents(events);
+ const state=combat.getState();
+ if(state.style!==style){style=state.style;refreshHud();}
+ combatView.update(state);
+ if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
+ hero.sprite.position.set(player.x,.08,player.z);
+ heroShadow.position.set(player.x,.04,player.z);
  for(const [i,n] of npcActors.entries())
   n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee'});
  if(pointerMark.visible){
