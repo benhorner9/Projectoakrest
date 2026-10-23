@@ -1,3 +1,4 @@
+export {accuracyFor} from './osrs-combat-math.js';
 /** Deterministic, renderer-free combat rules for Oakrest's levelled auto-attacks. */
 export const COMBAT_ACQUIRE_RANGE=30;
 export const COMBAT_LEASH_RANGE=38;
@@ -9,11 +10,6 @@ export function maxHitFor(level,weaponPower,equipmentMultiplier=1) {
  const lv=bounded(level,1,99),power=bounded(weaponPower,0,200),gear=bounded(equipmentMultiplier,.1,3);
  if(power===0)return 0;
  return Math.max(1,Math.floor((3+power*.55+lv*(.15+power*.005))*gear));
-}
-/** PvE accuracy; miss chance remains even for high level fighters. */
-export function accuracyFor(level,enemyLevel,weaponPower,enemyGuard=0){
- const lv=bounded(level,1,99),target=bounded(enemyLevel,1,999),power=bounded(weaponPower,0,200);
- return bounded(.72+(lv-target)*.0038+(power-19)*.0012-bounded(enemyGuard,0,.45),.16,.97);
 }
 /** First roll tests accuracy; only a successful roll consumes a damage roll.
  * RNG injection supports exact boundary tests and statistical simulations. */
