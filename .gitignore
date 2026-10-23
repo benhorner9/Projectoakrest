@@ -5,8 +5,3 @@ dist/
 .env*
 
 qa/
-
-# Curated Quaternius CC0 source binaries, SHA-verified at build time
-assets/quaternius/models/
-assets/quaternius/village/
-vendor/examples/

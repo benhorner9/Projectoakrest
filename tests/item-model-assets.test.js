@@ -33,7 +33,7 @@ test('every registered item has an icon and asset mapping does not alter IDs',()
  assert.equal(modelNameForItem(source.id),'sword_1handed');
  assert.equal(modelNameForItem('weapon.melee.bronze-axe'),'axe_1handed');
  assert.equal(modelNameForItem('material.boar-hide'),null);
- assert.match(itemIconUrl(source.id),/\/assets\/quaternius\/rpg\/Sword\.png$/);
+ assert.match(itemIconUrl(source.id),/\/assets\/kaykit-adventurers\/icons\/sword_1handed\.svg$/);
  assert.ok(itemIconUrl('material.boar-hide').startsWith('data:image/svg+xml'));
 });
 test('visible worn set follows bones, changes with style, and is removed on unequip',()=>{

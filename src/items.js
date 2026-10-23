@@ -4,7 +4,6 @@ import {MATERIAL_DROPS} from './combat-feel.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
 import {TREE_SPECIES,WOODCUTTING_AXES} from './woodcutting.js';
 import {modelNameForItem} from './item-model-registry.js';
-import {rpgIconName} from './quaternius-rpg-catalog.js';
 const catalogue=[];
 const add=(id,kind,title,legacy,accent,shape,extra={})=>{
  catalogue.push(Object.freeze({id,kind,title,legacy:Object.freeze({...legacy}),accent,shape,dropAllowed:true,...extra}));
@@ -78,8 +77,6 @@ export function itemIconSvg(itemId){
 export function itemIconUrl(itemId){
  const svg=itemIconSvg(itemId);if(!svg)return null;
  const model=modelNameForItem(itemId);
- const exactRpg=model&&rpgIconName(model);
- if(exactRpg)return new URL('../assets/quaternius/rpg/'+exactRpg+'.png',import.meta.url).href;
  return model?new URL('../assets/kaykit-adventurers/icons/'+model+'.svg',import.meta.url).href:
   'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 }
