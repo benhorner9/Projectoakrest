@@ -38,11 +38,16 @@ import { itemFromDrop } from './items.js';
 import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
 import {upgradeHeldWeapon,invalidateHeldWeapon} from './model-assets.js';
 import {applyVisibleEquipment} from './character-equipment-art.js';
+import {setQuaterniusMonster,updateQuaterniusMonster,inspectQuaterniusMonster} from './quaternius-monsters.js';
 import {cloneDropTables,readDropTables} from './drop-tables.js';
 import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 
 const $=id=>document.getElementById(id);
 const oakrestKey=key=>storageKey(key,location.pathname);
+const artParams=new URLSearchParams(location.search);
+const newArtDefault=/^\/oakrest-dev(?:\/|$)/.test(location.pathname)&&!artParams.has('qa');
+let newArtEnabled=newArtDefault||artParams.has('quaternius');
+try{const stored=localStorage.getItem(oakrestKey('oakrest-quaternius-models'));if(stored==='on')newArtEnabled=true;else if(stored==='off')newArtEnabled=false;}catch{}
 const devDropEditor=isDropEditorAllowed(location.pathname,location.hostname);
 const dropStorageKey=oakrestKey('oakrest-drop-tables-v1');
 let activeDropTables=devDropEditor?readDropTables(localStorage,dropStorageKey):cloneDropTables();
@@ -111,6 +116,7 @@ for(const spot of OAKREST_GROVES)registerWoodcuttingTree(spot.x,spot.z,.98,'soft
 // Merge static facade/interior materials without merging removable roofs or villagers.
 batchScenery(scene);
 const townLife=createOakrestTownLife(scene);
+const showQuaternius=()=>newArtEnabled&&quality!=='low';
 const visuals=createCombatVisuals(THREE,scene);
 
 function createHero(){return createActor();}
@@ -520,6 +526,7 @@ d.max={dummy:1200,mossling:57,boar:90,bandit:125}[type];d.hp=d.max;if(type==='ba
  const bg=block(plate,0,0,0,1.40,.14,.06,MAT.black);
  const bar=block(plate,0,.01,.06,1.36,.10,.05,mat(type==='mossling'?'#9ddc9b':type==='boar'?'#e9af81':'#f18c7b'));
 d.bar=bar;d.plate=plate;scene.add(g);enemies.push(d);
+ if(showQuaternius())setQuaterniusMonster(d,true);
  const label=document.createElement('span');
  label.className='enemy-world-label';label.addEventListener('pointerdown',event=>{event.preventDefault();event.stopPropagation();selectCombatTarget(d);});label.textContent='Lv '+d.level+' · '+ENEMY_COMBAT[type].name;
  label.hidden=true;d.levelLabel=label;$('enemy-level-layer').append(label);
@@ -1065,6 +1072,7 @@ function updateEnemy(e,dt,t){
  if(e.dead)return;
  e.bar.scale.x=clamp(e.hp/e.max,.001,1);e.bar.position.x=-.68*(1-e.hp/e.max);e.plate.lookAt(camera.position);
  animateCreature(e.group,e.type,t,dt,e.charge?10:e.aggro?2:0,e.warning?e.attackWindup:0,e.hitFlashUntil>t,0);
+ updateQuaterniusMonster(e,dt);
  if(e.type==='dummy')return;
  e.group.position.y=terrainHeight(e.x,e.z);
  // No monster may continue a chase or strike while the hero is protected by town patrols.
@@ -1461,6 +1469,21 @@ const query=new URLSearchParams(location.search);
 if(query.has('characters'))characterUI.show();
 $('begin').addEventListener('click',()=>{if(!activeCharacter&&!legacySave){location.assign(new URL('./characters.html',location.href).href);return;}startGameplay();});
 equipVisual(style,data.gear[style]);refreshSkills();
+const artToggle=$('quaternius-art-toggle');
+artToggle.checked=newArtEnabled;
+function syncQuaterniusArt(){
+ const enabled=showQuaternius();
+ townLife.setArtEnabled(enabled);
+ expandedTown.setArtEnabled(enabled);
+ for(const enemy of enemies)setQuaterniusMonster(enemy,enabled);
+}
+artToggle.addEventListener('change',()=>{
+ newArtEnabled=artToggle.checked;
+ try{localStorage.setItem(oakrestKey('oakrest-quaternius-models'),newArtEnabled?'on':'off');}catch{}
+ syncQuaterniusArt();
+});
+$('quality').addEventListener('change',syncQuaterniusArt);
+syncQuaterniusArt();
 if(new URLSearchParams(location.search).has('autostart')&&(activeCharacter||legacySave))startGameplay();
 if(data.defeated>=3){questCompleted=true;$('quest-text').textContent='Master all three styles and defeat the bandit on the forest road.';}
 let last=performance.now(),lastMetrics=last,frameTimes=[];
@@ -1472,6 +1495,7 @@ window.oakrestDiagnostics=()=>({...stats,quality,graphics:visualLighting.metrics
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
  animation:{specs:()=>listAnimationSpecs(),events:()=>animationJournal.latest(),pose:(family,cue,windup=1,release=0)=>abilityMotion(family,cue,windup,release),active:()=>attackAnimation?{...attackAnimation}:null},
+ quaterniusArt:()=>({enabled:showQuaternius(),town:townLife.artSnapshot(),buildings:expandedTown.artSnapshot(),monsters:enemies.map(e=>({type:e.type,...inspectQuaterniusMonster(e)}))}),
  state:()=>({data:structuredClone(data),quickInventory:{open:sideInventoryOpen,items:inventoryEntries(data).length},woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  quickInventory(open){setSideInventoryOpen(open);},woodcut:id=>startWoodcutting(id),learnWoodcutting(){data.professions.woodcuttingLearned=true;if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');save();},
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
