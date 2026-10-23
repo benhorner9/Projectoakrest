@@ -26,13 +26,20 @@ test('the rig uses real THREE.AnimationClip tracks and changes actual bone quate
  assert.ok(hero.clips.every(c=>c.tracks.every(t=>t.name.endsWith('.quaternion'))),'authored clips animate bones');
  hero.dispose();
 });
-test('rigged weapon sockets remain parented to skeletal hands during switches',()=>{
- const hero=createSkinnedOakrestHero(),hand=hero.bones.get('RightHand');
- assert.equal(hero.equipment.parent,hand);
+test('held weapons attach to the right anatomical hand, including bow and offhand dagger',()=>{
+ const hero=createSkinnedOakrestHero(),right=hero.bones.get('RightHand'),left=hero.bones.get('LeftHand');
+ assert.equal(hero.equipment.parent,right);assert.equal(hero.offhand.parent,left);
  for(const weapon of ['sword','greatsword','dagger','axe','bow','crossbow','staff','wand','none']){
-  hero.equip(weapon);assert.equal(hero.equipment.parent,hand);assert.equal(hero.equipped,weapon);
-  assert.equal(hero.equipment.children.length,1);
+  hero.equip(weapon);assert.equal(hero.equipment.parent,right);assert.equal(hero.offhand.parent,left);
+  assert.equal(hero.equipped,weapon);
+  assert.equal(hero.equipment.children.length,weapon==='bow'||weapon==='none'?0:1);
+  assert.equal(hero.offhand.children.length,['dagger','bow'].includes(weapon)?1:0);
  }
+ hero.equip('dagger');hero.update(.1);
+ const held=hero.offhand.children[0],start=held.getWorldPosition(new THREE.Vector3());
+ hero.bones.get('LeftUpperArm').rotation.x=.6;hero.root.updateMatrixWorld(true);
+ const moved=held.getWorldPosition(new THREE.Vector3());
+ assert.ok(moved.distanceTo(start)>.01,'offhand blade follows skeletal arm, not a detached visual prop');
  assert.throws(()=>hero.equip('bazooka'),/Unknown equipment/);
  hero.dispose();
 });
