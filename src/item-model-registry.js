@@ -1,6 +1,6 @@
 export const MODEL_NAMES=Object.freeze([
  'sword_1handed','sword_2handed','dagger','axe_1handed','crossbow_2handed',
- 'staff','wand','quiver','shield_square','arrow'
+ 'staff','wand','quiver','shield_square','arrow','bow'
 ]);
 export const MODEL_ITEMS=Object.freeze({
  'weapon.melee.sword':'sword_1handed',
