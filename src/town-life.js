@@ -67,8 +67,9 @@ function person(scene,name,role,colour,x,z,staff=false){
     mesh(root,cube,kindHat(role),0,2.42,0,.77,.12,.72);
     mesh(root,cube,kindHat(role),0,2.31,-.14,.56,.14,.40);
   }
+  root.userData.civilianParts=[...root.children];
   scene.add(root);
-  return {root,name,role,torso,arms,legs,x,z,speed:staff?0:1.12,wait:0,stuck:0,legPhase:0};
+  return {root,name,role,torso,arms,legs,x,z,speed:staff?0:1.12,wait:0,stuck:0,legPhase:0,walking:false};
 }
 function kindHat(role){return role==='Banker'?material('#364e65'):role==='Shopkeeper'?material('#76543d'):material('#48694f');}
 export function createOakrestTownLife(scene){
@@ -85,6 +86,19 @@ export function createOakrestTownLife(scene){
     const citizen=person(scene,route.name,route.role,route.colour,start[0],start[1]);
     return {...citizen,route,index:1,forward:true,wait:i*.31,stuck:0};
   });
+  const allCitizens=[...attendants,...standing,...villagers];
+  let citizenArt=null,artRequested=false,artEnabled=false;
+  function setArtEnabled(on){
+    artEnabled=!!on;
+    if(citizenArt)citizenArt.setEnabled(artEnabled);
+    if(artEnabled&&!artRequested){
+      artRequested=true;
+      import('./quaternius-town.js').then(mod=>{
+        citizenArt=mod.createQuaterniusTownArt(allCitizens);
+        citizenArt.setEnabled(artEnabled);
+      }).catch(err=>console.warn('Original civilians retained',err));
+    }
+  }
   function step(dt,time,player,enabled=true){
     // Keep them in world layer; don't animate the village during tutorial/Realm.
     if(!enabled)return;
@@ -93,6 +107,7 @@ export function createOakrestTownLife(scene){
       // Full movement stops when the player is far away, but idle gestures
       // still indicate occupation without requiring daily NPC teleportation.
       if(v.wait>0){
+        v.walking=false;
         v.wait-=dt;
         const settle=Math.max(0,Math.min(1,dt*7));
         for(let j=0;j<2;j++){
@@ -105,6 +120,7 @@ export function createOakrestTownLife(scene){
       let [tx,tz]=v.route.path[v.index];
       const dx=tx-v.x,dz=tz-v.z,length=Math.hypot(dx,dz);
       if(length<.32){
+        v.walking=false;
         if(v.index===v.route.path.length-1)v.forward=false;
         else if(v.index===0)v.forward=true;
         v.index+=v.forward?1:-1;v.wait=.8+(i%3)*.55;v.stuck=0;continue;
@@ -117,6 +133,7 @@ export function createOakrestTownLife(scene){
         // Don't stand permanently at blocked corners if scenery changes.
         v.index=(v.index+1)%v.route.path.length;v.stuck=0;v.wait=.5;
       }
+      v.walking=progress>.005;
       v.x=pos.x;v.z=pos.z;v.root.position.set(v.x,pos.y,v.z);
       v.root.rotation.y=approachHeading(v.root.rotation.y,Math.atan2(-dx,-dz),dt,8);
       v.legPhase+=progress*9;
@@ -138,10 +155,12 @@ export function createOakrestTownLife(scene){
       npc.arms[0].rotation.x=Math.sin(time*.9+i)*.065;
       npc.arms[1].rotation.x=-npc.arms[0].rotation.x;
     }
+    citizenArt?.update(dt,player);
   }
   function nearby(x,z){
     return nearestCitizen(villagers,standing,x,z,2.7);
   }
   return {update:step,nearby,count:villagers.length,staff:attendants.length,ambientStaff:standing.length,
-    snapshot:()=>villagers.map(v=>({name:v.name,x:v.x,z:v.z}))};
+    snapshot:()=>villagers.map(v=>({name:v.name,x:v.x,z:v.z})),
+    setArtEnabled,artSnapshot:()=>citizenArt?.snapshot()||{enabled:artEnabled,loaded:0,max:7,citizens:[]}};
 }
