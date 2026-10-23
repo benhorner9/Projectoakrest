@@ -5,27 +5,13 @@
  */
 import * as THREE from 'three';
 import {WEAPON_PROFILES} from './rig-contract.js';
-const down=new THREE.Vector3(0,-1,0),direction=new THREE.Vector3(),pole=new THREE.Vector3(),joint=new THREE.Vector3(),lowerDirection=new THREE.Vector3(),target=new THREE.Vector3(),q=new THREE.Quaternion(),inv=new THREE.Quaternion();
-const UPPER=.40,LOWER=.34,EPS=1e-5;
+import {solveTwoBone} from './two-bone-constraint.js';
+const direction=new THREE.Vector3(),pole=new THREE.Vector3(),target=new THREE.Vector3();
+const UPPER=.40,LOWER=.34;
 export function solveArm(u,side,goal,orientation){
  const upper=u[side+'Arm'],lower=u[side+'Elbow'],hand=u[side+'Hand'];
- direction.copy(goal).sub(upper.position);
- const requested=direction.length(),distance=Math.min(UPPER+LOWER-EPS,Math.max(Math.abs(UPPER-LOWER)+EPS,requested));
- if(requested<EPS)direction.set(0,-1,0);else direction.divideScalar(requested);
- // Elbows point out and down; project a stable anatomical pole off the reach axis.
- pole.set(side==='left'?-.75:.75,-.65,.25).addScaledVector(direction,-pole.dot(direction));
- if(pole.lengthSq()<EPS)pole.set(0,0,1).addScaledVector(direction,-direction.z);
- pole.normalize();
- const along=(UPPER*UPPER-LOWER*LOWER+distance*distance)/(2*distance);
- const height=Math.sqrt(Math.max(0,UPPER*UPPER-along*along));
- joint.copy(direction).multiplyScalar(along).addScaledVector(pole,height);
- q.setFromUnitVectors(down,lowerDirection.copy(joint).normalize());upper.quaternion.copy(q);
- lowerDirection.copy(direction).multiplyScalar(distance).sub(joint).normalize();
- q.setFromUnitVectors(down,lowerDirection);
- inv.copy(upper.quaternion).invert();lower.quaternion.copy(inv).multiply(q);
- // Final wrist orientation is explicit and independent of elbow bend.
- hand.quaternion.copy(q).invert().multiply(orientation);
- return Math.max(0,requested-distance);
+ pole.set(side==='left'?-.75:.75,-.65,.25);
+ return solveTwoBone(upper,lower,hand,goal,pole,orientation);
 }
 export function constrainWeaponHands(u,pull=0){
  const profile=WEAPON_PROFILES[u.family];if(!profile)return;

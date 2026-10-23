@@ -42,10 +42,10 @@ export function createActor(bandit=false,{foundation=false}={}){
  const leather=foundation?mesh(rig,shapes.chest,'#7a6045',0,1.43,0):ball(rig,'#7a6045',0,1.45,-.20,.36,.36,.11);
  const pauldrons=[];
  function leg(s){
-  const p=pivot(rig,s*.19,1,0),knee=pivot(p,0,-.46,0);
-  if(foundation){mesh(p,shapes.thigh,'#484b41',0,0,0);mesh(knee,shapes.shin,'#45453b',0,0,0);mesh(knee,shapes.shoe,'#3b3831',0,0,0);}
+  const p=pivot(rig,s*.19,1,0),knee=pivot(p,0,-.46,0),ankle=foundation?pivot(knee,0,-.40,0):null;
+  if(foundation){mesh(p,shapes.thigh,'#484b41',0,0,0);mesh(knee,shapes.shin,'#45453b',0,0,0);mesh(ankle,shapes.shoe,'#3b3831',0,.40,0);}
   else {tube(p,'#484b41',0,-.23,0,.145,.12,.46);ball(knee,'#7c7160',0,0,-.02,.14,.15,.14);tube(knee,'#45453b',0,-.19,0,.12,.10,.38);ball(knee,'#3b3831',0,-.38,-.09,.15,.14,.25);}
-  return {p,knee};
+  return {p,knee,ankle};
  }
  function arm(s){
   const p=pivot(rig,s*.43,1.77,0),elbow=pivot(p,0,-.40,0);
@@ -60,8 +60,11 @@ export function createActor(bandit=false,{foundation=false}={}){
  g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,skinMaterial:skin,hairMat,hair,hairBack,hairTail,hairCurls,torso,outfitTrims,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,leftHand:la.hand,rightHand:ra.hand,foundation,owned:[],family:'sword'};
  if(foundation){
   const u=g.userData;u.rigVersion=HUMANOID_RIG_VERSION;u.head.scale.setScalar(.9);
+  u.leftAnkle=ll.ankle;u.rightAnkle=rl.ankle;
+  u.upperBody=pivot(rig,0,0,0);
+  for(const part of [torso,neck,head,cape,chestPlate,leather,la.p,ra.p,...outfitTrims])u.upperBody.add(part);
   u.bodyGeometry=[capeGeo];
-  u.weapon=pivot(rig,.3,1.3,-.3);u.weapon.name='socket.weapon-control';
+  u.weapon=pivot(u.upperBody,.3,1.3,-.3);u.weapon.name='socket.weapon-control';
   u.offhand=pivot(la.hand,0,0,0);u.offhand.name='socket.offhand';
   for(const name of HUMANOID_JOINTS)u[name].name='humanoid.'+name;
   // Candidate silhouette meshes retain the established joint and equipment anchors.
@@ -149,7 +152,7 @@ export function applyEquipmentVariant(g,style,itemId){
  }
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData;if(u.foundation){animateFoundation(u,{dt,t,stride,speed,attack,dodge,side,backwards,dead,hit,chopping,combat});return;}restoreKayKitPose(u);const strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true,groundHeightAt=null}){const u=g.userData;if(u.foundation){animateFoundation(u,{dt,t,stride,speed,attack,dodge,side,backwards,dead,hit,chopping,combat,groundHeightAt});return;}restoreKayKitPose(u);const strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;

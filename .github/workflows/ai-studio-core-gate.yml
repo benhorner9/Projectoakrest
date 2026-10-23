@@ -58,5 +58,28 @@ jobs:
           path: qa/
           if-no-files-found: ignore
 
+  candidate-playtest:
+    name: Candidate character — actual gameplay and save compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install chromium
+      - name: Exercise candidate in real simulation
+        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-foundation-gameplay.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oakrest-candidate-gameplay
+          path: qa/foundation-gameplay/
+          if-no-files-found: ignore
+
 # This *fast* signal does not replace the existing comprehensive Greenwood
 # workflow, iPad Safari signoff, or shared-host dev release verification.

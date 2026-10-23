@@ -15,12 +15,12 @@ let browser;
  for(const family of families){
   await page.selectOption('#family',family);
   const states=await page.evaluate(family=>{
-   const rows=[];for(const state of ['idle','ready','walk','run','basic','hit','death']){
+   const rows=[];for(const state of ['idle','ready','walk','run','backward','left','right','turn','basic','hit','death']){
     oakrestVisualQA.select(family,state);
-    for(const t of [0,.09,.3,.5,.85,1.1]){const r=oakrestVisualQA.sample(t,false);rows.push({family,state,t,gripError:r.gripError,rigErrors:r.rigErrors});}
+    for(const t of [0,.09,.3,.5,.85,1.1]){const r=oakrestVisualQA.sample(t,false);rows.push({family,state,t,gripError:r.gripError,footError:r.footError,rigErrors:r.rigErrors});}
    }return rows;
   },family);
-  for(const result of states){assert.deepEqual(result.rigErrors,[]);assert.ok(result.gripError<.001,`${family}/${result.state}/${result.t}`);results.push(result);}
+  for(const result of states){assert.deepEqual(result.rigErrors,[]);assert.ok(result.gripError<.001,`${family}/${result.state}/${result.t}`);assert.ok(result.footError===undefined||result.footError<.001,'foot reach');results.push(result);}
   await page.evaluate(family=>{oakrestVisualQA.select(family,'basic');oakrestVisualQA.sample(.2);},family);
   await page.screenshot({path:path.join(out,family+'.png')});console.log('Captured '+family);
  }
@@ -28,7 +28,7 @@ let browser;
  const abilityResults=await page.evaluate(specs=>{
   const rows=[];for(const spec of specs){oakrestVisualQA.select(spec.weaponFamily,'basic',spec.id);for(const at of [0,spec.anticipation.seconds*.8,spec.anticipation.seconds,spec.recovery.seconds*.9]){const r=oakrestVisualQA.sample(at,false);rows.push({spec:spec.id,at,gripError:r.gripError});}}return rows;
  },specs);
- for(const result of abilityResults){assert.ok(result.gripError<.001,result.spec);results.push(result);}
+ for(const result of abilityResults){assert.ok(result.gripError<.001,result.spec);assert.ok(result.footError===undefined||result.footError<.001,'foot reach');results.push(result);}
  for(const view of ['ensemble','interior','side','rear']){
   await page.evaluate(view=>{oakrestVisualQA.select('greatsword','ready');oakrestVisualQA.view(view);oakrestVisualQA.sample(.3);},view);
   await page.screenshot({path:path.join(out,view+'.png')});
@@ -42,11 +42,11 @@ let browser;
  await page.evaluate(()=>{oakrestVisualQA.view('ensemble');oakrestVisualQA.resume();});
  await page.waitForTimeout(10000);
  const metrics=await page.evaluate(()=>({runtime:oakrestVisualQA.snapshot(),userAgent:navigator.userAgent,viewport:[innerWidth,innerHeight],memory:performance.memory?{usedJSHeapSize:performance.memory.usedJSHeapSize,totalJSHeapSize:performance.memory.totalJSHeapSize}:null}));
- const frames=metrics.runtime.frames.slice(5).sort((a,b)=>a-b);metrics.meanFrameMs=frames.reduce((a,b)=>a+b,0)/frames.length;metrics.meanFPS=1000/metrics.meanFrameMs;metrics.p95FrameMs=frames[Math.floor(frames.length*.95)];metrics.p99FrameMs=frames[Math.floor(frames.length*.99)];metrics.softwareGPU=true;metrics.physicalIPad=false;
+ Object.assign(metrics,metrics.runtime.frameStatistics);metrics.softwareGPU=true;metrics.physicalIPad=false;
  assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage})),initial,'reference must not mutate gameplay saves');
  assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);
  fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({browser:await browser.version(),cases:results,metrics,errors,assetFailures:failures},null,2));
  console.log(`PASS ${results.length} reference samples, ${specs.length} ability/basic specifications, nine profiles, scene screenshots, swap memory and save isolation`);
- console.log(JSON.stringify({meanFPS:metrics.meanFPS,p95FrameMs:metrics.p95FrameMs,drawCalls:metrics.runtime.drawCalls,triangles:metrics.runtime.triangles}));
+ console.log(JSON.stringify({measurementStatus:metrics.status,sampleCount:metrics.sampleCount,meanFPS:metrics.meanFPS,p95FrameMs:metrics.p95FrameMs,drawCalls:metrics.runtime.drawCalls,triangles:metrics.runtime.triangles}));
  await context.close();
 }catch(e){console.error(e.stack);process.exitCode=1;}finally{await browser?.close();server.kill();}})();

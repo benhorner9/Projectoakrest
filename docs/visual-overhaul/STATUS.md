@@ -2,7 +2,7 @@
 
 Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branch: `ai/animation/82-visual-foundations`. Baseline: `530bed9ee6f810f4e683af174cce33cdf2ef0171`.
 
-**The complete overhaul is not finished, merged or deployed.** This change is a reviewable first foundation within the one production initiative. The live game remains on its existing renderer. No public release was attempted. Do not close #82 on the basis of this PR.
+**The complete overhaul is not finished, merged or deployed.** This change is a reviewable first foundation within the one production initiative. The default game remains on its existing renderer; an explicit development-only playtest flag enables the candidate in the actual game. No public release was attempted. Do not close #82 on the basis of this PR.
 
 ## Completed and technically verified
 
@@ -21,7 +21,9 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 
 - Candidate complete-pose driver and state precedence; hand contact is numeric evidence, not final animation choreography approval.
 - Authored tapered torso, face/hair, sleeves, legs, boots, belt, chest armour, greaves and pauldrons, with unchanged joint anchors. Palms/fingers, complete outfit fitting and human silhouette/motion review still need work.
-- Basic walk/run, idle, ready, reaction, death and work pose presentation; start/stop, turns, strafing, full recovery blending and feet require further work.
+- Candidate ankle joints, shared fixed-length arm/leg constraints, upper-body yaw independent of the pelvis, grounded soles, steady-speed stance cancellation, eased starts/stops, backward/sideways travel and turn steps. Slope-normal soles, toe roll and full human motion approval remain pending.
+- Continuous authoritative action clock, separate bow draw, and contact poses unaffected by smoothing lag. This improves existing cues; it does not complete final per-ability choreography.
+- Opt-in actual-game playtest at `?qa=1&visual-foundation=1` in local/dev only, using collision-resolved travel and optional terrain height. Default renderer and save schema remain unchanged. Real-game candidate integration test is a required separate CI job.
 - Browser reference coverage and evidence are specified in `QA.md`; consult actual reported results, not this inventory of implementation.
 
 ## Known defects / release blockers
@@ -32,9 +34,9 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 | VIS-02 | Live imported held items still use a generic normalized-height offset. | Candidate per-mesh transforms now load in the reference, including corrected crossbow source axis. Finish human handle fitting, reload/focus part animation and every-state visual review before live migration. |
 | VIS-03 | Candidate ability cues do not yet provide fully distinct, final choreography for every mechanic. | Author/review each current ability, especially defence, healing, multi-shot and paired dagger strikes, against real event timing. |
 | VIS-04 | Candidate muzzle is diagnostic; real projectile spawning still uses the live hand offset. | Integrate into actual combat only with obstruction/range/trajectory regression; no purely visual authority. |
-| VIS-05 | No complete foot IK, movement-start/stop or turn-in-place set. | Ground-contact and movement transition work without moving simulation root or changing controls. |
+| VIS-05 | Grounded two-bone feet and movement transitions are implemented, but slope-normal alignment, toe roll, obstacle-aware steps and complete human motion review remain pending. | Review real-game movement on slopes/steps and interruptions; preserve root/collision authority. |
 | VIS-06 | Shields, dual wield/off-hand conflicts, full nine-slot outfits not certified. | Complete compatibility/clip matrix and modular fitting. |
-| VIS-07 | Town, civilians, creatures, gathering and world have not been migrated to the candidate. | Pass character/weapon gate first; preserve all entrances, services, routes, collisions and progression. |
+| VIS-07 | Default player, town, civilians, creatures, gathering and world have not been migrated to the candidate; actual-game player playtesting is explicitly opt-in. | Pass character/weapon gate first; preserve all entrances, services, routes, collisions and progression. |
 | VIS-08 | Performance of the assembled final game on actual iPad is unknown. | All eight representative scenarios, sustained frame-time/memory/input measurements on physical Safari. |
 | VIS-09 | Retained derived KayKit curves lack a reproducible source-binary hash record in this tree. | Capture immutable original provenance/licence records or retire curves after accepted migration. |
 
@@ -52,7 +54,7 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 | 1 Audit / art lock | Audit, standards and reference implemented; art lock pending |
 | 2 Character / rig | Named candidate rig and partial model refinement; final anatomy/art pending |
 | 3 Weapon handling | Procedural contact solver and seven imported source adapters tested; human fitting, shields and natural handling pending |
-| 4 Movement | Candidate states present; complete transitions/feet pending |
+| 4 Movement | Candidate grounded ankles, starts/stops, backward/sideways travel, turn steps and continuous action clock implemented; advanced feet and human acceptance pending |
 | 5 Combat animation | Existing 56 specifications audited; final per-ability choreography/integration pending |
 | 6 Equipment/items | Existing catalogue preserved; seven candidate adapters present; complete new fitting and live integration pending |
 | 7 Town | Existing actual shell/interior reference retained; redesign pending foundation gate |
@@ -68,6 +70,6 @@ Mining, Hunting, Blacksmithing, Inscription and Potioncraft are mentioned as fut
 
 Finish/review the canonical foundation and required regressions. PR targets `dev` only. Never merge with failed/missing critical checks or represent author review as independent approval. Once accepted, pin the exact reviewed merged SHA in `benhorner9/Cellbound` branch `deploy/oakrest-dev-20261020`, workflow `.github/workflows/deploy-oakrest-dev.yml`. Verify `/oakrest-dev/build-meta.json` and assets after upload. Public `/oakrest/` stays separate.
 
-Current observed hosted marker is `e78024717a74fcd47a0b618dd3c9aa4f9c5d4dff` (rollback baseline), not this candidate. A future rollback can revert this foundation commit without save migration; the candidate is opt-in and never writes player data.
+Current observed hosted marker is `530bed9ee6f810f4e683af174cce33cdf2ef0171` (rechecked during this continuation), not this candidate. A future rollback can revert this foundation commit without save migration; the candidate is opt-in and never writes player data.
 
-Local validation summary: 253 unit tests and static build passed; reference browser passed 602 samples. The live-game smoke/old inspector did not pass locally (browser/page closes during initialisation), the first published revision passed those same checks in GitHub core CI. New commits must pass again. See `QA.md` for exact evidence and limitations.
+Local continuation validation: 263 unit/regression tests, source parsing, asset audit and static/cache build passed. Reference browser passed 818 pose samples; all seven retained source meshes passed loading/switching/fallback. Actual-game candidate Chromium closed during initialization locally, as the earlier untouched baseline did; no local candidate gameplay pass is claimed. All six workflows passed the prior `1f8f635` head; consult PR #83 for checks on the latest head. No independent review, physical iPad acceptance, merge or deployment has occurred.

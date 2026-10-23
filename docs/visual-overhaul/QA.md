@@ -74,3 +74,18 @@ First revision CI evidence: [core run 39940405005](https://github.com/benhorner9
 CI infrastructure correction: bank run 39940405072 spent 6m30s downloading system packages, then its eight-minute job limit cancelled the bank walkthrough. The workflow now uses the runner system libraries, as core/Greenwood already do, with bounded Chromium installation and the unchanged full bank scenario. This fixes setup overhead; only a successful rerun establishes the bank check.
 
 Silhouette revision: the same actor factory now uses authored tapered body, face/hair, limbs, belt, boots and fitted chest/leg armour for the candidate. The legacy caller retains its original shapes. Shared chest/pauldron material now matches the fitted leg armour. Staff ready stance was raised from a horizontal hold. The seven-source browser test and full unit suite passed after the principal geometry change; final reference capture covers the subsequent belt/material/stance adjustments. Hands, full outfit compatibility and human motion acceptance remain open.
+
+## Grounding and timing continuation
+
+The candidate now separates upper-body aim from pelvis rotation and uses explicit ankle pivots. New tests exercise stationary ground contact across all 56 specifications, transformed actor roots, constant bone lengths, forward/backward/lateral stance cancellation, starts/stops/turns, equipment interruptions, modest terrain steps and exact weapon contact during normal playback. The old whole-rig bow twist and wind-up/contact discontinuity were corrected. Boot meshes now follow ankles while greaves remain on shins.
+
+Actual results for this continuation:
+
+- Locked installation, source check, **263 unit/regression tests**, 36-file asset audit and 2 build checks passed.
+- Chromium reference passed **818 samples**, all 56 specifications and nine profiles, with save isolation/resource-swap checks. Backward walk, both strafes and turning are now selectable. Rendered bow, greatsword and ensemble captures were inspected by the implementing session; this is not independent human motion approval.
+- All seven actual retained source meshes passed loading, expected-profile selection, stale-request protection and fallback after the joint hierarchy change.
+- A dedicated actual-game test is added for `?qa=1&visual-foundation=1`: movement during style change, retained facing, eight family release clocks, interruption, inventory and save reopening with the baseline renderer. Local Chromium closed during initial QA loading, before assertions; its CI result must be read from PR #83. The earlier untouched-baseline local failure remains relevant context, not a waiver for this new test.
+- The short software-GPU capture had only **one usable interval after five warm-up frames** (783.4 ms). The report now explicitly says `insufficient-samples`, includes sample count/window and emits JSON-safe nulls for empty data. This is **not a usable performance benchmark** or evidence for the iPad target. Old 2.15 FPS diagnostic numbers above belong to the earlier silhouette capture and are not a current performance comparison.
+- Default gameplay, existing regression workflows and public-path exclusion remain required. Review latest-head CI in PR #83; older green runs do not certify this revision.
+
+For real-device review, use the reference first, then an isolated test character on the explicit candidate playtest URL. Do not interpret the flag as a completed migration. Real projectile spawning still follows the existing hand-offset/obstruction logic; canonical muzzle calibration, all ability choreography and shield combinations remain open.

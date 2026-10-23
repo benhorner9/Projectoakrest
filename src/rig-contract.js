@@ -3,7 +3,7 @@
  * No profile may change a gameplay range, attack clock or collision shape.
  */
 export const HUMANOID_RIG_VERSION='oakrest-humanoid-2';
-export const HUMANOID_JOINTS=Object.freeze(['rig','head','leftArm','rightArm','leftElbow','rightElbow','leftHand','rightHand','leftLeg','rightLeg','leftKnee','rightKnee']);
+export const HUMANOID_JOINTS=Object.freeze(['rig','upperBody','head','leftArm','rightArm','leftElbow','rightElbow','leftHand','rightHand','leftLeg','rightLeg','leftKnee','rightKnee','leftAnkle','rightAnkle']);
 export const WEAPON_PROFILES=Object.freeze({
  sword:{style:'melee',primary:'right',grip:[0,0,0],muzzle:[0,0,-1.23]},
  greatsword:{style:'melee',primary:'right',grip:[0,0,0],secondary:[0,0,.18],muzzle:[0,0,-1.65]},
@@ -23,6 +23,6 @@ export function validateHumanoidRig(actor){
  const u=actor?.userData,errors=[];
  for(const name of HUMANOID_JOINTS)if(!u?.[name]?.isObject3D)errors.push('Missing joint '+name);
  for(const name of ['weapon','offhand'])if(!u?.[name]?.isObject3D)errors.push('Missing socket '+name);
- if(u?.foundation&&u.weapon.parent!==u.rig)errors.push('Weapon control must belong to visual rig');
+ if(u?.foundation&&(u.upperBody?.parent!==u.rig||u.weapon.parent!==u.upperBody))errors.push('Weapon control must belong to upper-body visual rig');
  return errors;
 }

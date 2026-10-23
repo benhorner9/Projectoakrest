@@ -50,7 +50,7 @@ Vegetation uses related silhouettes at several scales. Maintain trunks/collision
 
 ## Animation and effects
 
-Author complete bounded poses on the canonical rig. Imported rotations require rest-pose/axis calibration; never increase arbitrary additive weight to compensate for a mismatched skeleton. Movement, attack and interruption priorities are explicit. Civilian pose inputs cannot request combat stances. Upper-body constraints run after body pose; they never move the gameplay root.
+Author complete bounded poses on the canonical rig. Imported rotations require rest-pose/axis calibration; never increase arbitrary additive weight to compensate for a mismatched skeleton. Movement, attack and interruption priorities are explicit. Civilian pose inputs cannot request combat stances. Upper-body constraints run after body pose; they never move the gameplay root. The candidate separates upper-body yaw from the pelvis, solves ankle targets against the ground, and attaches boots to ankles. Foot contact must survive aiming and equipment changes; neither gait nor a visual terrain correction may command movement.
 
 Keep simulation start, release, contact and recovery times authoritative. An instantaneous ability has no invented anticipation delay. Silhouette, direction and timing distinguish defence, restraint, restoration and heavy attacks; colour is supplemental. Limit additive layers and particles. Every effect needs an origin, duration, bound and low-quality equivalent. Sound hooks observe real events and must never trigger duplicate damage.
 

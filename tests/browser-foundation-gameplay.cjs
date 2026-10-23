@@ -1,0 +1,67 @@
+// Opt-in candidate in the actual game. This is integration evidence, not art approval.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('playwright'),{spawn}=require('node:child_process');
+const root=path.resolve(__dirname,'..'),out=path.join(root,'qa','foundation-gameplay');
+const server=spawn('python3',['-m','http.server','5201','--bind','127.0.0.1'],{cwd:root,stdio:'ignore'});
+let browser;
+(async()=>{try{
+ fs.mkdirSync(out,{recursive:true});await new Promise(r=>setTimeout(r,900));
+ browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ const context=await browser.newContext({viewport:{width:1024,height:768},hasTouch:true});
+ const {defaultSave}=await import('../src/rules.js'),data=defaultSave();
+ data.xp={melee:13034431,magic:13034431,ranged:13034431,vitality:13034431};
+ data.inventory.weapons={melee:['sword','greatsword','daggers'],ranged:['bow','shortbow','crossbow'],magic:['frost','ember']};
+ await context.addInitScript(data=>{if(!localStorage.getItem('oakrest-v1'))localStorage.setItem('oakrest-v1',JSON.stringify(data));localStorage.setItem('oakrest-quality','low');},data);
+ const page=await context.newPage(),errors=[],badAssets=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)badAssets.push(r.url());});
+ await page.goto('http://127.0.0.1:5201/?qa=1&visual-foundation=1',{waitUntil:'domcontentloaded',timeout:30000});
+ await page.waitForFunction(()=>window.oakrestQA,null,{timeout:30000});
+ await page.locator('#begin').click();
+ assert.equal(await page.evaluate(()=>oakrestQA.animation.visual().candidate),true);
+ const inventory=await page.evaluate(()=>oakrestQA.state().data.inventory);
+ await page.evaluate(()=>{oakrestQA.teleport(-6,-1);oakrestQA.step(.3);});
+ const before=await page.evaluate(()=>oakrestQA.state());
+ await page.keyboard.down('w');
+ await page.evaluate(()=>{oakrestQA.step(.3);oakrestQA.style('magic');oakrestQA.step(.3);});
+ await page.keyboard.up('w');
+ const moved=await page.evaluate(()=>oakrestQA.state());
+ assert.ok(moved.hero.z<before.hero.z-.5,'switching styles retains movement input');
+ assert.equal(moved.style,'magic');
+ await page.evaluate(()=>oakrestQA.step(1));
+ const stopped=await page.evaluate(()=>oakrestQA.state());await page.evaluate(()=>oakrestQA.step(.4));
+ assert.ok(Math.abs((await page.evaluate(()=>oakrestQA.state())).heroHeading-stopped.heroHeading)<.001,'stop retains facing');
+ const cases=[];
+ for(const [style,family] of [['melee','sword'],['melee','greatsword'],['melee','daggers'],['ranged','bow'],['ranged','shortbow'],['ranged','crossbow'],['magic','frost'],['magic','ember']]){
+  const result=await page.evaluate(({style,family})=>{
+   const qa=oakrestQA;qa.stopCombat();qa.step(2);qa.style(style,true);qa.equip('weapon',family,style);qa.step(.25);
+   qa.basic();const active=qa.animation.active();if(!active)throw Error('Attack did not begin');
+   qa.step(Math.max(0,active.impactAt-qa.state().time-.03));
+   const before=qa.animation.events().filter(e=>e.actionId===active.animationActionId&&e.event==='release').length;
+   qa.step(.08);const events=qa.animation.events().filter(e=>e.actionId===active.animationActionId);
+   const visual=qa.animation.visual();qa.step(active.interval+.2);
+   return {style,family,gear:qa.state().data.gear[style],before,events,visual,after:qa.animation.visual()};
+  },{style,family});
+  assert.equal(result.gear,family);assert.equal(result.visual.family,family);
+  assert.equal(result.before,0,'no release before authoritative impact');
+  assert.equal(result.events.filter(e=>e.event==='release').length,1,'exactly one authoritative release');
+  assert.ok(result.visual.gripError<.001);assert.ok(result.after.gripError<.001);
+  assert.ok(result.after.footError<.001);assert.notEqual(result.after.state,'anticipation');
+  cases.push(result);console.log('Verified in-game candidate '+family);
+ }
+ const interrupted=await page.evaluate(()=>{const q=oakrestQA;q.step(2);q.basic();const a=q.animation.active();q.dodge();q.step(1);return {events:q.animation.events().filter(e=>e.actionId===a.animationActionId),visual:q.animation.visual()};});
+ assert.ok(interrupted.events.some(e=>e.event==='interrupted'));assert.ok(!interrupted.events.some(e=>e.event==='release'));
+ assert.notEqual(interrupted.visual.state,'anticipation');
+ assert.deepEqual(await page.evaluate(()=>oakrestQA.state().data.inventory),inventory,'visual mode does not consume or add inventory');
+ await page.evaluate(()=>oakrestQA.save());
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('oakrest-v1')));
+ assert.ok(!('visualFoundation' in saved),'candidate selection cannot persist in character save');
+ await page.screenshot({path:path.join(out,'candidate-gameplay.png')});
+ await page.goto('http://127.0.0.1:5201/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.oakrestQA,null,{timeout:30000});
+ assert.equal(await page.evaluate(()=>oakrestQA.animation.visual().candidate),false,'default game retains accepted baseline');
+ assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('oakrest-v1'))),saved,'candidate saves reopen with default renderer');
+ assert.deepEqual(errors,[]);assert.deepEqual(badAssets,[]);
+ fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({browser:await browser.version(),physicalIPad:false,cases,interrupted,errors,badAssets},null,2));
+ console.log('PASS candidate real-game movement, style switching, eight family clocks, interruption and save compatibility');
+ await context.close();
+}catch(e){console.error(e.stack);process.exitCode=1;}finally{await browser?.close();server.kill();}})();

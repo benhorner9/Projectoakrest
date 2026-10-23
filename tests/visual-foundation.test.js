@@ -57,8 +57,8 @@ test('state priority, interruption and end-of-action recovery are deterministic'
  const snapshot=a.userData.weapon.position.clone();
  for(let i=0;i<300;i++)animateFoundation(a.userData,{t:4,attack:null,sample:true});
  assert.deepEqual(a.userData.weapon.position,snapshot,'no cumulative offsets');
- assert.equal(a.userData.leftKnee.rotation.x,0,'no crouch at rest');
- assert.equal(a.userData.rightKnee.rotation.x,0);
+ assert.ok(Math.abs(a.userData.leftKnee.rotation.x)<1e-6,'no crouch at rest');
+ assert.ok(Math.abs(a.userData.rightKnee.rotation.x)<1e-6);
 });
 test('bow draw touches string and nocked arrow; wand uses a genuinely shorter shaft',()=>{
  const a=createActor(false,{foundation:true});equipActor(a,'ranged','bow','none');
@@ -73,7 +73,7 @@ test('bow draw touches string and nocked arrow; wand uses a genuinely shorter sh
 });
 test('unarmed reference civilian never inherits combat hand constraints or bent knees',()=>{
  const a=createActor(false,{foundation:true});a.userData.family='civilian';
- for(let t=0;t<20;t+=.1){animateFoundation(a.userData,{t,combat:false});assert.equal(a.userData.animationState,'idle');assert.equal(a.userData.leftKnee.rotation.x,0);assert.equal(a.userData.rightKnee.rotation.x,0);}
+ for(let t=0;t<20;t+=.1){animateFoundation(a.userData,{t,combat:false});assert.equal(a.userData.animationState,'idle');assert.ok(Math.abs(a.userData.leftKnee.rotation.x)<1e-6);assert.ok(Math.abs(a.userData.rightKnee.rotation.x)<1e-6);}
 });
 
 test('retained held-mesh transforms preserve grip origins and weapon forward direction',async()=>{
