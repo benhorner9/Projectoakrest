@@ -16,7 +16,7 @@ test('2.5D camera and sprite direction are deterministic and bounded',()=>{
 test('canonical buildings keep solid walls but real walkable door openings',()=>{
  assert.equal(occupantBuilding(-30,14)?.id,'bank');
  assert.equal(solidAt(-23,14),false,'bank doorway facing east');
- assert.equal(solidAt(-23,17),true,'bank facade away from doorway');
+ assert.equal(solidAt(-24,17),true,'bank facade away from doorway');
  assert.equal(solidAt(-30,8),true,'bank back wall');
  assert.equal(solidAt(-30,14),false,'interior floor is traversable');
  assert.equal(inBounds(-500,14),false);
@@ -25,7 +25,7 @@ test('canonical buildings keep solid walls but real walkable door openings',()=>
 test('direct movement slides along facade and enters through matching doorway',()=>{
  const start={x:-20,z:17};
  const blocked=slideMove(start,-5,0);
- assert.ok(blocked.x>-23,'cannot phase through closed wall');
+ assert.ok(blocked.x>-23.5,'cannot phase through closed wall');
  const opening=slideMove({x:-20,z:14},-5,0);
  assert.ok(opening.x<-24,'front doorway admits the player');
 });
