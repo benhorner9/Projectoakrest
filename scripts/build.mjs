@@ -24,9 +24,7 @@ for(const file of sourceFiles.filter(p=>p.endsWith('.js'))){
  // Import/export relative module specifiers only. Leave import-map 'three'
  // and other bare specifiers untouched.
  const updated=original.replace(/(\b(?:from|import)\s*['"])(\.{1,2}\/[^'"?\s]+\.js)(['"])/g,
-  (all,start,path,end)=>start+path+'?v='+version+end)
-  .replace(/(\bimport\s*\(\s*['"])(\.{1,2}\/[^'"?\s]+\.js)(['"]\s*\))/g,
-   (all,start,path,end)=>start+path+'?v='+version+end);
+  (all,start,path,end)=>start+path+'?v='+version+end);
  writeFileSync(dest,updated);
 }
 for(const html of ['dist/index.html','dist/characters.html']){

@@ -3,7 +3,6 @@ import {damp} from './motion.js';
 import {attackPose} from './gameplay-math.js';
 import {abilityMotion} from './animation-language.js';
 import {restoreKayKitPose,applyKayKitPose} from './kaykit-motion.js';
-import {updateActorArt} from './character-art-bridge.js';
 import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
