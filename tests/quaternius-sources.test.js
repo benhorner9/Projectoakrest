@@ -25,5 +25,5 @@ test('no one in Oakrest town receives combat clothes or weapons',()=>{
  assert.equal(monsterModel('mossling'),'mushnub');
  assert.equal(monsterModel('boar'),null);
  assert.equal(monsterModel('bandit'),null);
- assert.equal(playerOutfit({sex:'female'}),'ranger-male');
+ assert.equal(playerOutfit({sex:'female'}),'ranger-female');
 });
