@@ -4,6 +4,7 @@ Read this file before editing Oakrest, along with `docs/AI_STUDIO_CHARTER.md`, `
 
 ## Product and safety contract
 - Game Director (human) sets product direction and authorises public release. AI contributors are specialist roles, **not continuously running employees** or separate GitHub accounts.
+- **Standing studio polish authority (21 October 2026):** Specialists may proactively implement scoped improvements to graphics, combat cues, animation, audio, village life, UI, accessibility, code quality and performance without waiting for separate approval for every detail. Use issue-scoped PRs, real CI and clear before/after evidence. This permission is **not** approval to rewrite combat identity, level/XP progression, economy or save schema, nor to publish publicly.
 - Three.js, third-person low-poly fantasy, classless Melee/Magic/Ranged progression, and landscape iPad Safari as the priority device. Preserve existing game systems and saves; favour a cohesive, lived-in starter area before speculative endgame scope.
 - Never introduce arbitrary item rarity colours or developer-defined prestige tiers. Do not implement unapproved gameplay features in a quality/refactoring task.
 - Player progression aims for meaningful long-term level-99 mastery. Do not casually change combat XP, Woodcutting XP, equipment requirements, hit rates or resource economy without balance evidence.

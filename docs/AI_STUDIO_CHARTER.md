@@ -21,7 +21,7 @@ Roles are **work queues and prompts**, not provisioned bot accounts. A specialis
 
 ## Delivery workflow
 1. **Discover:** Read this charter, `AGENTS.md`, current dev state and relevant open PRs. Link issue, scope, acceptance criteria, risks and dependencies.
-2. **Design review:** Gameplay/World/UX proposals affecting player experience go to Game Director before implementation. Preserve agreed decisions and distinguish proposals.
+2. **Delegated design authority:** The Game Director has issued standing permission for sensible, low-risk studio polish across graphics, combat readability/feel, animation, audio, world ambience, UI, accessibility, performance and bug fixes. Specialists may implement these changes immediately on scoped task branches without asking for approval per small improvement. **Escalate before implementation** when changing the fundamental combat model, permanent level/XP curves, economy, item prestige, gameplay identity or incompatible saves; public release also still requires explicit approval. Document any creative choice and test its interactions.
 3. **Build isolated:** Branch `ai/<role>/<issue>-topic` from latest `dev`. Avoid working on the same core file in parallel unless interfaces and merge order are agreed.
 4. **Validate:** Check/units/build, affected browser flows, save-key compatibility, three combat styles, iPad-sized screenshots and physical Safari test when appropriate. Attach evidence.
 5. **Review:** QA independently tests; relevant counterpart reviews correctness/readability; coordinator checks cross-system regressions. A review by the same AI login is not independent approval.
