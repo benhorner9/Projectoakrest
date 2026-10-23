@@ -11,6 +11,7 @@ import { basicAttackReady, attackCooldown, projectileTravel, weaponDisplay } fro
 import {abilityAnimationSpec,basicAnimationSpec,listAnimationSpecs,createAnimationEventJournal} from './ability-animation.js';
 import {abilityMotion} from './animation-language.js';
 import {maxHitFor,accuracyFor,rollHit,maxHitForAction,acquireEnemy,targetValid,inAttackRange} from './auto-combat.js';
+import {awardMonsterVictory,combatSourceSnapshot} from './gameplay-core.js';
 import { createOakrestScenery } from './visual-world.js';
 import { createCombatVisuals } from './combat-visuals.js';
 import {createOakrestLighting,graphicsProfile} from './visual-fidelity.js';
@@ -743,7 +744,23 @@ function gearMenu(){bookOpen('equip',true);}
 $('gear-button').addEventListener('click',gearMenu);
 function addRing(pos,color,radius=1.4,duration=.5){if(rings.length>=32)return;const geom=new THREE.RingGeometry(.89,1,24);const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.position.copy(pos);mesh.position.y=terrainHeight(pos.x,pos.z)+.065;scene.add(mesh);rings.push({mesh,radius,duration,time:0});}
 function sparks(pos,color,count=10){count=Math.min(count,Math.max(0,120-projectiles.length));for(let i=0;i<count;i++){const sphere=put(scene,ballGeom.clone(),new THREE.MeshBasicMaterial({color}),pos.x,pos.y,pos.z,.07,.07,.07,false);const a=random()*Math.PI*2;projectiles.push({mesh:sphere,particle:true,velocity:new THREE.Vector3(Math.cos(a)*(2+random()*3),1+random()*4,Math.sin(a)*(2+random()*3)),life:.35+random()*.35,age:0});}}
-function gainXp(type,sourceStyle=style){const val=XP_BY_MOB[type]??0;if(!val)return;const old=levelFromXp(data.xp[sourceStyle]).level;const oldVital=levelFromXp(data.xp.vitality).level;data.xp[sourceStyle]+=val;data.xp.vitality+=Math.floor(val*.55);const newLevel=levelFromXp(data.xp[sourceStyle]).level,newVital=levelFromXp(data.xp.vitality).level;if(newLevel>old){const unlocked=skillCatalogue(sourceStyle,data.gear[sourceStyle]).filter(a=>a.requiredLevel>old&&a.requiredLevel<=newLevel).map(a=>a.name);toast(`<b>${sourceStyle.toUpperCase()} LEVEL ${newLevel}!</b> ${unlocked.length?'New skills: '+unlocked.join(', '):'Check MENU for new unlocks.'}`);}if(newVital>oldVital){hp+=8*(newVital-oldVital);toast(`<b>VITALITY LEVEL ${newVital}!</b> Maximum HP and armour choices increased.`);}data.defeated++;if(data.defeated===3&&!questCompleted){questCompleted=true;toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');$('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';}save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();}
+function gainXp(type,sourceStyle=style){
+ const event=awardMonsterVictory(data,type,sourceStyle);
+ if(!event.awarded)return;
+ if(event.newLevel>event.oldLevel){
+  toast(`<b>${sourceStyle.toUpperCase()} LEVEL ${event.newLevel}!</b> ${event.unlocked.length?'New skills: '+event.unlocked.join(', '):'Check MENU for new unlocks.'}`);
+ }
+ if(event.newVital>event.oldVital){
+  hp+=event.vitalityHealthBonus;
+  toast(`<b>VITALITY LEVEL ${event.newVital}!</b> Maximum HP and armour choices increased.`);
+ }
+ if(event.firstChallengeReached&&!questCompleted){
+  questCompleted=true;
+  toast('<b>FIRST CHALLENGE COMPLETE!</b> Explore, train and try different weapons.');
+  $('quest-text').textContent='Well done! Master all three styles and defeat the bandit on the forest road.';
+ }
+ save();refreshStyles();updateHpUI();if(!progressPanel.hidden)renderBook();
+}
 function hitEnemy(e,damage,ability,source=sourceSnapshot()){
  if(!e||e.dead||e.hp<=0||e.retreating||!activeEnemies().includes(e))return;
  if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}
@@ -769,9 +786,7 @@ function enemyCentre(e){return {x:e.x,y:e.group.position.y+(e.type==='mossling'?
 function enemyRadius(e){return e.type==='mossling'?.6:e.type==='boar'?.8:.65;}
 function clearCombatLine(a,b,r=.05){return segmentWorldHit(a,b,r)===null;}
 function sourceSnapshot(){
- const level=levelFromXp(data.xp[style]).level,weaponBasic=getWeapon().basic;
- const power=outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power;
- return {style,level,power,weaponBasic,maxHit:maxHitFor(level,weaponBasic,power)};
+ return combatSourceSnapshot(data,style,getWeapon());
 }
 function stopCombat(){combatTarget=null;combatPath=null;combatPathGoal=null;$('touch-attack').classList.remove('auto-locked');}
 function selectCombatTarget(enemy){
