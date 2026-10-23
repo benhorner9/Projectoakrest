@@ -53,6 +53,23 @@ let browser;
   assert.match(await page.locator('#classic-dialogue-text').textContent(),/Woodcutting/);
   await page.evaluate(()=>oakrestClassicQA.teleport(0,39));
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().interior),null);
+  // Block 4: battle is real in-session but never modifies the browser's character.
+  await page.evaluate(()=>oakrestClassicQA.teleport(-1,71));
+  await page.evaluate(()=>oakrestClassicQA.switchStyle('melee'));
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.lockMonster('practice')),true);
+  const beforeHit=await page.evaluate(()=>oakrestClassicQA.combatState().monsters.find(m=>m.id==='practice').hp);
+  await page.evaluate(()=>{for(let i=0;i<22;i++)oakrestClassicQA.step(.08);});
+  const afterHit=await page.evaluate(()=>oakrestClassicQA.combatState().monsters.find(m=>m.id==='practice').hp);
+  assert.ok(afterHit<beforeHit,'basic melee attacks actually inflict damage');
+  assert.match(await page.locator('#classic-health-label').textContent(),/HP/);
+  await page.locator('[data-style="magic"]').click();
+  await page.evaluate(()=>{for(let i=0;i<26;i++)oakrestClassicQA.step(.08);});
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.combatState().style),'magic','style switching reaches combat controller');
+  assert.ok(await page.locator('[data-ability="0"]').isVisible(),'weapon ability button remains usable');
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.savedState()),
+   await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.getItem('oakrest-v1'))&&
+    oakrestClassicQA.savedState()&&JSON.parse(oakrestClassicQA.savedState()))),
+   'combat session still snapshots the original persistent save');
   const after=await page.evaluate(()=>localStorage.getItem('oakrest-v1'));
   assert.equal(after,initial.raw,'existing save must never change in visual prototype');
   assert.deepEqual(errors,[],'no uncaught browser exceptions');
