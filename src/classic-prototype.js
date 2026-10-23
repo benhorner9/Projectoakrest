@@ -54,7 +54,7 @@ const heroShadow=makeGroundShadow();
 scene.add(hero.sprite,heroShadow);
 for(const npc of CLASSIC_NPCS){
  const colour=npc.colour;
- const actor=makeClassicActor({style:'melee',coat:colour,skin:'#dbaf8d',hair:npc.role==='guard'?'#4b3029':'#72533c'});
+ const actor=makeClassicActor({style:'melee',coat:colour,skin:'#dbaf8d',hair:npc.role==='guard'?'#4b3029':'#72533c',npc:true});
  const shadow=makeGroundShadow();
  scene.add(actor.sprite,shadow);
  actor.sprite.position.set(npc.x,.08,npc.z);
