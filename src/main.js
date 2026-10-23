@@ -39,6 +39,7 @@ import {makeInventoryIcon,makeWorldItemModel} from './item-visuals.js';
 import {upgradeHeldWeapon,invalidateHeldWeapon} from './model-assets.js';
 import {applyVisibleEquipment} from './character-equipment-art.js';
 import {setQuaterniusMonster,updateQuaterniusMonster,inspectQuaterniusMonster} from './quaternius-monsters.js';
+import {createQuaterniusHeroArt} from './quaternius-hero.js';
 import {cloneDropTables,readDropTables} from './drop-tables.js';
 import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 
@@ -121,6 +122,7 @@ const visuals=createCombatVisuals(THREE,scene);
 
 function createHero(){return createActor();}
 const hero=createHero();hero.position.set(0,terrainHeight(0,11),11);scene.add(hero);
+const heroArt=createQuaterniusHeroArt(hero);
 const minimap=createOakrestMinimap($('minimap-canvas'),$('minimap-area'));
 const oldSaveKey=oakrestKey('oakrest-v1'),rosterKey=oakrestKey('oakrest-characters-v1'),activeKey=oakrestKey('oakrest-active-character');
 const saveKeyFor=id=>oakrestKey('oakrest-character-save-'+id);
@@ -157,6 +159,7 @@ function equipVisual(style,weaponId){
  if(activeCharacter)applyCharacterAppearance(hero,activeCharacter);
  applyVisibleEquipment(hero,protection,data.equipment?.[style],style);
  if(owns)upgradeHeldWeapon(hero,style,weaponId);
+ heroArt.configure(showQuaternius(),activeCharacter,style);
 }
 let style='melee',hp=maxHealth(levelFromXp(data.xp.vitality).level), shieldUntil=0,switchUntil=0,attackUntil=0,dodgeUntil=0,dodgeMovingUntil=0;
 const activeStrikes=[],groundEffects=[];let dodgeStarted=-Infinity;
@@ -1213,6 +1216,7 @@ function animate(dt,t){
  visualHeading=cameraSettings.mode==='follow'?(gait>.3||combatFacing?heading:visualHeading):dampAngle(visualHeading,heading,19,dt);
  hero.rotation.y=visualHeading;
  animateActor(hero,{dt,t,stride,speed:gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:h,backwards:v<0,dead:hp<=0,combat:combatFacing});
+ heroArt.update(dt,{moving:gait>.3,running:gait>3.1,attacking:!!attackAnimation,dead:hp<=0});
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const indoor=(data.onboarding?.area||'world')==='world'?expandedTown.interior(hero.position.x,hero.position.z):null;
@@ -1473,6 +1477,7 @@ const artToggle=$('quaternius-art-toggle');
 artToggle.checked=newArtEnabled;
 function syncQuaterniusArt(){
  const enabled=showQuaternius();
+ heroArt.configure(enabled,activeCharacter,style);
  townLife.setArtEnabled(enabled);
  expandedTown.setArtEnabled(enabled);
  for(const enemy of enemies)setQuaterniusMonster(enemy,enabled);
@@ -1495,7 +1500,7 @@ window.oakrestDiagnostics=()=>({...stats,quality,graphics:visualLighting.metrics
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
  animation:{specs:()=>listAnimationSpecs(),events:()=>animationJournal.latest(),pose:(family,cue,windup=1,release=0)=>abilityMotion(family,cue,windup,release),active:()=>attackAnimation?{...attackAnimation}:null},
- quaterniusArt:()=>({enabled:showQuaternius(),town:townLife.artSnapshot(),buildings:expandedTown.artSnapshot(),monsters:enemies.map(e=>({type:e.type,...inspectQuaterniusMonster(e)}))}),
+ quaterniusArt:()=>({enabled:showQuaternius(),hero:heroArt.snapshot(),town:townLife.artSnapshot(),buildings:expandedTown.artSnapshot(),monsters:enemies.map(e=>({type:e.type,...inspectQuaterniusMonster(e)}))}),
  state:()=>({data:structuredClone(data),quickInventory:{open:sideInventoryOpen,items:inventoryEntries(data).length},woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  quickInventory(open){setSideInventoryOpen(open);},woodcut:id=>startWoodcutting(id),learnWoodcutting(){data.professions.woodcuttingLearned=true;if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');save();},
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
