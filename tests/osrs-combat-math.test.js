@@ -63,7 +63,7 @@ test('miss and damage rolls stay independent; successful damage remains bounded'
 
 test('hit resolution snapshots equipment/style and still checks physical contact',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.match(main,/source\.power\)\}\)/);
+ assert.match(main,/accuracyFor\(source\.level,e\.level,source\.weaponBasic,.*source\.power\)/);
  assert.match(main,/sourceSnapshot\(\)/);
  assert.match(main,/sweptStrikeHit\(/);
  assert.match(main,/segmentWorldHit\(/);
