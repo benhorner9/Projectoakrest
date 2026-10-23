@@ -6,7 +6,9 @@ import {validSave,defaultSave,STYLE_ORDER} from './rules.js';
 import {readCharacters} from './characters.js';
 import {storageKey} from './storage-key.js';
 import {installGameZoomGuard} from './touch-gestures.js';
-import {CLASSIC_CAMERA,CLASSIC_NPCS,clamp,occupantBuilding,presentationSnapshot} from './classic-presentation.js';
+import {CLASSIC_CAMERA,CLASSIC_NPCS,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
+import {createClassicCombat} from './classic-combat.js';
+import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicNavigation} from './classic-navigation.js';
 import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
  nearbyClassicInteraction,classicInteractionCopy} from './classic-interactions.js';
@@ -26,10 +28,11 @@ function readExistingCharacter(){
   return {profile:active||null,save:raw?validSave(JSON.parse(raw)):defaultSave(),existing:!!raw};
  }catch{return {profile:null,save:defaultSave(),existing:false};}
 }
-const existing=readExistingCharacter(),navigation=createClassicNavigation();
+const existing=readExistingCharacter(),navigation=createClassicNavigation(),combat=createClassicCombat({save:existing.save});
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
+let dodgeTravel=null,nextTargetUi=0;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color('#b4c9ad');
 scene.fog=new THREE.Fog('#b4c9ad',75,160);
@@ -45,6 +48,7 @@ try{
 const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
 const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const village=createClassicVillage(scene);
+const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#d9ad87',
  hair:existing.profile?.hairColor||'#493529'});
 const heroShadow=makeGroundShadow();
@@ -75,7 +79,7 @@ function showInteraction(target){
 }
 $('classic-dialogue-close').addEventListener('click',()=>{dialogue.hidden=true;});
 function refreshHud(){
- const view=presentationSnapshot(existing.save,style,player);
+ const view=presentationSnapshot(combat.sandboxSave(),style,player);
  $('classic-name').textContent=existing.profile?.name||'The Wanderer';
  $('classic-combat').textContent=view.combatLevel;
  $('classic-vitality').textContent=view.vitality;
@@ -87,7 +91,12 @@ function refreshHud(){
  }
  hero.update({facing:look,style,worn:view.worn});
 }
-function switchStyle(which){if(STYLE_ORDER.includes(which)){style=which;refreshHud();}}
+function switchStyle(which){
+ if(!combat.styleSwitch(which))return;
+ const current=combat.getState().style;
+ if(current!==style){style=current;refreshHud();}
+ else feedback('Style switch queued until your attack finishes.');
+}
 for(const b of document.querySelectorAll('[data-style]'))
  b.addEventListener('click',()=>switchStyle(b.dataset.style));
 function updateLocation(){
@@ -244,7 +253,7 @@ function moveGame(dt){
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
  hero.update({facing:look,step:update.moved?1+Math.floor(walkClock/.17)%2:0,
-  style,worn:presentationSnapshot(existing.save,style,player).worn});
+  style,worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
  updateLocation();
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
@@ -278,7 +287,7 @@ if(isQa)window.oakrestClassicQA={
   pathLength:navigation.state().waypoints.length,hasSavedProfile:existing.existing,
   npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&
    village.roofs.find(x=>x.id===occupantBuilding(player.x,player.z)?.id)?.roofs.visible===false,
-  combatLevel:presentationSnapshot(existing.save,style,player).combatLevel,
+  combatLevel:presentationSnapshot(combat.sandboxSave(),style,player).combatLevel,
   selected:selectedTarget?.id||null,lastInteraction,status:lastStatus}),
  step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
  selectTarget:id=>chooseInteraction(findClassicInteractable(id)),
@@ -286,5 +295,7 @@ if(isQa)window.oakrestClassicQA={
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
   navigation.stop();selectedTarget=null;draw(0);},
  navigationState:()=>navigation.state(),
+ combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
  savedState:()=>JSON.stringify(existing.save)
 };
