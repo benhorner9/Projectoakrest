@@ -50,7 +50,10 @@ let browser;
    qa.sampleAbility(spec.family,spec.abilityId,
     {start:0,impactAt:spec.anticipation,interval},spec.anticipation);
   },id);
+  const beforePose=await page.evaluate(()=>oakrestRigLabQA.hero.bones.get('RightUpperArm').quaternion.toArray());
   await page.screenshot({path:path.join(out,'ability-'+id.replace(':','-')+'.png')});
+  const afterPose=await page.evaluate(()=>oakrestRigLabQA.hero.bones.get('RightUpperArm').quaternion.toArray());
+  assert.ok(beforePose.every((n,i)=>Math.abs(n-afterPose[i])<.000001),id+' release pose must remain frozen while evidence is captured');
  }
  for(const [name,weapon] of [['Walk','none'],['SwordSlash','sword'],['GreatswordStrike','greatsword'],['DaggerCombo','dagger'],['BowDraw','bow'],['CrossbowFire','crossbow'],['StaffCast','staff'],['WandCast','wand'],['Dodge','none'],['Death','none']]){
   await page.selectOption('#clip',name);await page.selectOption('#weapon',weapon);
