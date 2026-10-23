@@ -41,6 +41,9 @@ import {applyVisibleEquipment} from './character-equipment-art.js';
 import {cloneDropTables,readDropTables} from './drop-tables.js';
 import {isDropEditorAllowed,setupDropEditor} from './drop-editor.js';
 import {visualPreviewEnabled} from './visual-preview.js';
+import {skeletalPreviewEnabled} from './skeletal-preview.js';
+import {createSkinnedOakrestHero} from './skeletal-character.js';
+import {createSkeletalMotionController} from './skeletal-motion-controller.js';
 
 const $=id=>document.getElementById(id);
 const oakrestKey=key=>storageKey(key,location.pathname);
@@ -114,9 +117,15 @@ batchScenery(scene);
 const townLife=createOakrestTownLife(scene);
 const visuals=createCombatVisuals(THREE,scene);
 
-const candidateVisuals=visualPreviewEnabled(location);
+const skeletalPreview=skeletalPreviewEnabled(location);
+const candidateVisuals=visualPreviewEnabled(location)&&!skeletalPreview;
 function createHero(){if(candidateVisuals)return createActor(false,{foundation:true});return createActor();}
 const hero=createHero();hero.position.set(0,terrainHeight(0,11),11);scene.add(hero);
+// Development-only alternative rendering. The legacy game actor continues to
+// own collision, equipment, health and the actual combat event timeline.
+const skinnedHero=skeletalPreview?createSkinnedOakrestHero():null;
+const skinnedController=skinnedHero?createSkeletalMotionController(skinnedHero):null;
+if(skinnedHero){hero.userData.rig.visible=false;hero.add(skinnedHero.root);}
 function candidateGroundHeight(x,z){
  if((data.onboarding?.area||'world')!=='world')return 0;
  const c=Math.cos(hero.rotation.y),s=Math.sin(hero.rotation.y);
@@ -1216,9 +1225,21 @@ function animate(dt,t){
  hero.rotation.y=visualHeading;
  const dx=hero.position.x-visualStartX,dz=hero.position.z-visualStartZ,travel=Math.hypot(dx,dz);
  const c=Math.cos(visualHeading),s=Math.sin(visualHeading);
- const visualSide=candidateVisuals&&travel>1e-6?-(dx*c-dz*s)/travel:h;
- const visualBackwards=candidateVisuals&&travel>1e-6?dx*s+dz*c>0:v<0;
+ const visualSide=(candidateVisuals||skeletalPreview)&&travel>1e-6?-(dx*c-dz*s)/travel:h;
+ const visualBackwards=(candidateVisuals||skeletalPreview)&&travel>1e-6?dx*s+dz*c>0:v<0;
  animateActor(hero,{dt,t,stride,speed:candidateVisuals?(dt?travel/dt:0):gait,hit:t-lastHurt<.16,attack:attackAnimation,chopping:woodcuttingTarget&&!woodcuttingTarget.approaching?{start:woodcuttingSwingStart,period:WOODCUTTING_SWING_SECONDS}:null,dodge:dodgeTravel?Math.sin(Math.PI*Math.min(1,(t-dodgeTravel.start)/.32)):0,side:visualSide,backwards:visualBackwards,dead:hp<=0,combat:combatFacing,groundHeightAt:candidateVisuals?candidateGroundHeight:null});
+ if(skinnedController){
+  const family=slotFamily(style,data.gear[style]),available=['sword','greatsword','daggers','bow','shortbow','crossbow','frost','ember'].includes(family)?family:'sword';
+  if(woodcuttingTarget){
+   if(skinnedHero.equipped!=='axe')skinnedHero.equip('axe');
+  }else skinnedController.equipFamily(available);
+  const action=attackAnimation&&t>=attackAnimation.start&&t<attackAnimation.start+attackAnimation.interval?attackAnimation:null;
+  skinnedController.tick({t,dt,family:available,
+   abilityId:action?.abilityId?.split(':').at(-1)||'basic',
+   attack:action,dead:hp<=0,hit:t-lastHurt<.16,
+   dodge:!!dodgeTravel,working:!!woodcuttingTarget&&!woodcuttingTarget.approaching,
+   speed:dt?travel/dt:0,moving:travel>.001,side:visualSide,backwards:visualBackwards,combat:combatFacing});
+ }
  const look=hero.position.clone().add(new THREE.Vector3(0,1.65,0));
  const orbit=cameraOrbitVector(yaw,pitch,cameraSettings.zoom,cameraSettings.height);
  const indoor=(data.onboarding?.area||'world')==='world'?expandedTown.interior(hero.position.x,hero.position.z):null;
@@ -1486,7 +1507,7 @@ window.oakrestDiagnostics=()=>({...stats,quality,graphics:visualLighting.metrics
 // Local-only QA uses isolated browser contexts and the real simulation/actions.
 if((['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname))&&new URLSearchParams(location.search).has('qa'))window.oakrestQA={
  animation:{specs:()=>listAnimationSpecs(),events:()=>animationJournal.latest(),pose:(family,cue,windup=1,release=0)=>abilityMotion(family,cue,windup,release),active:()=>attackAnimation?{...attackAnimation}:null,
-  visual:()=>({candidate:candidateVisuals,rigVersion:hero.userData.rigVersion||null,family:hero.userData.family,state:hero.userData.animationState||null,locomotion:hero.userData.locomotion?.stage||null,gripError:hero.userData.gripError??null,footError:hero.userData.footError??null,reaction:hero.userData.reaction?{...hero.userData.reaction}:null,bodyGroundCorrection:hero.userData.bodyGroundCorrection??null,assetLoaded:hero.userData.weapon.userData.assetLoaded||null})},
+  visual:()=>({skeletal:!!skinnedHero,skeletalBones:skinnedHero?.skeleton.bones.length||0,skeletalState:skinnedController?.state||null,candidate:candidateVisuals,rigVersion:hero.userData.rigVersion||null,family:hero.userData.family,state:hero.userData.animationState||null,locomotion:hero.userData.locomotion?.stage||null,gripError:hero.userData.gripError??null,footError:hero.userData.footError??null,reaction:hero.userData.reaction?{...hero.userData.reaction}:null,bodyGroundCorrection:hero.userData.bodyGroundCorrection??null,assetLoaded:hero.userData.weapon.userData.assetLoaded||null})},
  state:()=>({data:structuredClone(data),quickInventory:{open:sideInventoryOpen,items:inventoryEntries(data).length},woodcutting:{active:woodcuttingTarget?.id||null,trees:woodcuttingTrees.map(tree=>({id:tree.id,species:tree.species,logs:tree.state.logs,respawnAt:tree.state.respawnAt,visible:tree.group.visible}))},style,hp,combatTarget:combatTarget?.type||null,autoCombat:!!combatTarget,maxHit:maxHitFor(levelFromXp(data.xp[style]).level,getWeapon().basic,outgoingMultiplier(data.armour[style],style)*equipmentModifiers(data,style).power),city:{districts:expandedTown.districts,landmark:expandedTown.landmark,ambientCount:expandedTown.ambientCount},heroHeading:hero.rotation.y,cameraPosition:{x:camera.position.x,y:camera.position.y,z:camera.position.z},town:{buildings:expandedTown.buildings,staff:townLife.staff,villagers:townLife.snapshot(),inside:expandedTown.inside(hero.position.x,hero.position.z),interiorCameraBlend},cameraSettings:{...cameraSettings},gamepadConnected:!!padState,yaw,pitch,area:data.onboarding?.area||'world',hero:{x:hero.position.x,y:hero.position.y,z:hero.position.z},yaw,shieldUntil,dodgeUntil,cooldowns:Object.fromEntries(cooldowns),pendingBasic:!!pendingBasic,pendingAbility:!!pendingAbility,queuedAbility:queuedAbility?.index??null,attackUntil,time:now(),enemies:enemies.map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,dead:e.dead,retreating:e.retreating,aggro:e.aggro,warning:!!e.warning,aiState:e.aiState||'idle',rootUntil:e.rootUntil,stunUntil:e.stunUntil,startX:e.startX,startZ:e.startZ})),projectiles:projectiles.filter(p=>!p.particle).length,activeStrikes:activeStrikes.length,effects:projectiles.length+rings.length+visuals.count}),
  quickInventory(open){setSideInventoryOpen(open);},woodcut:id=>startWoodcutting(id),learnWoodcutting(){data.professions.woodcuttingLearned=true;if(!data.inventory.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');save();},
  aim(x,y,z){const dx=x-hero.position.x,dz=z-hero.position.z;yaw=Math.atan2(dx,-dz);const distance=Math.hypot(dx,dz);let lo=-.45,hi=.85;for(let i=0;i<30;i++){const p=(lo+hi)/2,orbit=cameraOrbitVector(yaw,p,cameraSettings.zoom,cameraSettings.height),cameraY=hero.position.y+1.65+orbit.y,focusY=hero.position.y+1.65-p*4,atY=cameraY+(focusY-cameraY)*(distance+Math.hypot(orbit.x,orbit.z))/(2.8+Math.hypot(orbit.x,orbit.z));if(atY>y)lo=p;else hi=p;}pitch=(lo+hi)/2;},
