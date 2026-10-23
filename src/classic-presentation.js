@@ -4,15 +4,19 @@
 import {OAKREST_BUILDINGS,OAKREST_WELL,OAKREST_PATHS,localBuildingPosition} from './town-layout.js';
 import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './rules.js';
 import {EQUIPMENT_SLOTS} from './equipment-slots.js';
+import {OAKREST_SERVICES} from './town-services.js';
 
 export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:27,offsetZ:35,viewHeight:32,minZoom:.78,maxZoom:1.48});
 export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
 export const CLASSIC_NPCS=Object.freeze([
- {id:'banker',name:'Banker',x:-26,z:14,role:'bank',colour:'#5b8190',message:'Your belongings are safe in Oakrest Bank. Banking transactions arrive in a later block.'},
- {id:'shopkeeper',name:'Shopkeeper',x:26,z:14,role:'shop',colour:'#ad8259',message:'Welcome to the General Store. Melee, Magic and Ranged starter equipment is stocked in the existing game.'},
- {id:'forester',name:'Forester',x:-25,z:46,role:'gathering',colour:'#7d995d',message:'The northern groves teach Woodcutting. Your existing skill progress is preserved.'},
- {id:'guard',name:'Village Guard',x:5,z:48,role:'guard',colour:'#a8695d',message:'The town is safe. Mosslings, boars and bandits wait beyond the greenbelt.'},
- {id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',message:'Oakrest is changing, but the same adventures are waiting.'}
+ ...OAKREST_SERVICES.map(s=>Object.freeze({
+  id:s.id==='store'?'shopkeeper':s.id==='forester'?'forester':s.id==='trade-house'?'trader':'banker',
+  name:s.attendant,x:s.npcX,z:s.npcZ,role:s.kind,
+  colour:s.kind==='bank'?'#5b8190':s.kind==='store'?'#ad8259':s.kind==='skill'?'#7d995d':'#8f799c',
+  targetId:'service:'+s.id
+ })),
+ Object.freeze({id:'guard',name:'Village Guard',x:5,z:48,role:'guard',colour:'#a8695d',targetId:'citizen:guard'}),
+ Object.freeze({id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',targetId:'citizen:villager'})
 ]);
 export const CLASSIC_TREES=Object.freeze(Array.from({length:70},(_,i)=>{
  const column=i%14,row=Math.floor(i/14);
