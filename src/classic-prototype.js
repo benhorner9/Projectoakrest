@@ -222,6 +222,71 @@ function releaseJoy(e){
  if(e.pointerId===joystickId){joystickId=null;input.x=0;input.z=0;stick.style.transform='';}
 }
 joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
+function toggleAttack(){
+ const state=combat.getState();
+ if(state.targetId){combat.stopTarget();navigation.stop();feedback('Combat target released.');return;}
+ const enemy=state.monsters.filter(m=>!m.dead&&!m.retreating&&m.hp>0)
+  .sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z))
+  .find(m=>Math.hypot(m.x-player.x,m.z-player.z)<29);
+ if(enemy)chooseEnemy(enemy.id);
+ else feedback('Tap a monster north of the village to lock it.');
+}
+function useCombatAbility(index){
+ const ability=combat.getState().abilities[index];
+ if(!ability){feedback('Ability slot locked or empty.');return;}
+ if(!combat.queueAbility(index))feedback('Ability unavailable or cooling down.');
+ else feedback(ability.name+' activated.');
+}
+function triggerDodge(){
+ if(!combat.dodge())return;
+ const keysDir=axesFromKeys(),length=Math.hypot(keysDir.x,keysDir.z);
+ dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
+ navigation.stop();feedback('Dodged!');
+}
+$('classic-attack').addEventListener('click',toggleAttack);
+$('classic-dodge').addEventListener('click',triggerDodge);
+for(const b of document.querySelectorAll('[data-ability]'))
+ b.addEventListener('click',()=>useCombatAbility(Number(b.dataset.ability)));
+function combatEvents(events){
+ for(const event of events){
+  if(event.type==='style'){style=event.style;refreshHud();}
+  else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
+  else if(event.type==='miss')feedback('Miss');
+  else if(event.type==='defeated')feedback(event.name+' defeated · temporary XP');
+  else if(event.type==='xp'){
+   refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
+  }else if(event.type==='warning')feedback('Enemy attack incoming — MOVE or DODGE!');
+  else if(event.type==='hurt')feedback('You took '+event.damage+' damage');
+  else if(event.type==='dead'){
+   navigation.stop();dodgeTravel=null;feedback('Defeated — respawning in Oakrest');
+  }else if(event.type==='revive'){
+   player.x=0;player.z=39;navigation.stop();feedback('Respawned in Oakrest');
+  }else if(event.type==='heal')feedback('Healed '+event.amount+' HP');
+  else if(event.type==='dash'){
+   const moved=slideMove(player,look.x*event.distance,look.z*event.distance);
+   player.x=moved.x;player.z=moved.z;
+  }
+ }
+}
+function updateCombatUi(snapshot){
+ $('classic-health-label').textContent=snapshot.hp+' / '+snapshot.maxHp+' HP';
+ $('classic-health-fill').style.width=(100*snapshot.hp/Math.max(1,snapshot.maxHp))+'%';
+ const target=snapshot.target;
+ $('classic-target-name').textContent=target?target.name:'No monster selected';
+ $('classic-target-level').textContent=target?'Lv '+target.level:'';
+ $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
+ const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
+ attack.textContent=target?'STOP · J':'ATTACK · J';
+ for(const b of document.querySelectorAll('[data-ability]')){
+  const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
+  const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
+  b.disabled=!ability||snapshot.hp<=0||seconds>0;
+  b.classList.toggle('on-cooldown',seconds>0);
+  b.textContent='QERF'[index]+' · '+(ability?.name||'Locked')+
+   (seconds>0?' '+seconds.toFixed(1)+'s':'');
+ }
+ $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
+}
 function interactNearby(){
  const candidate=nearbyClassicInteraction(player);
  if(candidate){navigation.stop();selectedTarget=null;showInteraction(candidate);}
@@ -301,7 +366,7 @@ function tick(time){
  if(document.hidden){last=time;return;}
  const dt=clamp((time-last)/1000,0,.06);last=time;draw(dt);
 }
-feedback(lastStatus);refreshHud();updateLocation();
+feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
 camera.position.set(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
 camera.lookAt(player.x,0,player.z);
 requestAnimationFrame(tick);
