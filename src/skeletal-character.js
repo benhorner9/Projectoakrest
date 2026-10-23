@@ -218,7 +218,7 @@ export function buildOakrestClips(){
  return clips;
 }
 function lowPoly(material,geometry,position,rotation){
- const mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:material,roughness:.72,metalness:material===palette.steel?.45:0,flatShading:true}));
+ const mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:material,roughness:.72,metalness:(material===palette.steel?.45:0),flatShading:true}));
  mesh.position.set(...position);
  if(rotation)mesh.rotation.set(...rotation);
  mesh.castShadow=true;return mesh;
@@ -286,7 +286,8 @@ export function createSkinnedOakrestHero(){
  }
  function equip(type){
   if(!['none','sword','greatsword','dagger','axe','bow','crossbow','staff','wand'].includes(type))throw Error('Unknown equipment '+type);
-  equipment.clear();equipment.add(makeRigWeapon(type));
+  for(const child of [...equipment.children]){child.traverse(obj=>{obj.geometry?.dispose();obj.material?.dispose();});equipment.remove(child);}
+  equipment.add(makeRigWeapon(type));
   weapon=type;return equipment;
  }
  play('Idle',0);
