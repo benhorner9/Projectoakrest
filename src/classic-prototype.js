@@ -190,7 +190,7 @@ function moveGame(dt){
 }
 function draw(dt){
  moveGame(dt);
- for(const [i,n] of npcActors){
+ for(const [i,n] of npcActors.entries()){
   n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee'});
  }
  const follow=.14;const target=new THREE.Vector3(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
@@ -212,8 +212,8 @@ const isQa=new URLSearchParams(location.search).has('qa')&&
  (['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname));
 if(isQa)window.oakrestClassicQA={
  state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
-  pathLength:path.length,hasSavedProfile:existing.existing,npcCount:npcActors.length,
+  pathLength:path.length,hasSavedProfile:existing.existing,npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&village.roofs.find(x=>x.id===occupantBuilding(player.x,player.z)?.id)?.roofs.visible===false,
   combatLevel:presentationSnapshot(existing.save,style,player).combatLevel}),
- step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
+ step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),\n teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;path=[];targetNpc=null;draw(0);},switchStyle,
  savedState:()=>JSON.stringify(existing.save)
 };
