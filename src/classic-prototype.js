@@ -1,0 +1,419 @@
+/** Oakrest Classic Block 3 — input shell around renderer-free navigation.
+ * Retains the original character save and all gameplay rules untouched.
+ */
+import * as THREE from 'three';
+import {validSave,defaultSave,STYLE_ORDER} from './rules.js';
+import {readCharacters} from './characters.js';
+import {storageKey} from './storage-key.js';
+import {installGameZoomGuard} from './touch-gestures.js';
+import {CLASSIC_CAMERA,CLASSIC_NPCS,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
+import {createClassicCombat} from './classic-combat.js';
+import {createClassicCombatView} from './classic-combat-view.js';
+import {createClassicNavigation} from './classic-navigation.js';
+import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
+ nearbyClassicInteraction,classicInteractionCopy} from './classic-interactions.js';
+import {createClassicVillage} from './classic-village.js';
+import {makeClassicActor,makeGroundShadow} from './classic-sprites.js';
+
+const $=id=>document.getElementById(id);
+const root=$('classic-game'),keys=new Set();
+installGameZoomGuard(document);
+function readExistingCharacter(){
+ const key=k=>storageKey(k,location.pathname);
+ try{
+  const roster=readCharacters(localStorage,key('oakrest-characters-v1'));
+  const active=roster.find(x=>x.id===localStorage.getItem(key('oakrest-active-character')));
+  const raw=active?localStorage.getItem(key('oakrest-character-save-'+active.id)):
+   localStorage.getItem(key('oakrest-v1'));
+  return {profile:active||null,save:raw?validSave(JSON.parse(raw)):defaultSave(),existing:!!raw};
+ }catch{return {profile:null,save:defaultSave(),existing:false};}
+}
+const existing=readExistingCharacter(),navigation=createClassicNavigation(),combat=createClassicCombat({save:existing.save});
+const player={x:0,z:39},input={x:0,z:0},npcActors=[];
+let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
+let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
+let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#b4c9ad');
+scene.fog=new THREE.Fog('#b4c9ad',75,160);
+scene.add(new THREE.HemisphereLight('#fff1d4','#657f68',2.1));
+const sun=new THREE.DirectionalLight('#ffedc8',2.2);sun.position.set(-27,55,36);scene.add(sun);
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ root.append(renderer.domElement);
+}catch(err){$('classic-error').hidden=false;throw err;}
+const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
+const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+const village=createClassicVillage(scene);
+const combatView=createClassicCombatView(scene,combat.getState().monsters);
+const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#d9ad87',
+ hair:existing.profile?.hairColor||'#493529'});
+const heroShadow=makeGroundShadow();
+scene.add(hero.sprite,heroShadow);
+for(const npc of CLASSIC_NPCS){
+ const actor=makeClassicActor({style:'melee',coat:npc.colour,skin:'#dbaf8d',
+  hair:npc.role==='guard'?'#4b3029':'#72533c',npc:true,armed:npc.role==='guard'});
+ const shadow=makeGroundShadow();
+ scene.add(actor.sprite,shadow);
+ actor.sprite.position.set(npc.x,.08,npc.z);
+ shadow.position.set(npc.x,.04,npc.z);
+ npcActors.push({...npc,actor,shadow});
+}
+const pointerMark=new THREE.Mesh(new THREE.RingGeometry(.54,.66,24),
+ new THREE.MeshBasicMaterial({color:'#e6d29b',side:THREE.DoubleSide,transparent:true,opacity:.82,depthWrite:false}));
+pointerMark.rotation.x=-Math.PI/2;pointerMark.position.y=.08;pointerMark.visible=false;scene.add(pointerMark);
+let markerTime=0;
+const selectableWorld=[];
+village.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
+const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
+function feedback(text){lastStatus=text;statusText.textContent=text;}
+function showInteraction(target){
+ const copy=classicInteractionCopy(target,existing.save);
+ $('classic-dialogue-name').textContent=copy.title;
+ $('classic-dialogue-text').textContent=copy.body;
+ dialogue.hidden=false;lastInteraction=target.id;
+ feedback('Talking to '+target.name+'.');
+}
+$('classic-dialogue-close').addEventListener('click',()=>{dialogue.hidden=true;});
+function refreshHud(){
+ const view=presentationSnapshot(combat.sandboxSave(),style,player);
+ $('classic-name').textContent=existing.profile?.name||'The Wanderer';
+ $('classic-combat').textContent=view.combatLevel;
+ $('classic-vitality').textContent=view.vitality;
+ $('classic-weapon').textContent=view.weaponName;
+ $('classic-level').textContent=view.styleLevel;
+ for(const b of document.querySelectorAll('[data-style]')){
+  const chosen=b.dataset.style===style;
+  b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));
+ }
+ hero.update({facing:look,style,worn:view.worn});
+}
+function switchStyle(which){
+ if(!combat.styleSwitch(which))return;
+ const current=combat.getState().style;
+ if(current!==style){style=current;refreshHud();}
+ else feedback('Style switch queued until your attack finishes.');
+}
+for(const b of document.querySelectorAll('[data-style]'))
+ b.addEventListener('click',()=>switchStyle(b.dataset.style));
+function updateLocation(){
+ const building=occupantBuilding(player.x,player.z);
+ const id=building?.id||null;
+ if(id!==lastInside){lastInside=id;village.updateCutaway(id);}
+ $('classic-location').textContent=building
+  ?building.kind==='bank'?'Oakrest Bank':building.kind==='store'?'General Store':
+   building.kind==='forester'?'Forester Lodge':building.kind==='trade'?'Trade Hall':building.id.replace(/-/g,' ')
+  :'Oakrest Village';
+ $('classic-inside').textContent=building?'You are indoors; the roof has lifted.'
+  :'Follow the lane to an open doorway to explore building interiors.';
+}
+function resize(){
+ const aspect=Math.max(1,innerWidth)/Math.max(1,innerHeight),half=CLASSIC_CAMERA.viewHeight/2/zoom;
+ camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;
+ camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);
+}
+function setZoom(n){zoom=clamp(n,CLASSIC_CAMERA.minZoom,CLASSIC_CAMERA.maxZoom);resize();}
+$('classic-zoom-in').addEventListener('click',()=>setZoom(zoom+.12));
+$('classic-zoom-out').addEventListener('click',()=>setZoom(zoom-.12));
+root.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom+(e.deltaY<0?.08:-.08));},{passive:false});
+addEventListener('resize',resize);resize();
+function screenRay(clientX,clientY){
+ const box=renderer.domElement.getBoundingClientRect();
+ const x=(clientX-box.left)/box.width*2-1;
+ const y=1-(clientY-box.top)/box.height*2;
+ raycaster.setFromCamera(new THREE.Vector2(x,y),camera);
+}
+function destinationAt(clientX,clientY){
+ screenRay(clientX,clientY);
+ const hit=new THREE.Vector3();
+ return raycaster.ray.intersectPlane(groundPlane,hit)?{x:hit.x,z:hit.z}:null;
+}
+function selectedFromRay(clientX,clientY){
+ screenRay(clientX,clientY);
+ const npcHit=raycaster.intersectObjects(npcActors.map(n=>n.actor.sprite),false)[0];
+ if(npcHit){
+  const npc=npcActors.find(n=>n.actor.sprite===npcHit.object);
+  if(npc)return findClassicInteractable(npc.targetId);
+ }
+ const worldHits=raycaster.intersectObjects(selectableWorld,true);
+ for(const hit of worldHits){
+  let obj=hit.object;
+  while(obj&&!obj.userData.interactId)obj=obj.parent;
+  const target=obj&&findClassicInteractable(obj.userData.interactId);
+  if(target)return target;
+ }
+ return null;
+}
+function placeMark(x,z){
+ pointerMark.position.set(x,.08,z);pointerMark.visible=true;markerTime=0;
+}
+function chooseInteraction(target){
+ if(!target)return false;
+ dialogue.hidden=true;selectedTarget=target;
+ placeMark(target.x,target.z);
+ const result=navigation.interactWith(player,target);
+ if(result.interaction){showInteraction(result.interaction);selectedTarget=null;return true;}
+ if(!result.ok){feedback(result.reason);selectedTarget=null;return false;}
+ feedback('Approaching '+target.name+'…');
+ return true;
+}
+function chooseEnemy(id){
+ const result=combat.chooseTarget(id,player);
+ if(result){
+  navigation.stop();selectedTarget=null;pointerMark.visible=false;dialogue.hidden=true;
+  const e=combat.getState().monsters.find(m=>m.id===id);
+  feedback('Target locked: '+e.name+' · Level '+e.level);
+ }else feedback('Target out of range or obstructed.');
+ return result;
+}
+function closestEnemyAt(point){
+ if(!point)return null;
+ const enemy=combat.getState().monsters.filter(e=>!e.dead).sort((a,b)=>
+  Math.hypot(point.x-a.x,point.z-a.z)-Math.hypot(point.x-b.x,point.z-b.z))[0];
+ return enemy&&Math.hypot(point.x-enemy.x,point.z-enemy.z)<2.3?enemy:null;
+}
+function queueDestination(point){
+ if(!point)return;
+ const enemy=closestEnemyAt(point);
+ if(enemy){chooseEnemy(enemy.id);return;}
+ const target=closestClickedInteractable(point);
+ if(target){chooseInteraction(target);return;}
+ selectedTarget=null;dialogue.hidden=true;
+ const result=navigation.moveTo(player,point);
+ if(result.ok){placeMark(point.x,point.z);feedback(result.arrived?'You are here.':'Walking to destination…');}
+ else{pointerMark.visible=false;feedback(result.reason);}
+}
+let canvasDown=null;
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(e.button!==0)return;
+ canvasDown={id:e.pointerId,x:e.clientX,y:e.clientY};
+},{passive:true});
+renderer.domElement.addEventListener('pointerup',e=>{
+ if(!canvasDown||e.pointerId!==canvasDown.id)return;
+ const down=canvasDown;canvasDown=null;
+ if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>13)return;
+ screenRay(e.clientX,e.clientY);
+ const hit=raycaster.intersectObjects(combatView.hitObjects().map(o=>o.object),false)[0];
+ const monster=hit&&combatView.hitObjects().find(o=>o.object===hit.object);
+ if(monster){chooseEnemy(monster.id);return;}
+ const target=selectedFromRay(e.clientX,e.clientY);
+ if(target)chooseInteraction(target);
+ else queueDestination(destinationAt(e.clientX,e.clientY));
+});
+renderer.domElement.addEventListener('pointercancel',()=>{canvasDown=null;});
+const joy=$('classic-joystick'),stick=$('classic-stick');
+let joystickId=null;
+function updateStick(clientX,clientY){
+ const box=joy.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
+ const dx=clientX-cx,dy=clientY-cy,len=Math.hypot(dx,dy),radius=box.width*.36;
+ const ux=dx/Math.max(1,len),uy=dy/Math.max(1,len),amount=clamp(len/radius,0,1);
+ input.x=ux*amount;input.z=uy*amount;
+ stick.style.transform=`translate(${ux*Math.min(radius,len)}px,${uy*Math.min(radius,len)}px)`;
+}
+joy.addEventListener('pointerdown',e=>{
+ e.preventDefault();joystickId=e.pointerId;joy.setPointerCapture(e.pointerId);
+ updateStick(e.clientX,e.clientY);selectedTarget=null;pointerMark.visible=false;
+});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===joystickId)updateStick(e.clientX,e.clientY);});
+function releaseJoy(e){
+ if(e.pointerId===joystickId){joystickId=null;input.x=0;input.z=0;stick.style.transform='';}
+}
+joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
+function toggleAttack(){
+ const state=combat.getState();
+ if(state.targetId){combat.stopTarget();navigation.stop();feedback('Combat target released.');return;}
+ const enemy=state.monsters.filter(m=>!m.dead&&!m.retreating&&m.hp>0)
+  .sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z))
+  .find(m=>Math.hypot(m.x-player.x,m.z-player.z)<29);
+ if(enemy)chooseEnemy(enemy.id);
+ else feedback('Tap a monster north of the village to lock it.');
+}
+function useCombatAbility(index){
+ const ability=combat.getState().abilities[index];
+ if(!ability){feedback('Ability slot locked or empty.');return;}
+ if(!combat.queueAbility(index))feedback('Ability unavailable or cooling down.');
+ else feedback(ability.name+' activated.');
+}
+function triggerDodge(){
+ if(!combat.dodge())return;
+ const keysDir=axesFromKeys(),length=Math.hypot(keysDir.x,keysDir.z);
+ dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
+ navigation.stop();feedback('Dodged!');
+}
+$('classic-attack').addEventListener('click',toggleAttack);
+$('classic-dodge').addEventListener('click',triggerDodge);
+for(const b of document.querySelectorAll('[data-ability]'))
+ b.addEventListener('click',()=>useCombatAbility(Number(b.dataset.ability)));
+function combatEvents(events){
+ for(const event of events){
+  if(event.type==='style'){style=event.style;refreshHud();}
+  else if(event.type==='release')lastReleaseUntil=event.time+.18;
+  else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
+  else if(event.type==='miss')feedback('Miss');
+  else if(event.type==='defeated')feedback(event.name+' defeated · temporary XP');
+  else if(event.type==='xp'){
+   refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
+  }else if(event.type==='warning')feedback('Enemy attack incoming — MOVE or DODGE!');
+  else if(event.type==='hurt')feedback('You took '+event.damage+' damage');
+  else if(event.type==='dead'){
+   navigation.stop();dodgeTravel=null;feedback('Defeated — respawning in Oakrest');
+  }else if(event.type==='revive'){
+   player.x=0;player.z=39;navigation.stop();feedback('Respawned in Oakrest');
+  }else if(event.type==='heal')feedback('Healed '+event.amount+' HP');
+  else if(event.type==='dash'){
+   const moved=slideMove(player,look.x*event.distance,look.z*event.distance);
+   player.x=moved.x;player.z=moved.z;
+  }
+ }
+}
+function updateCombatUi(snapshot){
+ $('classic-health-label').textContent=snapshot.hp+' / '+snapshot.maxHp+' HP';
+ $('classic-health-fill').style.width=(100*snapshot.hp/Math.max(1,snapshot.maxHp))+'%';
+ const target=snapshot.target;
+ $('classic-target-name').textContent=target?target.name:'No monster selected';
+ $('classic-target-level').textContent=target?'Lv '+target.level:'';
+ $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
+ const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
+ attack.textContent=target?'STOP · J':'ATTACK · J';
+ for(const b of document.querySelectorAll('[data-ability]')){
+  const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
+  const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
+  b.disabled=!ability||snapshot.hp<=0||seconds>0;
+  b.classList.toggle('on-cooldown',seconds>0);
+  b.textContent='QERF'[index]+' · '+(ability?.name||'Locked')+
+   (seconds>0?' '+seconds.toFixed(1)+'s':'');
+ }
+ $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
+}
+function interactNearby(){
+ const candidate=nearbyClassicInteraction(player);
+ if(candidate){navigation.stop();selectedTarget=null;showInteraction(candidate);}
+ else feedback('Walk closer to a person, sign or training tree.');
+}
+interactButton.addEventListener('click',interactNearby);
+document.addEventListener('keydown',e=>{
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space'].includes(e.key))e.preventDefault();
+ keys.add(e.key.toLowerCase());
+ if(e.repeat)return;
+ if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
+ if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
+ if(e.key.toLowerCase()==='t')interactNearby();
+ if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
+ if(e.code==='Space')triggerDodge();
+ const bindings=['q','e','r','f'];
+ if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
+ if(e.key==='Escape'){dialogue.hidden=true;navigation.stop();selectedTarget=null;pointerMark.visible=false;}
+});
+document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function releaseAll(){
+ keys.clear();input.x=0;input.z=0;navigation.stop();selectedTarget=null;pointerMark.visible=false;
+ stick.style.transform='';
+}
+addEventListener('blur',releaseAll);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
+const cameraLen=Math.hypot(CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.offsetZ);
+const basisRight={x:CLASSIC_CAMERA.offsetZ/cameraLen,z:-CLASSIC_CAMERA.offsetX/cameraLen};
+const basisUp={x:-CLASSIC_CAMERA.offsetX/cameraLen,z:-CLASSIC_CAMERA.offsetZ/cameraLen};
+function axesFromKeys(){
+ const h=Number(keys.has('d')||keys.has('arrowright'))-
+  Number(keys.has('a')||keys.has('arrowleft'))+input.x;
+ const v=Number(keys.has('w')||keys.has('arrowup'))-
+  Number(keys.has('s')||keys.has('arrowdown'))-input.z;
+ return {x:basisRight.x*h+basisUp.x*v,z:basisRight.z*h+basisUp.z*v};
+}
+function moveGame(dt){
+ const previous={...player};
+ const update=navigation.step(player,axesFromKeys(),dt);
+ player.x=update.position.x;player.z=update.position.z;
+ if(update.heading){look=update.heading;walkClock+=dt;}
+ else walkClock=0;
+ if(update.interaction){
+  showInteraction(update.interaction);selectedTarget=null;pointerMark.visible=false;
+ }else if(update.failed){
+  feedback(update.failed);selectedTarget=null;pointerMark.visible=false;
+ }else if(update.kind==='manual'&&selectedTarget){
+  selectedTarget=null;pointerMark.visible=false;
+  feedback('Manual movement — tap a person or object to interact.');
+ }
+ if(pointerMark.visible&&update.kind==='path'&&update.remaining===0){
+  pointerMark.visible=false;feedback('Destination reached.');
+ }
+ hero.sprite.position.set(player.x,.08,player.z);
+ heroShadow.position.set(player.x,.04,player.z);
+ hero.update({facing:look,step:update.moved?1+Math.floor(walkClock/.17)%2:0,
+  style,worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
+ updateLocation();
+ return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
+}
+function draw(dt){
+ const movement=moveGame(dt);
+ if(dodgeTravel&&dt>0){
+  const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
+  const moved=slideMove(player,direction.x*slice*12.5,direction.z*slice*12.5);
+  player.x=moved.x;player.z=moved.z;
+  dodgeTravel.remaining-=slice;if(dodgeTravel.remaining<=0)dodgeTravel=null;
+ }
+ const before=combat.getState(),target=before.target;
+ if(target&&movement.kind==='idle'&&!navigation.state().waypoints.length&&
+  !keys.size&&Math.hypot(input.x,input.z)<.12&&before.weapon!=='No equipped weapon'){
+  const dx=target.x-player.x,dz=target.z-player.z,range=
+   before.style==='melee'?2.2:before.style==='magic'?14:20;
+  if(Math.hypot(dx,dz)>range+.5){
+   const d=Math.hypot(dx,dz);
+   navigation.moveTo(player,{x:target.x-dx/d*range,z:target.z-dz/d*range});
+  }
+ }
+ const events=combat.tick(dt,player);
+ combatEvents(events);
+ const state=combat.getState();
+ if(state.style!==style){style=state.style;refreshHud();}
+ combatView.update(state);
+ if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
+ hero.sprite.position.set(player.x,.08,player.z);
+ heroShadow.position.set(player.x,.04,player.z);
+ hero.update({facing:look,style,
+  pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
+  worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
+ for(const [i,n] of npcActors.entries())
+  n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee'});
+ if(pointerMark.visible){
+  markerTime+=dt;pointerMark.material.opacity=.55+.25*Math.sin(markerTime*4);
+  pointerMark.scale.setScalar(1+.1*Math.sin(markerTime*4));
+ }
+ const follow=.14;
+ const next=new THREE.Vector3(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
+ camera.position.lerp(next,1-Math.pow(1-follow,Math.max(1,dt*60)));
+ camera.lookAt(player.x,0,player.z);renderer.render(scene,camera);
+}
+let last=performance.now();
+function tick(time){
+ requestAnimationFrame(tick);
+ if(document.hidden){last=time;return;}
+ const dt=clamp((time-last)/1000,0,.06);last=time;draw(dt);
+}
+feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
+camera.position.set(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
+camera.lookAt(player.x,0,player.z);
+requestAnimationFrame(tick);
+const isQa=new URLSearchParams(location.search).has('qa')&&
+ (['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname));
+if(isQa)window.oakrestClassicQA={
+ state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
+  pathLength:navigation.state().waypoints.length,hasSavedProfile:existing.existing,
+  npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&
+   village.roofs.find(x=>x.id===occupantBuilding(player.x,player.z)?.id)?.roofs.visible===false,
+  combatLevel:presentationSnapshot(combat.sandboxSave(),style,player).combatLevel,
+  selected:selectedTarget?.id||null,lastInteraction,status:lastStatus}),
+ step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
+ selectTarget:id=>chooseInteraction(findClassicInteractable(id)),
+ interactNow:interactNearby,
+ teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
+  navigation.stop();selectedTarget=null;draw(0);},
+ navigationState:()=>navigation.state(),
+ combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
+ savedState:()=>JSON.stringify(existing.save)
+};

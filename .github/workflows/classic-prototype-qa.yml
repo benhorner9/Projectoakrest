@@ -1,0 +1,42 @@
+name: Oakrest Classic 2.5D Prototype QA
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'classic.html'
+      - 'src/classic*.js'
+      - 'src/classic.css'
+      - 'scripts/build.mjs'
+      - 'tests/classic-presentation.test.js'
+      - 'tests/browser-classic.cjs'
+      - '.github/workflows/classic-prototype-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  classic-prototype:
+    name: Classic 2.5D — unit, build and real Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js
+      - run: npm run build
+      - name: Verify prototype copied and fingerprinted
+        run: |
+          test -f dist/classic.html
+          grep -q 'classic-prototype.js?v=' dist/classic.html
+      - run: npx playwright install chromium
+      - name: Test playable classic route
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic.cjs
