@@ -20,6 +20,7 @@ const model=(pack,id,path,size,blob,repo=common,commit=commonCommit)=>Object.fre
  pack,id,file:id+'.glb',path,size,blob,repo,commit
 });
 export const QUATERNIUS_MODELS=Object.freeze([
+ model('outfits','universal-animations','animations/UAL1.glb',7618436,'473e59080288428d0b6da826ba19324d07b191f0'),
  model('base','base-male','characters/Superhero_Male.glb',2507724,'2ce8c2efd4f15837d2f4326c7e06bb10e5eb1fea'),
  model('base','base-female','characters/Superhero_Female.glb',2853588,'73ec2fb65d2be88eaa3bdb86bad0621ca14440fc'),
  model('outfits','peasant-male','outfits/Male_Peasant.glb',2157460,'d8fafddb0b27ab73f0686d555e66099437790ea5'),
