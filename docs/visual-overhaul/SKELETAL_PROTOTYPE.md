@@ -12,7 +12,7 @@ This branch introduces a true **weighted skinned humanoid** in Three.js: a 26-bo
 
 ## Limitations and pending quality work
 
-The free Explosive sample and the candidate CC0 model files could not be retrieved through the available execution environment. This implementation builds its **own** rig and stand-in clips rather than claiming the sample pack has been obtained. Art proportions, joint seams, locomotion and combat choreography are **unapproved**. All 56 existing ability specifications now have individual **visual-only skeletal clips and timing maps**, but they are not yet wired to the live gameplay renderer or visually approved. Precise two-hand IK grip contact, bowstring/reload, equipment fitting, shields, enemy/NPC migrations, physical iPad Safari, independent QA and production-quality art review are pending.
+The free Explosive sample and the candidate CC0 model files could not be retrieved through the available execution environment. This implementation builds its **own** rig and stand-in clips rather than claiming the sample pack has been obtained. Art proportions, joint seams, locomotion and combat choreography are **unapproved**. All 56 existing ability specifications now have individual **visual-only skeletal clips and timing maps**, plus an opt-in development-game integration. They are not yet the default renderer or visually approved. Precise two-hand IK grip contact, bowstring/reload, equipment fitting, shields, enemy/NPC migrations, physical iPad Safari, independent QA and production-quality art review are pending.
 
 ## QA commands
 
@@ -22,6 +22,7 @@ The free Explosive sample and the candidate CC0 model files could not be retriev
 - npm run build
 - npx playwright install chromium
 - node tests/browser-skeletal-lab.cjs
+- node tests/browser-skeletal-game.cjs
 
 Browser evidence saves to qa/skeletal-lab/. Browser captures are not a calibrated art-quality or iPad performance pass.
 
@@ -47,3 +48,15 @@ Keep the old in-game character model as the default until we visually approve th
 - Dedicated event-to-animation hooks in the actual gameplay renderer and cancellation mapping to the real combat journal; preserve original hero visuals as fallback.
 - Human assessment of each silhouette, animation timings and quality; dedicated NPC and monster species motion; 60-FPS-class performance profiling on the user's physical iPad Air Safari.
 - Independent QA/UX review, entire core/regression CI and tested shared-host /oakrest-dev/ release before claiming acceptance. Public Oakrest must not be updated as part of this draft.
+
+## Opt-in actual-game test (under review)
+
+On a future reviewed development build, use /oakrest-dev/?qa=1&skeletal=1. It is not deployed by this draft PR, is disabled on /oakrest/, and never persists in character saves.
+
+- The existing gameplay actor still owns movement, targeting, collision, damage, cooldowns, item/equipment state and saves. Only its old mesh rig is hidden when the test flag is enabled.
+- The skinned visual model is attached as a child of the existing actor and follows real position, facing, attack clocks, hit/dodge/death and woodcutting events. All its animation tracks remain in place.
+- Removing the query flags restores the accepted original visual model. This is not a migration of town NPCs, monsters or every character appearance.
+- Browser QA covers actual skinned-player game startup, basic combat, root immutability and save/reload, but no physical iPad or final art acceptance is claimed.
+- The development preview still uses provisional weapon shapes and has outstanding bowstring, grip, armour, ground-contact and multi-action choreography.
+
+PR #85 stays draft until full CI, independent review and real-device visual acceptance. Deployment to the shared dev host requires a separate merge and reviewed Cellbound bridge pin; the public game must remain untouched.
