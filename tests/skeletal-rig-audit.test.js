@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {decodeRigDocument,auditSkeletalRig,compareAnimationRig} from '../src/skeletal-rig-audit.js';
-const names=['Hips','Spine','Head','LeftUpperArm','RightUpperArm','LeftUpLeg','RightUpLeg'];
-function document(names=names){
+const humanoidBones=['Hips','Spine','Head','LeftUpperArm','RightUpperArm','LeftUpLeg','RightUpLeg'];
+function document(names=humanoidBones){
  return {asset:{version:'2.0'},nodes:[...names.map(name=>({name})),{mesh:0,skin:0,name:'Body'}],
   skins:[{joints:names.map((_,i)=>i)}],meshes:[{primitives:[{attributes:{POSITION:0,JOINTS_0:1,WEIGHTS_0:2}}]}],
   animations:[{name:'Idle',channels:[{target:{node:0,path:'rotation'}}]}]};
