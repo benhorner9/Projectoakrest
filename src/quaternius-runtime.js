@@ -85,6 +85,7 @@ export async function mountQuaterniusModel(parent,id,height=2.4,{keepOriginals=[
   return true;
  }catch(err){
   copy?.removeFromParent();
+  parent.userData.quaterniusError=String(err?.stack||err).slice(0,450);
   console.warn('Oakrest kept procedural model',id,err);
   return false;
  }
@@ -114,7 +115,7 @@ export function updateQuaterniusModel(parent,dt,{moving=false,running=false,atta
 }
 export function quaterniusState(parent){
  const info=parent?.userData?.quaterniusMount;
- return {status:info?'ready':'original',model:info?.id||null,clip:info?.clip||null};
+ return {status:info?'ready':parent?.userData?.quaterniusError?'fallback':'original',model:info?.id||null,clip:info?.clip||null,error:parent?.userData?.quaterniusError||null};
 }
 export function loadVillagePiece(filename){
  // Three will fetch the matching .bin and retained base-colour PNGs locally.
