@@ -24,9 +24,29 @@ export function loadQuaternius(id){
 export function cloneFitted(template,height,origin='ground'){
  const copy=cloneSkin(template.scene),bounds=new THREE.Box3().setFromObject(copy);
  const size=new THREE.Vector3(),centre=new THREE.Vector3();
- bounds.getSize(size);bounds.getCenter(centre);
- if(!Number.isFinite(size.y)||size.y<.08||size.y>60)throw Error('Invalid sourced model bounds');
- const unit=height/size.y;
+ bounds.getSize(size);
+ // Ultimate Monsters and Universal humans use different authoring unit scales.
+ // For very small/large skinned bind poses, calculate bounds directly from
+ // original mesh vertex positions, independent of current animation/bones.
+ if(bounds.isEmpty()||size.y<.05||size.y>60){
+  copy.updateMatrixWorld(true);
+  const geometryBox=new THREE.Box3();
+  copy.traverse(object=>{
+   if(!object.isMesh||!object.geometry?.getAttribute('position'))return;
+   if(!object.geometry.boundingBox)object.geometry.computeBoundingBox();
+   if(!object.geometry.boundingBox?.isEmpty())
+    geometryBox.union(object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld));
+  });
+  if(!geometryBox.isEmpty())bounds.copy(geometryBox);
+  bounds.getSize(size);
+ }
+ bounds.getCenter(centre);
+ const dimension=size.y>1e-7?size.y:Math.max(size.x,size.z);
+ if(!Number.isFinite(dimension)||dimension<=1e-7||dimension>1e6)
+  throw Error('Invalid sourced mesh geometry: '+JSON.stringify(size.toArray()));
+ const unit=height/dimension;
+ if(!Number.isFinite(unit)||unit<=0||unit>1e7)
+  throw Error('Unsafe source asset scale: '+unit);
  copy.scale.setScalar(unit);
  copy.position.set(-centre.x*unit,-bounds.min.y*unit,-centre.z*unit);
  if(origin==='center')copy.position.y=-centre.y*unit;
