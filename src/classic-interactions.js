@@ -39,7 +39,7 @@ export function closestClickedInteractable(point,extra=0){
  }
  return best;
 }
-/** Keep the last 1.1m free of collision samples, because a resource or NPC
+/** Keep the last 1.25m free of collision samples, because a resource or NPC
  * may itself have a solid visual footprint. Walls between player and target
  * still block selection and completion.
  */
@@ -47,9 +47,9 @@ export function interactionSight(a,target){
  if(!a||!target)return false;
  const d=Math.hypot(target.x-a.x,target.z-a.z);
  if(!Number.isFinite(d))return false;
- const count=Math.ceil(Math.max(0,d-1.1)/.30);
+ const count=Math.ceil(Math.max(0,d-1.25)/.30);
  for(let i=1;i<=count;i++){
-  const distance=Math.min(d-1.1,i*.30);
+  const distance=Math.min(d-1.25,i*.30);
   if(distance<=0)continue;
   const t=distance/d;
   if(solidAt(a.x+(target.x-a.x)*t,a.z+(target.z-a.z)*t,.15))return false;
