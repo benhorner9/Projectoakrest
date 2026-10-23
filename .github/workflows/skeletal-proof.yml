@@ -1,0 +1,64 @@
+name: Oakrest skeletal character proof
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/skeletal-character.js'
+      - 'src/skeletal-preview.js'
+      - 'src/main.js'
+      - 'src/skeletal-ability-library.js'
+      - 'src/skeletal-motion-controller.js'
+      - 'src/ability-animation.js'
+      - 'src/animation-language.js'
+      - 'src/rig-lab.js'
+      - 'src/rig-lab.css'
+      - 'rig-lab.html'
+      - 'tests/skeletal-character.test.js'
+      - 'tests/skeletal-preview.test.js'
+      - 'tests/browser-skeletal-game.cjs'
+      - 'tests/skeletal-ability-library.test.js'
+      - 'tests/skeletal-motion-controller.test.js'
+      - 'tests/browser-skeletal-lab.cjs'
+      - 'scripts/build.mjs'
+      - '.github/workflows/skeletal-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  skeletal-browser-evidence:
+    name: Real skinned actor and in-place clip browser audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Check source parsing and rig invariants
+        run: |
+          npm run check
+          node --test tests/skeletal-character.test.js
+          node --test tests/skeletal-rig-audit.test.js
+          node --test tests/skeletal-ability-library.test.js
+          node --test tests/skeletal-motion-controller.test.js
+          node --test tests/skeletal-preview.test.js
+      - name: Build development static site
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install chromium
+      - name: Exercise browser skinned rig and save isolation
+        run: |
+          node tests/browser-skeletal-lab.cjs
+          node tests/browser-skeletal-game.cjs
+      - name: Preserve screenshot evidence for independent art review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oakrest-skeletal-lab
+          path: |
+            qa/skeletal-lab/
+            qa/skeletal-game/
+          if-no-files-found: warn
