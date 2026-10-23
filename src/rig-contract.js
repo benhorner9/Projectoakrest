@@ -1,9 +1,9 @@
-/** Oakrest humanoid v2 contract. Visual units preserve the existing 2.5-unit actor.
+/** Oakrest humanoid v3 contract. Visual units preserve the existing 2.5-unit actor.
  * -Z forward, +Y up, +X character-left from the viewer facing the actor.
  * No profile may change a gameplay range, attack clock or collision shape.
  */
-export const HUMANOID_RIG_VERSION='oakrest-humanoid-2';
-export const HUMANOID_JOINTS=Object.freeze(['rig','upperBody','head','leftArm','rightArm','leftElbow','rightElbow','leftHand','rightHand','leftLeg','rightLeg','leftKnee','rightKnee','leftAnkle','rightAnkle']);
+export const HUMANOID_RIG_VERSION='oakrest-humanoid-3';
+export const HUMANOID_JOINTS=Object.freeze(['rig','upperBody','head','leftArm','rightArm','leftElbow','rightElbow','leftWrist','rightWrist','leftHand','rightHand','leftLeg','rightLeg','leftKnee','rightKnee','leftAnkle','rightAnkle']);
 export const WEAPON_PROFILES=Object.freeze({
  sword:{style:'melee',primary:'right',grip:[0,0,0],muzzle:[0,0,-1.23]},
  greatsword:{style:'melee',primary:'right',grip:[0,0,0],secondary:[0,0,.18],muzzle:[0,0,-1.65]},
@@ -24,5 +24,6 @@ export function validateHumanoidRig(actor){
  for(const name of HUMANOID_JOINTS)if(!u?.[name]?.isObject3D)errors.push('Missing joint '+name);
  for(const name of ['weapon','offhand'])if(!u?.[name]?.isObject3D)errors.push('Missing socket '+name);
  if(u?.foundation&&(u.upperBody?.parent!==u.rig||u.weapon.parent!==u.upperBody))errors.push('Weapon control must belong to upper-body visual rig');
+ for(const side of ['left','right'])if(u?.foundation&&(u[side+'Wrist']?.parent!==u[side+'Elbow']||u[side+'Hand']?.parent!==u[side+'Wrist']))errors.push('Invalid wrist/grip hierarchy: '+side);
  return errors;
 }

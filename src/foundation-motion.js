@@ -7,6 +7,9 @@ import {abilityMotion} from './animation-language.js';
 import {constrainWeaponHands} from './weapon-handling.js';
 import {locomotionFrame,plantFoundationFeet} from './foundation-locomotion.js';
 import {visualActionClock} from './visual-action-clock.js';
+import {poseHumanoidHands} from './humanoid-hands.js';
+import {WEAPON_PROFILES} from './rig-contract.js';
+import {reactionFrame,poseFoundationReaction,supportFallenBody} from './foundation-reactions.js';
 const clamp=v=>Math.min(1,Math.max(0,v));
 const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
 export function foundationState({t=0,attack=null,dead=false,hit=false,dodge=0,chopping=null,speed=0,combat=false}){
@@ -21,13 +24,18 @@ export function animateFoundation(u,info){
  const clock=visualActionClock(t,active?attack:null),wind=clock.wind,recovery=clock.recovery,release=clock.contact;
  const cue=abilityMotion(family,active?attack.abilityKind:null,wind,release,attack?.combo);
  const motion=locomotionFrame(u,info),strength=clamp(motion.speed/4.7),s=Math.sin(motion.phase*Math.PI*2)*(backwards?-1:1),alert=combat||active;
+ const reaction=reactionFrame(u,info);
  u.animationState=state;
  const snap=info.sample||!u.foundationPosed;
- const rotation=(node,x,y,z)=>{if(snap)node.rotation.set(x,y,z);else node.rotation.set(damp(node.rotation.x,x,18,dt),damp(node.rotation.y,y,18,dt),damp(node.rotation.z,z,18,dt));};
- rotation(u.rig,dodge*.45+cue.lean*.3,0,dead?-1.5:hit?.08:-side*.04-motion.turn*.012);
+ const rotation=(node,x,y,z)=>{
+  // Reactions are an output layer, never next frame's base pose input.
+  const base=node.userData.foundationBaseRotation||(node.userData.foundationBaseRotation=node.rotation.clone());
+  if(snap)base.set(x,y,z);else base.set(damp(base.x,x,18,dt),damp(base.y,y,18,dt),damp(base.z,z,18,dt));node.rotation.copy(base);
+ };
+ rotation(u.rig,dodge*.45+cue.lean*.3,0,hit?.08:-side*.04-motion.turn*.012);
  rotation(u.upperBody,0,(family==='bow'||family==='shortbow'?-1:0)+cue.twist*.35,0);
  // Knees compensate swing clearance. No imported leg rotations at idle.
- u.rig.position.y=dead?.08:0;
+ u.rig.position.set(0,0,0);
  for(const [sign,leg,knee] of [[1,u.leftLeg,u.leftKnee],[-1,u.rightLeg,u.rightKnee]]){
   leg.rotation.set(sign*s*.45*strength,0,0);
   knee.rotation.set(Math.max(0,-sign*s)*.65*strength,0,0);
@@ -38,6 +46,8 @@ export function animateFoundation(u,info){
  u.rightArm.rotation.set(-.05+s*.25*strength,0,-.08);
  u.leftElbow.rotation.set(-.12,0,0);u.rightElbow.rotation.set(-.12,0,0);
  u.leftHand.rotation.set(0,0,0);u.rightHand.rotation.set(0,0,0);
+ u.leftWrist.rotation.set(0,0,0);u.rightWrist.rotation.set(0,0,0);
+ poseHumanoidHands(u,WEAPON_PROFILES[family],info);
  let x=.30,y=1.16,z=-.24,rx=-.55,ry=0,rz=0;
  if(family==='bow'||family==='shortbow'){
   x=-.32;y=alert?1.83:1.30;z=alert?-.60:-.40;rx=0;ry=1.0;rz=alert?0:-.18;
@@ -84,6 +94,8 @@ export function animateFoundation(u,info){
  if(u.nockedArrow){u.nockedArrow.position.z=u.bowString?.31+.34*pull:0;u.nockedArrow.visible=state!=='recovery'||recovery>.6;}
  if(u.crossbowSlider)u.crossbowSlider.position.z=-.57+.26*wind;
  if(u.magicFocus)u.magicFocus.scale.setScalar((family==='ember'?.6:1)*(1+.10*wind));
+ poseFoundationReaction(u,reaction);
  constrainWeaponHands(u,pull);
- plantFoundationFeet(u,info,motion);
+ if(!reaction.weight)plantFoundationFeet(u,info,motion);else u.footError=0;
+ supportFallenBody(u,info,reaction);
 }

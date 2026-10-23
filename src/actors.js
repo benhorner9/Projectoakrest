@@ -6,6 +6,7 @@ import {restoreKayKitPose,applyKayKitPose} from './kaykit-motion.js';
 import {animateFoundation} from './foundation-motion.js';
 import {HUMANOID_RIG_VERSION,HUMANOID_JOINTS} from './rig-contract.js';
 import {HUMANOID_SHAPES as shapes} from './humanoid-shapes.js';
+import {createHumanoidHand} from './humanoid-hands.js';
 import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
@@ -51,16 +52,18 @@ export function createActor(bandit=false,{foundation=false}={}){
   const p=pivot(rig,s*.43,1.77,0),elbow=pivot(p,0,-.40,0);
   if(foundation){mesh(p,shapes.upperArm,body,0,0,0);mesh(elbow,shapes.forearm,'#675440',0,0,0);}
   else {ball(p,body,0,-.02,0,.19,.23,.19);tube(p,body,0,-.22,0,.13,.105,.39);ball(elbow,skin,0,0,0,.105,.11,.10);tube(elbow,'#675440',0,-.16,0,.12,.10,.30);ball(elbow,skin,0,-.33,0,.115,.135,.105);}
-  const hand=pivot(elbow,0,-.34,foundation?0:-.06);
-  if(foundation){block(hand,skin,0,0,0,.15,.16,.14);for(let i=0;i<3;i++)block(hand,skin,-.06+i*.055,-.065,-.015,.042,.07,.12);ball(hand,skin,s*.082,.015,-.035,.038,.065,.05);}
+  const wrist=foundation?pivot(elbow,0,-.34,0):null;
+  const hand=foundation?pivot(wrist,0,-.08,0):pivot(elbow,0,-.34,-.06);
+  const handSkin=foundation?createHumanoidHand(skin,s):null;if(handSkin)hand.add(handSkin);
   pauldrons.push(foundation?mesh(p,shapes.pauldron,material('#839a9b',true),0,.025,0):ball(p,material('#839a9b',true),0,.035,0,.23,.18,.24));
-  return {p,elbow,hand};
+  return {p,elbow,hand,wrist,handSkin};
  }
  const ll=leg(-1),rl=leg(1),la=arm(-1),ra=arm(1);
  g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,skinMaterial:skin,hairMat,hair,hairBack,hairTail,hairCurls,torso,outfitTrims,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,leftHand:la.hand,rightHand:ra.hand,foundation,owned:[],family:'sword'};
  if(foundation){
   const u=g.userData;u.rigVersion=HUMANOID_RIG_VERSION;u.head.scale.setScalar(.9);
   u.leftAnkle=ll.ankle;u.rightAnkle=rl.ankle;
+  u.leftWrist=la.wrist;u.rightWrist=ra.wrist;u.leftHandSkin=la.handSkin;u.rightHandSkin=ra.handSkin;
   u.upperBody=pivot(rig,0,0,0);
   for(const part of [torso,neck,head,cape,chestPlate,leather,la.p,ra.p,...outfitTrims])u.upperBody.add(part);
   u.bodyGeometry=[capeGeo];

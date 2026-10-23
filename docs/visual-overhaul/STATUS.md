@@ -20,8 +20,9 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 ## Implemented, awaiting acceptance
 
 - Candidate complete-pose driver and state precedence; hand contact is numeric evidence, not final animation choreography approval.
-- Authored tapered torso, face/hair, sleeves, legs, boots, belt, chest armour, greaves and pauldrons, with unchanged joint anchors. Palms/fingers, complete outfit fitting and human silhouette/motion review still need work.
+- Authored tapered torso, face/hair, sleeves, legs, boots, belt, chest armour, greaves and pauldrons, with unchanged joint anchors. Version-3 wrist joints and mirrored, four-finger hand morphs now separate anatomical wrist position from grip contact. Imported handle fitting, complete outfits and human silhouette/motion review remain pending.
 - Candidate ankle joints, shared fixed-length arm/leg constraints, upper-body yaw independent of the pelvis, grounded soles, steady-speed stance cancellation, eased starts/stops, backward/sideways travel and turn steps. Slope-normal soles, toe roll and full human motion approval remain pending.
+- Bounded fall and recovery, visible body ground support and retained weapon constraints through defeat; actual-game defeat/respawn regression is included. Final resting prop/armour contact and human review remain pending.
 - Continuous authoritative action clock, separate bow draw, and contact poses unaffected by smoothing lag. This improves existing cues; it does not complete final per-ability choreography.
 - Opt-in actual-game playtest at `?qa=1&visual-foundation=1` in local/dev only, using collision-resolved travel and optional terrain height. Default renderer and save schema remain unchanged. Real-game candidate integration test is a required separate CI job.
 - Browser reference coverage and evidence are specified in `QA.md`; consult actual reported results, not this inventory of implementation.
@@ -30,7 +31,7 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 
 | ID | Finding | Required resolution |
 |---|---|---|
-| VIS-01 | Candidate body/plate now uses fitted cross-section meshes, but hands, full outfits and joint intersections still need polish; armour remains rigid rather than skinned. | Finish canonical model and fit all actual wearable combinations, then human visual review. |
+| VIS-01 | Candidate body/plate now uses fitted cross-section meshes, but final hand/handle fitting, full outfits and joint intersections still need polish; armour remains rigid rather than skinned. | Finish canonical model and fit all actual wearable combinations, then human visual review. |
 | VIS-02 | Live imported held items still use a generic normalized-height offset. | Candidate per-mesh transforms now load in the reference, including corrected crossbow source axis. Finish human handle fitting, reload/focus part animation and every-state visual review before live migration. |
 | VIS-03 | Candidate ability cues do not yet provide fully distinct, final choreography for every mechanic. | Author/review each current ability, especially defence, healing, multi-shot and paired dagger strikes, against real event timing. |
 | VIS-04 | Candidate muzzle is diagnostic; real projectile spawning still uses the live hand offset. | Integrate into actual combat only with obstruction/range/trajectory regression; no purely visual authority. |
@@ -72,4 +73,6 @@ Finish/review the canonical foundation and required regressions. PR targets `dev
 
 Current observed hosted marker is `530bed9ee6f810f4e683af174cce33cdf2ef0171` (rechecked during this continuation), not this candidate. A future rollback can revert this foundation commit without save migration; the candidate is opt-in and never writes player data.
 
-Local continuation validation: 263 unit/regression tests, source parsing, asset audit and static/cache build passed. Reference browser passed 818 pose samples; all seven retained source meshes passed loading/switching/fallback. Actual-game candidate Chromium closed during initialization locally, as the earlier untouched baseline did; no local candidate gameplay pass is claimed. All six workflows passed the prior `1f8f635` head; consult PR #83 for checks on the latest head. No independent review, physical iPad acceptance, merge or deployment has occurred.
+Prior grounded-locomotion checkpoint validation: 263 unit/regression tests, source parsing, asset audit and static/cache build passed. Reference browser passed 818 pose samples; all seven retained source meshes passed loading/switching/fallback. Actual-game candidate Chromium closed during initialization locally, as the earlier untouched baseline did; no local candidate gameplay pass is claimed. All six workflows passed the prior `1f8f635` head; consult PR #83 for checks on the latest head. No independent review, physical iPad acceptance, merge or deployment has occurred.
+
+Wrist/fall continuation: version-3 anatomy, hand morphs and body support implemented; 266 unit/regression tests and build pass locally. Browser captures and latest-head CI are reported in QA.md and PR #83. All seven full workflows passed preceding head `3ef3b1d`; that result must not be substituted for the next head. Review and deployment gates remain open.

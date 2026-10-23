@@ -29,6 +29,11 @@ let browser;
   const rows=[];for(const spec of specs){oakrestVisualQA.select(spec.weaponFamily,'basic',spec.id);for(const at of [0,spec.anticipation.seconds*.8,spec.anticipation.seconds,spec.recovery.seconds*.9]){const r=oakrestVisualQA.sample(at,false);rows.push({spec:spec.id,at,gripError:r.gripError});}}return rows;
  },specs);
  for(const result of abilityResults){assert.ok(result.gripError<.001,result.spec);assert.ok(result.footError===undefined||result.footError<.001,'foot reach');results.push(result);}
+ for(const [family,state,view,at,name] of [['greatsword','basic','hands',.2,'hand-grip'],['bow','basic','hands',.3,'bow-draw-hand'],['greatsword','death','fallen',.3,'fall-transition'],['greatsword','death','fallen',.9,'fallen-ground']]){
+  const sample=await page.evaluate(({family,state,view,at})=>{oakrestVisualQA.select(family,state);oakrestVisualQA.view(view);return oakrestVisualQA.sample(at);},{family,state,view,at});
+  assert.ok(sample.gripError<.001);if(name==='fallen-ground')assert.equal(sample.reaction.fall,1);
+  await page.screenshot({path:path.join(out,name+'.png')});
+ }
  for(const view of ['ensemble','interior','side','rear']){
   await page.evaluate(view=>{oakrestVisualQA.select('greatsword','ready');oakrestVisualQA.view(view);oakrestVisualQA.sample(.3);},view);
   await page.screenshot({path:path.join(out,view+'.png')});

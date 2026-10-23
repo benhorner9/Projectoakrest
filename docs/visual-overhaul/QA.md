@@ -10,6 +10,7 @@ npm run audit:visuals
 npm run build
 node tests/browser-visual-foundation.cjs
 node tests/browser-held-assets.cjs
+node tests/browser-foundation-gameplay.cjs
 node tests/browser-smoke.cjs
 node tests/browser-animation-inspector.cjs
 ```
@@ -89,3 +90,17 @@ Actual results for this continuation:
 - Default gameplay, existing regression workflows and public-path exclusion remain required. Review latest-head CI in PR #83; older green runs do not certify this revision.
 
 For real-device review, use the reference first, then an isolated test character on the explicit candidate playtest URL. Do not interpret the flag as a completed migration. Real projectile spawning still follows the existing hand-offset/obstruction logic; canonical muzzle calibration, all ability choreography and shield combinations remain open.
+
+## Wrist, hand and supported-fall continuation
+
+Rig `oakrest-humanoid-3` separates .34-length forearms/wrists from .08 palm-grip offsets. Each side uses one cached mesh with four fingers and an opposed thumb; relaxed, handle-grip and bowstring-hook morph weights are per actor. The fall has bounded timing, grounded visible body bounds and a resettable recovery layer. It preserves equipment constraints and all gameplay coordinates/timestamps.
+
+Rendered review exposed a side-fall with a visibly suspended head despite passing numeric floor clearance. The final candidate uses a back landing, with the free casting arm brought forward so it cannot prop the body above the ground. The final [fall transition](evidence/fall-transition.png) and [resting body](evidence/fallen-ground.png) were inspected. [Handle close-up](evidence/hand-grip.png) and [bow hand close-up](evidence/bow-draw-hand.png) show the new skin. This is implementer inspection, not independent art approval. Final handle thickness, wrist twist, joint seams, resting props, walls and every armour combination remain review items.
+
+- Source checks, **266 unit/regression tests**, visual audit and **2 build checks** pass after the final back-fall correction. Tests cover all nine profiles, rotated/scaled roots, modest ground slopes, unchanged bone lengths, no accumulated reaction offsets and eventual recovery.
+- Full Chromium reference passed **818 samples**, all 56 specifications, swap geometry checks and save isolation after the wrist change. A focused final browser pass sampled **63 back-fall poses across all nine families** after the visual correction; both final fall captures are updated. The normal CI reference suite also covers the final back landing.
+- Actual-game regression now tests defeat via the existing damage API, retained gameplay position during the fall, and the existing respawn/recovery in addition to eight-family clocks and save reopening. Local Chromium again closed during initial game loading before these assertions, so this is **not a local gameplay pass**. Latest CI must supply the real-game result; consult PR #83.
+- The final full reference's short post-warm-up window had **zero usable intervals** and correctly reports `insufficient-samples` with null FPS/frame-time values. It used Chromium 134 / SwiftShader on Linux at 1366×1024, not an iPad. Geometry/draw counters are diagnostic only. No 60 FPS, hardware-memory or physical-touch claim is made.
+- All seven workflows passed preceding head `3ef3b1d4fd5d50625167a06bda85ecf6ca9ecd85`, including the then-current actual-game candidate test. That historical result does not certify these later wrist/fall changes. Current-head run links and conclusions belong in PR #83.
+
+No independent review, physical iPad acceptance, merge or development deployment has occurred for this candidate. The whole overhaul remains open in #82 and STATUS.md.

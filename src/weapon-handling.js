@@ -6,12 +6,13 @@
 import * as THREE from 'three';
 import {WEAPON_PROFILES} from './rig-contract.js';
 import {solveTwoBone} from './two-bone-constraint.js';
-const direction=new THREE.Vector3(),pole=new THREE.Vector3(),target=new THREE.Vector3();
+const direction=new THREE.Vector3(),pole=new THREE.Vector3(),target=new THREE.Vector3(),wristGoal=new THREE.Vector3();
 const UPPER=.40,LOWER=.34;
 export function solveArm(u,side,goal,orientation){
- const upper=u[side+'Arm'],lower=u[side+'Elbow'],hand=u[side+'Hand'];
+ const upper=u[side+'Arm'],lower=u[side+'Elbow'],hand=u[side+'Hand'],wrist=u[side+'Wrist'];
  pole.set(side==='left'?-.75:.75,-.65,.25);
- return solveTwoBone(upper,lower,hand,goal,pole,orientation);
+ wristGoal.copy(hand.position).applyQuaternion(orientation).negate().add(goal);
+ return solveTwoBone(upper,lower,wrist,wristGoal,pole,orientation);
 }
 export function constrainWeaponHands(u,pull=0){
  const profile=WEAPON_PROFILES[u.family];if(!profile)return;
@@ -27,7 +28,8 @@ export function constrainWeaponHands(u,pull=0){
    else if(profile.draw)target.set(0,0,.18+.34*pull);
    else target.fromArray(profile.secondary);
    target.applyQuaternion(w.quaternion).add(w.position);
-   direction.copy(target).sub(u[side+'Arm'].position);
+   wristGoal.copy(u[side+'Hand'].position).applyQuaternion(w.quaternion);
+   direction.copy(target).sub(wristGoal).sub(u[side+'Arm'].position);
    const distance=direction.length(),limit=UPPER+LOWER-.012;
    if(distance>limit)w.position.addScaledVector(direction,-(distance-limit)/distance);
   }

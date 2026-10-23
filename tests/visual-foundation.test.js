@@ -25,7 +25,7 @@ test('canonical rigs retain named joints and exact bone lengths across every fam
   const a=createActor(false,{foundation:true});equipActor(a,profile.style,family,'none');
   a.position.set(8,3,-9);a.rotation.y=2.7;a.scale.setScalar(.85);
   assert.deepEqual(validateHumanoidRig(a),[]);
-  assert.ok(a.userData.leftHand.children.filter(x=>x.isMesh).length>=5,'re-equipping must retain palm and fingers');
+  assert.equal(a.userData.leftHandSkin.parent,a.userData.leftHand,'re-equipping must retain shared articulated hand skin');
   const root=a.position.clone(),rotation=a.quaternion.clone();
   for(const spec of [null,...listAnimationSpecs().filter(s=>s.weaponFamily===family)]){
    const interval=spec?.recovery.seconds||1.2,impact=spec?.anticipation.seconds??.4;
@@ -35,7 +35,8 @@ test('canonical rigs retain named joints and exact bone lengths across every fam
     const v=t<impact?Math.max(0,Math.min(1,t/Math.max(.001,impact))):0,pull=v*v*(3-2*v);
     checkGrip(a,profile,pull);
     assert.equal(a.userData.leftElbow.position.length(),.4);
-    assert.equal(a.userData.rightHand.position.length(),.34);
+    assert.equal(a.userData.rightWrist.position.length(),.34);
+    assert.equal(a.userData.rightHand.position.length(),.08);
     assert.deepEqual(a.position,root,'visual pose cannot move gameplay root');
     assert.deepEqual(a.quaternion.toArray(),rotation.toArray(),'visual pose cannot reset facing');
    }
