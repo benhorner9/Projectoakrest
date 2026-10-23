@@ -117,4 +117,9 @@ window.oakrestRigLabQA={hero,clipNames:hero.clips.map(x=>x.name),
  abilityCatalogue:catalogue,
  play:name=>{ability.value='';clip.value=name;choose(name,true);hero.update(.3);},
  chooseAbility:id=>{ability.value=id;return chooseAbility(id);},
- sampleAbility:(family,id,attack,now)=>hero.sampleAbility(family,id,attack,now)};
+ sampleAbility:(family,id,attack,now)=>{
+  const frame=hero.sampleAbility(family,id,attack,now);
+  if(frame){playing=false;$('toggle').textContent='Play';
+   $('frame-phase').textContent=frame.phase+' · contact='+frame.contact;}
+  return frame;
+ }};
