@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {join,relative} from 'node:path';
 
 rmSync('dist',{recursive:true,force:true});mkdirSync('dist');
-for(const path of ['index.html','characters.html','visual-reference.html','src','vendor','assets','.htaccess'])cpSync(path,'dist/'+path,{recursive:true});
+for(const path of ['index.html','characters.html','visual-reference.html','rig-lab.html','src','vendor','assets','.htaccess'])cpSync(path,'dist/'+path,{recursive:true});
 
 // Shared-host static assets have stable filenames. Version module *imports*
 // as well as the HTML entry point so iPad/Safari cannot combine a current
@@ -27,7 +27,7 @@ for(const file of sourceFiles.filter(p=>p.endsWith('.js'))){
   (all,start,path,end)=>start+path+'?v='+version+end);
  writeFileSync(dest,updated);
 }
-for(const html of ['dist/index.html','dist/characters.html','dist/visual-reference.html']){
+for(const html of ['dist/index.html','dist/characters.html','dist/visual-reference.html','dist/rig-lab.html']){
  let markup=readFileSync(html,'utf8');
  markup=markup.replace(/((?:src|href)=['"])(\.\/src\/[^'"?]+\.(?:js|css))(['"])/g,
   (all,start,path,end)=>start+path+'?v='+version+end);
