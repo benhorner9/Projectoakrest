@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createSkinnedOakrestHero} from './skeletal-character.js';
+import {skeletalAbilityCatalogue} from './skeletal-ability-library.js';
 const siteAllowed=['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname);
 if(!siteAllowed){
  document.getElementById('lab').textContent='This independent skeletal character test is restricted to local and Oakrest development builds.';
@@ -26,18 +27,47 @@ for(let i=0;i<10;i++){
 const hero=createSkinnedOakrestHero();scene.add(hero.root);
 const helper=new THREE.SkeletonHelper(hero.root);helper.visible=false;scene.add(helper);
 const $=id=>document.getElementById(id);
-const clip=$('clip');for(const animation of hero.clips){
+const clip=$('clip');for(const animation of hero.clips.filter(c=>!c.name.startsWith('Ability/'))){
  const option=document.createElement('option');option.value=animation.name;option.textContent=animation.name.replace(/([a-z])([A-Z])/g,'$1 $2');
  clip.append(option);
 }
 const defaults={SwordSlash:'sword',GreatswordStrike:'greatsword',DaggerCombo:'dagger',BowDraw:'bow',CrossbowFire:'crossbow',StaffCast:'staff',WandCast:'wand',Woodcut:'axe',Guard:'sword'};
+const catalogue=skeletalAbilityCatalogue(),ability=$('ability');
+for(const entry of catalogue){
+ const option=document.createElement('option');
+ option.value=entry.id;option.textContent=entry.family.toUpperCase()+' · '+entry.abilityId+' · '+entry.name;
+ ability.append(option);
+}
 clip.value='Walk';
 let current=hero.play('Walk',0),playing=true,yaw=.56,pitch=.1,distance=5.2,previous=performance.now();
 function choose(name,reset=false){
  current=hero.play(name,reset?0:.18);
  const weapon=defaults[name];if(weapon&&$('weapon').value!==weapon){$('weapon').value=weapon;hero.equip(weapon);}
 }
-clip.addEventListener('change',()=>choose(clip.value));
+const familyWeapon={sword:'sword',daggers:'dagger',greatsword:'greatsword',bow:'bow',
+ shortbow:'bow',crossbow:'crossbow',frost:'staff',ember:'wand'};
+function chooseAbility(id){
+ const data=catalogue.find(item=>item.id===id);
+ if(!data)return null;
+ current=hero.playAbility(data.family,data.abilityId);
+ const weapon=familyWeapon[data.family];
+ if($('weapon').value!==weapon){$('weapon').value=weapon;hero.equip(weapon);}
+ $('preview-timeline').value='0';$('frame-phase').textContent=data.instant?'Instant effect':'Before contact';
+ return data;
+}
+clip.addEventListener('change',()=>{ability.value='';choose(clip.value);$('frame-phase').textContent='No ability selected';});
+ability.addEventListener('change',()=>{if(ability.value)chooseAbility(ability.value);});
+$('preview-timeline').addEventListener('input',()=>{
+ const data=catalogue.find(item=>item.id===ability.value);if(!data)return;
+ // Authoritative-equivalent simulated action clock for VISUAL inspection only.
+ const duration=Math.max(.43,data.anticipation+.31,data.recovery);
+ const action={start:0,impactAt:data.instant?0:data.anticipation,interval:duration};
+ const t=Number($('preview-timeline').value)/1000*(duration-.00001);
+ const frame=hero.sampleAbility(data.family,data.abilityId,action,t);
+ if(frame){$('frame-phase').textContent=frame.phase+' · contact='+frame.contact;
+  playing=false;$('toggle').textContent='Play';current=hero.mixer.clipAction(hero.clips.find(c=>c.name===frame.clip));
+ }
+});
 $('weapon').addEventListener('change',()=>hero.equip($('weapon').value));
 $('toggle').addEventListener('click',()=>{playing=!playing;$('toggle').textContent=playing?'Pause':'Play';});
 $('restart').addEventListener('click',()=>{current.reset().play();});
@@ -83,4 +113,8 @@ function tick(now){
  }
 }
 requestAnimationFrame(tick);
-window.oakrestRigLabQA={hero,clipNames:hero.clips.map(x=>x.name),play:name=>{clip.value=name;choose(name,true);hero.update(.3);}};
+window.oakrestRigLabQA={hero,clipNames:hero.clips.map(x=>x.name),
+ abilityCatalogue:catalogue,
+ play:name=>{ability.value='';clip.value=name;choose(name,true);hero.update(.3);},
+ chooseAbility:id=>{ability.value=id;return chooseAbility(id);},
+ sampleAbility:(family,id,attack,now)=>hero.sampleAbility(family,id,attack,now)};
