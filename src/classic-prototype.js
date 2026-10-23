@@ -160,8 +160,25 @@ function chooseInteraction(target){
  feedback('Approaching '+target.name+'…');
  return true;
 }
+function chooseEnemy(id){
+ const result=combat.chooseTarget(id,player);
+ if(result){
+  navigation.stop();selectedTarget=null;pointerMark.visible=false;dialogue.hidden=true;
+  const e=combat.getState().monsters.find(m=>m.id===id);
+  feedback('Target locked: '+e.name+' · Level '+e.level);
+ }else feedback('Target out of range or obstructed.');
+ return result;
+}
+function closestEnemyAt(point){
+ if(!point)return null;
+ const enemy=combat.getState().monsters.filter(e=>!e.dead).sort((a,b)=>
+  Math.hypot(point.x-a.x,point.z-a.z)-Math.hypot(point.x-b.x,point.z-b.z))[0];
+ return enemy&&Math.hypot(point.x-enemy.x,point.z-enemy.z)<2.3?enemy:null;
+}
 function queueDestination(point){
  if(!point)return;
+ const enemy=closestEnemyAt(point);
+ if(enemy){chooseEnemy(enemy.id);return;}
  const target=closestClickedInteractable(point);
  if(target){chooseInteraction(target);return;}
  selectedTarget=null;dialogue.hidden=true;
@@ -178,6 +195,10 @@ renderer.domElement.addEventListener('pointerup',e=>{
  if(!canvasDown||e.pointerId!==canvasDown.id)return;
  const down=canvasDown;canvasDown=null;
  if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>13)return;
+ screenRay(e.clientX,e.clientY);
+ const hit=raycaster.intersectObjects(combatView.hitObjects().map(o=>o.object),false)[0];
+ const monster=hit&&combatView.hitObjects().find(o=>o.object===hit.object);
+ if(monster){chooseEnemy(monster.id);return;}
  const target=selectedFromRay(e.clientX,e.clientY);
  if(target)chooseInteraction(target);
  else queueDestination(destinationAt(e.clientX,e.clientY));
@@ -213,7 +234,11 @@ document.addEventListener('keydown',e=>{
  if(e.repeat)return;
  if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
  if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
- if(e.key.toLowerCase()==='t'||e.key.toLowerCase()==='e')interactNearby();
+ if(e.key.toLowerCase()==='t')interactNearby();
+ if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
+ if(e.code==='Space')triggerDodge();
+ const bindings=['q','e','r','f'];
+ if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
  if(e.key==='Escape'){dialogue.hidden=true;navigation.stop();selectedTarget=null;pointerMark.visible=false;}
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
