@@ -14,6 +14,7 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 - Two-bone arm reach solver tested against world-space hand contact, actor rotation/scale, all 56 existing animation specifications and repeated timeline samples. Bone lengths, gameplay root and facing remain unchanged.
 - Bow mesh/string/grip alignment, nocked-arrow release visibility and genuinely shorter wand in the candidate; live item meshes are not silently replaced.
 - Reference scene includes the real actor factory, an unarmed same-rig civilian, boar, actual building/interior code, trees, common lighting, alternate views and original-motion comparison.
+- Explicit per-source imported mesh transforms and reference toggle added; seven actual retained sources pass load/profile/swap/fallback checks. Human fitting and live migration remain pending.
 - Asset audit validates 36 local files, 10 current glTFs, 57 icon definitions and 56 metadata specifications; emits hashes and full spec records.
 
 ## Implemented, awaiting acceptance
@@ -28,7 +29,7 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 | ID | Finding | Required resolution |
 |---|---|---|
 | VIS-01 | Original body still visibly constructed from primitives; current armour is rigid overlay geometry. | Finish canonical model and fit all actual wearable combinations, then human visual review. |
-| VIS-02 | Live imported held items still use a generic normalized-height offset. | Author per-mesh grip transforms and validate actual imported geometry across every state; candidate procedural hand-contact results do not cover this. |
+| VIS-02 | Live imported held items still use a generic normalized-height offset. | Candidate per-mesh transforms now load in the reference, including corrected crossbow source axis. Finish human handle fitting, reload/focus part animation and every-state visual review before live migration. |
 | VIS-03 | Candidate ability cues do not yet provide fully distinct, final choreography for every mechanic. | Author/review each current ability, especially defence, healing, multi-shot and paired dagger strikes, against real event timing. |
 | VIS-04 | Candidate muzzle is diagnostic; real projectile spawning still uses the live hand offset. | Integrate into actual combat only with obstruction/range/trajectory regression; no purely visual authority. |
 | VIS-05 | No complete foot IK, movement-start/stop or turn-in-place set. | Ground-contact and movement transition work without moving simulation root or changing controls. |
@@ -50,10 +51,10 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 |---|---|
 | 1 Audit / art lock | Audit, standards and reference implemented; art lock pending |
 | 2 Character / rig | Named candidate rig and partial model refinement; final anatomy/art pending |
-| 3 Weapon handling | Procedural contact solver tested; imported meshes, shields and natural handling pending |
+| 3 Weapon handling | Procedural contact solver and seven imported source adapters tested; human fitting, shields and natural handling pending |
 | 4 Movement | Candidate states present; complete transitions/feet pending |
 | 5 Combat animation | Existing 56 specifications audited; final per-ability choreography/integration pending |
-| 6 Equipment/items | Existing catalogue preserved; complete new fitting and asset adapters pending |
+| 6 Equipment/items | Existing catalogue preserved; seven candidate adapters present; complete new fitting and live integration pending |
 | 7 Town | Existing actual shell/interior reference retained; redesign pending foundation gate |
 | 8 NPC/creatures/professions | Unarmed canonical reference only; live migrations pending |
 | 9 Render/camera/polish | Reference lighting and measurement tools; full-world polish pending |
@@ -69,4 +70,4 @@ Finish/review the canonical foundation and required regressions. PR targets `dev
 
 Current observed hosted marker is `e78024717a74fcd47a0b618dd3c9aa4f9c5d4dff` (rollback baseline), not this candidate. A future rollback can revert this foundation commit without save migration; the candidate is opt-in and never writes player data.
 
-Local validation summary: 252 unit tests and static build passed; reference browser passed 602 samples. The live-game smoke/old inspector did not pass locally (browser/page closes during initialisation), so this is an additional unresolved integration gate even though the reference page works. See `QA.md` for exact evidence and limitations.
+Local validation summary: 253 unit tests and static build passed; reference browser passed 602 samples. The live-game smoke/old inspector did not pass locally (browser/page closes during initialisation), the first published revision passed those same checks in GitHub core CI. New commits must pass again. See `QA.md` for exact evidence and limitations.

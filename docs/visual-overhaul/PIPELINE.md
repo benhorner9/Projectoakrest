@@ -14,7 +14,7 @@ The candidate uses a complete bounded pose, followed by reach-envelope correctio
 2. Author mesh pivot at the primary palm grip; forward -Z. Specify secondary grip, nock, muzzle and appropriate asset scale in `WEAPON_PROFILES` or an explicit per-asset adapter.
 3. Fit palms around handle geometry; sockets cannot float away from the mesh. For bows, both tips, nock, arrow and string must share coordinates. Draw hand follows the nock. Staff/wand have different shaft lengths.
 4. Test all relevant idle/movement/attack/interrupt/death frames, all loadouts, shield compatibility and async re-equip. Validate actual world-space contact, not just parent names.
-5. Review side/front/rear and normal gameplay-distance motion; preserve evidence. Imported static meshes require their own authored grip offsets before they can replace procedural geometry. The current live generic `height*.23` adapter is not certified by the candidate solver.
+5. Review side/front/rear and normal gameplay-distance motion; preserve evidence. `held-asset-profiles.js` records explicit source scales, pivots and rotations for seven retained meshes; the reference checkbox exercises them without enabling them in gameplay. Blades/staff/wand point along source +Y; crossbow points +Z. Candidate adapters preserve the source origin and still require human handle/contact fitting. Imported reload parts and magical focus animation are not yet separated from the static source meshes. The current live generic `height*.23` adapter is not certified by the candidate solver.
 6. Reuse one asset definition for equipped/drop/icon views with separate documented view transforms. Dispose owned geometry/materials; never dispose shared templates.
 
 ## Add an ability
@@ -39,6 +39,7 @@ The audit rejects missing/traversing paths, wrong binary lengths, unsupported fi
 
 - `npm ci --ignore-scripts`; `npm run check`; `npm test`; `npm run audit:visuals`; `npm run build`.
 - `node tests/browser-visual-foundation.cjs`: actual candidate scene, 56 metadata entries, family/state samples, screenshot/video artifacts, resource growth, save isolation and measured frame intervals.
+- `node tests/browser-held-assets.cjs`: loads all seven actual retained weapon sources, captures them, checks profile selection, stale asynchronous replacement and procedural fallback. This does not certify anatomical grip quality.
 - Run original smoke/town/equipment/auto-combat/creator/controller and full repository CI before integration.
 - Review screenshots AND moving sequences. Positive contact tests do not certify character anatomy or art direction.
 - Run physical iPad Safari test procedure in QA report. Desktop touch emulation cannot satisfy it.

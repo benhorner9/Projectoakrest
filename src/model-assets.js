@@ -3,6 +3,7 @@
  * geometry/materials are cached; clones MUST NOT dispose shared GPU resources.
  */
 import * as THREE from 'three';
+import {HELD_ASSET_PROFILES} from './held-asset-profiles.js';
 
 import {MODEL_NAMES,modelNameForItem} from './item-model-registry.js';
 export {MODEL_NAMES,modelNameForItem} from './item-model-registry.js';
@@ -100,6 +101,16 @@ export function upgradeGroundItem(root,itemId){
   root.add(laid);root.userData.assetLoaded=name;
  });
 }
+/** Clone a retained accessory at its authored grip; shared GPU resources stay cached. */
+export function cloneHeldModel(template,name){
+ const profile=HELD_ASSET_PROFILES[name];
+ if(!profile)throw Error('No authored held-asset profile: '+name);
+ const holder=new THREE.Group(),model=template.clone(true);
+ model.scale.setScalar(profile.scale);
+ model.position.fromArray(profile.grip).multiplyScalar(-profile.scale);
+ holder.rotation.set(...profile.rotation);holder.add(model);
+ holder.userData.heldProfile=name;return holder;
+}
 /** Keep combat rig's live tells (crystal/bowstring/crossbow catch) when swapping the static prop.
  * Meshes are shared and cached; never dispose loaded accessory geometry on re-equip.
  */
@@ -113,7 +124,7 @@ export function upgradeHeldWeapon(hero,style,weaponId){
   if(!template||hand.userData.assetStamp!==stamp||hero.userData.weapon!==hand)return;
   // Hide only the procedural base art, retaining animated live components and
   // the original motion rig for true in-world combat telegraphs.
-  const live=new Set([hero.userData.crossbowSlider,hero.userData.magicFocus]);
+  const live=new Set(hero.userData.foundation?[]:[hero.userData.crossbowSlider,hero.userData.magicFocus]);
   const hideStatic=parent=>parent.traverse(obj=>{
    if(obj.isMesh&&!live.has(obj))obj.visible=false;
   });
@@ -122,6 +133,11 @@ export function upgradeHeldWeapon(hero,style,weaponId){
    // Keep attached equipped shields and focus visible; hide only old dagger art.
    const worn=new Set(hero.userData.visibleEquipmentNodes||[]);
    for(const child of hero.userData.offhand.children)if(!worn.has(child))hideStatic(child);
+  }
+  if(hero.userData.foundation){
+   const holder=cloneHeldModel(template,name);hand.add(holder);hand.userData.assetLoaded=name;
+   if(name==='dagger'&&!hero.userData.equipmentShield)hero.userData.offhand.add(cloneHeldModel(template,name));
+   return;
   }
   const holder=new THREE.Group(),height=name==='sword_2handed'?1.95:
    name==='staff'?1.85:name==='wand'?.92:name==='dagger'?.74:

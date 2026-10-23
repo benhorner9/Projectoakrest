@@ -9,6 +9,7 @@ npm test
 npm run audit:visuals
 npm run build
 node tests/browser-visual-foundation.cjs
+node tests/browser-held-assets.cjs
 node tests/browser-smoke.cjs
 node tests/browser-animation-inspector.cjs
 ```
@@ -26,7 +27,7 @@ Browser evidence lands under `qa/visual-foundation/`: each family PNG, ensemble/
 
 ## What remains unproven
 
-Complete art quality, all imported item grips, all actual gameplay ability animations, shield compatibility, all 16 interiors, pathfinding after migration, full-world frame times, Safari/WebKit compatibility for the new candidate, physical touch controls, and long-run memory stability. The browser reference metric is a short software-GPU sample, not a hardware benchmark. Renderer geometry/texture counts are not total GPU memory. Browser heap reporting, where available, is not a leak proof.
+Complete art quality, anatomical fitting of imported item grips, all actual gameplay ability animations, shield compatibility, all 16 interiors, pathfinding after migration, full-world frame times, Safari/WebKit compatibility for the new candidate, physical touch controls, and long-run memory stability. The browser reference metric is a short software-GPU sample, not a hardware benchmark. Renderer geometry/texture counts are not total GPU memory. Browser heap reporting, where available, is not a leak proof.
 
 ## Visual review findings
 
@@ -49,13 +50,14 @@ Results are recorded below after actual runs; interrupted attempts do not count 
 |---|---|
 | Locked dependency installation | Passed (`npm ci --ignore-scripts`) |
 | Source syntax | Passed |
-| Unit/regression suite | 252 passed, 0 failed |
+| Unit/regression suite | 253 passed, 0 failed |
 | Static build/cache checks | Passed; 2 build checks |
 | Visual asset audit | Passed: 36 files, 10 glTFs, 57 icons, 56 specs, 0 errors |
 | Standalone Chromium reference | Passed: 602 samples, 56 spec entries, 9 profiles, save isolation and repeated-swap GPU geometry check |
-| Live-game Chromium smoke | Failed locally before QA initialisation: browser/page closed at `browser-smoke.cjs:28`. No live-game pass is claimed. Baseline comparison investigated separately. |
-| Existing animation inspector | Local attempt also ended with browser/page closed; not passed |
-| Complete CI matrix / independent QA | Not yet established by this local report |
+| Retained imported meshes | Passed: seven actual sources, expected adapters, stale-request protection and procedural fallback; screenshots under `qa/visual-foundation/imported/` |
+| Live-game Chromium smoke | Failed locally before QA initialisation: browser/page closed at `browser-smoke.cjs:28`. No live-game pass is claimed. Baseline comparison investigated separately. The first published revision passed this check in GitHub CI. |
+| Existing animation inspector | Local attempt ended with browser/page closed; first published revision passed in GitHub CI |
+| Complete CI matrix / independent QA | First published revision core passed; complete matrix and latest revision must be checked separately. Independent review not performed. |
 | WebKit / physical iPad / desktop Safari | Not tested |
 | Development deployment | Not performed |
 
@@ -64,3 +66,7 @@ Short reference performance sample: Chromium 134.0.6998.35, Linux headless, Swif
 See [machine-readable metrics](evidence/reference-metrics.json), [original greatsword](evidence/before-greatsword.png), [candidate greatsword](evidence/after-greatsword.png), [bow](evidence/bow.png), [ensemble](evidence/ensemble.png) and [interior](evidence/interior.png). The local WebM and complete family captures are retained in `qa/visual-foundation/` and the CI artifact workflow collects that directory.
 
 Baseline comparison: the untouched `530bed9ee6f810f4e683af174cce33cdf2ef0171` tree was checked out into a separate worktree and the same Chromium smoke was run with the same dependencies. It failed at the same initial QA wait with `Target page, context or browser has been closed`. This establishes that the local failure is reproducible before these changes; it does **not** establish successful live-game verification or identify the crash's root cause.
+
+Imported-source visual inspection: rendered crossbow, greatsword and staff captures were inspected after loading their actual glTF geometry. The crossbow has a different source axis and now uses its own rotation. These captures expose remaining wrist/handle and pose-quality work; zero numerical socket residual is not evidence of final finger contact. Imported static meshes currently have no separately animated crossbow catch or magical focus.
+
+First revision CI evidence: [core run 39940405005](https://github.com/benhorner9/Projectoakrest/actions/runs/39940405005) passed all steps at `77fbc85aad24ced727f1e7da6ffa1081c4e894c7`, including smoke, existing inspector and reference browser. This run does not cover subsequent imported-source additions.

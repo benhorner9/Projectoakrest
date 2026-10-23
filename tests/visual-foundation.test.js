@@ -75,3 +75,16 @@ test('unarmed reference civilian never inherits combat hand constraints or bent 
  const a=createActor(false,{foundation:true});a.userData.family='civilian';
  for(let t=0;t<20;t+=.1){animateFoundation(a.userData,{t,combat:false});assert.equal(a.userData.animationState,'idle');assert.equal(a.userData.leftKnee.rotation.x,0);assert.equal(a.userData.rightKnee.rotation.x,0);}
 });
+
+test('retained held-mesh transforms preserve grip origins and weapon forward direction',async()=>{
+ const {HELD_ASSET_PROFILES}=await import('../src/held-asset-profiles.js');
+ const {cloneHeldModel}=await import('../src/model-assets.js');
+ for(const [name,profile] of Object.entries(HELD_ASSET_PROFILES)){
+  const template=new THREE.Group(),grip=new THREE.Object3D();grip.position.fromArray(profile.grip);template.add(grip);
+  const held=cloneHeldModel(template,name);held.updateMatrixWorld(true);
+  held.children[0].children[0].getWorldPosition(point);assert.ok(point.length()<1e-6,name+' grip remains at hand');
+  const forward=new THREE.Vector3(...(name.startsWith('crossbow')?[0,0,1]:[0,1,0])).applyQuaternion(held.quaternion);
+  assert.ok(forward.distanceTo(new THREE.Vector3(0,0,-1))<1e-6,name+' authored forward is -Z');
+  assert.equal(template.scale.x,1,'cached template cannot be resized by another actor');
+ }
+});
