@@ -4,10 +4,16 @@ on:
     branches: [dev]
     paths:
       - 'src/skeletal-character.js'
+      - 'src/skeletal-ability-library.js'
+      - 'src/skeletal-motion-controller.js'
+      - 'src/ability-animation.js'
+      - 'src/animation-language.js'
       - 'src/rig-lab.js'
       - 'src/rig-lab.css'
       - 'rig-lab.html'
       - 'tests/skeletal-character.test.js'
+      - 'tests/skeletal-ability-library.test.js'
+      - 'tests/skeletal-motion-controller.test.js'
       - 'tests/browser-skeletal-lab.cjs'
       - 'scripts/build.mjs'
       - '.github/workflows/skeletal-proof.yml'
@@ -32,6 +38,8 @@ jobs:
           npm run check
           node --test tests/skeletal-character.test.js
           node --test tests/skeletal-rig-audit.test.js
+          node --test tests/skeletal-ability-library.test.js
+          node --test tests/skeletal-motion-controller.test.js
       - name: Build development static site
         run: npm run build
       - name: Install Chromium
