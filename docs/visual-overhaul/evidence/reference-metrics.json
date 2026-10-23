@@ -1,0 +1,49 @@
+{
+  "browser": "134.0.6998.35",
+  "metrics": {
+    "runtime": {
+      "family": "bow",
+      "state": "recovery",
+      "rigErrors": [],
+      "gripError": 0,
+      "muzzle": [
+        0.32487197842916044,
+        1.8199997528603833,
+        -1.1075587159352687
+      ],
+      "drawCalls": 247,
+      "triangles": 15636,
+      "geometries": 61,
+      "textures": 11,
+      "frames": [
+        1716.6000000000058,
+        1466.6000000000058,
+        1450,
+        2166.5999999999913,
+        1283.199999999997,
+        400,
+        400,
+        500,
+        316.6000000000058
+      ],
+      "elapsed": 20.445342000000014
+    },
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/134.0.6998.35 Safari/537.36",
+    "viewport": [
+      1366,
+      1024
+    ],
+    "memory": {
+      "usedJSHeapSize": 12700000,
+      "totalJSHeapSize": 15200000
+    },
+    "meanFrameMs": 404.15000000000146,
+    "meanFPS": 2.4743288383026014,
+    "p95FrameMs": 500,
+    "p99FrameMs": 500,
+    "softwareGPU": true,
+    "physicalIPad": false
+  },
+  "errors": [],
+  "assetFailures": []
+}

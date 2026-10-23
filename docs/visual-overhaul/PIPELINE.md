@@ -1,0 +1,47 @@
+# Visual production pipeline
+
+## Ownership and boundaries
+
+`actors.js` remains the shared humanoid geometry/equipment factory. `createActor(false, {foundation:true})` enables the candidate only for explicit callers. Live game callers retain the baseline. Do not silently turn the candidate on before Phase 1–3 review. `visual-reference.html` runs separately from main.js and has no access to combat or save mutation APIs.
+
+Canonical joints: `rig`, `head`, left/right `Arm`, `Elbow`, `Hand`, `Leg`, `Knee`. Stable names are prefixed `humanoid.`. Visual weapon control is a sibling under `rig`; both wrists solve toward its grips. Ordinary off-hand props remain children of the left hand. This avoids a cyclic hand→weapon→same-hand constraint.
+
+The candidate uses a complete bounded pose, followed by reach-envelope correction and two-bone arm solving. Bone lengths never change. It is not a skinned glTF pipeline or a full IK foot-placement solution. Future skins must bind the same conventions or use an explicit rest-pose conversion, validated against the actual source rig.
+
+## Add a weapon
+
+1. Use the actual current item ID/family. Do not change reach, damage, timing or ownership.
+2. Author mesh pivot at the primary palm grip; forward -Z. Specify secondary grip, nock, muzzle and appropriate asset scale in `WEAPON_PROFILES` or an explicit per-asset adapter.
+3. Fit palms around handle geometry; sockets cannot float away from the mesh. For bows, both tips, nock, arrow and string must share coordinates. Draw hand follows the nock. Staff/wand have different shaft lengths.
+4. Test all relevant idle/movement/attack/interrupt/death frames, all loadouts, shield compatibility and async re-equip. Validate actual world-space contact, not just parent names.
+5. Review side/front/rear and normal gameplay-distance motion; preserve evidence. Imported static meshes require their own authored grip offsets before they can replace procedural geometry. The current live generic `height*.23` adapter is not certified by the candidate solver.
+6. Reuse one asset definition for equipped/drop/icon views with separate documented view transforms. Dispose owned geometry/materials; never dispose shared templates.
+
+## Add an ability
+
+Use `ability-animation.js` metadata for compatibility, pose, anticipation/tell, active event, origin, follow-through, recovery, interruption, VFX/audio and low-quality fallback. Current specifications enumerate 8 families × (basic + four weapon skills + two shared skills) = 56 entries. Shared mechanics appear per compatible family intentionally.
+
+The candidate reference samples existing timing; it does not claim distinct final choreography for all 56 entries. A new skill needs genuinely distinguishable body motion, not only a new label pointing at the same swing. Instant effects remain instant. Simulation emits release/contact/cancel events; visuals and audio observe them. Never move damage into an animation callback.
+
+## Add characters, armour, creatures or buildings
+
+Humanoid variation uses shared proportions/rig/materials and retains saved appearance. Civilian callers supply explicit civilian behaviour and no combat equipment. Armour must be checked over underlying body surfaces across every pose. Non-humanoid anatomy needs its own locomotion and attack origins; do not retarget a human gait onto a boar.
+
+Environment assets conform to Art Bible scale/materials, architectural modules and collision openings. `buildHouse` is exported so the reference exercises the actual shell/interior builder. It registers colliders within the isolated reference page; do not run it in an existing gameplay scene merely to draw a thumbnail.
+
+## Import and provenance gates
+
+Prefer self-hosted glTF 2 / GLB. Apply transforms in the authoring tool; preserve source file, licence, creator, original URL, source hash, export version, modifications, triangle/material/texture counts and sockets. Retarget bones explicitly. Compression is allowed only after decoder is locally bundled and Chromium/WebKit/iPad fallback tested. Current hand-written accessory loader does not support arbitrary glTF features, interleaved/sparse accessors, skinned animation, Draco or KTX2. Do not point it at an arbitrary new model.
+
+The audit rejects missing/traversing paths, wrong binary lengths, unsupported file sizes and missing item visual definitions. Additional formats need explicit capability validators. No unlicensed release dependencies. Pin immutable source versions; do not download a pack's latest branch during a release build.
+
+## Verification and release
+
+- `npm ci --ignore-scripts`; `npm run check`; `npm test`; `npm run audit:visuals`; `npm run build`.
+- `node tests/browser-visual-foundation.cjs`: actual candidate scene, 56 metadata entries, family/state samples, screenshot/video artifacts, resource growth, save isolation and measured frame intervals.
+- Run original smoke/town/equipment/auto-combat/creator/controller and full repository CI before integration.
+- Review screenshots AND moving sequences. Positive contact tests do not certify character anatomy or art direction.
+- Run physical iPad Safari test procedure in QA report. Desktop touch emulation cannot satisfy it.
+- PR into `dev`, independent review, all critical CI conclusive. Preserve rollback SHA. Only then pin reviewed SHA in Cellbound dev bridge; verify upload, hosted build marker and runtime assets. Never promote public `/oakrest/` under this directive.
+
+Current candidate must be replaced/refined or accepted through these gates before migration of the live player, NPCs and town. A reference page existing is not the completed visual overhaul.

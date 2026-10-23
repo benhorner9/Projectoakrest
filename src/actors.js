@@ -3,6 +3,8 @@ import {damp} from './motion.js';
 import {attackPose} from './gameplay-math.js';
 import {abilityMotion} from './animation-language.js';
 import {restoreKayKitPose,applyKayKitPose} from './kaykit-motion.js';
+import {animateFoundation} from './foundation-motion.js';
+import {HUMANOID_RIG_VERSION,HUMANOID_JOINTS} from './rig-contract.js';
 import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
@@ -13,9 +15,9 @@ const block=(g,c,x,y,z,sx,sy,sz,metal=false)=>mesh(g,box,c,x,y,z,sx,sy,sz,metal)
 function tube(g,c,x,y,z,rt,rb,h,metal=false){const key=[rt,rb,h].join();if(!geometries.has(key))geometries.set(key,new THREE.CylinderGeometry(rt,rb,h,10));return mesh(g,geometries.get(key),c,x,y,z,1,1,1,metal);}
 function pivot(parent,x,y,z){const p=new THREE.Group();p.position.set(x,y,z);parent.add(p);return p;}
 function taperedBlade(g,length,width){const shape=new THREE.Shape();shape.moveTo(-width/2,0);shape.lineTo(-width*.4,-length*.78);shape.lineTo(0,-length);shape.lineTo(width*.4,-length*.78);shape.lineTo(width/2,0);shape.closePath();const geo=new THREE.ExtrudeGeometry(shape,{depth:.055,bevelEnabled:true,bevelSize:.018,bevelThickness:.018,bevelSegments:1,steps:1});geo.rotateX(Math.PI/2);mesh(g,geo,'#b4c9cc',0,0,-.2,1,1,1,true);}
-export function createActor(bandit=false){
+export function createActor(bandit=false,{foundation=false}={}){
  const g=new THREE.Group(),rig=pivot(g,0,0,0),skin=material(bandit?'#b88b69':'#d6aa83').clone(),body=material(bandit?'#6a4d4e':'#607b7c').clone(),cloth=material('#34574e').clone();
- const torso=tube(rig,body,0,1.43,0,.43,.31,.82);torso.scale.z=.62;
+ const torso=tube(rig,body,0,1.43,0,foundation?.37:.43,foundation?.29:.31,.82);torso.scale.z=.62;
  const trimMat=material('#c9b28a').clone();
  const outfitTrims=[
   block(rig,trimMat,0,1.46,-.275,.085,.56,.028),
@@ -24,23 +26,35 @@ export function createActor(bandit=false){
  ];
  ball(rig,body,0,1.12,0,.36,.23,.25);
  const neck=tube(rig,skin,0,1.94,0,.14,.16,.22);
- const head=pivot(rig,0,2.15,0);ball(head,skin,0,0,0,.275,.34,.26);
+ const head=pivot(rig,0,2.15,0);const face=ball(head,skin,0,0,0,foundation?.245:.275,foundation?.30:.34,foundation?.235:.26);
  const hairMat=material('#40332a').clone();
  const hair=ball(head,hairMat,0,.17,.055,.285,.23,.27);
  const hairBack=ball(head,hairMat,0,-.15,.19,.24,.38,.13);hairBack.visible=false;
  const hairTail=ball(head,hairMat,.12,-.18,.30,.11,.32,.11);hairTail.visible=false;
  const hairCurls=[[-.20,.24,-.06],[0,.32,-.09],[.20,.24,-.06]].map(([x,y,z])=>{const curl=ball(head,hairMat,x,y,z,.11,.12,.12);curl.visible=false;return curl;});
  for(const s of [-1,1]){ball(head,skin,s*.27,-.01,.01,.065,.11,.07);ball(head,'#26332e',s*.105,.015,-.237,.03,.037,.02);block(head,'#493a2c',s*.11,.09,-.235,.10,.025,.03);}
- ball(head,skin,0,-.035,-.27,.055,.075,.07);
+ ball(head,skin,0,-.035,foundation?-.245:-.27,foundation?.04:.055,foundation?.065:.075,foundation?.045:.07);
+ if(foundation){block(head,'#775848',0,-.17,-.225,.10,.015,.014);}
  block(rig,'#493d30',0,1.02,0,.71,.14,.49);block(rig,'#c8ab70',0,1.03,-.27,.15,.15,.05,true);
  const cape=pivot(rig,0,1.78,.25),capeGeo=new THREE.PlaneGeometry(.75,1.05,4,4);const cp=capeGeo.attributes.position;for(let i=0;i<cp.count;i++){const y=cp.getY(i);cp.setXYZ(i,cp.getX(i)*(1.10-y*.30),y,Math.cos(cp.getX(i)*5)*.06);}capeGeo.computeVertexNormals();cloth.side=THREE.DoubleSide;mesh(cape,capeGeo,cloth,0,-.53,.045);cape.rotation.x=.10;
  const chestPlate=ball(rig,material('#839a9b',true),0,1.48,-.22,.36,.38,.12);
  const leather=ball(rig,'#7a6045',0,1.45,-.20,.36,.36,.11);
  const pauldrons=[];
  function leg(s){const p=pivot(rig,s*.19,1,0);tube(p,'#484b41',0,-.23,0,.145,.12,.46);const knee=pivot(p,0,-.46,0);ball(knee,'#7c7160',0,0,-.02,.14,.15,.14);tube(knee,'#45453b',0,-.19,0,.12,.10,.38);ball(knee,'#3b3831',0,-.38,-.09,.15,.14,.25);return {p,knee};}
- function arm(s){const p=pivot(rig,s*.43,1.77,0);ball(p,body,0,-.02,0,.19,.23,.19);tube(p,body,0,-.22,0,.13,.105,.39);const elbow=pivot(p,0,-.40,0);ball(elbow,skin,0,0,0,.105,.11,.10);tube(elbow,'#675440',0,-.16,0,.12,.10,.30);ball(elbow,skin,0,-.33,0,.115,.135,.105);const hand=pivot(elbow,0,-.34,-.06);pauldrons.push(ball(p,material('#839a9b',true),0,.035,0,.23,.18,.24));return {p,elbow,hand};}
+ function arm(s){const p=pivot(rig,s*.43,1.77,0);ball(p,body,0,-.02,0,foundation?.15:.19,foundation?.17:.23,foundation?.15:.19);tube(p,body,0,-.22,0,.13,.105,.39);const elbow=pivot(p,0,-.40,0);ball(elbow,skin,0,0,0,.105,.11,.10);tube(elbow,'#675440',0,-.16,0,.12,.10,.30);const palm=ball(elbow,skin,0,-.33,0,.115,.135,.105);const hand=pivot(elbow,0,-.34,foundation?0:-.06);if(foundation){palm.removeFromParent();block(hand,skin,0,0,0,.17,.17,.16);for(let i=0;i<3;i++)block(hand,skin,-.07+i*.065,-.07,-.015,.046,.075,.14);ball(hand,skin,s*.095,.015,-.035,.045,.075,.06);}pauldrons.push(ball(p,material('#839a9b',true),0,.035,0,foundation?.19:.23,foundation?.13:.18,foundation?.19:.24));return {p,elbow,hand};}
  const ll=leg(-1),rl=leg(1),la=arm(-1),ra=arm(1);
- g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,skinMaterial:skin,hairMat,hair,hairBack,hairTail,hairCurls,torso,outfitTrims,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,owned:[],family:'sword'};
+ g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,skinMaterial:skin,hairMat,hair,hairBack,hairTail,hairCurls,torso,outfitTrims,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,leftHand:la.hand,rightHand:ra.hand,foundation,owned:[],family:'sword'};
+ if(foundation){
+  const u=g.userData;u.rigVersion=HUMANOID_RIG_VERSION;u.head.scale.setScalar(.9);
+  face.geometry=face.geometry.clone();u.bodyGeometry=[face.geometry,capeGeo];
+  // Shape the jaw into deliberate planes instead of retaining a spherical chin.
+  const vertices=face.geometry.attributes.position;for(let i=0;i<vertices.count;i++){const y=vertices.getY(i);if(y<-.15)vertices.setX(i,vertices.getX(i)*(1+(y+.15)*.24));}face.geometry.computeVertexNormals();
+  u.weapon=pivot(rig,.3,1.3,-.3);u.weapon.name='socket.weapon-control';
+  u.offhand=pivot(la.hand,0,0,0);u.offhand.name='socket.offhand';
+  for(const name of HUMANOID_JOINTS)u[name].name='humanoid.'+name;
+  // Preserve the existing world scale and clothing anchors. Geometry is shared
+  // with the live actor so the reference cannot silently use an unrelated model.
+ }
  if(bandit){ball(head,'#383e40',0,.16,.06,.33,.26,.31);block(head,'#5d5148',0,-.15,-.245,.45,.19,.05);}
  return g;
 }
@@ -58,7 +72,7 @@ export function applyCharacterAppearance(g,appearance={}){
  u.body.color.set(color(appearance.outfitColor,'#607b7c'));
  u.cloth.color.set(color(appearance.outfitColor,'#607b7c')).multiplyScalar(.72);
  u.torso.scale.x=sex==='female'?.90:1;
- u.head.scale.setScalar(sex==='female'?.97:1);
+ u.head.scale.setScalar((sex==='female'?.97:1)*(u.foundation?.9:1));
  u.hair.position.set(hairStyle==='swept'?.07:0,hairStyle==='buzz'?.19:.17,.055);
  u.hair.scale.set(hairStyle==='swept'?.32:.285,hairStyle==='buzz'?.10:hairStyle==='ponytail'?.17:.23,.27);
  u.hair.rotation.z=hairStyle==='swept'?.22:0;
@@ -68,21 +82,22 @@ export function applyCharacterAppearance(g,appearance={}){
  u.outfitTrims.forEach((m,i)=>m.visible=outfit==='scholar'?i===0:outfit==='traveller'?i>0:outfit==='wanderer'?i===1:false);
  u.cape.visible=outfit==='wanderer'&&!u.chestPlate.visible;
 }
-export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();for(const mat of u.ownedMaterials||[])mat.dispose();u.ownedMaterials=[];u.owned=[];u.weapon.clear();u.offhand.clear();u.bowString=null;u.crossbowSlider=null;u.magicFocus=null;u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
+export function equipActor(g,style,family,armour){const u=g.userData;for(const geo of u.owned)geo.dispose();for(const mat of u.ownedMaterials||[])mat.dispose();u.ownedMaterials=[];u.owned=[];u.weapon.clear();u.offhand.clear();u.bowString=null;u.nockedArrow=null;u.foundationPosed=false;u.crossbowSlider=null;u.magicFocus=null;u.family=family;u.chestPlate.visible=armour==='plate';u.leather.visible=armour==='leather';u.pauldrons.forEach(p=>p.visible=armour==='plate');u.cape.visible=armour!=='plate';u.body.color.set(armour==='plate'?'#58686b':armour==='leather'?'#7b674b':style==='magic'?'#697e9b':'#607b7c');u.cloth.color.set(style==='magic'?'#3b5277':style==='ranged'?'#45634c':'#34574e');
  const w=u.weapon;function blade(group,heavy=false,dagger=false){block(group,'#54402f',0,0,.02,.105,.11,.38);block(group,'#c4a466',0,0,-.18,dagger?.26:heavy?.55:.40,.09,.10,true);taperedBlade(group,dagger?.52:heavy?1.45:1.03,dagger?.15:heavy?.30:.20);ball(group,'#c4a466',0,0,.24,.08,.08,.08);}
  if(style==='melee'){
    if(family==='woodaxe'){
-    block(w,'#745235',0,0,-.49,.12,.12,1.15);
+    block(w,'#745235',0,0,u.foundation?-.37:-.49,.12,.12,u.foundation?1.38:1.15);
     block(w,'#c0c9c7',-.25,0,-.96,.58,.15,.38,true);
     block(w,'#e2e5dc',-.51,0,-.97,.085,.16,.4,true);
    }else{blade(w,family==='greatsword',family==='daggers');if(family==='daggers')blade(u.offhand,false,true);}
   }
- else if(style==='magic'){const shaft=tube(w,'#604d36',0,0,-.65,.055,.075,1.75);shaft.rotation.x=Math.PI/2;const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.23),material(family==='frost'?'#8fcde3':'#ecaa69'));crystal.position.z=-1.58;w.add(crystal);u.magicFocus=crystal;for(const s of [-1,1]){const prong=block(w,'#baa775',s*.15,0,-1.43,.07,.10,.42,true);prong.rotation.y=s*-.35;}}
+ else if(style==='magic'){const wand=u.foundation&&family==='ember',length=wand?.85:1.75;const shaft=tube(w,'#604d36',0,0,wand?-.3:-.65,.055,.075,length);shaft.rotation.x=Math.PI/2;const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.23),material(family==='frost'?'#8fcde3':'#ecaa69'));crystal.position.z=wand?-.72:-1.58;if(wand)crystal.scale.setScalar(.6);w.add(crystal);u.magicFocus=crystal;for(const s of [-1,1]){const prong=block(w,'#baa775',s*(wand?.08:.15),0,wand?-.65:-1.43,.07,.10,wand?.18:.42,true);prong.rotation.y=s*-.35;}}
  else {const bow=family!=='crossbow',size=family==='shortbow'?.55:.8;
- if(bow){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,-size,.12),new THREE.Vector3(0,-size*.7,-.22),new THREE.Vector3(0,0,-.38),new THREE.Vector3(0,size*.7,-.22),new THREE.Vector3(0,size,.12)]);mesh(w,new THREE.TubeGeometry(curve,16,.045,5,false),'#946c42',0,0,-.28);
+ if(bow){const points=u.foundation?[[0,-size,.18],[0,-size*.7,.02],[0,0,0],[0,size*.7,.02],[0,size,.18]].map(p=>new THREE.Vector3(...p)):null;const curve=new THREE.CatmullRomCurve3(points||[new THREE.Vector3(0,-size,.12),new THREE.Vector3(0,-size*.7,-.22),new THREE.Vector3(0,0,-.38),new THREE.Vector3(0,size*.7,-.22),new THREE.Vector3(0,size,.12)]);mesh(w,new THREE.TubeGeometry(curve,16,.045,5,false),'#946c42',0,0,u.foundation?0:-.28);
   // Three retained points form a genuine V draw-string. The middle point
   // follows the actual pending attack wind-up without creating per-frame meshes.
-  const positions=new Float32Array([0,-size,.12,0,0,-.16,0,size,.12]);
+  const tip=u.foundation?.18:.12,nock=u.foundation?.18:-.16;
+  const positions=new Float32Array([0,-size,tip,0,0,nock,0,size,tip]);
   const stringGeometry=new THREE.BufferGeometry();
   stringGeometry.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
   const stringMaterial=new THREE.LineBasicMaterial({color:'#e7dabc'});
@@ -92,7 +107,7 @@ export function equipActor(g,style,family,armour){const u=g.userData;for(const g
  else{block(w,'#725235',0,0,-.35,.18,.2,.90);const bowMesh=mesh(w,new THREE.TorusGeometry(.46,.045,5,16,Math.PI),'#adb6b0',0,0,-.68);bowMesh.rotation.x=Math.PI/2;bowMesh.rotation.z=Math.PI;block(w,'#c7b999',0,0,-.69,.92,.016,.016);
   // Mechanical catch slides during the crossbow wind-up then snaps forward.
   u.crossbowSlider=block(w,'#cfbb8b',0,.08,-.57,.14,.10,.14,true);}
- block(w,'#d3bb84',0,0,-.58,.025,.025,.9);}
+ const arrowRoot=pivot(w,0,0,0);block(arrowRoot,'#d3bb84',0,0,-.58,.025,.025,.9);u.nockedArrow=arrowRoot;}
  // Equipment geometry belongs to this loadout; cached primitive geometry remains shared.
  for(const root of [w,u.offhand])root.traverse(o=>{if(o.isMesh&&o.geometry!==box&&o.geometry!==sphere&&![...geometries.values()].includes(o.geometry))u.owned.push(o.geometry);});
 }
@@ -123,7 +138,7 @@ export function applyEquipmentVariant(g,style,itemId){
  }
  u.owned.push(geometry);u.ownedMaterials.push(...mats,gemMaterial);
 }
-export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData;restoreKayKitPose(u);const strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
+export function animateActor(g,{dt,t,stride=0,speed=0,attack=null,dodge=0,side=0,backwards=false,dead=false,hit=false,chopping=null,combat=true}){const u=g.userData;if(u.foundation){animateFoundation(u,{dt,t,stride,speed,attack,dodge,side,backwards,dead,hit,chopping,combat});return;}restoreKayKitPose(u);const strength=Math.min(1,speed/4.7),s=Math.sin(stride)*(backwards?-1:1),family=u.family,pose=attackPose(t,attack),wind=pose.phase==='windup'?pose.amount:0,release=pose.phase==='release'?pose.amount:0;
  u.leftLeg.rotation.x=damp(u.leftLeg.rotation.x,s*.58*strength,20,dt);u.rightLeg.rotation.x=damp(u.rightLeg.rotation.x,-s*.58*strength,20,dt);
  u.leftKnee.rotation.x=damp(u.leftKnee.rotation.x,Math.max(0,-s)*.85*strength,20,dt);u.rightKnee.rotation.x=damp(u.rightKnee.rotation.x,Math.max(0,s)*.85*strength,20,dt);
  u.rig.position.y=Math.sin(stride*2)*.035*strength+Math.sin(t*2)*.009*(1-strength)-dodge*.35;

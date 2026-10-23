@@ -35,6 +35,8 @@ jobs:
         run: npm run check
       - name: Run unit and regression tests
         run: npm test
+      - name: Audit visual asset contracts
+        run: npm run audit:visuals
       - name: Build static release
         run: npm run build
       - name: Install Chromium using preinstalled runner system libraries
@@ -44,6 +46,8 @@ jobs:
         run: node tests/browser-smoke.cjs
       - name: Verify real-rig animation inspector and event tracing
         run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-animation-inspector.cjs
+      - name: Canonical visual reference and grip regression
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-visual-foundation.cjs
       - name: Preserve diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
