@@ -64,5 +64,5 @@ export function monsterModel(type){
  return type==='mossling'?'mushnub':null; // boars remain quadrupeds; no misleading swaps.
 }
 export function playerOutfit(profile){
- return /woman|female/i.test(profile?.body||profile?.gender||'')?'ranger-female':'ranger-male';
+ return /woman|female/i.test(profile?.sex||profile?.gender||profile?.body||'')?'ranger-female':'ranger-male';
 }
