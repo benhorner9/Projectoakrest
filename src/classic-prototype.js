@@ -32,7 +32,7 @@ const existing=readExistingCharacter(),navigation=createClassicNavigation(),comb
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
-let dodgeTravel=null,nextTargetUi=0;
+let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color('#b4c9ad');
 scene.fog=new THREE.Fog('#b4c9ad',75,160);
@@ -250,6 +250,7 @@ for(const b of document.querySelectorAll('[data-ability]'))
 function combatEvents(events){
  for(const event of events){
   if(event.type==='style'){style=event.style;refreshHud();}
+  else if(event.type==='release')lastReleaseUntil=event.time+.18;
   else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated · temporary XP');
@@ -373,6 +374,9 @@ function draw(dt){
  if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
+ hero.update({facing:look,style,
+  pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
+  worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
  for(const [i,n] of npcActors.entries())
   n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee'});
  if(pointerMark.visible){
