@@ -13,12 +13,12 @@ const palette={
 const rest={
  Root:[0,0,0],Hips:[0,1.03,0],Spine:[0,1.33,0],Chest:[0,1.73,0],
  Neck:[0,1.97,0],Head:[0,2.17,0],
- LeftShoulder:[-.43,1.76,0],LeftUpperArm:[-.55,1.72,0],
- LeftLowerArm:[-.78,1.44,0],LeftHand:[-.99,1.19,0],
- LeftThumb:[-1.03,1.14,-.08],LeftIndex:[-1.05,1.10,-.045],
- RightShoulder:[.43,1.76,0],RightUpperArm:[.55,1.72,0],
- RightLowerArm:[.78,1.44,0],RightHand:[.99,1.19,0],
- RightThumb:[1.03,1.14,-.08],RightIndex:[1.05,1.10,-.045],
+ LeftShoulder:[-.43,1.76,0],LeftUpperArm:[-.52,1.71,0],
+ LeftLowerArm:[-.56,1.39,0],LeftHand:[-.60,1.08,0],
+ LeftThumb:[-.64,1.03,-.08],LeftIndex:[-.65,.97,-.045],
+ RightShoulder:[.43,1.76,0],RightUpperArm:[.52,1.71,0],
+ RightLowerArm:[.56,1.39,0],RightHand:[.60,1.08,0],
+ RightThumb:[.64,1.03,-.08],RightIndex:[.65,.97,-.045],
  LeftUpperLeg:[-.20,1.00,0],LeftLowerLeg:[-.21,.57,0],
  LeftFoot:[-.21,.15,0],LeftToe:[-.21,.075,-.18],
  RightUpperLeg:[.20,1.00,0],RightLowerLeg:[.21,.57,0],
@@ -106,18 +106,18 @@ function authorGeometry(index){
  ellipsoid(0,2.045,-.219,.072,.014,.015,'Head',palette.leather,3,6);
  for(const s of [-1,1]){
   const side=s<0?'Left':'Right';
-  const shoulder=[s*.55,1.72,0],elbow=[s*.78,1.44,0],hand=[s*.99,1.19,0];
+  const shoulder=[s*.52,1.71,0],elbow=[s*.56,1.39,0],hand=[s*.60,1.08,0];
   tube([s*.43,1.76,0],elbow,.175,.17,.132,.132,
    side+'Shoulder',side+'LowerArm',palette.shirt,5);
   tube(elbow,hand,.135,.135,.090,.094,side+'LowerArm',side+'Hand',palette.skin,5);
-  ellipsoid(s*1.00,1.155,-.02,.107,.138,.065,side+'Hand',palette.skin);
+  ellipsoid(s*.60,1.035,-.02,.107,.119,.065,side+'Hand',palette.skin);
   // Five-finger silhouette for the hand at ordinary game-camera distance.
-  for(let k=0;k<4;k++)ellipsoid(s*(1.032+k*.013),1.08,-.075+k*.038,
+  for(let k=0;k<4;k++)ellipsoid(s*(.626+k*.007),.965,-.075+k*.038,
     .027,.080,.025,side+'Index',palette.skin,3,5);
-  ellipsoid(s*1.055,1.11,-.105,.040,.085,.041,side+'Thumb',palette.skin);
+  ellipsoid(s*.642,1.02,-.105,.040,.085,.041,side+'Thumb',palette.skin);
   // Small shoulder guard and cuff fit the same weighted skin; no floating plates.
-  ellipsoid(s*.51,1.68,-.01,.21,.105,.21,side+'Shoulder',palette.leather);
-  tube([s*.73,1.50,0],[s*.80,1.405,0],.144,.145,.135,.132,
+  ellipsoid(s*.48,1.68,-.01,.18,.105,.18,side+'Shoulder',palette.leather);
+  tube([s*.55,1.47,0],[s*.57,1.36,0],.144,.145,.13,.13,
     side+'LowerArm',side+'LowerArm',palette.leather,2);
   const hip=[s*.20,1.00,0],knee=[s*.21,.57,0],foot=[s*.21,.15,0];
   tube(hip,knee,.205,.195,.154,.14,side+'UpperLeg',side+'LowerLeg',palette.trousers,6);
