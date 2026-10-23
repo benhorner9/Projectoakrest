@@ -4,6 +4,8 @@ on:
     branches: [dev]
     paths:
       - 'src/skeletal-character.js'
+      - 'src/skeletal-preview.js'
+      - 'src/main.js'
       - 'src/skeletal-ability-library.js'
       - 'src/skeletal-motion-controller.js'
       - 'src/ability-animation.js'
@@ -12,6 +14,8 @@ on:
       - 'src/rig-lab.css'
       - 'rig-lab.html'
       - 'tests/skeletal-character.test.js'
+      - 'tests/skeletal-preview.test.js'
+      - 'tests/browser-skeletal-game.cjs'
       - 'tests/skeletal-ability-library.test.js'
       - 'tests/skeletal-motion-controller.test.js'
       - 'tests/browser-skeletal-lab.cjs'
@@ -40,16 +44,21 @@ jobs:
           node --test tests/skeletal-rig-audit.test.js
           node --test tests/skeletal-ability-library.test.js
           node --test tests/skeletal-motion-controller.test.js
+          node --test tests/skeletal-preview.test.js
       - name: Build development static site
         run: npm run build
       - name: Install Chromium
         run: npx playwright install chromium
       - name: Exercise browser skinned rig and save isolation
-        run: node tests/browser-skeletal-lab.cjs
+        run: |
+          node tests/browser-skeletal-lab.cjs
+          node tests/browser-skeletal-game.cjs
       - name: Preserve screenshot evidence for independent art review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: oakrest-skeletal-lab
-          path: qa/skeletal-lab/
+          path: |
+            qa/skeletal-lab/
+            qa/skeletal-game/
           if-no-files-found: warn
