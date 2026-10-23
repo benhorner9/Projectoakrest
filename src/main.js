@@ -405,7 +405,7 @@ function renderBook(){
    const weaponPower=item?.basic||(bookStyle==='melee'?UNARMED.basic:0);
    const combatLv=levelFromXp(data.xp[bookStyle]).level;
    const equipmentPower=outgoingMultiplier(data.armour[bookStyle],bookStyle)*equipmentModifiers(data,bookStyle).power;
-   el('p',bookStyle.toUpperCase()+' · Level '+combatLv+' · Maximum hit '+maxHitFor(combatLv,weaponPower,equipmentPower)+' · Accuracy vs level '+combatLv+': '+Math.round(accuracyFor(combatLv,combatLv,weaponPower)*100)+'% · '+(item?.interval||UNARMED.interval).toFixed(2)+'s per attack',host,'detail-footnote');
+   el('p',bookStyle.toUpperCase()+' · Level '+combatLv+' · Maximum hit '+maxHitFor(combatLv,weaponPower,equipmentPower)+' · Accuracy vs level '+combatLv+': '+Math.round(accuracyFor(combatLv,combatLv,weaponPower,0,equipmentPower)*100)+'% · '+(item?.interval||UNARMED.interval).toFixed(2)+'s per attack',host,'detail-footnote');
  }else if(bookTab==='inventory'){
   renderInventoryGrid(host,data,showItemDetail,()=>{save();renderBook();});
  }else if(bookTab==='quests'){
@@ -742,7 +742,9 @@ function hitEnemy(e,damage,ability,source=sourceSnapshot()){
  if(e.type!=='dummy'&&Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)>ENEMY_COMBAT[e.type].leash){disengageEnemy(e,now());return;}
  const periodic=ability?.periodic===true;
  const maximum=periodic?Math.max(1,Math.floor(damage)):maxHitForAction(source.maxHit||maxHitFor(source.level,source.weaponBasic,source.power),source.weaponBasic,damage);
- const result=periodic?{hit:true,damage:maximum}:rollHit({maxHit:maximum,accuracy:accuracyFor(source.level,e.level,source.weaponBasic,{dummy:0,mossling:0,boar:.04,bandit:.08}[e.type]||0)});
+ // Practice dummies are guaranteed to register contact for the three-style tutorial.
+ const chance=e.type==='dummy'?1:accuracyFor(source.level,e.level,source.weaponBasic,{mossling:0,boar:.04,bandit:.08}[e.type]||0,source.power);
+ const result=periodic?{hit:true,damage:maximum}:rollHit({maxHit:maximum,accuracy:chance});
  if(e.type!=='dummy'){const cfg=ENEMY_COMBAT[e.type];if(Math.hypot(hero.position.x-e.startX,hero.position.z-e.startZ)<=cfg.leash)e.aggro=true;}
  if(!result.hit){floating('0','#c4d2d7',e.group.position.clone().add(new THREE.Vector3(0,e.type==='mossling'?1.7:2.8,0)));return;}
  if(e.onboardingDummy&&data.onboarding?.area==='tutorial'){
@@ -1010,7 +1012,7 @@ function startEnemyWarning(e,t){
 function applyEnemyDamage(e,spec,t){
  if(hp<=0||dodgeInvulnerable(t,dodgeStarted)){floating('EVADED','#a8f2be',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));return;}
  const vitality=levelFromXp(data.xp.vitality).level,sourceLevel=e?.level||vitality;
- const result=rollHit({maxHit:Math.max(1,Math.round(spec.damage)),accuracy:accuracyFor(sourceLevel,vitality,19,equipmentModifiers(data,style).guard)});
+ const result=rollHit({maxHit:Math.max(1,Math.round(spec.damage)),accuracy:accuracyFor(sourceLevel,vitality,19,Math.min(.45,equipmentModifiers(data,style).guard+defenceFor(data.armour[style]).physical*.5))});
  if(!result.hit){floating('0','#c4d2d7',hero.position.clone().add(new THREE.Vector3(0,2.7,0)));return;}
  const harm=Math.max(1,Math.round(damageAfterArmour(result.damage,shieldUntil>t,data.armour[style])*(1-equipmentModifiers(data,style).guard)));
  hp=Math.max(0,hp-harm);lastHurt=t;cameraJolt=.13;audio.play('hurt');
