@@ -7,7 +7,6 @@ import {classicItemDetails,classicAbilityCatalogue} from './classic-item-state.j
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries} from './town-ui.js';
 import {positionedEntries,BAG_MIN_SLOTS,VAULT_MIN_SLOTS} from './item-slot-layout.js';
-import {closestDrop} from './loot.js';
 const q=(root,id)=>root.querySelector('#'+id);
 function element(parent,tag,cls,text){
  const n=document.createElement(tag);if(cls)n.className=cls;
@@ -117,10 +116,8 @@ export function setupClassicItems({combat,player,style,notify,changed}){
    else element(tile,'span','classic-plus','+');
   }
   element(content,'h3','classic-section-title','EQUIPMENT IN BACKPACK');
-  const items=inventoryEntries(save()).filter(e=>e.kind==='armour'||e.kind==='weapon'&&e.style===style()||
-   e.kind==='slot'&&getItem(e.canonical)?.legacy?.itemId&&getItem(e.canonical)?.legacy?.itemId&&
-   getItem(e.canonical)?.kind==='slot'&&getItem(e.canonical).legacy&&
-   save().equipment?.[style()]&&getItem(e.canonical)?.legacy?.kind!=='weapon'&&e.style===style());
+  const items=inventoryEntries(save()).filter(e=>e.kind==='armour'||
+   (e.kind==='weapon'||e.kind==='slot')&&e.style===style());
   const list=element(content,'div','classic-equip-choices');
   for(const e of items){const name=getItem(e.canonical)?.title||e.id;
    const tile=button(list,'classic-equip-choice',name,()=>showDetails(e.canonical));
