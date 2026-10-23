@@ -48,7 +48,9 @@ export async function prepareAssets(){
  for(const [source,target] of [
   ['node_modules/three/examples/jsm/loaders/GLTFLoader.js','vendor/examples/jsm/loaders/GLTFLoader.js'],
   ['node_modules/three/examples/jsm/utils/BufferGeometryUtils.js','vendor/examples/jsm/utils/BufferGeometryUtils.js'],
-  ['node_modules/three/examples/jsm/utils/SkeletonUtils.js','vendor/examples/jsm/utils/SkeletonUtils.js']
+  ['node_modules/three/examples/jsm/utils/SkeletonUtils.js','vendor/examples/jsm/utils/SkeletonUtils.js'],
+  ['node_modules/three/examples/jsm/loaders/OBJLoader.js','vendor/examples/jsm/loaders/OBJLoader.js'],
+  ['node_modules/three/examples/jsm/loaders/MTLLoader.js','vendor/examples/jsm/loaders/MTLLoader.js']
  ]){
   mkdirSync(dirname(target),{recursive:true});copyFileSync(source,target);
  }
