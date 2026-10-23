@@ -1,5 +1,5 @@
 /** Oakrest's first *actual* skinned humanoid, authored from scratch for #84.
- * Built as one weighted low-poly mesh around a stable 28-joint skeleton.
+ * Built as one weighted low-poly mesh around a stable 26-joint skeleton.
  * AnimationMixer samples real AnimationClips. No root motion or save writes.
  * This is a visual test rig, not an approved player/NPC replacement.
  */
