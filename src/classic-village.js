@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import {OAKREST_BUILDINGS,OAKREST_PATHS,OAKREST_WELL,FACING,roadQuads} from './town-layout.js';
 import {CLASSIC_TREES,CLASSIC_NPCS} from './classic-presentation.js';
+import {OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 const MAT={
  grass:new THREE.MeshLambertMaterial({color:'#73956c'}),
  grass2:new THREE.MeshLambertMaterial({color:'#668c63'}),
@@ -115,6 +116,21 @@ export function createClassicVillage(scene){
  cube(root,MAT.sand,0,.01,39,21,.07,22);
  const roofs=OAKREST_BUILDINGS.map((b,i)=>building(root,b,i));
  for(const [i,t] of CLASSIC_TREES.entries())tree(root,t.x,t.z,i,.85+(i%4)*.09);
+ // Training groves and noticeboards now occupy canonical interaction anchors.
+ for(const [i,grove] of OAKREST_GROVES.entries()){
+  const treeGroup=tree(root,grove.x,grove.z,i,1.02);
+  treeGroup.userData.interactId='grove:'+grove.id;
+ }
+ for(const notice of OAKREST_NOTICES){
+  const g=new THREE.Group();g.position.set(notice.x,0,notice.z);root.add(g);
+  cube(g,MAT.darkwood,0,1.25,0,.23,2.5,.23);
+  cube(g,MAT.trim,0,2.2,.18,2.55,1.3,.21);
+  const board=new THREE.Mesh(new THREE.PlaneGeometry(2.36,.89),
+   new THREE.MeshBasicMaterial({map:signTexture('NOTICES'),side:THREE.DoubleSide}));
+  board.position.set(0,2.25,.31);g.add(board);
+  g.userData.interactId='notice:'+notice.id;
+ }
+
  // Decorated greenbelt trees do not sit on the navigable village paths.
  for(const [i,[x,z]] of [[-40,31],[-43,47],[43,39],[40,48],[-42,74],[45,70],[-41,5],[42,6]].entries())tree(root,x,z,i,.89);
  // Well and its roof.
