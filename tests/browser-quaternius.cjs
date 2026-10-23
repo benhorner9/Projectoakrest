@@ -12,7 +12,7 @@ const ctx=await browser.newContext({viewport:{width:1366,height:1024},hasTouch:t
 const page=await ctx.newPage();
 const {defaultSave}=await import('../src/rules.js');
 await ctx.addInitScript(d=>localStorage.setItem('oakrest-dev-v1',JSON.stringify(d)),defaultSave());
-page.on('console',msg=>{if(msg.type()==='error')console.log('CONSOLE',msg.text())});
+page.on('console',msg=>{if(msg.type()==='error'||msg.type()==='warning')console.log('CONSOLE',msg.type(),msg.text())});
 await page.goto('http://127.0.0.1:5192/oakrest-dev/?qa=1&quaternius=1');
 await page.waitForFunction(()=>window.oakrestQA?.quaterniusArt);
 await page.locator('#begin').click();
