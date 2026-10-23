@@ -19,6 +19,7 @@ await page.locator('#begin').click();
 await page.evaluate(()=>{oakrestQA.teleport(0,20);oakrestQA.step(1)});
 await page.waitForTimeout(10000);
 console.log('QUATERNIUS VISUAL STATE',JSON.stringify(await page.evaluate(()=>oakrestQA.quaterniusArt())));
+await page.screenshot({path:path.join(root,'qa','quaternius-preview.png')});
 await page.waitForFunction(()=>{const a=oakrestQA.quaterniusArt();return a.buildings.buildings===16&&a.town.loaded>0&&a.hero.status==='ready'&&a.monsters.some(x=>x.type==='mossling'&&x.status==='ready');},null,{timeout:75000});
 const art=await page.evaluate(()=>oakrestQA.quaterniusArt());
 assert.equal(art.hero.status,'ready');assert.equal(art.hero.parts,2);
