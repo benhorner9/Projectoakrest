@@ -104,6 +104,7 @@ export function updateQuaterniusModel(parent,dt,{moving=false,running=false,atta
  if(!info)return;
  const kind=attacking?'attack':running?'run':moving?'walk':'idle';
  const action=info.actions[kind]||info.actions[moving?'walk':'idle']||Object.values(info.actions)[0];
+ if(!action){info.copy.rotation.z=Math.sin((parent.userData.quaterniusCosmeticTime=(parent.userData.quaterniusCosmeticTime||0)+dt)*4)*(moving?.04:.015);return;}
  if(action!==info.active){
   info.active?.fadeOut(.16);
   action.reset().setLoop(dead?THREE.LoopOnce:THREE.LoopRepeat,Infinity).fadeIn(.16).play();
