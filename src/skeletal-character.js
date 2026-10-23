@@ -269,8 +269,9 @@ export function createSkinnedOakrestHero(){
  mesh.name='WeightedCharacter';mesh.castShadow=true;mesh.frustumCulled=false;root.add(mesh);
  root.updateMatrixWorld(true);
  mesh.bind(new THREE.Skeleton(bones));
- const equipment=new THREE.Group();equipment.name='WeaponGrip';
- byName.get('RightHand').add(equipment);
+ const equipment=new THREE.Group();equipment.name='RightHandWeaponGrip';
+ const offhand=new THREE.Group();offhand.name='LeftHandWeaponGrip';
+ byName.get('RightHand').add(equipment);byName.get('LeftHand').add(offhand);
  const clips=buildOakrestClips(),mixer=new THREE.AnimationMixer(root);
  let current=null,weapon='none';
  function play(name,fade=.18){
@@ -286,15 +287,21 @@ export function createSkinnedOakrestHero(){
  }
  function equip(type){
   if(!['none','sword','greatsword','dagger','axe','bow','crossbow','staff','wand'].includes(type))throw Error('Unknown equipment '+type);
-  for(const child of [...equipment.children]){child.traverse(obj=>{obj.geometry?.dispose();obj.material?.dispose();});equipment.remove(child);}
-  equipment.add(makeRigWeapon(type));
+  for(const socket of [equipment,offhand])for(const child of [...socket.children]){
+   child.traverse(obj=>{obj.geometry?.dispose();obj.material?.dispose();});socket.remove(child);
+  }
+  // Bow grip is controlled by the left hand; the right hand draws the string.
+  // Dual daggers genuinely use both hand bones, not a floating second blade.
+  if(type==='bow')offhand.add(makeRigWeapon(type));
+  else if(type==='dagger'){equipment.add(makeRigWeapon(type));offhand.add(makeRigWeapon(type));}
+  else if(type!=='none')equipment.add(makeRigWeapon(type));
   weapon=type;return equipment;
  }
  play('Idle',0);
- return {root,mesh,skeleton:mesh.skeleton,bones:byName,clips,mixer,play,equip,equipment,
+ return {root,mesh,skeleton:mesh.skeleton,bones:byName,clips,mixer,play,equip,equipment,offhand,
    update:dt=>mixer.update(Math.max(0,Math.min(.1,dt))),
    dispose:()=>{mixer.stopAllAction();geometry.dispose();mesh.material.dispose();
-    equipment.traverse(x=>{x.geometry?.dispose();x.material?.dispose();});},
+    for(const socket of [equipment,offhand])socket.traverse(x=>{x.geometry?.dispose();x.material?.dispose();});},
    get equipped(){return weapon;}
  };
 }
