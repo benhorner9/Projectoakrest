@@ -96,13 +96,13 @@ function keyFor(config,dir,step){
  return [config.coat,config.skin,config.hair,config.helm,config.shield,config.boots,
   config.offhand,config.arrows,config.weapon,config.style,dir,step].join('|');
 }
-export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',worn={}}={}){
+export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',worn={},npc=false}={}){
  const material=new THREE.SpriteMaterial({transparent:true,depthWrite:false,alphaTest:.07});
  const sprite=new THREE.Sprite(material);sprite.scale.set(2.65,3.55,1);
  sprite.center.set(.5,0);
  let lastKey='';
  function update({facing={x:0,z:1},step=0,style:nextStyle=style,worn:nextWorn=worn}={}){
-  const config={style:nextStyle,coat:nextStyle==='melee'?'#916b5c':nextStyle==='magic'?'#62758f':nextStyle==='ranged'?'#668069':coat,
+  const config={style:nextStyle,coat:npc?coat:nextStyle==='melee'?'#916b5c':nextStyle==='magic'?'#62758f':nextStyle==='ranged'?'#668069':coat,
    skin,hair,helm:!!nextWorn.helm,shield:!!nextWorn.offhand,offhand:!!nextWorn.offhand,
    boots:nextWorn.boots?'#5f4a3b':'#795f4a',arrows:!!nextWorn.arrows,weapon:nextWorn.weapon};
   const dir=spriteDirection(facing.x,facing.z),frame=step%3,key=keyFor(config,dir,frame);
