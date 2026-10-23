@@ -5,7 +5,6 @@
 import * as THREE from 'three';
 
 import {MODEL_NAMES,modelNameForItem} from './item-model-registry.js';
-import {loadQuaterniusRpg} from './quaternius-rpg-models.js';
 export {MODEL_NAMES,modelNameForItem} from './item-model-registry.js';
 const models=new Set(MODEL_NAMES);
 const base=new URL('../assets/kaykit-adventurers/',import.meta.url);
@@ -73,7 +72,14 @@ export function loadKayKit(name){
  }));
  return loaded.get(name);
 }
-function loadEquipmentArt(name){return loadQuaterniusRpg(name).then(model=>model||loadKayKit(name));}
+function loadEquipmentArt(name){
+ // The original QA mode remains bootable without optional 3D addons.
+ const params=typeof location==='undefined'?new URLSearchParams():new URLSearchParams(location.search);
+ if(params.has('qa')&&!params.has('quaternius'))return loadKayKit(name);
+ return import('./quaternius-rpg-models.js').then(mod=>mod.loadQuaterniusRpg(name))
+  .then(model=>model||loadKayKit(name))
+  .catch(error=>{console.warn('Original Oakrest item art retained',error);return loadKayKit(name);});
+}
 function sizedModel(template,size){
  const instance=template.clone(true),bounds=new THREE.Box3().setFromObject(instance);
  const ext=new THREE.Vector3(),center=new THREE.Vector3();
