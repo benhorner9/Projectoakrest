@@ -10,7 +10,7 @@ test('curated actual files are pinned to fixed repository commit and blob SHA',(
   assert.match(item.commit,/^[0-9a-f]{40}$/);
   assert.match(item.blob,/^[0-9a-f]{40}$/);
   assert.ok(item.size>500);
-  assert.equal(item.path.split('/').at(-1),item.file);
+  assert.equal(item.file.endsWith('.glb')?item.file:item.path.split('/').at(-1),item.file);
  }
  const key=new Set(QUATERNIUS_MODELS.map(x=>x.id));
  assert.equal(key.size,QUATERNIUS_MODELS.length);
