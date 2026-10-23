@@ -4,6 +4,7 @@
  * This is a visual test rig, not an approved player/NPC replacement.
  */
 import * as THREE from 'three';
+import {buildSkeletalAbilityClips,skeletalAbilitySpec,skeletalAbilityName,sampleSkeletalAbilityTime} from './skeletal-ability-library.js';
 const V=(x,y,z)=>new THREE.Vector3(x,y,z);
 const palette={
  skin:'#d3a587',shirt:'#59736e',trousers:'#555549',leather:'#6c5540',
@@ -272,16 +273,17 @@ export function createSkinnedOakrestHero(){
  const equipment=new THREE.Group();equipment.name='RightHandWeaponGrip';
  const offhand=new THREE.Group();offhand.name='LeftHandWeaponGrip';
  byName.get('RightHand').add(equipment);byName.get('LeftHand').add(offhand);
- const clips=buildOakrestClips(),mixer=new THREE.AnimationMixer(root);
+ const clips=[...buildOakrestClips(),...buildSkeletalAbilityClips()],clipByName=new Map(clips.map(c=>[c.name,c])),mixer=new THREE.AnimationMixer(root);
  let current=null,weapon='none';
  function play(name,fade=.18){
-  const clip=clips.find(c=>c.name===name);
+  const clip=clipByName.get(name);
   if(!clip)throw Error('Unknown skeletal clip '+name);
   const next=mixer.clipAction(clip);
   if(current===next)return next;
   next.enabled=true;next.reset().setEffectiveWeight(1).play();
-  if(name==='Death')next.setLoop(THREE.LoopOnce,1).clampWhenFinished=true;
-  else next.setLoop(THREE.LoopRepeat,Infinity);
+  if(name==='Death'||name.startsWith('Ability/')||['SwordSlash','GreatswordStrike','DaggerCombo','BowDraw','CrossbowFire','StaffCast','WandCast','Guard','Hit','Dodge','Woodcut'].includes(name)){
+   next.setLoop(THREE.LoopOnce,1);next.clampWhenFinished=true;
+  }else{next.setLoop(THREE.LoopRepeat,Infinity);next.clampWhenFinished=false;}
   if(current){current.fadeOut(fade);next.fadeIn(fade);}
   current=next;return next;
  }
@@ -297,8 +299,28 @@ export function createSkinnedOakrestHero(){
   else if(type!=='none')equipment.add(makeRigWeapon(type));
   weapon=type;return equipment;
  }
+ /** Play distinct authored body language for every registered family ability.
+  * This does not run damage events or alter movement/cooldowns.
+  */
+ function playAbility(family,id,{fade=.10}={}){
+  if(!skeletalAbilitySpec(family,id))throw Error('Unmapped Oakrest ability: '+family+':'+id);
+  return play(skeletalAbilityName(family,id),fade);
+ }
+ /** Observe a simulation action without starting an independent attack clock.
+  * The animation's contact keyframe follows impactAt even under variable FPS.
+  */
+ function sampleAbility(family,id,attack,now){
+  const spec=skeletalAbilitySpec(family,id);
+  if(!spec)return null;
+  const frame=sampleSkeletalAbilityTime(spec,attack,now);
+  if(!frame)return null;
+  const action=playAbility(family,id,{fade:0});
+  action.time=frame.time;
+  mixer.update(0);root.updateMatrixWorld(true);
+  return frame;
+ }
  play('Idle',0);
- return {root,mesh,skeleton:mesh.skeleton,bones:byName,clips,mixer,play,equip,equipment,offhand,
+ return {root,mesh,skeleton:mesh.skeleton,bones:byName,clips,mixer,play,playAbility,sampleAbility,equip,equipment,offhand,
    update:dt=>mixer.update(Math.max(0,Math.min(.1,dt))),
    dispose:()=>{mixer.stopAllAction();geometry.dispose();mesh.material.dispose();
     for(const socket of [equipment,offhand])socket.traverse(x=>{x.geometry?.dispose();x.material?.dispose();});},
