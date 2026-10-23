@@ -47,6 +47,15 @@ function safeWeapon(data,style){
 }
 export function createClassicCombat({save,random=Math.random}={}){
  const data=JSON.parse(JSON.stringify(save||{}));
+ // Session-only practice weapons for characters who have not yet completed
+ // onboarding. Nothing here reaches browser storage or the source character.
+ for(const s of STYLE_ORDER){
+  if(!data.inventory?.weapons?.[s]?.length){
+   const loan={melee:'sword',magic:'frost',ranged:'bow'}[s];
+   data.inventory??={};data.inventory.weapons??={};data.inventory.weapons[s]=[loan];
+   data.gear??={};data.gear[s]=loan;
+  }
+ }
  const monsters=spawn.map(initialMonster),events=[],projectiles=[],cooldowns=new Map();
  let time=0,style='melee',targetId=null,attackUntil=0,switchUntil=0,dodgeUntil=0,dodgeStart=-Infinity;
  let action=null,queuedAbility=null,queuedStyle=null,shieldUntil=0,deadUntil=0;
@@ -129,7 +138,7 @@ export function createClassicCombat({save,random=Math.random}={}){
  }
  function addProjectile(enemy,damage,source,ability,speed,kind){
   if(!enemy||!source)return;
-  const dir=toward(playerForAction,enemy),range=style==='ranged'?source.weapon?.reach||30:source.weapon?.reach||20;
+  const dir=toward(playerForAction,enemy),range=source.weapon?.reach||20;
   projectiles.push({x:playerForAction.x,z:playerForAction.z,direction:dir,speed,
    remaining:ability?.reach||range,targetId:enemy.id,damage,source,
    ability,kind,travelled:0});
@@ -258,7 +267,8 @@ export function createClassicCombat({save,random=Math.random}={}){
    const gap=dist(e,player);
    if(gap<=spec.engage&&time-e.lastAttack>=spec.cooldown&&wallClear(e,player)){
     const dir=toward(e,player);
-    const warning={kind:spec.kind,x:e.x,z:e.z,direction:dir,
+    const warning={kind:spec.kind,x:spec.kind==='pounce'?player.x:e.x,
+     z:spec.kind==='pounce'?player.z:e.z,direction:dir,
      radius:spec.radius||1,length:spec.length||0,width:spec.width||0,
      halfAngle:spec.halfAngle||0,end:time+spec.windup};
     // Mosslings pounce onto a marked point; their tell is deliberately frozen.
@@ -295,7 +305,7 @@ export function createClassicCombat({save,random=Math.random}={}){
   }
   executeAction(player);moveProjectiles(step);updateMonsters(player,step);
   const enemy=getTarget(),weapon=styleWeapon();
-  if(enemy&&weapon&&inAttackRange(player,enemy,weapon.reach,wallClear(player,enemy)))
+  if(enemy&&weapon&&canFight()&&inAttackRange(player,enemy,weapon.reach,wallClear(player,enemy)))
    queueBasic(player);
   return drain();
  }
