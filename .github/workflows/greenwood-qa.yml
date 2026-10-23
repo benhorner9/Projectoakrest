@@ -35,9 +35,10 @@ jobs:
         run: npm test
       - name: Production asset build
         run: npm run build
-      - name: Install browser engines and dependencies
+      - name: Install Chromium using runner system libraries
         id: browsers
-        run: npx playwright install --with-deps chromium
+        # Same validated setup as core, bank and release jobs; no apt mirror stall.
+        run: timeout --signal=TERM --kill-after=10s 3m npx playwright install chromium
       - name: Browser smoke test
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-smoke.cjs
