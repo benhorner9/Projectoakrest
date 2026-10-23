@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="./src/hud-minimap.css" />
   <link rel="stylesheet" href="./src/side-inventory.css" />
   <script type="importmap">
-  { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/examples/jsm/" } }
+  { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
 </head>
 <body>
@@ -56,7 +56,6 @@
       <label for="gamepad-deadzone">Controller stick deadzone <output id="gamepad-deadzone-value">0.18</output></label>
       <input id="gamepad-deadzone" type="range" min="0.10" max="0.35" step="0.01" value="0.18" />
       <label for="quality">Graphics quality</label><select id="quality"><option value="low">Performance</option><option value="balanced">Balanced</option><option value="high">High</option></select>
-      <label class="camera-check"><input id="character-art-toggle" type="checkbox" checked /> KayKit 3D characters <small>(original personal appearance returns when off; Performance quality uses originals)</small></label>
       <label class="sound-setting"><input id="sound-enabled" type="checkbox" checked /> Combat sounds</label>
       <button id="character-switch" class="choose-character in-game-characters" type="button">CHARACTERS · SWITCH / CREATE</button>
       <button id="drop-editor-open" class="drop-editor-open" type="button" hidden>EDIT MONSTER DROPS (DEV)</button>

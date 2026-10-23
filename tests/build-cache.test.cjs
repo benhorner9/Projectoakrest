@@ -22,8 +22,6 @@ test('release asset import version prevents stale iPad ES modules',()=>{
  assert.ok(main.includes("from './rules.js?v="+version+"'"),'game rules module is versioned');
  assert.ok(html.includes('"three": "./vendor/three.module.min.js"'),'three import map still works');
  // Fingerprints must not alter the checked-in source code.
- const bridge=readFileSync('dist/src/character-art-bridge.js','utf8');
- assert.ok(bridge.includes("import('./character-art.js?v="+version+"')"),'lazy asset import must also be versioned for Safari');
  const source=readFileSync('src/main.js','utf8');
  assert.ok(source.includes("from './character-creator.js'"));
 });
