@@ -12,7 +12,7 @@
 <main id="classic-app">
  <div id="classic-game" aria-label="Oakrest 2.5D explorable village"></div>
  <header class="classic-top">
-  <div class="brand"><span class="brand-rune">✥</span><div><strong>OAKREST</strong><small>CLASSIC PROTOTYPE · BLOCK 4</small></div></div>
+  <div class="brand"><span class="brand-rune">✥</span><div><strong>OAKREST</strong><small>CLASSIC PROTOTYPE · BLOCK 5</small></div></div>
   <div class="location"><span class="location-dot"></span><span id="classic-location">Heartwood Square</span></div>
   <a class="return-link" href="./index.html" aria-label="Return to original Oakrest">Original 3D ↗</a>
  </header>
@@ -29,7 +29,7 @@
    </div>
    <div class="weapon-box"><span id="classic-weapon">Iron Longsword</span><small>Level <b id="classic-level">1</b> · Active combat loadout</small></div>
    <p class="hint" id="classic-inside">Walk the village and enter buildings through their doors.</p>
-   <p class="save-note">Combat rewards are temporary in this prototype. Your original character, bank, gear and XP are never overwritten.</p>
+   <p class="save-note">Combat, loot, shop and bank changes are SESSION-ONLY. Your saved character is not overwritten.</p>
  </aside>
  <div class="classic-interaction-bar" aria-label="Interaction controls">
   <span id="classic-action-hint" role="status" aria-live="polite">Tap to move, or select a person or object.</span>
@@ -57,6 +57,26 @@
     <button type="button" id="classic-dodge">DODGE <small>SPACE</small></button>
   </div>
  </section>
+ <nav class="classic-item-buttons" aria-label="Inventory and equipment menus">
+  <button type="button" id="classic-inventory-toggle">BACKPACK <small>I</small></button>
+  <button type="button" id="classic-equipment-toggle">EQUIP <small>K</small></button>
+  <button type="button" id="classic-abilities-toggle">ABILITIES <small>L</small></button>
+  <button type="button" id="classic-pickup" disabled>LOOT <small>G</small></button>
+ </nav>
+ <aside id="classic-item-window" class="classic-item-window" aria-label="Classic item and equipment menu" hidden>
+  <header class="classic-item-header">
+   <div><strong id="classic-item-title">Backpack</strong><small id="classic-item-summary">SESSION-ONLY · NO SAVE CHANGES</small></div>
+   <button type="button" id="classic-item-close" aria-label="Close item panel">×</button>
+  </header>
+  <nav class="classic-item-tabs" role="tablist" aria-label="Item menu sections">
+   <button type="button" data-item-tab="inventory">BAG</button>
+   <button type="button" data-item-tab="equipment">EQUIP</button>
+   <button type="button" data-item-tab="bank">BANK</button>
+   <button type="button" data-item-tab="shop">SHOP</button>
+   <button type="button" data-item-tab="abilities">SKILLS</button>
+  </nav>
+  <div id="classic-item-content" class="classic-item-scroll"></div>
+ </aside>
  <div class="zoom-group" aria-label="Camera zoom">
   <button type="button" id="classic-zoom-in" aria-label="Zoom in">+</button>
   <button type="button" id="classic-zoom-out" aria-label="Zoom out">−</button>
