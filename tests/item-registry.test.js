@@ -17,7 +17,7 @@ test('every existing gear and resource has a stable canonical item ID',()=>{
  for(const item of ITEM_CATALOG){
   assert.ok(item.title&&item.accent&&item.shape);
   assert.ok(itemIconSvg(item.id).startsWith('<svg '));
-  assert.ok(itemIconUrl(item.id).startsWith('data:image/svg+xml')||itemIconUrl(item.id).includes('/assets/kaykit-adventurers/icons/'));
+  assert.ok(itemIconUrl(item.id).startsWith('data:image/svg+xml')||itemIconUrl(item.id).includes('/assets/kaykit-adventurers/icons/')||itemIconUrl(item.id).includes('/assets/quaternius/rpg/'));
   assert.equal(itemIdFromLegacy(item.legacy),item.id);
   assert.equal(itemFromDrop(item.legacy),item);
  }
