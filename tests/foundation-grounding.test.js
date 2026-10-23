@@ -72,6 +72,47 @@ test('modest sampled steps affect visual feet only and never stretch a leg',()=>
  assert.ok(u.footError<1e-6);assert.equal(a.position.y,0);
 });
 
+test('candidate boots conform to walkable slopes without tilting gameplay root',()=>{
+ const a=actor('bow'),u=a.userData,groundHeightAt=(x,z)=>.12*x+.09*z;
+ a.rotation.y=1.3;a.position.set(4,2,3);a.updateMatrix();
+ const root=a.matrix.toArray();
+ animateFoundation(u,{t:0,combat:true,sample:true,groundHeightAt});
+ a.updateMatrixWorld(true);
+ const desired=new THREE.Vector3(-.12,1,-.09).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),1.3);
+ for(const side of ['left','right']){
+  u[side+'Ankle'].getWorldQuaternion(q);
+  v.set(0,1,0).applyQuaternion(q);
+  assert.ok(v.distanceTo(desired)<1e-6,`${side} boot normal must follow the ground`);
+ }
+ assert.ok(u.footError<1e-6,'visual leg reach remains fixed');
+ assert.deepEqual(a.matrix.toArray(),root,'terrain tilt cannot move the gameplay root');
+});
+
+test('airborne toe lift returns to flat contact and does not survive idle',()=>{
+ const a=actor('sword'),u=a.userData;
+ animateFoundation(u,{t:0,speed:3,combat:true,sample:true,stride:Math.PI*1.6});
+ a.updateMatrixWorld(true);
+ u.leftAnkle.getWorldQuaternion(q);v.set(0,1,0).applyQuaternion(q);
+ assert.ok(v.y>.98&&v.y<1,'swing boot pitches upward within a small bound');
+ animateFoundation(u,{t:0,speed:0,combat:false,sample:true,stride:Math.PI*1.6});
+ a.updateMatrixWorld(true);
+ u.leftAnkle.getWorldQuaternion(q);v.set(0,1,0).applyQuaternion(q);
+ assert.ok(v.distanceTo(new THREE.Vector3(0,1,0))<1e-6,'idle foot has no inherited toe roll');
+});
+
+test('terrain discontinuities and invalid height samples never tip the sole',()=>{
+ for(const groundHeightAt of [x=>x<-.19?.12:0,()=>NaN,()=>Infinity]){
+  const a=actor('sword'),u=a.userData;
+  animateFoundation(u,{t:0,sample:true,groundHeightAt});
+  a.updateMatrixWorld(true);
+  for(const side of ['left','right']){
+   u[side+'Ankle'].getWorldQuaternion(q);v.set(0,1,0).applyQuaternion(q);
+   assert.ok(v.distanceTo(new THREE.Vector3(0,1,0))<1e-6,'unsafe terrain samples cannot roll the boot');
+  }
+  assert.ok(Number.isFinite(u.footError));
+ }
+});
+
 test('every timed action reaches impact continuously; instant effects invent no anticipation',()=>{
  for(const spec of listAnimationSpecs()){
   const impact=spec.anticipation.seconds,attack={start:2,impactAt:2+impact,interval:spec.recovery.seconds};

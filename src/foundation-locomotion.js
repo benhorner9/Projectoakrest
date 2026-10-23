@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {solveTwoBone} from './two-bone-constraint.js';
 const TAU=Math.PI*2,STANCE=.6,ANKLE_HEIGHT=.14;
 const inverse=new THREE.Matrix4(),hip=new THREE.Vector3(),goal=new THREE.Vector3(),pole=new THREE.Vector3(),orientation=new THREE.Quaternion();
+const up=new THREE.Vector3(0,1,0),xAxis=new THREE.Vector3(1,0,0),surfaceNormal=new THREE.Vector3(),footOrientation=new THREE.Quaternion(),footTilt=new THREE.Quaternion(),toeRoll=new THREE.Quaternion();
 const left=new THREE.Vector3(),right=new THREE.Vector3();
 const clamp=v=>Math.max(0,Math.min(1,v));
 const smooth=v=>v*v*(3-2*v);
@@ -50,6 +51,29 @@ function footTarget(out,side,phase,motion,info){
  if(Number.isFinite(ground))out.y+=Math.max(-.18,Math.min(.18,ground));
 }
 
+/** Estimate a normal in actor coordinates, not world coordinates: groundHeightAt
+ * already samples in the actor's horizontal frame. Ignore cliff/step edges,
+ * missing samples and grades above 29 degrees rather than snapping an ankle.
+ * Lifted toes relax toward level, then realign as they approach foot strike.
+ * The simulation's collision normal and root heading remain untouched.
+ */
+function sampledSoleNormal(out,target,phase,motion,heightAt){
+ out.copy(up);
+ if(typeof heightAt!=='function')return out;
+ const d=.08,x=target.x,z=target.z;
+ const hx1=heightAt(x+d,z),hx0=heightAt(x-d,z),hz1=heightAt(x,z+d),hz0=heightAt(x,z-d);
+ if(![hx1,hx0,hz1,hz0].every(Number.isFinite))return out;
+ const gx=(hx1-hx0)/(2*d),gz=(hz1-hz0)/(2*d);
+ if(!Number.isFinite(gx)||!Number.isFinite(gz)||Math.hypot(gx,gz)>.55)return out;
+ out.set(-gx,1,-gz).normalize();
+ const p=positive(phase);
+ if(p>=STANCE){
+  const airborne=Math.sin(Math.PI*(p-STANCE)/(1-STANCE))*motion.weight;
+  out.lerp(up,clamp(airborne)).normalize();
+ }
+ return out;
+}
+
 export function plantFoundationFeet(u,info,motion){
  if(!u.leftAnkle||!u.rightAnkle)return;
  if(info.dead||info.dodge>0){
@@ -71,6 +95,14 @@ export function plantFoundationFeet(u,info,motion){
  u.footError=0;
  for(const [side,target] of [['left',left],['right',right]]){
   goal.copy(target).applyMatrix4(inverse);
-  u.footError=Math.max(u.footError,solveTwoBone(u[side+'Leg'],u[side+'Knee'],u[side+'Ankle'],goal,pole,orientation));
+  const phase=motion.phase+(side==='right'?.5:0),p=positive(phase);
+  sampledSoleNormal(surfaceNormal,target,phase,motion,info.groundHeightAt);
+  footTilt.setFromUnitVectors(up,surfaceNormal);
+  // The toe only lifts in the aerial swing. On planted frames the fixed-length
+  // IK sets a fully grounded ankle, irrespective of combat or aiming pose.
+  const lift=p>=STANCE?Math.sin(Math.PI*(p-STANCE)/(1-STANCE)):0;
+  toeRoll.setFromAxisAngle(xAxis,.16*lift*motion.weight);
+  footOrientation.copy(orientation).multiply(footTilt).multiply(toeRoll);
+  u.footError=Math.max(u.footError,solveTwoBone(u[side+'Leg'],u[side+'Knee'],u[side+'Ankle'],goal,pole,footOrientation));
  }
 }
