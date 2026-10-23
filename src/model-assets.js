@@ -72,6 +72,14 @@ export function loadKayKit(name){
  }));
  return loaded.get(name);
 }
+function loadEquipmentArt(name){
+ // The original QA mode remains bootable without optional 3D addons.
+ const params=typeof location==='undefined'?new URLSearchParams():new URLSearchParams(location.search);
+ if(params.has('qa')&&!params.has('quaternius'))return loadKayKit(name);
+ return import('./quaternius-rpg-models.js').then(mod=>mod.loadQuaterniusRpg(name))
+  .then(model=>model||loadKayKit(name))
+  .catch(error=>{console.warn('Original Oakrest item art retained',error);return loadKayKit(name);});
+}
 function sizedModel(template,size){
  const instance=template.clone(true),bounds=new THREE.Box3().setFromObject(instance);
  const ext=new THREE.Vector3(),center=new THREE.Vector3();
@@ -87,7 +95,7 @@ export function upgradeGroundItem(root,itemId){
  if(typeof window==='undefined')return;
  const name=modelNameForItem(itemId);if(!name)return;
  const stamp=Symbol();root.userData.assetStamp=stamp;
- loadKayKit(name).then(template=>{
+ loadEquipmentArt(name).then(template=>{
   if(!template||root.userData.destroyed||root.userData.assetStamp!==stamp)return;
   const laid=new THREE.Group(),copy=sizedModel(template,
    name==='quiver'?.7:name==='shield_square'?.8:1.05);
@@ -109,7 +117,7 @@ export function upgradeHeldWeapon(hero,style,weaponId){
  const stamp=Symbol();hand.userData.assetStamp=stamp;
  const name=modelNameForItem('weapon.'+style+'.'+weaponId);
  if(!name)return;
- loadKayKit(name).then(template=>{
+ loadEquipmentArt(name).then(template=>{
   if(!template||hand.userData.assetStamp!==stamp||hero.userData.weapon!==hand)return;
   // Hide only the procedural base art, retaining animated live components and
   // the original motion rig for true in-world combat telegraphs.

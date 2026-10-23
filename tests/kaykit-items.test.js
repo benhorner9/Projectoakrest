@@ -24,9 +24,10 @@ test('every mapped CC0 mesh has a local geometry buffer, PNG atlas, icon and pro
 test('real asset-backed icons preserve Oakrest item IDs and fallback icons for non-modelled gear',()=>{
  for(const id of ['weapon.melee.sword','weapon.melee.daggers','weapon.melee.greatsword','weapon.magic.frost','weapon.magic.ember','weapon.ranged.crossbow','slot.recruit-shield','slot.bronze-arrows']){
   assert.ok(getItem(id),id);assert.ok(modelNameForItem(id),id);
-  assert.ok(itemIconUrl(id).includes('/assets/kaykit-adventurers/icons/'),id);
+  const expected=['weapon.melee.sword','weapon.melee.daggers','weapon.melee.greatsword'].includes(id)?'/assets/quaternius/rpg/':'/assets/kaykit-adventurers/icons/';
+  assert.ok(itemIconUrl(id).includes(expected),id);
  }
- assert.equal(modelNameForItem('weapon.ranged.bow'),null);
+ assert.equal(modelNameForItem('weapon.ranged.bow'),'bow');
  assert.equal(modelNameForItem('weapon.melee.bronze-axe'),'axe_1handed');
  assert.ok(itemIconUrl('armour.traveller').startsWith('data:image/svg+xml'));
  assert.equal(modelNameForItem('invalid'),null);

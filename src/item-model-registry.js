@@ -10,6 +10,9 @@ export const MODEL_ITEMS=Object.freeze({
  'weapon.magic.frost':'staff',
  'weapon.magic.ember':'wand',
  'weapon.ranged.crossbow':'crossbow_2handed',
+ 'weapon.ranged.bow':'bow',
+ 'weapon.ranged.shortbow':'bow',
+ 'weapon.ranged.longbow':'bow',
  'slot.recruit-shield':'shield_square',
  'slot.bronze-arrows':'quiver'
 });
