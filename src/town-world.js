@@ -257,7 +257,7 @@ function optimizeCutawayMeshes(group,cutaway){
   cutaway[side]=[...items.filter(mesh=>!deleted.has(mesh)),...added];
  }
 }
-function buildHouse(scene,build){
+export function buildHouse(scene,build){
   const g=new THREE.Group();
   g.position.set(build.x,terrainHeight(build.x,build.z),build.z);
   g.rotation.y=FACING[build.face];scene.add(g);

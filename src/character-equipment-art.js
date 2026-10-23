@@ -3,6 +3,7 @@
  * Armour slot graphics are cosmetic; stats and item ownership still live in rules.
  */
 import * as THREE from 'three';
+import {HUMANOID_SHAPES as shapes} from './humanoid-shapes.js';
 import {loadKayKit,cloneKayKitModel} from './model-assets.js';
 
 const box=new THREE.BoxGeometry(1,1,1),sphere=new THREE.SphereGeometry(1,9,7);
@@ -29,9 +30,10 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
  const robe=chest==='starter-robes';
  u.chestPlate.visible=plating;u.leather.visible=leather;
  u.pauldrons.forEach(part=>part.visible=plating);
+ if(u.foundation){u.chestPlate.material=mat(metal);u.pauldrons.forEach(part=>part.material=mat(metal));}
  u.cape.visible=!plating&&!leather;
  if(robe){
-  const torso=group(u,u.rig);
+  const torso=group(u,u.upperBody||u.rig);
   mesh(torso,box,fabric,[0,1.48,-.32],[.70,.70,.07]);
   mesh(torso,box,'#9eacbf',[0,1.47,-.367],[.08,.53,.025]);
   mesh(torso,box,fabric,[0,.88,-.15],[.72,.56,.5]);
@@ -51,16 +53,16 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
  }else u.hair.visible=true;
  if(slots.legs)for(const leg of [u.leftLeg,u.rightLeg]){
   const g=group(u,leg);
-  mesh(g,box,style==='melee'?metal:fabric,[0,-.24,-.15],[.27,.39,.17]);
-  mesh(g,box,'#403f35',[0,-.43,-.17],[.30,.11,.21]);
+  if(u.foundation)mesh(g,shapes.thighArmour,style==='melee'?metal:fabric,[0,0,0],[1,1,1]);
+  else {mesh(g,box,style==='melee'?metal:fabric,[0,-.24,-.15],[.27,.39,.17]);mesh(g,box,'#403f35',[0,-.43,-.17],[.30,.11,.21]);}
  }
- if(slots.boots)for(const knee of [u.leftKnee,u.rightKnee]){
+ if(slots.boots)for(const [knee,ankle] of [[u.leftKnee,u.leftAnkle],[u.rightKnee,u.rightAnkle]]){
   const g=group(u,knee);
-  mesh(g,box,style==='melee'?metal:'#5a493a',[0,-.27,-.11],[.27,.30,.32]);
-  mesh(g,box,'#363931',[0,-.42,-.21],[.32,.14,.43]);
+  if(u.foundation){mesh(g,shapes.greave,style==='melee'?metal:'#5a493a',[0,0,0],[1,1,1]);mesh(group(u,ankle),shapes.shoe,'#363931',[0,.397,0],[1.04,1,1.04]);}
+  else {mesh(g,box,style==='melee'?metal:'#5a493a',[0,-.27,-.11],[.27,.30,.32]);mesh(g,box,'#363931',[0,-.42,-.21],[.32,.14,.43]);}
  }
  if(slots.amulet){
-  const g=group(u,u.rig);
+  const g=group(u,u.upperBody||u.rig);
   mesh(g,box,'#c6af75',[0,1.73,-.35],[.25,.035,.04]);
   const pendant=mesh(g,sphere,style==='magic'?'#88d8ec':'#c9b780',[0,1.60,-.385],[.095,.11,.055]);
   pendant.rotation.z=Math.PI/4;
@@ -70,7 +72,7 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
   mesh(g,box,'#c7a96e',[0,-.315,-.125],[.16,.055,.19]);
  }
  if(slots.arrows&&style==='ranged'){
-  const g=group(u,u.rig);g.position.set(.36,1.35,.33);g.rotation.z=-.20;
+  const g=group(u,u.upperBody||u.rig);g.position.set(.36,1.35,.33);g.rotation.z=-.20;
   mesh(g,box,'#795b3e',[0,0,0],[.22,.63,.24]);
   for(let i=0;i<3;i++)mesh(g,box,'#e5d4a5',[-.065+i*.065,.44,0],[.027,.31,.025]);
   if(typeof window!=='undefined')loadKayKit('quiver').then(template=>{

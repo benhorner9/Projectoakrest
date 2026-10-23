@@ -1,0 +1,65 @@
+{
+  "runtime": {
+    "family": "bow",
+    "assetLoaded": null,
+    "expectedAsset": null,
+    "state": "anticipation",
+    "locomotion": "idle",
+    "footError": 0,
+    "reaction": {
+      "fall": 0,
+      "hit": 0,
+      "weight": 0
+    },
+    "bodyGroundCorrection": 0,
+    "frameStatistics": {
+      "status": "insufficient-samples",
+      "sampleCount": 0,
+      "minimumSamples": 60,
+      "durationMs": 0,
+      "meanFrameMs": null,
+      "meanFPS": null,
+      "p50FrameMs": null,
+      "p95FrameMs": null,
+      "p99FrameMs": null,
+      "overBudgetFrames": 0
+    },
+    "rigErrors": [],
+    "gripError": 0,
+    "muzzle": [
+      0.3319858530069331,
+      1.8254372485059873,
+      -1.1606575623909052
+    ],
+    "drawCalls": 218,
+    "triangles": 12820,
+    "geometries": 74,
+    "textures": 13,
+    "frames": [
+      3933.1999999999825,
+      2949.9000000000233
+    ],
+    "elapsed": 150.7725999999994
+  },
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/134.0.6998.35 Safari/537.36",
+  "viewport": [
+    1366,
+    1024
+  ],
+  "memory": {
+    "usedJSHeapSize": 13400000,
+    "totalJSHeapSize": 15200000
+  },
+  "status": "insufficient-samples",
+  "sampleCount": 0,
+  "minimumSamples": 60,
+  "durationMs": 0,
+  "meanFrameMs": null,
+  "meanFPS": null,
+  "p50FrameMs": null,
+  "p95FrameMs": null,
+  "p99FrameMs": null,
+  "overBudgetFrames": 0,
+  "softwareGPU": true,
+  "physicalIPad": false
+}
