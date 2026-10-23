@@ -32,7 +32,9 @@ let browser;
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'magic');
   assert.match(await page.locator('#classic-weapon').textContent(),/Frostwood Staff/);
   await page.locator('[data-style="ranged"]').click();
-  assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'ranged');
+  await page.evaluate(()=>{for(let i=0;i<8;i++)oakrestClassicQA.step(.05);});
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'ranged',
+   'queued style switch resolves after the 0.12s recovery');
   await page.keyboard.down('w');
   await page.evaluate(()=>{for(let i=0;i<6;i++)oakrestClassicQA.step(.05);});
   await page.keyboard.up('w');
