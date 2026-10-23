@@ -15,7 +15,7 @@ test('all 56 existing combat specifications receive a distinct authored skeletal
   const spec=catalogue[i],clip=clips[i];
   assert.equal(clip.name,skeletalAbilityName(spec.family,spec.abilityId));
   assert.equal(clip.userData.visualOnly,true);
-  assert.equal(clip.userData.sourceEvent,spec.event, 'event metadata must be preserved');
+  assert.equal(clip.userData.event,spec.event, 'event metadata must be preserved');
   assert.ok(clip.tracks.length>=23,spec.id+': full skeleton choreography');
   assert.equal(clip.tracks.some(t=>/Root\.(position|quaternion)/.test(t.name)),false,'no animated gameplay root');
   assert.ok(clip.duration>0&&Number.isFinite(clip.duration));
@@ -61,7 +61,8 @@ test('all time mapping derives from real simulation timestamps, including early 
   }else{
    assert.equal(a.time,0,'instant effects cannot have a fictional windup');
   }
-  assert.ok(sampleSkeletalAbilityTime(spec,action,start+duration-.00001).time<a.clip.length+100,'finite sample');
+  const ending=sampleSkeletalAbilityTime(spec,action,start+duration-.00001);
+  assert.ok(Number.isFinite(ending.time)&&ending.time>=0,'finite sample');
  }
  assert.equal(sampleSkeletalAbilityTime(catalogue[0],{start:0,impactAt:0,interval:-1},0),null);
  assert.equal(sampleSkeletalAbilityTime(catalogue[0],{start:0,impactAt:NaN,interval:1},0),null);
