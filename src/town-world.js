@@ -326,7 +326,7 @@ function buildHouse(scene,build){
   furnishDistinctInterior(g,build,shared);
   const roof=makeRoof(g,build,h);
   optimizeCutawayMeshes(g,cutaway);
-  return {build,roof,cutaway};
+  return {build,roof,cutaway,root:g,height:h};
 }
 function buildMerchantWell(scene){
   const {x,z,r,roofRadius,courtyardRadius}=OAKREST_WELL;
@@ -377,6 +377,18 @@ export function buildOakrestTown(scene){
   // old roads. Its visual detail creates no collision or pathfinding changes.
   const cityPaths=buildOakrestCityPaths(scene);
   const buildings=OAKREST_BUILDINGS.map(b=>buildHouse(scene,b));
+  let newVillageArt=null,villageArtRequested=false,villageArtWanted=false;
+  function setArtEnabled(value){
+    villageArtWanted=!!value;
+    if(newVillageArt)newVillageArt.setEnabled(villageArtWanted);
+    if(villageArtWanted&&!villageArtRequested){
+      villageArtRequested=true;
+      import('./quaternius-architecture.js').then(mod=>{
+        newVillageArt=mod.createMedievalVillageArt(buildings);
+        newVillageArt.setEnabled(villageArtWanted);
+      }).catch(err=>console.warn('Original enterable medieval buildings retained',err));
+    }
+  }
   const cityIdentity=buildCityIdentity(scene);
   // Historic Heartwood Square is built in city-identity.js. The broad ancient
   // oak trunk uses a matching collision footprint with a passable paved ring.
@@ -420,6 +432,7 @@ export function buildOakrestTown(scene){
   const cityMeadows=buildOakrestCityMeadows(scene);
   return {
     buildings:buildings.length,services:OAKREST_SERVICES.length,groves:OAKREST_GROVES.length,
+    setArtEnabled,artSnapshot:()=>newVillageArt?.snapshot()||{enabled:villageArtWanted,buildings:0,expected:buildings.length},
     groundFinish:{pavingStones:cityPaths.stoneCount,grassTufts:cityMeadows.grassCount,wildflowers:cityMeadows.flowerCount},
     districts:CITY_DISTRICTS,landmark:cityIdentity.landmark,ambientCount:cityIdentity.ambientCount,
     update(player,time=0,camera=null){
