@@ -105,7 +105,7 @@ export function createClassicCombatView(scene,spawns){
    const show=!enemy.dead,hit=enemy.hitFlashUntil>t;
    actor.sprite.visible=show;actor.shadow.visible=show;
    actor.label.visible=show;actor.hpBackground.visible=show;actor.hpFill.visible=show;
-   actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro?.06:0),enemy.z);
+   actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro ? .06 : 0),enemy.z);
    actor.shadow.position.set(enemy.x,.035,enemy.z);
    actor.label.position.set(enemy.x,enemy.type==='boar'?3.5:3.65,enemy.z);
    actor.hpBackground.position.set(enemy.x,2.72,enemy.z);
