@@ -31,7 +31,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
-      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js
+      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js
       - run: npm run build
       - name: Verify prototype copied and fingerprinted
         run: |
