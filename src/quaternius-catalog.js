@@ -38,18 +38,14 @@ export const QUATERNIUS_MODELS=Object.freeze([
 ]);
 const part=(id,file,size,blob)=>Object.freeze({pack:'medieval',id,file,path:'glTF/'+file,size,blob,repo:village,commit:villageCommit});
 // Faithful medieval building-detail modules. Material atlases are compressed
-// by dropping optional normal/ORM maps at build time; no false geometry.
+// by dropping unavailable source texture files at build time; no geometry loss.
 export const VILLAGE_MODULE_FILES=Object.freeze([
  part('round-door-gltf','DoorFrame_Round_Brick.gltf',2223,'b6d9f5f4519e8730f5a89e75c9f892ee7acd1b7c'),
  part('round-door-bin','DoorFrame_Round_Brick.bin',63988,'7fd2257fd57dbb636006b006e08236e812369f95'),
  part('roof-gltf','Roof_RoundTiles_4x6.gltf',4341,'272d57f1a17ecf06cdbee58dc0bfb162cbe809de'),
  part('roof-bin','Roof_RoundTiles_4x6.bin',129840,'c7e538d1d1d7a79653b1ab5d2fb5d868d2afc8e3'),
  part('wall-window-gltf','Wall_Plaster_Window_Wide_Round.gltf',5967,'343e874fbad32990eae96b4e979a3f8e8eeb7f26'),
- part('wall-window-bin','Wall_Plaster_Window_Wide_Round.bin',6664,'1904c63a82972b06d7ff7a6ad233b582ec0579b4'),
- part('rock-colour','T_RockTrim_BaseColor.png',1908835,'66d38c3389b53c261dca7253a8898a5fa92cec'),
- part('wood-colour','T_WoodTrim_BaseColor.png',2082310,'3547da835b7b1aa89e27e98c68b1582bd203ef93'),
- part('roof-colour','T_RoundTiles_BaseColor.png',4352034,'1499f2b4d6eda2da8ca7512c342ed29632cf3d1e'),
- part('plaster-colour','T_Plaster_BaseColor.png',3316410,'14ff755f0dc786a775faea8eb9d51ef1e4dcd613')
+ part('wall-window-bin','Wall_Plaster_Window_Wide_Round.bin',6664,'1904c63a82972b06d7ff7a6ad233b582ec0579b4')
 ]);
 export const CURATED_QUATERNIUS_IDS=Object.freeze(QUATERNIUS_MODELS.map(m=>m.id));
 export const MODEL_BY_ID=Object.freeze(Object.fromEntries(QUATERNIUS_MODELS.map(m=>[m.id,m])));
