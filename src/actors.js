@@ -5,6 +5,7 @@ import {abilityMotion} from './animation-language.js';
 import {restoreKayKitPose,applyKayKitPose} from './kaykit-motion.js';
 import {animateFoundation} from './foundation-motion.js';
 import {HUMANOID_RIG_VERSION,HUMANOID_JOINTS} from './rig-contract.js';
+import {HUMANOID_SHAPES as shapes} from './humanoid-shapes.js';
 import {AXE_BY_ID} from './woodcutting.js';
 const materials=new Map(),geometries=new Map();
 const material=(color,metal=false)=>{const key=color+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.38:.88,metalness:metal?.55:0}));return materials.get(key);};
@@ -17,43 +18,53 @@ function pivot(parent,x,y,z){const p=new THREE.Group();p.position.set(x,y,z);par
 function taperedBlade(g,length,width){const shape=new THREE.Shape();shape.moveTo(-width/2,0);shape.lineTo(-width*.4,-length*.78);shape.lineTo(0,-length);shape.lineTo(width*.4,-length*.78);shape.lineTo(width/2,0);shape.closePath();const geo=new THREE.ExtrudeGeometry(shape,{depth:.055,bevelEnabled:true,bevelSize:.018,bevelThickness:.018,bevelSegments:1,steps:1});geo.rotateX(Math.PI/2);mesh(g,geo,'#b4c9cc',0,0,-.2,1,1,1,true);}
 export function createActor(bandit=false,{foundation=false}={}){
  const g=new THREE.Group(),rig=pivot(g,0,0,0),skin=material(bandit?'#b88b69':'#d6aa83').clone(),body=material(bandit?'#6a4d4e':'#607b7c').clone(),cloth=material('#34574e').clone();
- const torso=tube(rig,body,0,1.43,0,foundation?.37:.43,foundation?.29:.31,.82);torso.scale.z=.62;
+ const torso=foundation?mesh(rig,shapes.torso,body,0,1.43,0):tube(rig,body,0,1.43,0,.43,.31,.82);if(!foundation)torso.scale.z=.62;
  const trimMat=material('#c9b28a').clone();
  const outfitTrims=[
   block(rig,trimMat,0,1.46,-.275,.085,.56,.028),
   block(rig,trimMat,-.12,1.44,-.28,.045,.52,.03),
   block(rig,trimMat,.12,1.44,-.28,.045,.52,.03)
  ];
- ball(rig,body,0,1.12,0,.36,.23,.25);
+ if(foundation)mesh(rig,shapes.hips,body,0,1.12,0);else ball(rig,body,0,1.12,0,.36,.23,.25);
  const neck=tube(rig,skin,0,1.94,0,.14,.16,.22);
- const head=pivot(rig,0,2.15,0);const face=ball(head,skin,0,0,0,foundation?.245:.275,foundation?.30:.34,foundation?.235:.26);
+ const head=pivot(rig,0,2.15,0);const face=foundation?mesh(head,shapes.face,skin,0,0,0):ball(head,skin,0,0,0,.275,.34,.26);
  const hairMat=material('#40332a').clone();
- const hair=ball(head,hairMat,0,.17,.055,.285,.23,.27);
+ const hair=mesh(head,foundation?shapes.hair:sphere,hairMat,0,.17,.055,.285,.23,.27);
  const hairBack=ball(head,hairMat,0,-.15,.19,.24,.38,.13);hairBack.visible=false;
  const hairTail=ball(head,hairMat,.12,-.18,.30,.11,.32,.11);hairTail.visible=false;
  const hairCurls=[[-.20,.24,-.06],[0,.32,-.09],[.20,.24,-.06]].map(([x,y,z])=>{const curl=ball(head,hairMat,x,y,z,.11,.12,.12);curl.visible=false;return curl;});
- for(const s of [-1,1]){ball(head,skin,s*.27,-.01,.01,.065,.11,.07);ball(head,'#26332e',s*.105,.015,-.237,.03,.037,.02);block(head,'#493a2c',s*.11,.09,-.235,.10,.025,.03);}
+ for(const s of [-1,1]){ball(head,skin,s*(foundation?.245:.27),-.01,.01,foundation?.045:.065,foundation?.075:.11,foundation?.055:.07);ball(head,'#26332e',s*.105,.015,-.237,foundation?.022:.03,foundation?.028:.037,.02);block(head,'#493a2c',s*.11,.09,-.235,.10,.025,.03);}
  ball(head,skin,0,-.035,foundation?-.245:-.27,foundation?.04:.055,foundation?.065:.075,foundation?.045:.07);
  if(foundation){block(head,'#775848',0,-.17,-.225,.10,.015,.014);}
- block(rig,'#493d30',0,1.02,0,.71,.14,.49);block(rig,'#c8ab70',0,1.03,-.27,.15,.15,.05,true);
+ if(foundation)mesh(rig,shapes.belt,'#493d30',0,1.02,0);else block(rig,'#493d30',0,1.02,0,.71,.14,.49);block(rig,'#c8ab70',0,1.03,-.27,.15,.15,.05,true);
  const cape=pivot(rig,0,1.78,.25),capeGeo=new THREE.PlaneGeometry(.75,1.05,4,4);const cp=capeGeo.attributes.position;for(let i=0;i<cp.count;i++){const y=cp.getY(i);cp.setXYZ(i,cp.getX(i)*(1.10-y*.30),y,Math.cos(cp.getX(i)*5)*.06);}capeGeo.computeVertexNormals();cloth.side=THREE.DoubleSide;mesh(cape,capeGeo,cloth,0,-.53,.045);cape.rotation.x=.10;
- const chestPlate=ball(rig,material('#839a9b',true),0,1.48,-.22,.36,.38,.12);
- const leather=ball(rig,'#7a6045',0,1.45,-.20,.36,.36,.11);
+ const chestPlate=foundation?mesh(rig,shapes.chest,material('#839a9b',true),0,1.43,0):ball(rig,material('#839a9b',true),0,1.48,-.22,.36,.38,.12);
+ const leather=foundation?mesh(rig,shapes.chest,'#7a6045',0,1.43,0):ball(rig,'#7a6045',0,1.45,-.20,.36,.36,.11);
  const pauldrons=[];
- function leg(s){const p=pivot(rig,s*.19,1,0);tube(p,'#484b41',0,-.23,0,.145,.12,.46);const knee=pivot(p,0,-.46,0);ball(knee,'#7c7160',0,0,-.02,.14,.15,.14);tube(knee,'#45453b',0,-.19,0,.12,.10,.38);ball(knee,'#3b3831',0,-.38,-.09,.15,.14,.25);return {p,knee};}
- function arm(s){const p=pivot(rig,s*.43,1.77,0);ball(p,body,0,-.02,0,foundation?.15:.19,foundation?.17:.23,foundation?.15:.19);tube(p,body,0,-.22,0,.13,.105,.39);const elbow=pivot(p,0,-.40,0);ball(elbow,skin,0,0,0,.105,.11,.10);tube(elbow,'#675440',0,-.16,0,.12,.10,.30);const palm=ball(elbow,skin,0,-.33,0,.115,.135,.105);const hand=pivot(elbow,0,-.34,foundation?0:-.06);if(foundation){palm.removeFromParent();block(hand,skin,0,0,0,.17,.17,.16);for(let i=0;i<3;i++)block(hand,skin,-.07+i*.065,-.07,-.015,.046,.075,.14);ball(hand,skin,s*.095,.015,-.035,.045,.075,.06);}pauldrons.push(ball(p,material('#839a9b',true),0,.035,0,foundation?.19:.23,foundation?.13:.18,foundation?.19:.24));return {p,elbow,hand};}
+ function leg(s){
+  const p=pivot(rig,s*.19,1,0),knee=pivot(p,0,-.46,0);
+  if(foundation){mesh(p,shapes.thigh,'#484b41',0,0,0);mesh(knee,shapes.shin,'#45453b',0,0,0);mesh(knee,shapes.shoe,'#3b3831',0,0,0);}
+  else {tube(p,'#484b41',0,-.23,0,.145,.12,.46);ball(knee,'#7c7160',0,0,-.02,.14,.15,.14);tube(knee,'#45453b',0,-.19,0,.12,.10,.38);ball(knee,'#3b3831',0,-.38,-.09,.15,.14,.25);}
+  return {p,knee};
+ }
+ function arm(s){
+  const p=pivot(rig,s*.43,1.77,0),elbow=pivot(p,0,-.40,0);
+  if(foundation){mesh(p,shapes.upperArm,body,0,0,0);mesh(elbow,shapes.forearm,'#675440',0,0,0);}
+  else {ball(p,body,0,-.02,0,.19,.23,.19);tube(p,body,0,-.22,0,.13,.105,.39);ball(elbow,skin,0,0,0,.105,.11,.10);tube(elbow,'#675440',0,-.16,0,.12,.10,.30);ball(elbow,skin,0,-.33,0,.115,.135,.105);}
+  const hand=pivot(elbow,0,-.34,foundation?0:-.06);
+  if(foundation){block(hand,skin,0,0,0,.15,.16,.14);for(let i=0;i<3;i++)block(hand,skin,-.06+i*.055,-.065,-.015,.042,.07,.12);ball(hand,skin,s*.082,.015,-.035,.038,.065,.05);}
+  pauldrons.push(foundation?mesh(p,shapes.pauldron,material('#839a9b',true),0,.025,0):ball(p,material('#839a9b',true),0,.035,0,.23,.18,.24));
+  return {p,elbow,hand};
+ }
  const ll=leg(-1),rl=leg(1),la=arm(-1),ra=arm(1);
  g.userData={rig,head,body,cloth,cape,chestPlate,leather,pauldrons,skinMaterial:skin,hairMat,hair,hairBack,hairTail,hairCurls,torso,outfitTrims,leftLeg:ll.p,rightLeg:rl.p,leftKnee:ll.knee,rightKnee:rl.knee,leftArm:la.p,rightArm:ra.p,leftElbow:la.elbow,rightElbow:ra.elbow,weapon:ra.hand,offhand:la.hand,leftHand:la.hand,rightHand:ra.hand,foundation,owned:[],family:'sword'};
  if(foundation){
   const u=g.userData;u.rigVersion=HUMANOID_RIG_VERSION;u.head.scale.setScalar(.9);
-  face.geometry=face.geometry.clone();u.bodyGeometry=[face.geometry,capeGeo];
-  // Shape the jaw into deliberate planes instead of retaining a spherical chin.
-  const vertices=face.geometry.attributes.position;for(let i=0;i<vertices.count;i++){const y=vertices.getY(i);if(y<-.15)vertices.setX(i,vertices.getX(i)*(1+(y+.15)*.24));}face.geometry.computeVertexNormals();
+  u.bodyGeometry=[capeGeo];
   u.weapon=pivot(rig,.3,1.3,-.3);u.weapon.name='socket.weapon-control';
   u.offhand=pivot(la.hand,0,0,0);u.offhand.name='socket.offhand';
   for(const name of HUMANOID_JOINTS)u[name].name='humanoid.'+name;
-  // Preserve the existing world scale and clothing anchors. Geometry is shared
-  // with the live actor so the reference cannot silently use an unrelated model.
+  // Candidate silhouette meshes retain the established joint and equipment anchors.
  }
  if(bandit){ball(head,'#383e40',0,.16,.06,.33,.26,.31);block(head,'#5d5148',0,-.15,-.245,.45,.19,.05);}
  return g;

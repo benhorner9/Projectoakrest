@@ -8,6 +8,8 @@ Canonical joints: `rig`, `head`, left/right `Arm`, `Elbow`, `Hand`, `Leg`, `Knee
 
 The candidate uses a complete bounded pose, followed by reach-envelope correction and two-bone arm solving. Bone lengths never change. It is not a skinned glTF pipeline or a full IK foot-placement solution. Future skins must bind the same conventions or use an explicit rest-pose conversion, validated against the actual source rig.
 
+`humanoid-shapes.js` owns reusable, project-authored cross-section geometry. Its ring coordinates fit existing joints; body, chest, thigh armour and boots share those dimensions. Geometry is cached and never disposed during equipment swaps. The reference civilian uses the same silhouette. These shapes are a model refinement, not certification of every outfit or an imported skinned mesh.
+
 ## Add a weapon
 
 1. Use the actual current item ID/family. Do not change reach, damage, timing or ownership.

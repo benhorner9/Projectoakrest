@@ -43,7 +43,7 @@ export function animateFoundation(u,info){
   x=.17;y=alert?1.46:1.22;z=alert?-.25:-.22;rx=alert?0:-.35;
  }else if(family==='frost'||family==='ember'){
   x=.34;y=1.28+wind*.20+release*.08;z=-.28-wind*.12-release*.12;
-  rx=alert?.15+wind*.65-release*.20:1.15;
+  rx=family==='frost'?1.28+wind*.30-release*.50:alert?.15+wind*.65-release*.20:1.15;
   // Distinct tactical cues move the free hand, not only an effect colour.
   u.leftArm.rotation.set(-.22+cue.left*.65,0,.16+Math.abs(cue.left)*.2);
   u.leftElbow.rotation.x=-.25-cue.elbow*.5;

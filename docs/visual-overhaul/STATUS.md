@@ -20,7 +20,7 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 ## Implemented, awaiting acceptance
 
 - Candidate complete-pose driver and state precedence; hand contact is numeric evidence, not final animation choreography approval.
-- Revised head/jaw/shoulder proportions and simple fingers; deliberate face/armour modelling and silhouette review still needed.
+- Authored tapered torso, face/hair, sleeves, legs, boots, belt, chest armour, greaves and pauldrons, with unchanged joint anchors. Palms/fingers, complete outfit fitting and human silhouette/motion review still need work.
 - Basic walk/run, idle, ready, reaction, death and work pose presentation; start/stop, turns, strafing, full recovery blending and feet require further work.
 - Browser reference coverage and evidence are specified in `QA.md`; consult actual reported results, not this inventory of implementation.
 
@@ -28,7 +28,7 @@ Initiative: [#82](https://github.com/benhorner9/Projectoakrest/issues/82). Branc
 
 | ID | Finding | Required resolution |
 |---|---|---|
-| VIS-01 | Original body still visibly constructed from primitives; current armour is rigid overlay geometry. | Finish canonical model and fit all actual wearable combinations, then human visual review. |
+| VIS-01 | Candidate body/plate now uses fitted cross-section meshes, but hands, full outfits and joint intersections still need polish; armour remains rigid rather than skinned. | Finish canonical model and fit all actual wearable combinations, then human visual review. |
 | VIS-02 | Live imported held items still use a generic normalized-height offset. | Candidate per-mesh transforms now load in the reference, including corrected crossbow source axis. Finish human handle fitting, reload/focus part animation and every-state visual review before live migration. |
 | VIS-03 | Candidate ability cues do not yet provide fully distinct, final choreography for every mechanic. | Author/review each current ability, especially defence, healing, multi-shot and paired dagger strikes, against real event timing. |
 | VIS-04 | Candidate muzzle is diagnostic; real projectile spawning still uses the live hand offset. | Integrate into actual combat only with obstruction/range/trajectory regression; no purely visual authority. |

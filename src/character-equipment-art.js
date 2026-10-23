@@ -3,6 +3,7 @@
  * Armour slot graphics are cosmetic; stats and item ownership still live in rules.
  */
 import * as THREE from 'three';
+import {HUMANOID_SHAPES as shapes} from './humanoid-shapes.js';
 import {loadKayKit,cloneKayKitModel} from './model-assets.js';
 
 const box=new THREE.BoxGeometry(1,1,1),sphere=new THREE.SphereGeometry(1,9,7);
@@ -29,6 +30,7 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
  const robe=chest==='starter-robes';
  u.chestPlate.visible=plating;u.leather.visible=leather;
  u.pauldrons.forEach(part=>part.visible=plating);
+ if(u.foundation){u.chestPlate.material=mat(metal);u.pauldrons.forEach(part=>part.material=mat(metal));}
  u.cape.visible=!plating&&!leather;
  if(robe){
   const torso=group(u,u.rig);
@@ -51,13 +53,13 @@ export function applyVisibleEquipment(actor,chest,slots={},style='melee'){
  }else u.hair.visible=true;
  if(slots.legs)for(const leg of [u.leftLeg,u.rightLeg]){
   const g=group(u,leg);
-  mesh(g,box,style==='melee'?metal:fabric,[0,-.24,-.15],[.27,.39,.17]);
-  mesh(g,box,'#403f35',[0,-.43,-.17],[.30,.11,.21]);
+  if(u.foundation)mesh(g,shapes.thighArmour,style==='melee'?metal:fabric,[0,0,0],[1,1,1]);
+  else {mesh(g,box,style==='melee'?metal:fabric,[0,-.24,-.15],[.27,.39,.17]);mesh(g,box,'#403f35',[0,-.43,-.17],[.30,.11,.21]);}
  }
  if(slots.boots)for(const knee of [u.leftKnee,u.rightKnee]){
   const g=group(u,knee);
-  mesh(g,box,style==='melee'?metal:'#5a493a',[0,-.27,-.11],[.27,.30,.32]);
-  mesh(g,box,'#363931',[0,-.42,-.21],[.32,.14,.43]);
+  if(u.foundation){mesh(g,shapes.greave,style==='melee'?metal:'#5a493a',[0,0,0],[1,1,1]);mesh(g,shapes.shoe,'#363931',[0,-.003,0],[1.04,1,1.04]);}
+  else {mesh(g,box,style==='melee'?metal:'#5a493a',[0,-.27,-.11],[.27,.30,.32]);mesh(g,box,'#363931',[0,-.42,-.21],[.32,.14,.43]);}
  }
  if(slots.amulet){
   const g=group(u,u.rig);
