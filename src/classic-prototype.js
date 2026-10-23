@@ -9,6 +9,8 @@ import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicCombat} from './classic-combat.js';
 import {createClassicCombatView} from './classic-combat-view.js';
+import {createClassicGroundLoot} from './classic-loot-view.js';
+import {setupClassicItems} from './classic-items-ui.js';
 import {createClassicNavigation} from './classic-navigation.js';
 import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
  nearbyClassicInteraction,classicInteractionCopy} from './classic-interactions.js';
@@ -49,6 +51,8 @@ const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
 const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const village=createClassicVillage(scene);
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
+const groundView=createClassicGroundLoot(scene);
+let itemUi=null;
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#d9ad87',
  hair:existing.profile?.hairColor||'#493529'});
 const heroShadow=makeGroundShadow();
@@ -71,7 +75,13 @@ village.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(no
 const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
 function feedback(text){lastStatus=text;statusText.textContent=text;}
 function showInteraction(target){
- const copy=classicInteractionCopy(target,existing.save);
+ if(target?.service==='bank'||target?.service==='store'){
+  navigation.stop();
+  itemUi.open(target.service==='bank'?'bank':'shop');
+  feedback('Using '+target.place+' · session-only transactions.');
+  return;
+ }
+ const copy=classicInteractionCopy(target,combat.sandboxSave());
  $('classic-dialogue-name').textContent=copy.title;
  $('classic-dialogue-text').textContent=copy.body;
  dialogue.hidden=false;lastInteraction=target.id;
@@ -196,6 +206,10 @@ renderer.domElement.addEventListener('pointerup',e=>{
  const down=canvasDown;canvasDown=null;
  if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>13)return;
  screenRay(e.clientX,e.clientY);
+ const lootObjects=groundView.hitObjects();
+ const lootHits=raycaster.intersectObjects(lootObjects.map(o=>o.object),false);
+ const drop=lootHits[0]&&lootObjects.find(x=>x.object===lootHits[0].object);
+ if(drop){chooseLoot(drop.id);return;}
  const hit=raycaster.intersectObjects(combatView.hitObjects().map(o=>o.object),false)[0];
  const monster=hit&&combatView.hitObjects().find(o=>o.object===hit.object);
  if(monster){chooseEnemy(monster.id);return;}
@@ -222,6 +236,31 @@ function releaseJoy(e){
  if(e.pointerId===joystickId){joystickId=null;input.x=0;input.z=0;stick.style.transform='';}
 }
 joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
+let pendingDrop=null;
+function pickUp(id){
+ const item=id||combat.nearestLoot(player)?.id;
+ if(!item){feedback('No loot within reach.');return false;}
+ const result=combat.pickup(player,item);
+ feedback(result.reason);
+ if(result.ok){
+  pendingDrop=null;
+  itemUi?.render();refreshHud();
+ }
+ return result.ok;
+}
+function chooseLoot(id){
+ const drop=combat.getState().groundLoot.find(item=>item.id===id);
+ if(!drop)return;
+ if(Math.hypot(player.x-drop.x,player.z-drop.z)<=3.2){pickUp(id);return;}
+ pendingDrop=id;
+ const route=navigation.moveTo(player,{x:drop.x,z:drop.z});
+ if(!route.ok){feedback(route.reason);pendingDrop=null;}
+ else feedback('Approaching dropped item…');
+}
+$('classic-pickup').addEventListener('click',()=>pickUp());
+$('classic-inventory-toggle').addEventListener('click',()=>itemUi.open('inventory'));
+$('classic-equipment-toggle').addEventListener('click',()=>itemUi.open('equipment'));
+$('classic-abilities-toggle').addEventListener('click',()=>itemUi.open('abilities'));
 function toggleAttack(){
  const state=combat.getState();
  if(state.targetId){combat.stopTarget();navigation.stop();feedback('Combat target released.');return;}
@@ -301,11 +340,15 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
  if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
  if(e.key.toLowerCase()==='t')interactNearby();
+ if(e.key.toLowerCase()==='i')itemUi.open('inventory');
+ if(e.key.toLowerCase()==='k')itemUi.open('equipment');
+ if(e.key.toLowerCase()==='l')itemUi.open('abilities');
+ if(e.key.toLowerCase()==='g')pickUp();
  if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
  if(e.code==='Space')triggerDodge();
  const bindings=['q','e','r','f'];
  if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
- if(e.key==='Escape'){dialogue.hidden=true;navigation.stop();selectedTarget=null;pointerMark.visible=false;}
+ if(e.key==='Escape'){dialogue.hidden=true;itemUi.hide();navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;}
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 function releaseAll(){
@@ -345,6 +388,11 @@ function moveGame(dt){
  heroShadow.position.set(player.x,.04,player.z);
  hero.update({facing:look,step:update.moved?1+Math.floor(walkClock/.17)%2:0,
   style,worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
+ if(pendingDrop){
+  const item=combat.getState().groundLoot.find(x=>x.id===pendingDrop);
+  if(!item||Math.hypot(player.x-item.x,player.z-item.z)<=3.2)pickUp(pendingDrop);
+  else if(!navigation.state().waypoints.length&&update.kind==='idle'){feedback('Cannot reach dropped item.');pendingDrop=null;}
+ }
  updateLocation();
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
@@ -371,6 +419,10 @@ function draw(dt){
  const state=combat.getState();
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
+ groundView.update(state.groundLoot,state.time);
+ const nearest=combat.nearestLoot(player);
+ const pickup=$('classic-pickup');pickup.disabled=!nearest;
+ pickup.title=nearest?'Pick up nearby item':'No loot within reach';
  if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
@@ -394,6 +446,10 @@ function tick(time){
  if(document.hidden){last=time;return;}
  const dt=clamp((time-last)/1000,0,.06);last=time;draw(dt);
 }
+itemUi=setupClassicItems({
+ combat,player:()=>player,style:()=>style,notify:feedback,
+ changed:next=>{if(STYLE_ORDER.includes(next))switchStyle(next);refreshHud();}
+});
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
 camera.position.set(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
 camera.lookAt(player.x,0,player.z);
@@ -414,6 +470,9 @@ if(isQa)window.oakrestClassicQA={
   navigation.stop();selectedTarget=null;draw(0);},
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
+  const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();}return result;
+ },pickupDrop:id=>pickUp(id),openItemMenu:tab=>itemUi.open(tab),
  useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
  savedState:()=>JSON.stringify(existing.save)
 };
