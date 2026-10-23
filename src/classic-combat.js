@@ -14,6 +14,9 @@ import {abilityCooldownKey,DODGE,dodgeInvulnerable} from './combat-physics.js';
 import {isOakrestSafe} from './town-services.js';
 import {solidAt,slideMove} from './classic-presentation.js';
 import {combatSourceSnapshot,awardMonsterVictory} from './gameplay-core.js';
+import {createMonsterDrops,MAX_GROUND_LOOT,closestDrop} from './loot.js';
+import {classicItemAction,classicPickup,classicItemSnapshot} from './classic-item-state.js';
+import {canCompleteInteraction,findClassicInteractable} from './classic-interactions.js';
 
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const toward=(a,b)=>{const d=Math.max(.00001,dist(a,b));return {x:(b.x-a.x)/d,z:(b.z-a.z)/d};};
@@ -57,6 +60,8 @@ export function createClassicCombat({save,random=Math.random}={}){
   }
  }
  const monsters=spawn.map(initialMonster),events=[],projectiles=[],cooldowns=new Map();
+ data.groundLoot=Array.isArray(data.groundLoot)?data.groundLoot:[];
+ let nextDrop=0;
  let time=0,style='melee',targetId=null,attackUntil=0,switchUntil=0,dodgeUntil=0,dodgeStart=-Infinity;
  let action=null,queuedAbility=null,queuedStyle=null,shieldUntil=0,deadUntil=0;
  let hp=maxHealth(levelFromXp(data.xp?.vitality||0).level);
@@ -133,6 +138,11 @@ export function createClassicCombat({save,random=Math.random}={}){
    enemy.dead=true;enemy.aggro=false;enemy.warning=null;enemy.respawnAt=time+12;
    const reward=awardMonsterVictory(data,enemy.type,source.style);
    if(reward.awarded)emit('xp',{style:source.style,amount:XP_BY_MOB[enemy.type],reward});
+   const drops=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,
+    ()=> 'classic-'+(++nextDrop)+'-'+Math.floor(time*100));
+   data.groundLoot.push(...drops);
+   if(data.groundLoot.length>MAX_GROUND_LOOT)data.groundLoot.splice(0,data.groundLoot.length-MAX_GROUND_LOOT);
+   if(drops.length)emit('ground-loot',{count:drops.length,ids:drops.map(d=>d.id)});
    emit('defeated',{id:enemy.id,name:enemy.name});
   }
  }
@@ -309,6 +319,24 @@ export function createClassicCombat({save,random=Math.random}={}){
    queueBasic(player);
   return drain();
  }
+ function itemAction(action,player){
+  const atBank=canCompleteInteraction(player,findClassicInteractable('service:bank'));
+  const atStore=canCompleteInteraction(player,findClassicInteractable('service:store'));
+  const result=classicItemAction(data,action,{atBank,atStore});
+  if(result.ok)emit('item',{action:action.type,reason:result.reason});
+  return result;
+ }
+ function pickup(player,id){
+  const result=classicPickup(data,player,id);
+  if(result.ok)emit('pickup',{reason:result.reason,id});
+  return result;
+ }
+ function nearestLoot(player){
+  return closestDrop(data.groundLoot,player.x,player.z,3.2);
+ }
+ function itemSnapshot(style){
+  return classicItemSnapshot(data,style);
+ }
  function drain(){return events.splice(0,events.length);}
  function getState(){
   const weapon=styleWeapon(),maxHp=maxHealth(levelFromXp(data.xp.vitality).level);
@@ -320,11 +348,13 @@ export function createClassicCombat({save,random=Math.random}={}){
    monsters:monsters.map(e=>({...e,warning:e.warning?{...e.warning}:null})),
    projectiles:projectiles.map(p=>({x:p.x,z:p.z,kind:p.kind,style:p.source.style})),
    progression:{...data.xp},defeated:data.defeated||0,
+   groundLoot:data.groundLoot.map(drop=>({...drop})),coins:data.coins,
    combatLevel:combatLevelFromXp(data.xp),targetLocked:!!getTarget(),
    action:action?{type:action.type,until:action.impactAt,style:action.style}:null};
  }
  return {tick,getState,chooseTarget,stopTarget,styleSwitch,queueAbility,queueBasic,dodge,drain,
   reset:()=>{targetId=null;action=null;queuedAbility=null;},
+  itemAction,pickup,nearestLoot,itemSnapshot,
   sandboxSave:()=>JSON.parse(JSON.stringify(data))};
 }
 export const CLASSIC_ENEMY_SPAWNS=spawn;
