@@ -17,7 +17,7 @@ test('canonical buildings keep solid walls but real walkable door openings',()=>
  assert.equal(occupantBuilding(-30,14)?.id,'bank');
  assert.equal(solidAt(-23,14),false,'bank doorway facing east');
  assert.equal(solidAt(-24,17),true,'bank facade away from doorway');
- assert.equal(solidAt(-30,8),true,'bank back wall');
+ assert.equal(solidAt(-36,14),true,'bank back wall');
  assert.equal(solidAt(-30,14),false,'interior floor is traversable');
  assert.equal(inBounds(-500,14),false);
 });
