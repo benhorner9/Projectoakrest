@@ -9,3 +9,31 @@
 #classic-dialogue-text{white-space:pre-line}
 @media(max-width:860px){.classic-interaction-bar{top:62px;left:9px;max-width:min(285px,48vw);padding:6px 8px}#classic-action-hint{font-size:10px}#classic-interact-button{padding:7px 9px;min-height:44px}}
 @media(max-height:530px){.classic-interaction-bar{max-width:46vw}.bottom-guide{display:none}}
+
+
+/* Block 4 — touch-first combat HUD, readable targets and real cooldown state */
+.classic-combat-target{position:absolute;top:78px;left:50%;transform:translateX(-50%);width:min(300px,31vw);background:#263b33ee;border:1px solid #b79f75;border-radius:5px;padding:9px 12px;color:#f3e7cc;pointer-events:none}
+.classic-combat-target>div:first-child{display:flex;justify-content:space-between;gap:8px;font:13px system-ui,sans-serif}
+.classic-combat-target span{font-size:11px;color:#e4be84}
+.classic-hp-track{margin-top:8px;height:8px;background:#392d2b;overflow:hidden;border:1px solid #907368;border-radius:6px}
+.classic-hp-track>div{height:100%;width:100%;background:#bb7659;transition:width .12s linear}
+.classic-combat-dock{position:absolute;z-index:3;left:50%;bottom:66px;transform:translateX(-50%);background:#263b33f2;border:1px solid #c3a879;border-radius:8px;padding:9px 12px;min-width:min(560px,57vw);box-shadow:0 7px 19px #18291b77}
+.classic-health-line{display:flex;justify-content:space-between;gap:10px;font:11px system-ui,sans-serif}
+.classic-health-line span{color:#cabb9a}
+.classic-combat-dock .player-health{margin:6px 0 8px}
+.classic-combat-dock .player-health>div{background:#73ab75}
+.classic-attack-row{display:flex;gap:8px;align-items:stretch;justify-content:center}
+.classic-attack-row button{border:1px solid #b6a17a;background:#455b4a;color:#f2e4c9;border-radius:5px;padding:9px 8px;min-height:51px;font:700 12px system-ui,sans-serif;min-width:53px}
+.classic-attack-row button small{display:block;font:10px system-ui,sans-serif;color:#d6c7a6;margin-top:4px}
+.classic-attack-row button:disabled{opacity:.47;cursor:not-allowed;background:#36493d}
+.classic-attack-row button:focus-visible{outline:3px solid #ead099;outline-offset:2px}
+.classic-attack-row button#classic-attack{background:#866246;min-width:87px}
+.classic-attack-row button#classic-attack.attacking{background:#7a4840;border-color:#d99572}
+.classic-ability-buttons{display:flex;gap:6px;align-items:stretch}
+.classic-ability-buttons button{position:relative;font-size:14px;min-width:48px;max-width:73px}
+.classic-ability-buttons button small{max-width:65px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.classic-ability-buttons button.on-cooldown{background:#393d40}
+.classic-combat-dock #classic-dodge{background:#486877;min-width:73px}
+@media(max-width:1000px){.classic-combat-dock{bottom:9px;min-width:0;width:min(530px,64vw);padding:6px}.classic-attack-row{gap:4px}.classic-ability-buttons{gap:3px}.classic-attack-row button{padding:5px 4px;min-width:43px;min-height:43px;font-size:11px}.classic-ability-buttons button{min-width:40px}.classic-attack-row button#classic-attack{min-width:65px}.classic-combat-dock #classic-dodge{min-width:56px}.classic-combat-target{top:64px;width:190px;padding:6px}.bottom-guide{display:none}}
+@media(pointer:coarse){.classic-combat-dock{bottom:10px}.classic-attack-row button{min-height:48px}}
+@media(max-width:750px){.classic-combat-dock{left:auto;right:5px;transform:none;width:min(73vw,490px)}.classic-combat-target{top:122px;left:10px;transform:none;max-width:200px}.classic-panel{max-width:31vw}}
