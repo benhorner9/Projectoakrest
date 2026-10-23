@@ -4,7 +4,7 @@
 import {OAKREST_BUILDINGS,OAKREST_WELL,OAKREST_PATHS,localBuildingPosition} from './town-layout.js';
 import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './rules.js';
 import {EQUIPMENT_SLOTS} from './equipment-slots.js';
-import {OAKREST_SERVICES} from './town-services.js';
+import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 
 export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:27,offsetZ:35,viewHeight:32,minZoom:.78,maxZoom:1.48});
 export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
@@ -36,6 +36,7 @@ export function solidAt(x,z,radius=.38){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!inBounds(x,z,radius))return true;
  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.r+radius)return true;
  for(const tree of CLASSIC_TREES)if(Math.hypot(x-tree.x,z-tree.z)<tree.r+radius)return true;
+ for(const tree of OAKREST_GROVES)if(Math.hypot(x-tree.x,z-tree.z)<.85+radius)return true;
  for(const b of OAKREST_BUILDINGS){
   const p=localBuildingPosition(b,x,z),hx=b.w/2,hz=b.d/2,thick=.22+radius;
   if(Math.abs(p.x)>hx+thick||Math.abs(p.z)>hz+thick)continue;
