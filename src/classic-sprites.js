@@ -12,7 +12,7 @@ function polygon(ctx,color,points){
  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fill();
 }
 function outline(ctx,x,y,w,h,c='#2c2b2a'){fill(ctx,c,x-2,y-2,w+4,h+4);}
-function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs}){
+function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs,pose}){
  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
  const front=[0,1,7].includes(dir),back=[3,4,5].includes(dir);
@@ -42,7 +42,7 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  if(plate){fill(c,'#9baaaa',32,49,32,24);fill(c,'#d2d4be',35,53,26,4);fill(c,'#687977',46,55,4,18);}
  else if(leather){fill(c,'#8b6548',33,49,30,26);fill(c,'#c29b69',43,48,9,29);}
  else if(cloth){fill(c,'#c1b39a',32,52,32,4);fill(c,'#4b6679',38,57,20,16);}
- const handOffset=step===1?4:step===2?-4:0;
+ const handOffset=pose==='windup'?-10:pose==='strike'?7:step===1?4:step===2?-4:0;
  outline(c,61+shift,48+handOffset,14,34);fill(c,coat,61+shift,48+handOffset,14,34);
  fill(c,skin,62+shift,80+handOffset,12,9);
  // Head and neck; face/hair direction conveys facing.
@@ -73,7 +73,7 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
   fill(c,'#c8ac73',sx+6,71,5,12);
  }
  // Equipment drawn after hands ensures correctly attached 2D silhouette.
- const wx=right?79:14,wy=step===2?39:45;
+ const wx=right?79:14,wy=pose==='windup'?30:pose==='strike'?51:step===2?39:45;
  if(weapon!=='none'&&style==='melee'){
   if(/dagger/i.test(weapon)){
    for(const shift of [-8,8]){fill(c,'#e3ded1',wx+shift-2,wy-13,4,26);fill(c,'#8a6b4a',wx+shift-2,wy+12,4,14);}
@@ -103,6 +103,17 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
   polygon(c,'#d5ded7',[[wx+13,wy+5],[wx+3,wy-2],[wx+4,wy+11]]);
   }
  }
+ // Directional attack cues are sprites, not extra skeletal meshes.
+ // Different frames convey intentional preparation and contact.
+ if(pose==='windup'){
+  c.strokeStyle=style==='magic'?'#a9d8e8':style==='ranged'?'#e2d6aa':'#c9c4ad';
+  c.lineWidth=3;c.beginPath();c.moveTo(wx-10,wy+5);c.lineTo(wx+7,wy-20);c.stroke();
+ }else if(pose==='strike'){
+  c.strokeStyle=style==='magic'?'#97c7ed':style==='ranged'?'#e9c987':'#e5ded0';
+  c.lineWidth=5;c.beginPath();
+  c.arc(right?61:35,58,28,-Math.PI*.62,Math.PI*.46,!right);
+  c.stroke();
+ }
  // Jewellery/pouch finishing touches, drawn from the saved loadout's extra slots.
  if(offhand&&style==='magic')fill(c,'#d1deaa',19,66,8,8);
 
@@ -113,18 +124,18 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
 }
 function keyFor(config,dir,step){
  return [config.coat,config.skin,config.hair,config.helm,config.shield,config.boots,
-  config.offhand,config.arrows,config.weapon,config.chest,config.legs,config.style,dir,step].join('|');
+  config.offhand,config.arrows,config.weapon,config.chest,config.legs,config.style,config.pose,dir,step].join('|');
 }
 export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',worn={},npc=false,armed=false}={}){
  const material=new THREE.SpriteMaterial({transparent:true,depthWrite:false,alphaTest:.07});
  const sprite=new THREE.Sprite(material);sprite.scale.set(2.65,3.55,1);
  sprite.center.set(.5,0);
  let lastKey='';
- function update({facing={x:0,z:1},step=0,style:nextStyle=style,worn:nextWorn=worn}={}){
+ function update({facing={x:0,z:1},step=0,pose='idle',style:nextStyle=style,worn:nextWorn=worn}={}){
   const config={style:nextStyle,coat:npc?coat:nextStyle==='melee'?'#916b5c':nextStyle==='magic'?'#62758f':nextStyle==='ranged'?'#668069':coat,
    skin,hair,helm:!!nextWorn.helm,shield:!!nextWorn.offhand,offhand:!!nextWorn.offhand,
    boots:nextWorn.boots?'#5f4a3b':'#795f4a',arrows:!!nextWorn.arrows,
-   chest:nextWorn.chest,legs:nextWorn.legs,weapon:npc?(armed?'sword':'none'):(nextWorn.weapon||'none')};
+   chest:nextWorn.chest,legs:nextWorn.legs,pose,weapon:npc?(armed?'sword':'none'):(nextWorn.weapon||'none')};
   const dir=spriteDirection(facing.x,facing.z),frame=step%3,key=keyFor(config,dir,frame);
   if(key===lastKey)return;
   if(!textureCache.has(key))textureCache.set(key,renderActor({...config,dir,step:frame}));
