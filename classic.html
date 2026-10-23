@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+<meta name="theme-color" content="#263e37"/>
+<title>Oakrest — Classic 2.5D Prototype</title>
+<link rel="stylesheet" href="./src/classic.css"/>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<main id="classic-app">
+ <div id="classic-game" aria-label="Oakrest 2.5D explorable village"></div>
+ <header class="classic-top">
+  <div class="brand"><span class="brand-rune">✥</span><div><strong>OAKREST</strong><small>CLASSIC PROTOTYPE · BLOCK 2</small></div></div>
+  <div class="location"><span class="location-dot"></span><span id="classic-location">Heartwood Square</span></div>
+  <a class="return-link" href="./index.html" aria-label="Return to original Oakrest">Original 3D ↗</a>
+ </header>
+ <aside class="classic-panel" aria-label="Character overview">
+   <p class="eyebrow">YOUR ADVENTURER</p>
+   <h1 id="classic-name">The Wanderer</h1>
+   <div class="level-row"><span>Combat <strong id="classic-combat">1</strong></span><span>Vitality <strong id="classic-vitality">1</strong></span></div>
+   <hr/>
+   <p class="eyebrow">EQUIPPED STYLE</p>
+   <div id="classic-styles" class="styles" role="group" aria-label="Preview saved combat loadouts">
+     <button type="button" data-style="melee" class="active" aria-pressed="true">⚔ <span>Melee</span></button>
+     <button type="button" data-style="magic" aria-pressed="false">✦ <span>Magic</span></button>
+     <button type="button" data-style="ranged" aria-pressed="false">➶ <span>Ranged</span></button>
+   </div>
+   <div class="weapon-box"><span id="classic-weapon">Iron Longsword</span><small>Level <b id="classic-level">1</b> · Saved loadout preview</small></div>
+   <p class="hint" id="classic-inside">Walk the village and enter buildings through their doors.</p>
+   <p class="save-note">Read-only prototype. Your current character, inventory, bank and XP are never modified here.</p>
+ </aside>
+ <div class="bottom-guide">
+   <div class="guide-title">EXPLORE OAKREST</div>
+   <span>Tap to walk · WASD / arrow keys · Tap an NPC to speak</span>
+ </div>
+ <div class="zoom-group" aria-label="Camera zoom">
+  <button type="button" id="classic-zoom-in" aria-label="Zoom in">+</button>
+  <button type="button" id="classic-zoom-out" aria-label="Zoom out">−</button>
+ </div>
+ <div class="joystick" id="classic-joystick" aria-label="Touch movement joystick">
+  <div class="joystick-ring"><div id="classic-stick"></div></div>
+ </div>
+ <div id="classic-dialogue" class="dialogue" role="status" hidden>
+  <strong id="classic-dialogue-name">Villager</strong>
+  <p id="classic-dialogue-text"></p>
+  <button type="button" id="classic-dialogue-close">Close</button>
+ </div>
+ <div id="classic-error" class="fatal" role="alert" hidden>Oakrest Classic could not start on this browser. Return to the original game.</div>
+</main>
+<script type="module" src="./src/classic-prototype.js"></script>
+</body>
+</html>
