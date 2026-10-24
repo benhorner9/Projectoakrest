@@ -39,6 +39,14 @@ const saveManager=createClassicSaveManager({storage:localStorage,pathname:locati
   if(state)state.textContent=result.reason;
  }});
 let sessionMutated=false,needsSave=false,lastSavedAt=0;
+let wornCache=null,wornCacheStyle=null;
+function savedWorn(){
+ if(!wornCache||wornCacheStyle!==style){
+  wornCache=presentationSnapshot(combat.sandboxSave(),style,player).worn;
+  wornCacheStyle=style;
+ }
+ return wornCache;
+}
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
@@ -107,6 +115,7 @@ function saveNow(){
  return result.ok;
 }
 function markProgress(){
+ wornCache=null;
  sessionMutated=true;
  if(saveManager.status().enabled){needsSave=true;showSaveState();}
 }
@@ -138,6 +147,7 @@ function showInteraction(target){
 }
 $('classic-dialogue-close').addEventListener('click',()=>{dialogue.hidden=true;});
 function refreshHud(){
+ wornCache=null;
  const view=presentationSnapshot(combat.sandboxSave(),style,player);
  $('classic-name').textContent=existing.profile?.name||'The Wanderer';
  $('classic-combat').textContent=view.combatLevel;
@@ -384,6 +394,7 @@ function interactNearby(){
 }
 interactButton.addEventListener('click',interactNearby);
 document.addEventListener('keydown',e=>{
+ if(['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space'].includes(e.key))e.preventDefault();
  keys.add(e.key.toLowerCase());
  if(e.repeat)return;
@@ -436,8 +447,7 @@ function moveGame(dt){
  }
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
- hero.update({facing:look,step:update.moved?1+Math.floor(walkClock/.17)%2:0,
-  style,worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
+ // Hero sprite is drawn once in draw(), not twice per frame.
  if(pendingDrop){
   const item=combat.getState().groundLoot.find(x=>x.id===pendingDrop);
   if(!item||Math.hypot(player.x-item.x,player.z-item.z)<=3.2)pickUp(pendingDrop);
@@ -478,8 +488,9 @@ function draw(dt){
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
  hero.update({facing:look,style,
+  step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
   pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
-  worn:presentationSnapshot(combat.sandboxSave(),style,player).worn});
+  worn:savedWorn()});
  for(const [i,n] of npcActors.entries())
   n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee'});
  if(pointerMark.visible){
