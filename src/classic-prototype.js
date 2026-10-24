@@ -298,7 +298,7 @@ function chooseEnemy(id){
   combatPursuitId=id;
   chaseSelectedEnemy();
   const e=combat.getState().monsters.find(m=>m.id===id);
-  feedback('Attacking '+e.name+' · Move to disengage');
+  if(combat.getState().targetId===id)feedback('Attacking '+e.name+' · Move to disengage');
  }else feedback('Creature too far away or behind an obstacle.');
  return result;
 }
@@ -452,7 +452,7 @@ function updateCombatUi(snapshot){
  $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
  const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
  attack.firstChild.textContent='⚔';
- attack.querySelector('small').textContent=target?'TARGET':'ATTACK';
+ attack.querySelector('small').textContent='ATTACK';
  for(const b of document.querySelectorAll('[data-ability]')){
   const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
   const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
@@ -555,6 +555,14 @@ function draw(dt,render=true){
  orbitCamera.step(keys,dt);
  const cameraOffset=orbitCamera.offset();
  const movement=moveGame(dt);
+ // Stop approaching as soon as the monster is actually in weapon range:
+ // don't walk through its sprite or past it to an old path waypoint.
+ if(combatPursuitId){
+  const engaging=combat.getState(),enemy=engaging.target;
+  if(enemy&&engaging.targetId===combatPursuitId&&
+   Math.hypot(player.x-enemy.x,player.z-enemy.z)<=Math.max(.75,engaging.reach-.26))
+   navigation.stop();
+ }
  if(dodgeTravel&&dt>0){
   const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
   const moved=slideMove(player,direction.x*slice*12.5,direction.z*slice*12.5);
