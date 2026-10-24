@@ -105,9 +105,17 @@ function terrain(ctx,project,width,height,scale){
   ctx.strokeStyle='#57432f';ctx.lineWidth=Math.max(.7,.16*scale);
   ctx.strokeRect(p.x-w/2,p.y-d/2,w,d);
   ctx.beginPath();
-  if(lateral){ctx.moveTo(p.x-w/2,p.y);ctx.lineTo(p.x+w/2,p.y);}
-  else {ctx.moveTo(p.x,p.y-d/2);ctx.lineTo(p.x,p.y+d/2);}
+  // Roof ridges follow the building's actual rotated local X axis.
+  if(lateral){ctx.moveTo(p.x,p.y-d/2);ctx.lineTo(p.x,p.y+d/2);}
+  else {ctx.moveTo(p.x-w/2,p.y);ctx.lineTo(p.x+w/2,p.y);}
   ctx.stroke();
+  // Dark entrance notch is on the same front face as the real doorway.
+  ctx.fillStyle='#57432f';
+  const door=3.1*scale,edge=.32*scale;
+  if(b.face==='east')ctx.fillRect(p.x+w/2-edge,p.y-door/2,edge,door);
+  else if(b.face==='west')ctx.fillRect(p.x-w/2,p.y-door/2,edge,door);
+  else if(b.face==='north')ctx.fillRect(p.x-door/2,p.y+d/2-edge,door,edge);
+  else ctx.fillRect(p.x-door/2,p.y-d/2,door,edge);
  }
  // The actual three market stalls, northwest wagon, outpost tent and fallen logs.
  for(const stall of CLASSIC_STALLS)rect(ctx,project,{...stall,w:4.65,d:3.2},scale,stall.roof);
