@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import {spriteDirection} from './classic-presentation.js';
-const PIX=4, W=96,H=128;
+const W=96,H=128;
 const textureCache=new Map();
 function fill(ctx,color,x,y,w,h){
  ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
@@ -12,7 +12,7 @@ function polygon(ctx,color,points){
  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fill();
 }
 function outline(ctx,x,y,w,h,c='#2c2b2a'){fill(ctx,c,x-2,y-2,w+4,h+4);}
-function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs,pose}){
+function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs,amulet,ring,outfit,hairstyle,sex,pose}){
  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
  const front=[0,1,7].includes(dir),back=[3,4,5].includes(dir);
@@ -24,19 +24,27 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  const plate=/plate|mail|recruit/i.test(chest||'');
  const leather=/leather|hide|scout/i.test(chest||'');
  const cloth=/robes|wraps|traveller/i.test(chest||'');
+ const legPlate=/recruit|greaves/i.test(legs||'');
+ const legLeather=/scout|chaps/i.test(legs||'');
+ const legMage=/apprentice|legging/i.test(legs||'');
  for(const sign of [-1,1]){
   const x=48+sign*11+shift/2,foot=stride*sign;
-  outline(c,x-7,84+foot,14,19,line);fill(c,boots,x-7,84+foot,14,19);
-  fill(c,legs?(plate?'#a3aeac':leather?'#9c7757':coat):'#c6a778',x-7,89+foot,14,12);
+  outline(c,x-7,84+foot,14,19,line);fill(c,boots?(/scout/i.test(boots)?'#66563f':/apprentice/i.test(boots)?'#424c66':'#788281'):'#654d3c',x-7,84+foot,14,19);
+  fill(c,legPlate?'#a3aeac':legLeather?'#9c7757':legMage?'#5d6787':coat,x-7,89+foot,14,12);
   fill(c,'#c6a778',x-7,102+foot,17,7);
  }
  // Equipment that must appear behind the body.
  if(arrows&&style==='ranged'){outline(c,right?20:66,47,11,29);fill(c,'#947b51',right?20:66,47,11,29);for(let i=0;i<3;i++)fill(c,'#d3c7a7',(right?21:67)+i*3,41,2,11);}
- if(style==='magic'){polygon(c,'#303f57',[[27,63],[69,63],[78,104],[18,104]]);}
+ // Style alone never creates a cloak: empty loadouts always show starter clothes.
  // Left arm, body and moving right arm.
  outline(c,23+shift,49,14,37);fill(c,coat,23+shift,49,14,37);
  polygon(c,line,[[30,44],[66,44],[72,88],[24,88]]);
- polygon(c,coat,[[31,45],[65,45],[69,84],[27,84]]);
+ polygon(c,coat,sex==='female'?[[34,45],[62,45],[69,84],[27,84]]:[[31,45],[65,45],[69,84],[27,84]]);
+ // Starter clothing remains consistent across every loadout; armour is layered over it.
+ if(outfit==='wanderer'){fill(c,'#b8a17c',30,48,4,33);fill(c,'#aa8d66',63,48,4,33);}
+ else if(outfit==='scholar'){fill(c,'#d1c8a6',31,46,34,6);fill(c,'#a69377',43,55,10,29);}
+ else if(outfit==='traveller'){fill(c,'#554637',28,62,5,23);fill(c,'#76654c',64,62,5,23);}
+ else {fill(c,'#9b8061',38,46,20,4);}
  fill(c,'#d8bf8d',28,78,41,5);
  fill(c,'#5a4636',32,81,33,5);
  if(plate){fill(c,'#9baaaa',32,49,32,24);fill(c,'#d2d4be',35,53,26,4);fill(c,'#687977',46,55,4,18);}
@@ -50,21 +58,26 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  outline(c,32+shift/2,12,32,32);
  fill(c,skin,32+shift/2,12,32,32);
  if(back){
-  fill(c,hair,32+shift/2,12,32,23);
-  fill(c,hair,35+shift/2,32,26,11);
+  fill(c,hair,32+shift/2,12,32,hairstyle==='buzz'?7:23);
+  if(['long','ponytail','curly'].includes(hairstyle))fill(c,hair,35+shift/2,32,26,hairstyle==='ponytail'?22:15);
  }else{
-  fill(c,hair,32+shift/2,12,32,10);
-  fill(c,hair,32+shift/2,18,7,13);
+  fill(c,hair,32+shift/2,12,32,hairstyle==='buzz'?4:10);
+  if(hairstyle!=='buzz')fill(c,hair,32+shift/2,18,7,hairstyle==='short'?9:13);
+  if(hairstyle==='swept')polygon(c,hair,[[33,17],[65,13],[59,24],[36,26]]);
+  if(hairstyle==='curly')for(let i=0;i<5;i++)fill(c,hair,31+shift/2+i*7,9+(i%2)*3,9,8);
+  if(hairstyle==='long')for(const x of [30,62])fill(c,hair,x+shift/2,27,6,29);
+  if(hairstyle==='ponytail')fill(c,hair,64+shift/2,26,6,31);
   if(front){
    fill(c,'#43312a',40+shift/2,31,4,4);
    fill(c,'#43312a',54+shift/2,31,4,4);
   }else fill(c,'#43312a',right?55:39,29,4,5);
  }
  if(helm){
-  fill(c,'#697b7d',30+shift/2,12,36,11);
-  fill(c,'#c7b9a0',31+shift/2,23,34,4);
-  fill(c,'#5e7473',30+shift/2,25,8,13);
-  fill(c,'#5e7473',58+shift/2,25,8,13);
+  const metal=/recruit/i.test(helm),colour=metal?'#8e9e9c':/scout/i.test(helm)?'#806444':'#586385';
+  fill(c,colour,30+shift/2,12,36,11);
+  fill(c,metal?'#c7c9b8':'#baaa87',31+shift/2,23,34,4);
+  fill(c,colour,30+shift/2,25,8,13);
+  fill(c,colour,58+shift/2,25,8,13);
  }
  if(shield&&style==='melee'){
   const sx=right?15:66;
@@ -116,6 +129,8 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  }
  // Jewellery/pouch finishing touches, drawn from the saved loadout's extra slots.
  if(offhand&&style==='magic')fill(c,'#d1deaa',19,66,8,8);
+ if(amulet){fill(c,'#d5b66f',47,47,3,10);fill(c,'#a4c6b2',46,57,5,5);}
+ if(ring)fill(c,'#e6c47a',right?69:24,83+handOffset,5,3);
 
  const tex=new THREE.CanvasTexture(canvas);
  tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;
@@ -123,19 +138,23 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  return tex;
 }
 function keyFor(config,dir,step){
- return [config.coat,config.skin,config.hair,config.helm,config.shield,config.boots,
-  config.offhand,config.arrows,config.weapon,config.chest,config.legs,config.style,config.pose,dir,step].join('|');
+ return [config.coat,config.skin,config.hair,config.outfit,config.hairstyle,config.sex,
+  config.helm,config.shield,config.boots,config.offhand,config.arrows,config.amulet,config.ring,
+  config.weapon,config.chest,config.legs,config.style,config.pose,dir,step].join('|');
 }
-export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',worn={},npc=false,armed=false}={}){
+export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',
+ outfit='tunic',hairstyle='short',sex='male',worn={},npc=false,armed=false}={}){
  const material=new THREE.SpriteMaterial({transparent:true,depthWrite:false,alphaTest:.07});
  const sprite=new THREE.Sprite(material);sprite.scale.set(2.65,3.55,1);
  sprite.center.set(.5,0);
  let lastKey='';
  function update({facing={x:0,z:1},step=0,pose='idle',style:nextStyle=style,worn:nextWorn=worn}={}){
-  const config={style:nextStyle,coat:npc?coat:nextStyle==='melee'?'#916b5c':nextStyle==='magic'?'#62758f':nextStyle==='ranged'?'#668069':coat,
-   skin,hair,helm:!!nextWorn.helm,shield:!!nextWorn.offhand,offhand:!!nextWorn.offhand,
-   boots:nextWorn.boots?'#5f4a3b':'#795f4a',arrows:!!nextWorn.arrows,
-   chest:nextWorn.chest,legs:nextWorn.legs,pose,weapon:npc?(armed?'sword':'none'):(nextWorn.weapon||'none')};
+  const config={style:nextStyle,coat,skin,hair,outfit,hairstyle,sex,
+   helm:nextWorn.helm||null,shield:!!(nextStyle==='melee'&&nextWorn.offhand),
+   offhand:nextWorn.offhand||null,boots:nextWorn.boots||null,arrows:!!nextWorn.arrows,
+   amulet:!!nextWorn.amulet,ring:!!nextWorn.ring,
+   chest:nextWorn.chest||null,legs:nextWorn.legs||null,pose,
+   weapon:npc?(armed?'sword':'none'):(nextWorn.weapon||'none')};
   const dir=spriteDirection(facing.x,facing.z),frame=step%3,key=keyFor(config,dir,frame);
   if(key===lastKey)return;
   if(!textureCache.has(key))textureCache.set(key,renderActor({...config,dir,step:frame}));
