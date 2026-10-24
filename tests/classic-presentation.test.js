@@ -6,6 +6,10 @@ import {defaultSave,STYLE_ORDER,LOADOUTS,validSave} from '../src/rules.js';
 
 test('2.5D camera and sprite direction are deterministic and bounded',()=>{
  assert.ok(CLASSIC_CAMERA.elevation>0);
+ assert.ok(CLASSIC_CAMERA.offsetZ<0,'camera is south of the +Z-north world axis');
+ const len=Math.hypot(CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.offsetZ);
+ const gameUpWorld={x:-CLASSIC_CAMERA.offsetX/len,z:-CLASSIC_CAMERA.offsetZ/len};
+ assert.ok(gameUpWorld.z>.85,'up on screen moves substantially north on map');
  assert.ok(CLASSIC_CAMERA.minZoom<1 && CLASSIC_CAMERA.maxZoom>1);
  assert.equal(spriteDirection(1,1),spriteDirection(2,2));
  const dirs=new Set();
