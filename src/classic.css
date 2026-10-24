@@ -95,3 +95,13 @@
 .classic-ability-select{min-width:0;flex:1;color:#f1e3c3;background:#283f33;border:1px solid #a48a5f;padding:8px;border-radius:3px;font:11px system-ui,sans-serif}
 @media(max-width:900px){.classic-item-window{top:58px;bottom:65px;width:min(360px,57vw)}.classic-item-buttons{right:8px;bottom:105px;max-width:220px}.classic-item-buttons button{padding:7px 5px;font-size:10px;min-height:36px}.classic-four-grid{gap:3px}.classic-item-cell{min-height:47px}.classic-item-scroll{padding:7px}.classic-item-tabs button{font-size:8px;padding:8px 2px}}
 @media(max-height:550px){.classic-item-window{bottom:8px}.classic-item-buttons{right:8px;bottom:90px}.classic-item-cell{min-height:40px}}
+
+
+/* Block 6 opt-in save status, compact for iPad landscape. */
+.classic-save-box{border:1px solid #b9a077;border-radius:5px;background:#344d3fec;padding:9px;margin-top:10px}
+.classic-save-box>strong{font:700 10px system-ui,sans-serif;letter-spacing:.11em;color:#ebd8a8}
+.classic-save-box p{margin:4px 0 8px;font:10px/1.45 system-ui,sans-serif;color:#e0dbca}
+.classic-save-actions{display:flex;gap:5px;flex-wrap:wrap}
+.classic-save-actions button{flex:1;padding:8px 5px;background:#665c40;color:#fff0cc;border:1px solid #c6ae7a;border-radius:4px;font:700 10px system-ui,sans-serif;min-height:38px}
+.classic-save-actions button:disabled{opacity:.45}
+@media(max-width:860px){.classic-save-box{padding:6px;margin-top:7px}.classic-save-actions button{font-size:9px;padding:6px 4px;min-height:34px}}
