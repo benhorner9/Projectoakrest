@@ -88,7 +88,7 @@ function terrain(ctx,project,width,height,scale){
  // The courtyard and well physically occupy these same coordinates.
  const well=project(OAKREST_WELL);
  ctx.fillStyle='#abb1a0';ctx.beginPath();ctx.arc(well.x,well.y,OAKREST_WELL.courtyardRadius*scale,0,Math.PI*2);ctx.fill();
- const townTrees=[...CLASSIC_TREES.map(t=>({...t,canopy:1.7*(.85+.09*(CLASSIC_TREES.indexOf(t)%4))})),
+ const townTrees=[...CLASSIC_TREES.map((t,i)=>({...t,canopy:1.7*(.85+.09*(i%4))})),
   ...OAKREST_GROVES.map(t=>({...t,canopy:1.7*1.02}))];
  for(const t of [...townTrees,...ADVENTURE_TREES.map(t=>({...t,canopy:2}))]){
   const p=project(t),radius=Math.max(.65,t.canopy*scale);
@@ -151,9 +151,9 @@ function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cam
  // Dungeon ward gates disappear on the map when opened in the live world.
  for(const [i,z] of [241,269,297].entries()){
   if(adventure?.run?.wards?.includes(i))continue;
-  const p=project({x:0,z});ctx.strokeStyle='#769b91';
-  ctx.lineWidth=Math.max(2,full?4:3);ctx.beginPath();ctx.moveTo(p.x-3* (full?1:1),p.y);
-  ctx.lineTo(p.x+3,p.y);ctx.stroke();
+  const left=project({x:-3,z}),right=project({x:3,z});
+  ctx.strokeStyle='#769b91';ctx.lineWidth=Math.max(2,full?4:3);
+  ctx.beginPath();ctx.moveTo(left.x,left.y);ctx.lineTo(right.x,right.y);ctx.stroke();
  }
  // Quest icons share the same state as glowing NPC beacons (not generic golden dots).
  for(const giver of questGivers){
