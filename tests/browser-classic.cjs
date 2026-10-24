@@ -39,7 +39,7 @@ let browser;
   await page.evaluate(()=>{for(let i=0;i<6;i++)oakrestClassicQA.step(.05);});
   await page.keyboard.up('w');
   const moved=await page.evaluate(()=>oakrestClassicQA.state());
-  assert.ok(moved.z<initial.state.z,'W moves character toward northern road');
+  assert.ok(moved.z>initial.state.z,'W moves north (+Z) and up in the world view');
   await page.evaluate(()=>oakrestClassicQA.teleport(-30,14));
   const inside=await page.evaluate(()=>oakrestClassicQA.state());
   assert.equal(inside.interior,'bank','interior comes from canonical building layout');
