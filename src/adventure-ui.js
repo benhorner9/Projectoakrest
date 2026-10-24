@@ -44,14 +44,14 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
    }
   }else el('p',({
    'adventure:rowan':'Try all three styles on the dummy. Red shapes warn where an enemy attack will land. Step clear or dodge before it flashes.',
-   'adventure:smith':'The forge turns copper and tin into bronze. Take your metal to the anvil for shields and helms. Equip your work from the backpack.',
+   'adventure:smith':'Metalwork needs a real forge. Fletching, Inscription and Cooking happen from the backpack: select materials and choose MAKE or USE WITH.',
    'adventure:scout':'I am Nessa. Something is ringing below the hill. Read the old journal and memorial before judging the watch’s purpose.',
-   'adventure:scribe':'One spell, one scroll. Frostwood uses frost scrolls; Ember uses ember scrolls. Reeds and timber make a renewable supply.',
+   'adventure:scribe':'A spell consumes one scroll. You can inscribe scrolls anywhere with reeds and other materials. Open BAG → MAKE; no writing desk is required.',
    'citizen:guard':state.catalogue.find(q=>q.id==='hollow')?.status==='completed'?'The watch needs your help keeping the Hollow stable.':'Your journal will point you to the next person who needs you.',
    'service:forester':'Carry an axe, select a softwood tree, and stay nearby while cutting. Bank excess logs or sell five at a time to Darrin.'
   })[t.id]||t.text||(t.kind==='grove'?'Woodcutting: stay beside the tree while chopping.':'Select an action below.'),content);
   if(t.id==='service:forester')btn('Learn Woodcutting / collect axe',()=>act('teach'));
-  if(t.id==='adventure:smith')el('p','Forge: just east of Brann. Quarry: outside the north gate, west path.',content);
+  if(t.id==='adventure:smith')el('p','The anvil is east of Brann for metalwork. All field supplies can be made from the BAG → MAKE menu, anywhere outside combat.',content);
   if(t.id==='adventure:scout'&&state.catalogue.find(q=>q.id==='outpost')?.status==='active'){
    btn('The watch protected the living forest',()=>act('answer','protect'));
    btn('The watch hid a treasure vault',()=>act('answer','treasure'));
@@ -59,7 +59,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   if(t.id==='citizen:guard'&&state.catalogue.find(q=>q.id==='seal')?.status==='active')btn('Check my expedition supplies',()=>act('prepare'));
   if(t.id==='citizen:guard'&&state.catalogue.find(q=>q.id==='hollow')?.status==='completed')btn('Supply the watch · 2 shards',()=>act('contract'));
   if(t.id==='adventure:stump')btn('Calm guardian · 1 restoration seal',()=>act('calm'));
-  if(t.id==='adventure:spring'||t.id==='adventure:cook')btn('Rest and recover Health',()=>act('rest'));
+  if(t.id==='adventure:spring')btn('Rest and recover Health',()=>act('rest'));
   if(t.kind==='resource'||t.kind==='grove')btn(t.kind==='grove'||t.material==='softwood-logs'?'Chop softwood':'Gather resource',()=>act('gather'));
   if(t.kind==='station'){
    const data=combat.sandboxSave();
@@ -149,10 +149,10 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   const key=q.objectives.find(o=>!progress.flags.includes(o[0]))?.[0];
   if(key?.startsWith('visit:'))return findTarget(key.slice(6));
   const ids={'hit:melee':'rowan','hit:magic':'rowan','hit:ranged':'rowan','gather:copper-ore':'copper',
-   'gather:tin-ore':'tin','gather:softwood-logs':'softwood','craft:useful':'fletch',
+   'gather:tin-ore':'tin','gather:softwood-logs':'softwood','craft:useful':'smith',
    'inspect:cart':'cart','inspect:tracks':'tracks','inspect:stump':'stump',
    'resolve:guardian':'stump','inspect:journal':'journal','inspect:memorial':'memorial',
-   'solve:watch':'scout','prepare:supplies':'inscribe','inspect:entrance':'entrance',
+   'solve:watch':'scout','prepare:supplies':'smith','inspect:entrance':'entrance',
    'dungeon:clear':'entrance'};
   return findTarget('adventure:'+ids[key]);
  }
