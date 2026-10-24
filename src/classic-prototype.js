@@ -1,3 +1,6 @@
+import {createAdventureWorld} from './adventure-world.js';
+import {setupAdventureUI} from './adventure-ui.js';
+import {DUNGEON_ROOMS,ADVENTURE_REGIONS} from './adventure-content.js';
 /** Oakrest Classic Block 3 — input shell around renderer-free navigation.
  * Retains the original character save and all gameplay rules untouched.
  */
@@ -35,7 +38,7 @@ function readExistingCharacter(){
   return {profile:active||null,save:raw?validSave(JSON.parse(raw)):defaultSave(),existing:!!raw,raw};
  }catch{return {profile:null,save:defaultSave(),existing:false};}
 }
-const existing=readExistingCharacter(),navigation=createClassicNavigation(),combat=createClassicCombat({save:existing.save});
+const existing=readExistingCharacter(),navigation=createClassicNavigation(),combat=createClassicCombat({save:existing.save,adventure:true});
 const saveManager=createClassicSaveManager({storage:localStorage,pathname:location.pathname,
  profile:existing.profile,baselineRaw:existing.raw,
  onStatus:result=>{
@@ -72,6 +75,8 @@ try{
 const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
 const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const village=createClassicVillage(scene);
+const adventureWorld=createAdventureWorld(scene);
+let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const groundView=createClassicGroundLoot(scene);
 let itemUi=null,windowUi=null,characterUI=null;
@@ -98,6 +103,7 @@ pointerMark.rotation.x=-Math.PI/2;pointerMark.position.y=.08;pointerMark.visible
 let markerTime=0;
 const selectableWorld=[];
 village.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
+adventureWorld.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
 const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
 let toastUntil=0;
 function feedback(text){
@@ -154,6 +160,9 @@ $('classic-enable-save').addEventListener('click',()=>{
 });
 $('classic-save-now').addEventListener('click',saveNow);
 function showInteraction(target){
+ lastInteraction=target.id;
+ if(adventureUi?.talk(target))return;
+ adventureUi?.hideContent();
  if(target?.service==='bank'||target?.service==='store'){
   navigation.stop();
   windowUi.open(target.service==='bank'?'bank':'shop');
@@ -196,7 +205,7 @@ function updateLocation(){
  $('classic-location').textContent=building
   ?building.kind==='bank'?'Oakrest Bank':building.kind==='store'?'General Store':
    building.kind==='forester'?'Forester Lodge':building.kind==='trade'?'Trade Hall':building.id.replace(/-/g,' ')
-  :'Oakrest Village';
+  :player.z>210?(DUNGEON_ROOMS.find(r=>player.z>=r.minZ&&player.z<=r.maxZ)?.name||'Warden’s Hollow'):player.z>80?([...ADVENTURE_REGIONS].sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z))[0].name):'Oakrest Village';
  $('classic-inside').textContent=building?'You are indoors; the roof has lifted.'
   :'Follow the lane to an open doorway to explore building interiors.';
 }
@@ -384,7 +393,9 @@ function combatEvents(events){
   else if(event.type==='release')lastReleaseUntil=event.time+.18;
   else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
   else if(event.type==='miss')feedback('Miss');
-  else if(event.type==='defeated')feedback(event.name+' defeated · temporary XP');
+  else if(event.type==='defeated')feedback(event.name+' defeated');
+  else if(event.type==='adventure'){markProgress();if(!event.reason.startsWith('Used '))feedback(event.reason);}
+  else if(event.type==='adventure-notice')feedback(event.reason);
   else if(event.type==='xp'){
    refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
   }else if(event.type==='warning')feedback('Enemy attack incoming — MOVE or DODGE!');
@@ -392,11 +403,12 @@ function combatEvents(events){
   else if(event.type==='dead'){
    navigation.stop();dodgeTravel=null;feedback('Defeated — respawning in Oakrest');
   }else if(event.type==='revive'){
+   windowUi.hide();
    player.x=0;player.z=39;navigation.stop();feedback('Respawned in Oakrest');
   }else if(event.type==='heal')feedback('Healed '+event.amount+' HP');
   else if(event.type==='dash'){
    const moved=slideMove(player,look.x*event.distance,look.z*event.distance);
-   player.x=moved.x;player.z=moved.z;
+   if(combat.adventureCanPass(moved.z)){player.x=moved.x;player.z=moved.z;}
   }
  }
 }
@@ -405,7 +417,7 @@ function updateCombatUi(snapshot){
  $('classic-health-fill').style.width=(100*snapshot.hp/Math.max(1,snapshot.maxHp))+'%';
  const target=snapshot.target;
  $('classic-combat-target').hidden=!target;
- $('classic-target-name').textContent=target?target.name:'No monster selected';
+ $('classic-target-name').textContent=target?target.name+(target.weak?' · weak to '+target.weak:''):'No monster selected';
  $('classic-target-level').textContent=target?'Lv '+target.level:'';
  $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
  const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
@@ -451,6 +463,8 @@ document.addEventListener('keydown',e=>{
  if(e.key.toLowerCase()==='k')windowUi.open('equipment');
  if(e.key.toLowerCase()==='l')windowUi.open('abilities');
  if(e.key.toLowerCase()==='m')windowUi.open('map');
+ if(e.key.toLowerCase()==='u')adventureUi.showJournal();
+ if(e.key.toLowerCase()==='h'){const r=combat.adventureAction('eat',{},player);feedback(r.reason);if(r.ok)markProgress();}
  if(e.key.toLowerCase()==='g')pickUp();
  if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
  if(e.code==='Space')triggerDodge();
@@ -476,7 +490,8 @@ function axesFromKeys(){
 function moveGame(dt){
  const previous={...player};
  const update=navigation.step(player,axesFromKeys(),dt);
- player.x=update.position.x;player.z=update.position.z;
+ if(!combat.adventureCanPass(update.position.z)&&update.position.z>210){navigation.stop();feedback('Restore this chamber’s ward before proceeding.');}
+ else {player.x=update.position.x;player.z=update.position.z;}
  if(update.heading){look=update.heading;walkClock+=dt;}
  else walkClock=0;
  if(update.interaction){
@@ -509,7 +524,7 @@ function draw(dt){
  if(dodgeTravel&&dt>0){
   const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
   const moved=slideMove(player,direction.x*slice*12.5,direction.z*slice*12.5);
-  player.x=moved.x;player.z=moved.z;
+  if(combat.adventureCanPass(moved.z)){player.x=moved.x;player.z=moved.z;}
   dodgeTravel.remaining-=slice;if(dodgeTravel.remaining<=0)dodgeTravel=null;
  }
  const before=combat.getState(),target=before.target;
@@ -526,11 +541,12 @@ function draw(dt){
  combatEvents(events);
  if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
  const state=combat.getState();
+ adventureWorld.update(combat.adventureState(),player,cameraOffset);adventureUi?.tick();
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
  groundView.update(state.groundLoot,state.time);
  minimap.update({player,facing:look,destination:navigation.state().goal,cameraOffset,
-  monsters:state.monsters,drops:state.groundLoot},state.time);
+  monsters:state.monsters,drops:state.groundLoot,objective:adventureUi?.objective()},state.time);
  if(!$('classic-toasts').classList.contains('is-critical')&&state.time>=toastUntil)
   $('classic-toasts').classList.add('is-faded');
  updateContextActions();
@@ -571,6 +587,10 @@ itemUi=setupClassicItems({
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
  settings:$('classic-settings-window'),dialogue,minimap});
+adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
+ changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
+ teleport:p=>{player.x=p.x;player.z=p.z;navigation.stop();combat.stopTarget();dodgeTravel=null;selectedTarget=null;}});
+if(existing.profile&&existing.save.adventure?.autoSave){saveManager.enable();showSaveState();}
 characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.pathname,
  onOpen:()=>{windowUi.hide();releaseAll();combat.reset();},
  beforeSwitch:()=>{
@@ -629,6 +649,8 @@ if(isQa)window.oakrestClassicQA={
   characterCreatorState:()=>({open:characterUI.isOpen(),appearance:existing.profile||null}),
   openCharacterCreator:()=>characterUI.show(),
   wornVisual:()=>savedWorn(),
+  adventureState:()=>combat.adventureState(),
+  adventureAction:(kind,id,choice)=>{const r=combat.adventureAction(kind,{target:findClassicInteractable(id),choice},player);if(r.ok){if(r.teleport){player.x=r.teleport.x;player.z=r.teleport.z;navigation.stop();}markProgress();refreshHud();}return r;},
   heroPixelSignature:()=>{
    const image=hero.sprite.material.map?.image;
    if(!image)return null;

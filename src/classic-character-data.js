@@ -1,3 +1,4 @@
+import {sanitizeAdventure} from './adventure-content.js';
 /** Character roster writes for Classic. Never overwrite an existing character save. */
 import {createCharacter,readCharacters} from './characters.js';
 import {freshCharacterSave,validSave} from './rules.js';
@@ -13,6 +14,7 @@ export function createClassicProfile(storage,pathname,input,id){
  const characterKey=key('oakrest-character-save-'+profile.id);
  if(storage.getItem(characterKey)!==null)throw new Error('That character slot already has saved progress.');
  const fresh=freshCharacterSave();
+ fresh.adventure=sanitizeAdventure({autoSave:true});
  // Classic begins directly in Oakrest Village; the old 3D portal/tutorial
  // does not exist in this route. Empty ownership/XP are retained exactly.
  fresh.gear={melee:'none',magic:'none',ranged:'none'};

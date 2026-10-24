@@ -1,3 +1,4 @@
+import {findClassicInteractable} from './classic-interactions.js';
 /** Classic 2.5D inventory and economy presentation.
  * DOM concerns stay here. All mutations use combat.itemAction and combat.pickup.
  */
@@ -157,6 +158,9 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
  }
  function renderShop(){
+  if(combat.adventureState?.())button(content,'classic-item-action','SELL 5 LOGS · 8 COINS',()=>{
+   const result=combat.adventureAction('timber',{target:findClassicInteractable('service:store')},player());notify(result.reason);if(result.ok)changed();render();
+  });
   const rows=view().shop;
   element(content,'p','classic-muted','Darrin sells the existing starter equipment at the exact Oakrest prices.');
   const gridShop=element(content,'div','classic-shop-grid');

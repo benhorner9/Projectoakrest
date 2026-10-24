@@ -52,7 +52,7 @@ export function createClassicCombatView(scene,spawns){
   }
   const shadow=makeGroundShadow();
   const label=new THREE.Sprite(new THREE.SpriteMaterial({
-   map:labelTexture(ENEMY_COMBAT[e.type].name,ENEMY_COMBAT[e.type].level),
+   map:labelTexture(e.name,e.level),
    transparent:true,depthWrite:false
   }));
   label.scale.set(3.7,1.05,1);label.position.set(e.x,3.3,e.z);
@@ -102,7 +102,7 @@ export function createClassicCombatView(scene,spawns){
   for(const enemy of snapshot.monsters){
    const actor=actors.get(enemy.id);
    if(!actor)continue;
-   const show=!enemy.dead,hit=enemy.hitFlashUntil>t;
+   const show=!enemy.dead&&!enemy.hidden,hit=enemy.hitFlashUntil>t;
    actor.sprite.visible=show;actor.shadow.visible=show;
    actor.label.visible=show;actor.hpBackground.visible=show;actor.hpFill.visible=show;
    actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro ? .06 : 0),enemy.z);
@@ -112,7 +112,7 @@ export function createClassicCombatView(scene,spawns){
    const fraction=Math.max(.005,enemy.hp/enemy.maxHp);
    actor.hpFill.scale.set(fraction,1,1);
    actor.hpFill.position.set(enemy.x-(1-fraction)*1.125,2.735,enemy.z);
-   actor.sprite.material.color.set(hit?'#f9ad89':'#ffffff');
+   actor.sprite.material.color.set(hit?'#f9ad89':enemy.weak==='magic'?'#bad6cf':enemy.weak==='ranged'?'#cabce0':'#ffffff');
    actor.update({facing:{x:0,z:1},step:enemy.aggro?1+Math.floor(t*5)%2:0});
   }
   updateWarnings(snapshot.monsters,t);

@@ -65,7 +65,7 @@ let browser;
   await page.locator('#classic-item-close').click();
   await page.evaluate(()=>oakrestClassicQA.teleport(-16,59));
   await page.locator('#classic-interact-button').click();
-  assert.match(await page.locator('#classic-dialogue-text').textContent(),/Woodcutting/);
+  assert.match(await page.locator('#classic-dialogue').textContent(),/Woodcutting/);
   await page.evaluate(()=>oakrestClassicQA.teleport(0,39));
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().interior),null);
   // Block 4: battle is real in-session but never modifies the browser's character.

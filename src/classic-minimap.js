@@ -1,3 +1,4 @@
+import {ADVENTURE_PATHS,ADVENTURE_WALLS,ADVENTURE_TREES,ADVENTURE_TARGETS} from './adventure-content.js';
 /** Oakrest Classic minimap: one canonical village model, no secondary scene.
  * Roads, footprints and service anchors come from the gameplay modules.
  */
@@ -10,7 +11,7 @@ export const CLASSIC_MAP_FEATURES=Object.freeze({
  bounds:CLASSIC_LIMITS,buildings:OAKREST_BUILDINGS,roads:CLASSIC_ROADS,
  walls:CLASSIC_PERIMETER.walls,gates:CLASSIC_PERIMETER.gates,districts:CLASSIC_DISTRICTS,
  trees:[...CLASSIC_TREES,...OAKREST_GROVES],well:OAKREST_WELL,
- services:OAKREST_SERVICES,notices:OAKREST_NOTICES
+ services:OAKREST_SERVICES,notices:OAKREST_NOTICES,adventure:ADVENTURE_TARGETS
 });
 /** Match the ACTUAL control orientation on the angled 2.5D game view.
  * The large world map is north-up; the corner minimap is camera-aligned.
@@ -40,7 +41,7 @@ function terrain(ctx,project,width,height,scale){
  ctx.fillStyle='#6b8664';ctx.fillRect(0,0,width,height);
  ctx.lineCap='round';ctx.lineJoin='round';
  ctx.strokeStyle='#b6a27d';ctx.lineWidth=Math.max(2,5.4*scale);
- for(const road of CLASSIC_ROADS){
+ for(const road of [...CLASSIC_ROADS,...ADVENTURE_PATHS]){
   ctx.beginPath();road.forEach(([x,z],i)=>{
    const p=project({x,z});i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
   });ctx.stroke();
@@ -51,6 +52,7 @@ function terrain(ctx,project,width,height,scale){
   const a=project({x:wall.a[0],z:wall.a[1]}),b=project({x:wall.b[0],z:wall.b[1]});
   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
  }
+ for(const w of ADVENTURE_WALLS){const p=project(w);ctx.fillStyle='#53645b';ctx.fillRect(p.x-w.w*scale/2,p.y-w.d*scale/2,w.w*scale,Math.max(1,w.d*scale));}
  for(const gate of CLASSIC_PERIMETER.gates){
   const at=project(gate);
   ctx.fillStyle='#f2d49a';ctx.beginPath();ctx.arc(at.x,at.y,Math.max(2,scale*.48),0,Math.PI*2);ctx.fill();
@@ -59,7 +61,7 @@ function terrain(ctx,project,width,height,scale){
  const well=project(OAKREST_WELL);
  ctx.beginPath();ctx.arc(well.x,well.y,OAKREST_WELL.courtyardRadius*scale,0,Math.PI*2);ctx.fill();
  ctx.fillStyle='#798a6e';
- for(const t of CLASSIC_TREES){
+ for(const t of [...CLASSIC_TREES,...ADVENTURE_TREES]){
   const p=project(t);
   ctx.fillStyle='#4e7351';ctx.beginPath();ctx.arc(p.x,p.y,Math.max(2,t.r*scale),0,Math.PI*2);ctx.fill();
  }
@@ -100,19 +102,21 @@ function playerArrow(ctx,at,facing,large=false,cameraOffset){
  ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r*.63,r*.7);ctx.lineTo(0,r*.3);
  ctx.lineTo(-r*.63,r*.7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
-function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cameraOffset},full=false){
+function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cameraOffset,objective},full=false){
  for(const s of OAKREST_SERVICES){
   const p=project({x:s.x,z:s.z});
   if(p.x<6||p.y<6||p.x>ctx.canvas.width-6||p.y>ctx.canvas.height-6)continue;
   marker(ctx,p,s.kind,full);
  }
+ for(const t of ADVENTURE_TARGETS){const p=project(t);ctx.fillStyle='#d9c18b';ctx.fillRect(p.x-2,p.y-2,4,4);if(full){ctx.font='9px system-ui';ctx.fillText(t.name.split(' · ')[0],p.x+4,p.y-4);}}
+ if(objective){const p=project(objective);ctx.strokeStyle='#fff0ab';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);ctx.stroke();}
  if(destination&&Number.isFinite(destination.x)&&Number.isFinite(destination.z)){
   const p=project(destination);
   ctx.strokeStyle='#ffdc88';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.stroke();
   ctx.beginPath();ctx.moveTo(p.x-12,p.y);ctx.lineTo(p.x+12,p.y);ctx.moveTo(p.x,p.y-12);ctx.lineTo(p.x,p.y+12);ctx.stroke();
  }
  for(const monster of monsters){
-  if(monster.dead||monster.hp<=0)continue;
+  if(monster.dead||monster.hidden||monster.hp<=0)continue;
   const p=project(monster);
   ctx.fillStyle='#ca796b';ctx.beginPath();ctx.arc(p.x,p.y,full?3:2,0,Math.PI*2);ctx.fill();
  }

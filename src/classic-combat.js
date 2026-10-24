@@ -1,3 +1,5 @@
+import {ADVENTURE_SPAWNS} from './adventure-content.js';
+import {createAdventure} from './adventure-state.js';
 /**
  * Block 4: pure gameplay simulation for the 2.5D combat proof.
  * All weapon timings, damage and accuracy come from Oakrest's existing rules.
@@ -12,11 +14,11 @@ import {equipmentModifiers} from './equipment-slots.js';
 import {ENEMY_COMBAT,ENEMY_PATTERNS,enemyBehaviour,isThreatened} from './combat-feel.js';
 import {abilityCooldownKey,DODGE,dodgeInvulnerable} from './combat-physics.js';
 import {isOakrestSafe} from './town-services.js';
-import {solidAt,slideMove} from './classic-presentation.js';
+import {solidAt,slideMove,findClassicPath} from './classic-presentation.js';
 import {combatSourceSnapshot,awardMonsterVictory} from './gameplay-core.js';
 import {createMonsterDrops,MAX_GROUND_LOOT,closestDrop} from './loot.js';
 import {classicItemAction,classicPickup,classicItemSnapshot} from './classic-item-state.js';
-import {canCompleteInteraction,findClassicInteractable} from './classic-interactions.js';
+import {canCompleteInteraction,findClassicInteractable,interactionSight} from './classic-interactions.js';
 
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const toward=(a,b)=>{const d=Math.max(.00001,dist(a,b));return {x:(b.x-a.x)/d,z:(b.z-a.z)/d};};
@@ -28,7 +30,7 @@ const spawn=Object.freeze([
  {id:'boar-a',type:'boar',x:1,z:91,maxHp:100},
  {id:'bandit-a',type:'bandit',x:26,z:89,maxHp:148}
 ]);
-const isAlive=e=>e&&!e.dead&&e.hp>0&&!e.retreating;
+const isAlive=e=>e&&!e.hidden&&!e.dead&&e.hp>0&&!e.retreating;
 const wallClear=(a,b)=>{
  const distance=dist(a,b),n=Math.ceil(distance/.23);
  for(let i=1;i<n;i++){
@@ -39,7 +41,7 @@ const wallClear=(a,b)=>{
 };
 function initialMonster(def){
  return {...def,x:def.x,z:def.z,startX:def.x,startZ:def.z,
-  name:ENEMY_COMBAT[def.type].name,level:ENEMY_COMBAT[def.type].level,
+  name:def.name||ENEMY_COMBAT[def.type].name,level:def.level||ENEMY_COMBAT[def.type].level,
   hp:def.maxHp,aggro:false,retreating:false,dead:false,lastAttack:0,
   warning:null,stunUntil:0,slowUntil:0,rootUntil:0,bleedUntil:0,nextBleed:0,
   bleedSource:null,respawnAt:0,hitFlashUntil:0};
@@ -48,7 +50,7 @@ function safeWeapon(data,style){
  const id=data.gear?.[style],weapon=LOADOUTS[style]?.[id];
  return weapon&&(ownsWeapon(data,style,id)||data.onboarding?.area==='tutorial')?weapon:null;
 }
-export function createClassicCombat({save,random=Math.random}={}){
+export function createClassicCombat({save,random=Math.random,adventure=false}={}){
  const data=JSON.parse(JSON.stringify(save||{}));
  const original=JSON.parse(JSON.stringify(save||{}));
  const loaned={};
@@ -62,7 +64,7 @@ export function createClassicCombat({save,random=Math.random}={}){
    data.gear??={};data.gear[s]=loan;
   }
  }
- const monsters=spawn.map(initialMonster),events=[],projectiles=[],cooldowns=new Map();
+ const monsters=[...spawn,...(adventure?ADVENTURE_SPAWNS:[])].map(initialMonster),events=[],projectiles=[],cooldowns=new Map();
  data.groundLoot=Array.isArray(data.groundLoot)?data.groundLoot:[];
  // Stable within a session, unique across page reloads. Prevent saved drops
  // from colliding with IDs newly generated in later browser sessions.
@@ -72,6 +74,12 @@ export function createClassicCombat({save,random=Math.random}={}){
  let action=null,queuedAbility=null,queuedStyle=null,shieldUntil=0,deadUntil=0;
  let hp=maxHealth(levelFromXp(data.xp?.vitality||0).level);
  const emit=(type,details={})=>events.push({type,time,...details});
+ const adventureSystem=adventure?createAdventure(data,{emit,random,sight:interactionSight,
+  grantWeapon:(s,id,equip=true)=>{if(loaned[s]===id)delete loaned[s];if(!data.inventory.weapons[s].includes(id))data.inventory.weapons[s].push(id);if(equip)data.gear[s]=id;},
+  heal:amount=>{if(hp<=0)return false;const prev=hp;hp=Math.min(maxHealth(levelFromXp(data.xp.vitality).level),hp+amount);return hp>prev;},
+  calmGuardian:()=>{const e=monsters.find(m=>m.id==='guardian');if(e){e.dead=true;e.respawnAt=Infinity;}},
+  resetDungeon:run=>{for(const e of monsters.filter(m=>m.room!==undefined)){const def=ADVENTURE_SPAWNS.find(m=>m.id===e.id);Object.assign(e,initialMonster(def),{dead:run.kills.includes(e.id),respawnAt:Infinity});}stopTarget();projectiles.length=0;}
+ }):null;
  const active=()=>monsters.filter(isAlive);
  const getTarget=()=>active().find(m=>m.id===targetId)||null;
  const styleWeapon=()=>safeWeapon(data,style);
@@ -81,6 +89,7 @@ export function createClassicCombat({save,random=Math.random}={}){
  function stopTarget(){targetId=null;action=null;queuedAbility=null;emit('target-lost');}
  function chooseTarget(id,player){
   const e=monsters.find(m=>m.id===id);
+  if(e?.room!==undefined&&(!data.adventure?.run||!adventureSystem?.canPass(e.startZ)))return false;
   if(!e||!isAlive(e)||dist(e,player)>30||!wallClear(player,e))return false;
   targetId=id;emit('target',{id,name:e.name,level:e.level});return true;
  }
@@ -109,6 +118,15 @@ export function createClassicCombat({save,random=Math.random}={}){
   emit('windup',{style,kind:ability.kind,name:ability.name,until:action.impactAt});
   return true;
  }
+ function spendSupply(attackStyle,weapon,ability){
+  if(!adventureSystem||attackStyle==='melee')return true;
+  const id=attackStyle==='magic'?(slotFamily(attackStyle,data.gear[attackStyle])==='ember'?'ember-scroll':'frost-scroll'):'field-arrows';
+  const amount=attackStyle==='ranged'&&ability?.kind==='burst'?(ability.count||3):1;
+  if((data.inventory.materials[id]||0)<amount){
+   targetId=null;queuedAbility=null;emit('adventure-notice',{reason:'Out of '+id.replaceAll('-',' ')+'. Craft more in Oakrest or switch style.'});return false;
+  }
+  data.inventory.materials[id]-=amount;emit('adventure',{reason:'Used '+id});return true;
+ }
  function queueBasic(player){
   const weapon=styleWeapon(),enemy=getTarget();
   if(!weapon||!enemy||!canFight()||action||time<switchUntil||
@@ -128,7 +146,7 @@ export function createClassicCombat({save,random=Math.random}={}){
     accuracyFor(source.level,enemy.level,source.weaponBasic,
       {mossling:0,boar:.04,bandit:.08}[enemy.type]||0,source.power);
   const result=ability.periodic?{hit:true,damage:max}:
-    rollHit({maxHit:max,accuracy:chance,random});
+    rollHit({maxHit:Math.max(1,Math.round(max*(enemy.weak===source.style?1.25:1))),accuracy:chance,random});
   if(!result.hit){emit('miss',{id:enemy.id});return;}
   enemy.hp=Math.max(0,enemy.hp-result.damage);
   enemy.hitFlashUntil=time+.18;
@@ -141,11 +159,12 @@ export function createClassicCombat({save,random=Math.random}={}){
   if(enemy.hp<=0){
    if(targetId===enemy.id){targetId=null;queuedAbility=null;}
    if(enemy.type==='dummy'){enemy.hp=enemy.maxHp;emit('dummy',{id:enemy.id});return;}
-   enemy.dead=true;enemy.aggro=false;enemy.warning=null;enemy.respawnAt=time+12;
+   enemy.dead=true;enemy.aggro=false;enemy.warning=null;enemy.respawnAt=enemy.room!==undefined?Infinity:time+(enemy.adventure?45:12);
    const reward=awardMonsterVictory(data,enemy.type,source.style);
    if(reward.awarded)emit('xp',{style:source.style,amount:XP_BY_MOB[enemy.type],reward});
    const drops=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,
     ()=> 'classic-'+dropSession+'-'+(++nextDrop)+'-'+Math.floor(time*100));
+   if(enemy.room!==undefined)drops.push({kind:'material',itemId:'hollow-shard',amount:1,id:'hollow-'+dropSession+'-'+(++nextDrop),x:enemy.x,z:enemy.z});
    data.groundLoot.push(...drops);
    if(data.groundLoot.length>MAX_GROUND_LOOT)data.groundLoot.splice(0,data.groundLoot.length-MAX_GROUND_LOOT);
    if(drops.length)emit('ground-loot',{count:drops.length,ids:drops.map(d=>d.id)});
@@ -177,6 +196,7 @@ export function createClassicCombat({save,random=Math.random}={}){
   const weapon=current.weapon,source={
    ...combatSourceSnapshot(data,current.style,weapon),weapon};
   const enemy=getTarget(),ability=current.ability||{};
+  if(!spendSupply(current.style,weapon,current.ability))return;
   emit('release',{style:current.style,kind:ability.kind||'basic'});
   if(current.type==='basic'){
    if(current.style==='melee')strike(player,weapon.basic,source,{kind:'hit',reach:weapon.reach,
@@ -228,7 +248,7 @@ export function createClassicCombat({save,random=Math.random}={}){
   if(dodgeInvulnerable(time,dodgeStart)){emit('evade',{id:enemy.id});return;}
   const vitality=levelFromXp(data.xp.vitality).level,guard=equipmentModifiers(data,style).guard;
   const resistance=Math.min(.45,guard+defenceFor(data.armour[style]).physical*.5);
-  const result=rollHit({maxHit:Math.max(1,Math.round(ENEMY_PATTERNS[enemy.type].damage)),
+  const result=rollHit({maxHit:Math.max(1,Math.round((enemy.pattern||ENEMY_PATTERNS[enemy.type]).damage)),
    accuracy:accuracyFor(enemy.level,vitality,19,resistance),random});
   if(!result.hit){emit('enemy-miss',{id:enemy.id});return;}
   const harm=Math.max(1,Math.round(damageAfterArmour(result.damage,shieldUntil>time,
@@ -241,9 +261,14 @@ export function createClassicCombat({save,random=Math.random}={}){
  }
  function updateMonsters(player,dt){
   for(const e of monsters){
+   if(e.room!==undefined){
+    e.hidden=!data.adventure?.run||player.z<210||!adventureSystem.canPass(e.startZ);
+    if(e.hidden)continue;
+    if(!adventureSystem.canPass(e.startZ)){e.aggro=false;e.warning=null;continue;}
+   }
    if(e.dead){
     if(time>=e.respawnAt){
-     Object.assign(e,initialMonster({id:e.id,type:e.type,x:e.startX,z:e.startZ,maxHp:e.maxHp}));
+     Object.assign(e,initialMonster({...e,x:e.startX,z:e.startZ}));
      emit('respawn',{id:e.id});
     }
     continue;
@@ -252,11 +277,13 @@ export function createClassicCombat({save,random=Math.random}={}){
     e.nextBleed=time+1;applyEnemyHit(e,3,e.bleedSource,{periodic:true});
    }
    if(e.type==='dummy'||e.dead)continue;
-   const cfg=ENEMY_COMBAT[e.type],spec=ENEMY_PATTERNS[e.type];
+   const cfg=ENEMY_COMBAT[e.type];
+   if(e.boss){const phase=e.hp/e.maxHp>.66?0:e.hp/e.maxHp>.33?1:2;if(e.phase!==phase){e.phase=phase;emit('adventure-notice',{reason:'The keeper shifts: '+['roots yield to Magic','exposed echoes yield to Ranged','cracked heart yields to Melee'][phase]+'. Watch its warning shape.'});}e.weak=['magic','ranged','melee'][phase];e.pattern=[{kind:'charge',engage:10,length:10,width:1.7,windup:1.5,cooldown:4.4,damage:24},{kind:'pounce',engage:14,radius:3,windup:1.7,cooldown:4.2,damage:22},{kind:'cleave',engage:5,radius:5,halfAngle:1.1,windup:1.3,cooldown:3.8,damage:24}][phase];}
+   const spec=e.pattern||ENEMY_PATTERNS[e.type];
    if(isOakrestSafe(player.x,player.z)||!canFight()){
     e.aggro=false;e.warning=null;e.retreating=dist(e,{x:e.startX,z:e.startZ})>.1;
    }
-   const decision=enemyBehaviour(e.type,e,player,e.aggro);
+   const decision=e.room!==undefined?(Math.abs(player.z-e.startZ)>21?'retreat':e.aggro?'pursue':dist(e,player)<(e.boss?15:10)?'acquire':'idle'):enemyBehaviour(e.type,e,player,e.aggro);
    if(decision==='retreat'||e.retreating||decision==='return'){
     e.aggro=false;e.warning=null;e.retreating=true;
     const toHome=toward(e,{x:e.startX,z:e.startZ});
@@ -292,11 +319,17 @@ export function createClassicCombat({save,random=Math.random}={}){
     continue;
    }
    if(e.rootUntil>time||gap<Math.min(2.5,spec.engage*.75))continue;
-   const heading=toward(e,player),moveDist=Math.min(gap-.7,(e.type==='bandit'?2.5:e.type==='boar'?2.2:1.75)*
+   let destination=player;
+   if(e.adventure&&!wallClear(e,player)){
+    if(!e.route||time>=(e.routeAt||0)){e.route=findClassicPath(e,player);e.routeAt=time+2;}
+    while(e.route.length&&dist(e,e.route[0])<.5)e.route.shift();
+    destination=e.route[0]||player;
+   }
+   const heading=toward(e,destination),moveDist=Math.min(gap-.7,(e.type==='bandit'?2.5:e.type==='boar'?2.2:1.75)*
      (e.slowUntil>time?.42:1)*dt);
    if(moveDist<=0)continue;
    const next=slideMove(e,heading.x*moveDist,heading.z*moveDist,.40);
-   if(dist(next,{x:e.startX,z:e.startZ})<=cfg.leash){e.x=next.x;e.z=next.z;}
+   if(dist(next,{x:e.startX,z:e.startZ})<=(e.room!==undefined?20:cfg.leash)){e.x=next.x;e.z=next.z;}
   }
  }
  function dodge(){
@@ -320,6 +353,7 @@ export function createClassicCombat({save,random=Math.random}={}){
    }
   }
   executeAction(player);moveProjectiles(step);updateMonsters(player,step);
+  if(adventureSystem){for(const e of [...events])adventureSystem.event(e);adventureSystem.tick(time,step,player);}
   const enemy=getTarget(),weapon=styleWeapon();
   if(enemy&&weapon&&canFight()&&inAttackRange(player,enemy,weapon.reach,wallClear(player,enemy)))
    queueBasic(player);
@@ -382,6 +416,10 @@ export function createClassicCombat({save,random=Math.random}={}){
  }
  return {tick,getState,chooseTarget,stopTarget,styleSwitch,queueAbility,queueBasic,dodge,drain,
   reset:()=>{targetId=null;action=null;queuedAbility=null;},
+  adventureState:()=>adventureSystem?.state(),
+  adventureVisit:id=>adventureSystem?.visit(id),
+  adventureCanPass:z=>!adventureSystem||adventureSystem.canPass(z),
+  adventureAction:(kind,options,player)=>{if(!canFight())return {ok:false,reason:'Wait until you recover.'};return adventureSystem?.action(kind,{...options,time,player,threatened:monsters.some(m=>m.aggro&&!m.dead)})||{ok:false,reason:'Adventure unavailable'};},
   itemAction,pickup,nearestLoot,itemSnapshot,
   sandboxSave:()=>JSON.parse(JSON.stringify(data)),
   persistentSave};

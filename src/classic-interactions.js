@@ -1,3 +1,4 @@
+import {ADVENTURE_TARGETS} from './adventure-content.js';
 /**
  * Block 3: canonical, renderer-free village interaction targets.
  * Read-only adapters over authoritative town-services, equipment and skills.
@@ -8,6 +9,7 @@ import {woodcuttingLevel} from './woodcutting.js';
 import {solidAt} from './classic-presentation.js';
 
 export const CLASSIC_INTERACTABLES=Object.freeze([
+ ...ADVENTURE_TARGETS,
  ...OAKREST_SERVICES.map(s=>Object.freeze({
   id:'service:'+s.id,sourceId:s.id,kind:'service',service:s.kind,
   x:s.npcX??s.x,z:s.npcZ??s.z,name:s.attendant,place:s.label,reach:s.reach,clickRadius:2.6
@@ -73,7 +75,7 @@ export function nearbyClassicInteraction(player){
   :findClassicInteractable('notice:'+fromTown.id));
  if(canonical&&canCompleteInteraction(player,canonical))return canonical;
  return CLASSIC_INTERACTABLES
-  .filter(t=>t.kind==='citizen'&&canCompleteInteraction(player,t))
+  .filter(t=>canCompleteInteraction(player,t))
   .sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z))[0]||null;
 }
 const num=value=>Math.max(0,Math.floor(Number(value)||0)).toLocaleString('en-GB');

@@ -1,3 +1,4 @@
+import {adventureSolidAt} from './adventure-content.js';
 /** Oakrest Block 2: renderer-free 2.5D camera, navigation and presentation data.
  * Reuses canonical world coordinates and never mutates character saves.
  */
@@ -23,7 +24,7 @@ export function classicScreenBasis(offset=CLASSIC_CAMERA){
   up:{x:-x/length,z:-z/length}
  };
 }
-export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
+export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:334});
 export const CLASSIC_NPCS=Object.freeze([
  ...OAKREST_SERVICES.map(s=>Object.freeze({
   id:s.id==='store'?'shopkeeper':s.id==='forester'?'forester':s.id==='trade-house'?'trader':'banker',
@@ -56,7 +57,7 @@ export function inBounds(x,z,radius=.4){
  */
 export function solidAt(x,z,radius=.38){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!inBounds(x,z,radius))return true;
- if(wallSolidAt(x,z,radius))return true;
+ if(wallSolidAt(x,z,radius)||adventureSolidAt(x,z,radius))return true;
  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.r+radius)return true;
  for(const tree of CLASSIC_TREES)if(Math.hypot(x-tree.x,z-tree.z)<tree.r+radius)return true;
  for(const tree of OAKREST_GROVES)if(Math.hypot(x-tree.x,z-tree.z)<.85+radius)return true;
@@ -88,7 +89,7 @@ export function slideMove(pos,dx,dz,radius=.38){
  return {x,z};
 }
 function clearLine(a,b){
- const d=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.ceil(d/.5);
+ const d=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.ceil(d/.18);
  for(let i=1;i<=steps;i++)if(solidAt(a.x+(b.x-a.x)*i/steps,a.z+(b.z-a.z)*i/steps))return false;
  return true;
 }
@@ -123,7 +124,7 @@ export function findClassicPath(start,end){
   if(h(current.x,current.z)<=1.3){found=current;break;}
   for(const [dx,dz] of MOVES){
    const x=current.x+dx,z=current.z+dz,key=code(x,z),point=nodeAt(x,z);
-   if(closed.has(key)||solidAt(point.x,point.z))continue;
+   if(closed.has(key)||solidAt(point.x,point.z)||!clearLine(nodeAt(current.x,current.z),point))continue;
    if(dx&&dz&&(solidAt((current.x+dx)*CELL,current.z*CELL)||solidAt(current.x*CELL,(current.z+dz)*CELL)))continue;
    const g=current.g+Math.hypot(dx,dz),old=records.get(key);
    if(!old||g<old.g){records.set(key,{x,z,g,f:g+h(x,z),parent:best});open.add(key);}
