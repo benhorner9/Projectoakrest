@@ -8,8 +8,8 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  let current=null,lastWork='',selectedQuest=null,lastJournalKey='';
  const questBook=document.getElementById('classic-quest-book');
  const eatButton=el('button','Eat',document.querySelector('.classic-item-buttons'));eatButton.type='button';eatButton.id='adventure-eat';eatButton.title='Eat field ration (35 Health)';el('small','RATION',eatButton);
- const work=el('button','',document.body);work.id='adventure-work';work.hidden=true;work.type='button';work.title='Cancel gathering or crafting';
- const tracker=el('button','',document.querySelector('.classic-panel'));tracker.id='adventure-journal';tracker.type='button';tracker.title='Open quest journal';
+ const work=el('button','',document.querySelector('.classic-footer-events'));work.id='adventure-work';work.hidden=true;work.type='button';work.title='Cancel gathering or crafting';
+ const tracker=el('button','',document.querySelector('.classic-side-notes'));tracker.id='adventure-journal';tracker.type='button';tracker.title='Open quest journal';
  const btn=(text,fn)=>{const b=el('button',text,content);b.type='button';b.addEventListener('click',fn);return b;};
  function open(){if(windowUi.current()!=='dialogue')windowUi.open('dialogue');content.hidden=false;body.textContent='';}
  function act(kind,choice){
