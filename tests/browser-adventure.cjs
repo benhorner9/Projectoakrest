@@ -46,7 +46,13 @@ let browser;
    assert.ok(await page.evaluate(material=>oakrestClassicQA.adventureState().flags.includes('gather:'+material),material),'gather objective registered: '+material);
    await act('cancel');
   }
-  await act('craft',null,'arrows');await step(4);await act('finish','adventure:smith');
+  // Make supplies through the actual Classic inventory, no world fletching table.
+  await page.locator('#classic-inventory-toggle').click();
+  await page.getByRole('button',{name:'MAKE FROM BAG'}).click();
+  const arrows=page.locator('.craft-option').filter({hasText:'Fletch 30 field ammunition'});
+  await arrows.getByRole('button',{name:'MAKE',exact:true}).click();
+  await page.locator('#classic-item-close').click();
+  await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
   // The existing save sanitizer omits exhausted stacks (0 logs after fletching).
@@ -61,6 +67,12 @@ let browser;
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
   assert.equal(await page.locator('#classic-quest-book').getByText('The Cart That Never Came').count()>0,true);
   await page.locator('#classic-quests-close').click();
+  await page.locator('#classic-skills-toggle').click();
+  assert.equal(await page.locator('.classic-skill-card').count(),10,'all skills are available from LEVELS');
+  await page.locator('.classic-skill-card').filter({hasText:'Fletching'}).click();
+  assert.ok(await page.locator('.classic-skill-unlock').count()>=2,'tapping a skill opens real level unlocks');
+  assert.match(await page.locator('.skill-progress-heading').textContent(),/Level 1/);
+  await page.locator('#classic-skills-close').click();
   mkdirSync('qa/first-adventure',{recursive:true});
   await page.screenshot({path:'qa/first-adventure/village.png'});
   await page.evaluate(()=>{oakrestClassicQA.teleport(23,148);oakrestClassicQA.selectTarget('adventure:scout');});
