@@ -36,9 +36,16 @@ let browser;
   // both target and the auto-approach order before the next movement frame.
   await page.evaluate(()=>oakrestClassicQA.teleport(-1,66));
   assert.equal(await page.evaluate(()=>oakrestClassicQA.lockMonster('practice')),true);
-  const before=await page.evaluate(()=>oakrestClassicQA.state().z);
-  await step(.32);
-  assert.ok(await page.evaluate(z=>oakrestClassicQA.state().z>z),before,'a selected distant enemy is approached');
+  const before=await page.evaluate(()=>oakrestClassicQA.state());
+  await step(1.2);
+  const after=await page.evaluate(()=>({
+   player:oakrestClassicQA.state(),
+   nav:oakrestClassicQA.navigationState(),
+   target:oakrestClassicQA.combatState().targetId,
+   feedback:oakrestClassicQA.state().status
+  }));
+  assert.ok(Math.hypot(after.player.x+1,after.player.z-73)<Math.hypot(before.x+1,before.z-73),
+   'a selected distant enemy is approached: '+JSON.stringify({before,after}));
   await page.evaluate(()=>oakrestClassicQA.moveTo(-13,65));
   assert.equal((await state()).targetId,null,'a ground destination cancels the attack immediately');
   await step(.3);
