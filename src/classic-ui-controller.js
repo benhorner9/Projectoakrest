@@ -25,6 +25,12 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
   if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
  };
  const hide=()=>close();
+ const adopt=name=>{
+  current=name;
+  for(const b of document.querySelectorAll('.classic-item-buttons button'))b.setAttribute('aria-pressed','false');
+  const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',abilities:'classic-abilities-toggle'}[name];
+  if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
+ };
  const isOpen=()=>current!==null;
- return {open,hide,isOpen,current:()=>current};
+ return {open,hide,isOpen,adopt,current:()=>current};
 }
