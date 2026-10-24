@@ -23,9 +23,9 @@ test('cancelled attack windup does not hit and standing still never re-locks',()
  assert.equal(game.chooseTarget('practice',player),true);
  assert.ok(step(game,player,2).some(e=>e.type==='hit'),'new deliberate tap restarts attacks');
 });
-test('disengaging preserves attack rate and does not refund a fired projectile',()=>{
+test('disengaging preserves attack rate and does not refund a cancelled windup',()=>{
  const game=createClassicCombat({save:defaultSave(),random:()=>.01});
- const player={x:-1,z:69};
+ const player={x:-1,z:71.3};
  assert.equal(game.chooseTarget('practice',player),true);
  step(game,player,.03);game.stopTarget();
  const attackUntil=game.getState().attackUntil;
