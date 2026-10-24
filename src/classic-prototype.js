@@ -19,6 +19,7 @@ import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable
  nearbyClassicInteraction,classicInteractionCopy} from './classic-interactions.js';
 import {createClassicVillage} from './classic-village.js';
 import {makeClassicActor,makeGroundShadow} from './classic-sprites.js';
+import {setupClassicCharacterUI} from './classic-character-ui.js';
 
 const $=id=>document.getElementById(id);
 const root=$('classic-game'),keys=new Set();
@@ -44,7 +45,8 @@ let sessionMutated=false,needsSave=false,lastSavedAt=0;
 let wornCache=null,wornCacheStyle=null;
 function savedWorn(){
  if(!wornCache||wornCacheStyle!==style){
-  wornCache=presentationSnapshot(combat.sandboxSave(),style,player).worn;
+  // Temporary simulation-loaned weapons must not masquerade as equipped items.
+  wornCache=presentationSnapshot(combat.persistentSave(),style,player).worn;
   wornCacheStyle=style;
  }
  return wornCache;
@@ -70,11 +72,13 @@ const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vect
 const village=createClassicVillage(scene);
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const groundView=createClassicGroundLoot(scene);
-let itemUi=null,windowUi=null;
+let itemUi=null,windowUi=null,characterUI=null;
 const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
  onDestination:point=>{windowUi?.hide();queueDestination(point);}});
-const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#d9ad87',
- hair:existing.profile?.hairColor||'#493529'});
+const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#f0ceaa',
+ hair:existing.profile?.hairColor||'#39271f',coat:existing.profile?.outfitColor||'#607b7c',
+ outfit:existing.profile?.outfit||'tunic',hairstyle:existing.profile?.hairstyle||'short',
+ sex:existing.profile?.sex||'male'});
 const heroShadow=makeGroundShadow();
 scene.add(hero.sprite,heroShadow);
 for(const npc of CLASSIC_NPCS){
@@ -163,7 +167,7 @@ function showInteraction(target){
 $('classic-dialogue-close').addEventListener('click',()=>windowUi.hide());
 function refreshHud(){
  wornCache=null;
- const view=presentationSnapshot(combat.sandboxSave(),style,player);
+ const view=presentationSnapshot(combat.persistentSave(),style,player);
  $('classic-name').textContent=existing.profile?.name||'The Wanderer';
  $('classic-combat').textContent=view.combatLevel;
  $('classic-vitality').textContent=view.vitality;
@@ -430,7 +434,7 @@ function interactNearby(){
 }
 interactButton.addEventListener('click',interactNearby);
 document.addEventListener('keydown',e=>{
- if(['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
+ if(characterUI?.isOpen()||['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space'].includes(e.key))e.preventDefault();
  keys.add(e.key.toLowerCase());
  if(e.repeat)return;
@@ -492,6 +496,7 @@ function moveGame(dt){
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
 function draw(dt){
+ if(characterUI?.isOpen())return; // Do not move or fight behind character selection.
  const movement=moveGame(dt);
  if(dodgeTravel&&dt>0){
   const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
@@ -557,9 +562,19 @@ itemUi=setupClassicItems({
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
  settings:$('classic-settings-window'),dialogue,minimap});
+characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.pathname,
+ onOpen:()=>{windowUi.hide();releaseAll();combat.reset();},
+ beforeSwitch:()=>{
+  if(needsSave&&saveManager.status().enabled&&!saveNow())return false;
+  return !sessionMutated||saveManager.status().enabled||
+   confirm('Unsaved practice changes will be lost when changing characters. Continue?');
+ }
+});
+$('classic-characters-open').addEventListener('click',()=>characterUI.show());
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
 showSaveState();updateContextActions();
 minimap.update({player,facing:look,monsters:combat.getState().monsters,drops:combat.getState().groundLoot},0,true);
+if(!existing.profile&&!existing.existing)characterUI.show();
 addEventListener('pagehide',()=>{if(needsSave)saveNow();});
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden&&needsSave)saveNow();
@@ -595,5 +610,7 @@ if(isQa)window.oakrestClassicQA={
  useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
  savedState:()=>JSON.stringify(existing.save),
  saveStatus:()=>saveManager.status(),enableSaving:()=>{if(sessionMutated)return {ok:false};const r=saveManager.enable();showSaveState(r.reason);return r;},
- saveNow,persistentSnapshot:()=>combat.persistentSave()
+ saveNow,persistentSnapshot:()=>combat.persistentSave(),
+  characterCreatorState:()=>({open:characterUI.isOpen(),appearance:existing.profile||null}),
+  openCharacterCreator:()=>characterUI.show()
 };
