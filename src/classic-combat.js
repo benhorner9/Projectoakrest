@@ -50,11 +50,14 @@ function safeWeapon(data,style){
 }
 export function createClassicCombat({save,random=Math.random}={}){
  const data=JSON.parse(JSON.stringify(save||{}));
+ const original=JSON.parse(JSON.stringify(save||{}));
+ const loaned={};
  // Session-only practice weapons for characters who have not yet completed
  // onboarding. Nothing here reaches browser storage or the source character.
  for(const s of STYLE_ORDER){
   if(!data.inventory?.weapons?.[s]?.length){
    const loan={melee:'sword',magic:'frost',ranged:'bow'}[s];
+   loaned[s]=loan;
    data.inventory??={};data.inventory.weapons??={};data.inventory.weapons[s]=[loan];
    data.gear??={};data.gear[s]=loan;
   }
@@ -355,6 +358,20 @@ export function createClassicCombat({save,random=Math.random}={}){
  return {tick,getState,chooseTarget,stopTarget,styleSwitch,queueAbility,queueBasic,dodge,drain,
   reset:()=>{targetId=null;action=null;queuedAbility=null;},
   itemAction,pickup,nearestLoot,itemSnapshot,
-  sandboxSave:()=>JSON.parse(JSON.stringify(data))};
+  sandboxSave:()=>JSON.parse(JSON.stringify(data)),
+  /** Saveable core excludes all Block 4 practice loans and transient simulation.
+   * Keep real purchased/earned items and correct original gear selection.
+   */
+  persistentSave:()=>{
+   const saved=JSON.parse(JSON.stringify(data));
+   for(const [s,id] of Object.entries(loaned)){
+    // These are session-issued, not obtained from loot or the real store.
+    if(!original.inventory?.weapons?.[s]?.includes(id)){
+     saved.inventory.weapons[s]=saved.inventory.weapons[s].filter(x=>x!==id);
+     if(saved.gear[s]===id)saved.gear[s]=original.gear?.[s]||'none';
+    }
+   }
+   delete saved.classicSession;return saved;
+  }};
 }
 export const CLASSIC_ENEMY_SPAWNS=spawn;
