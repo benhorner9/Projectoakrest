@@ -50,6 +50,23 @@ export const ADVENTURE_TARGETS=Object.freeze([
  ...[240,268,296].map((z,i)=>target('ward-'+i,['Root ward','Water ward','Echo ward'][i],0,z,'ward',{room:i})),
  target('heart','Keeper’s heartstone',0,321,'heart')
 ]);
+/** Exact ground, creek, camp and dungeon dressing used by both Three.js and the map. */
+export const ADVENTURE_SCENERY=Object.freeze({
+ ground:Object.freeze([
+  {x:0,z:146,w:106,d:104,y:-.2,h:.3,color:'#627756'},
+  {x:-25,z:137,w:47,d:42,y:-.025,h:.04,color:'#4b654c'},
+  {x:24,z:157,w:24,d:26,y:-.015,h:.05,color:'#8a8468'},
+  {x:0,z:267,w:106,d:138,y:-.2,h:.3,color:'#313b40'}
+ ]),
+ creek:Object.freeze([
+  {x:32,z:114,w:3.5,d:24,y:.025,h:.04,color:'#729a9c'},
+  {x:30,z:137,w:2,d:19,y:.02,h:.04,color:'#729a9c'}
+ ]),
+ roomColours:Object.freeze(['#56605a','#4c6167','#625d55','#4b6260']),
+ wagon:Object.freeze({x:-8,z:108,w:3,d:1.7}),
+ camp:Object.freeze({x:26,z:155}),
+ logs:Object.freeze([[-30,130],[-34,136],[5,180]])
+});
 export const ADVENTURE_PATHS=[[[0,78],[0,100],[-8,108],[19,117],[23,150],[0,181]],[[0,86],[-24,91],[-31,95],[-20,103]],[[-8,108],[-28,135],[-12,142],[23,150]],[[23,150],[28,159],[16,163],[0,181]],[[19,117],[26,106]],[[0,212],[0,324]]];
 export const ADVENTURE_REGIONS=[{name:'Gate meadows',x:0,z:87},{name:'Alderwood',x:0,z:110},{name:'Whispering wood',x:-22,z:137},{name:'The Last Watch',x:24,z:157},{name:'Warden’s Hollow',x:0,z:181}];
 export const DUNGEON_ROOMS=[{name:'The Root Vestibule',minZ:210,maxZ:241},{name:'The Drowned Archive',minZ:241,maxZ:269},{name:'The Broken Watch',minZ:269,maxZ:297},{name:'The Heart Chamber',minZ:297,maxZ:329}];
