@@ -328,7 +328,25 @@ export function createClassicCombat({save,random=Math.random}={}){
  function itemAction(action,player){
   const atBank=canCompleteInteraction(player,findClassicInteractable('service:bank'));
   const atStore=canCompleteInteraction(player,findClassicInteractable('service:store'));
-  const result=classicItemAction(data,action,{atBank,atStore});
+  // Session-only loaned basic weapons must never count as owned by shop logic.
+  // Temporarily exclude them from this purchase, then reinstate only loans
+  // that weren't truly purchased. No other transaction touches ownership.
+  const unloaned=[];
+  if(action?.type==='buy'){
+   for(const [s,id] of Object.entries(loaned)){
+    const list=data.inventory.weapons[s],index=list.indexOf(id);
+    if(index>=0){list.splice(index,1);unloaned.push([s,id]);}
+   }
+  }
+  let result;
+  try{
+   result=classicItemAction(data,action,{atBank,atStore});
+  }finally{
+   for(const [s,id] of unloaned){
+    if(data.inventory.weapons[s].includes(id))delete loaned[s];
+    else data.inventory.weapons[s].push(id);
+   }
+  }
   if(result.ok)emit('item',{action:action.type,reason:result.reason});
   return result;
  }
@@ -341,7 +359,11 @@ export function createClassicCombat({save,random=Math.random}={}){
   return closestDrop(data.groundLoot,player.x,player.z,3.2);
  }
  function itemSnapshot(style){
-  return classicItemSnapshot(data,style);
+  const display=classicItemSnapshot(data,style);
+  // Bag shows active practice gear, but store cost/ownership is computed
+  // from persistent inventory only, so loaned gear does not reduce prices.
+  if(Object.keys(loaned).length)display.shop=classicItemSnapshot(persistentSave(),style).shop;
+  return display;
  }
  function drain(){return events.splice(0,events.length);}
  function getState(){
