@@ -46,7 +46,11 @@ export function chooseClassicProfile(storage,pathname,id){
  if(!profile)throw new Error('This character was not found.');
  const raw=storage.getItem(key('oakrest-character-save-'+id));
  if(!raw)throw new Error('Character progress is missing. No save was changed.');
- try{validSave(JSON.parse(raw));}catch{throw new Error('Character save is unreadable. No save was changed.');}
+ try{
+  const parsed=JSON.parse(raw);
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||!parsed.xp)throw Error('Invalid save');
+  validSave(parsed);
+ }catch{throw new Error('Character save is unreadable. No save was changed.');}
  storage.setItem(activeKey,id);
  if(storage.getItem(activeKey)!==id)throw new Error('Could not select character in browser storage.');
  return profile;
