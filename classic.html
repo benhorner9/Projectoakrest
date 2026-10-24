@@ -103,6 +103,14 @@
   <button type="button" id="classic-characters-open" class="classic-characters-open">CHARACTERS · CREATE / SWITCH</button>
   <p class="classic-muted">Switching characters reloads Classic. Save your current progress first.</p>
   <h3>Camera</h3>
+  <p class="classic-muted">Arrow keys: ← / → orbit around your character. ↑ / ↓ raise or lower the camera. WASD still walks relative to your view. Home resets the angle.</p>
+  <div class="classic-camera-actions" role="group" aria-label="Adjust camera orientation">
+   <button type="button" data-camera-turn="left" aria-label="Rotate camera left" title="Orbit left (Left arrow)">↶ LEFT</button>
+   <button type="button" data-camera-turn="right" aria-label="Rotate camera right" title="Orbit right (Right arrow)">RIGHT ↷</button>
+   <button type="button" data-camera-turn="up" aria-label="Raise camera" title="Raise view (Up arrow)">↑ RAISE</button>
+   <button type="button" data-camera-turn="down" aria-label="Lower camera" title="Lower view (Down arrow)">↓ LOWER</button>
+   <button type="button" id="classic-camera-reset" aria-label="Reset camera angle" title="Reset view (Home)">RESET VIEW</button>
+  </div>
   <div class="zoom-group" aria-label="Camera zoom"><button type="button" id="classic-zoom-out" aria-label="Zoom camera out">−</button><span>CAMERA DISTANCE</span><button type="button" id="classic-zoom-in" aria-label="Zoom camera in">+</button></div>
   <p id="classic-inside" class="hint">Walk through the building doors to enter.</p>
   <p id="classic-session-xp" class="classic-muted">Session XP until saved mode is enabled.</p>
