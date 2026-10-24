@@ -46,7 +46,7 @@ let browser;
    assert.ok(await page.evaluate(material=>oakrestClassicQA.adventureState().flags.includes('gather:'+material),material),'gather objective registered: '+material);
    await act('cancel');
   }
-  await act('craft','adventure:fletch','arrows');await step(4);await act('finish','adventure:smith');
+  await act('craft',null,'arrows');await step(4);await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
   // The existing save sanitizer omits exhausted stacks (0 logs after fletching).
