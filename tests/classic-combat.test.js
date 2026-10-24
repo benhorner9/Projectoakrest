@@ -68,7 +68,7 @@ test('ability slots use existing skill requirements and keyed cooldowns',()=>{
 
 test('monster warnings are timed and moving outside marked shape prevents attack',()=>{
  const game=createClassicCombat({save:defaultSave(),random:()=>.02});
- const player=near(-12,84);
+ const player=near(-12,90);
  const events=time(game,player,7);
  assert.ok(events.some(e=>e.type==='warning'&&e.id==='moss-a'),
   'aggro mossling exposes a real warning');
@@ -82,7 +82,7 @@ test('monster warnings are timed and moving outside marked shape prevents attack
 
 test('safe town and leash abort monster chase; enemy returns home',()=>{
  const game=createClassicCombat({save:defaultSave(),random:()=>.02});
- const nearEnemy=near(10,85);
+ const nearEnemy=near(10,90);
  time(game,nearEnemy,4);
  const mob=game.getState().monsters.find(e=>e.id==='moss-b');
  assert.ok(mob.aggro||mob.retreating||mob.warning);
@@ -97,8 +97,8 @@ test('all combat changes remain in a separate, non-persisted session save',()=>{
  const save=defaultSave();
  const original=JSON.stringify(save);
  const game=createClassicCombat({save,random:()=>.01});
- assert.equal(game.chooseTarget('moss-a',near(-12,84)),true);
- time(game,near(-12,84),8);
+ assert.equal(game.chooseTarget('moss-a',near(-12,90)),true);
+ time(game,near(-12,90),8);
  assert.equal(JSON.stringify(save),original,'caller save is immutable');
  const snap=game.sandboxSave();
  assert.notEqual(snap,save);
