@@ -384,10 +384,8 @@ export function createClassicCombat({save,random=Math.random}={}){
   reset:()=>{targetId=null;action=null;queuedAbility=null;},
   itemAction,pickup,nearestLoot,itemSnapshot,
   sandboxSave:()=>JSON.parse(JSON.stringify(data)),
-  /** Saveable core excludes all Block 4 practice loans and transient simulation.
-   * Keep real purchased/earned items and correct original gear selection.
-   */
-  persistentSave:()=>{
+  persistentSave};
+ function persistentSave(){
    const saved=JSON.parse(JSON.stringify(data));
    for(const [s,id] of Object.entries(loaned)){
     // These are session-issued, not obtained from loot or the real store.
@@ -397,6 +395,6 @@ export function createClassicCombat({save,random=Math.random}={}){
     }
    }
    delete saved.classicSession;return saved;
-  }};
+ }
 }
 export const CLASSIC_ENEMY_SPAWNS=spawn;
