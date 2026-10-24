@@ -14,6 +14,8 @@ import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,pr
 import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
 import {createClassicCombatView} from './classic-combat-view.js';
+import {createClassicQuestBeacon} from './classic-quest-beacon.js';
+import {availableQuestGivers} from './classic-quest-indicators.js';
 import {createClassicGroundLoot} from './classic-loot-view.js';
 import {setupClassicItems} from './classic-items-ui.js';
 import {createClassicMinimap} from './classic-minimap.js';
@@ -95,7 +97,8 @@ for(const npc of CLASSIC_NPCS){
  scene.add(actor.sprite,shadow);
  actor.sprite.position.set(npc.x,.08,npc.z);
  shadow.position.set(npc.x,.04,npc.z);
- npcActors.push({...npc,actor,shadow});
+ const beacon=createClassicQuestBeacon(scene,npc.x,npc.z,npc.targetId);
+ npcActors.push({...npc,actor,shadow,beacon});
 }
 const pointerMark=new THREE.Mesh(new THREE.RingGeometry(.54,.66,24),
  new THREE.MeshBasicMaterial({color:'#e6d29b',side:THREE.DoubleSide,transparent:true,opacity:.82,depthWrite:false}));
@@ -360,6 +363,8 @@ $('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
 $('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
 $('classic-save-indicator').addEventListener('click',()=>windowUi.open('settings'));
 $('classic-map-close').addEventListener('click',()=>windowUi.hide());
+$('classic-quests-close').addEventListener('click',()=>windowUi.hide());
+$('classic-quests-toggle').addEventListener('click',()=>adventureUi?.showJournal());
 $('classic-settings-close').addEventListener('click',()=>windowUi.hide());
 $('classic-map-zoom-in').addEventListener('click',()=>minimap.setZoom(minimap.zoom()+.55));
 $('classic-map-zoom-out').addEventListener('click',()=>minimap.setZoom(minimap.zoom()-.55));
@@ -543,12 +548,16 @@ function draw(dt,render=true){
  combatEvents(events);
  if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
  const state=combat.getState();
- adventureWorld.update(combat.adventureState(),player,cameraOffset);adventureUi?.tick();
+ const adventureState=combat.adventureState();
+ adventureWorld.update(adventureState,player,cameraOffset,state.time);
+ for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
+ adventureUi?.tick();
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
  groundView.update(state.groundLoot,state.time);
  minimap.update({player,facing:look,destination:navigation.state().goal,cameraOffset,
-  monsters:state.monsters,drops:state.groundLoot,objective:adventureUi?.objective()},state.time);
+  monsters:state.monsters,drops:state.groundLoot,objective:adventureUi?.objective(),
+  questGivers:availableQuestGivers(adventureState,findClassicInteractable),adventure:adventureState},state.time);
  if(!$('classic-toasts').classList.contains('is-critical')&&state.time>=toastUntil)
   $('classic-toasts').classList.add('is-faded');
  updateContextActions();
@@ -588,7 +597,7 @@ itemUi=setupClassicItems({
  onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
- settings:$('classic-settings-window'),dialogue,minimap});
+ settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window')});
 adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
  changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
  teleport:p=>{player.x=p.x;player.z=p.z;navigation.stop();combat.stopTarget();dodgeTravel=null;selectedTarget=null;}});
@@ -604,7 +613,10 @@ characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.path
 $('classic-characters-open').addEventListener('click',()=>characterUI.show());
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
 showSaveState();updateContextActions();
-minimap.update({player,facing:look,cameraOffset:orbitCamera.offset(),monsters:combat.getState().monsters,drops:combat.getState().groundLoot},0,true);
+minimap.update({player,facing:look,cameraOffset:orbitCamera.offset(),
+ monsters:combat.getState().monsters,drops:combat.getState().groundLoot,
+ questGivers:availableQuestGivers(combat.adventureState(),findClassicInteractable),
+ adventure:combat.adventureState()},0,true);
 if(!existing.profile&&!existing.existing)characterUI.show();
 addEventListener('pagehide',()=>{if(needsSave)saveNow();});
 document.addEventListener('visibilitychange',()=>{
@@ -655,6 +667,8 @@ if(isQa)window.oakrestClassicQA={
   openCharacterCreator:()=>characterUI.show(),
   wornVisual:()=>savedWorn(),
   adventureState:()=>combat.adventureState(),
+  questBeacons:()=>[...npcActors.map(n=>({id:n.targetId,visible:n.beacon.sprite.visible})),
+   ...availableQuestGivers(combat.adventureState(),findClassicInteractable)],
   adventureAction:(kind,id,choice)=>{const r=combat.adventureAction(kind,{target:findClassicInteractable(id),choice},player);if(r.ok){if(r.teleport){player.x=r.teleport.x;player.z=r.teleport.z;navigation.stop();}markProgress();refreshHud();}return r;},
   heroPixelSignature:()=>{
    const image=hero.sprite.material.map?.image;

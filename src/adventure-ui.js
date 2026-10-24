@@ -5,7 +5,8 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  const dialog=document.getElementById('classic-dialogue'),title=document.getElementById('classic-dialogue-name'),body=document.getElementById('classic-dialogue-text');
  const content=el('div','',dialog);content.id='adventure-content';
  dialog.insertBefore(content,document.getElementById('classic-dialogue-close'));
- let current=null,journal=false,lastWork='';
+ let current=null,lastWork='',selectedQuest=null,lastJournalKey='';
+ const questBook=document.getElementById('classic-quest-book');
  const eatButton=el('button','Eat',document.querySelector('.classic-item-buttons'));eatButton.type='button';eatButton.id='adventure-eat';eatButton.title='Eat field ration (35 Health)';el('small','RATION',eatButton);
  const work=el('button','',document.body);work.id='adventure-work';work.hidden=true;work.type='button';work.title='Cancel gathering or crafting';
  const tracker=el('button','',document.querySelector('.classic-panel'));tracker.id='adventure-journal';tracker.type='button';tracker.title='Open quest journal';
@@ -17,7 +18,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   return result;
  }
  function talk(target){
-  combat.adventureVisit(target.id);current=target;journal=false;
+  combat.adventureVisit(target.id);current=target;
   if(target.kind==='discovery'||target.kind==='entrance')act('inspect');
   if(['adventure-npc','station','resource','grove','discovery','entrance','exit','ward','heart'].includes(target.kind)||['citizen:guard','service:forester'].includes(target.id)){
    open();render();return true;
@@ -25,30 +26,38 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   content.hidden=true;return false;
  }
  function render(){
-  if(journal){renderJournal();return;}
   if(!current)return;
-  content.replaceChildren();const state=combat.adventureState(),q=state.quest,t=current;
+  content.replaceChildren();const state=combat.adventureState(),t=current;
   title.textContent=t.id==='citizen:guard'?'Elowen · north-gate warden':t.name;
-  if(q?.npc===t.id){
-   el('h3',q.title,content);el('p',state.accepted?(state.ready?q.end:q.intro):q.intro,content);
-   if(!state.accepted)btn('Accept quest',()=>act('accept'));
-   else {for(const [id,text] of q.objectives)el('p',(state.flags.includes(id)?'✓ ':'○ ')+text,content);if(state.ready)btn('Complete quest · '+q.coins+' coins',()=>act('finish'));}
+  const offering=state.catalogue.filter(q=>q.npc===t.id&&['available','active','ready'].includes(q.status));
+  if(offering.length){
+   for(const q of offering){
+    el('h3',q.title,content);
+    el('p',q.status==='ready'?q.end:q.intro,content);
+    if(q.status==='available')btn('Accept quest',()=>act('accept',q.id));
+    else {
+     for(const [id,description] of q.objectives)
+      el('p',(q.flags.includes(id)?'✓ ':'○ ')+description,content);
+     if(q.status==='ready')btn('Complete quest · '+q.coins+' coins',()=>act('finish',q.id));
+     else btn('Track this quest',()=>act('track',q.id));
+    }
+   }
   }else el('p',({
    'adventure:rowan':'Try all three styles on the dummy. Red shapes warn where an enemy attack will land. Step clear or dodge before it flashes.',
    'adventure:smith':'The forge turns copper and tin into bronze. Take your metal to the anvil for shields and helms. Equip your work from the backpack.',
    'adventure:scout':'I am Nessa. Something is ringing below the hill. Read the old journal and memorial before judging the watch’s purpose.',
    'adventure:scribe':'One spell, one scroll. Frostwood uses frost scrolls; Ember uses ember scrolls. Reeds and timber make a renewable supply.',
-   'citizen:guard':state.index===8?'The watch needs your help keeping the Hollow stable.':'Your journal will point you to the next person who needs you.',
+   'citizen:guard':state.catalogue.find(q=>q.id==='hollow')?.status==='completed'?'The watch needs your help keeping the Hollow stable.':'Your journal will point you to the next person who needs you.',
    'service:forester':'Carry an axe, select a softwood tree, and stay nearby while cutting. Bank excess logs or sell five at a time to Darrin.'
   })[t.id]||t.text||(t.kind==='grove'?'Woodcutting: stay beside the tree while chopping.':'Select an action below.'),content);
   if(t.id==='service:forester')btn('Learn Woodcutting / collect axe',()=>act('teach'));
   if(t.id==='adventure:smith')el('p','Forge: just east of Brann. Quarry: outside the north gate, west path.',content);
-  if(t.id==='adventure:scout'&&state.index===5&&state.accepted){
+  if(t.id==='adventure:scout'&&state.catalogue.find(q=>q.id==='outpost')?.status==='active'){
    btn('The watch protected the living forest',()=>act('answer','protect'));
    btn('The watch hid a treasure vault',()=>act('answer','treasure'));
   }
-  if(t.id==='citizen:guard'&&state.index===6)btn('Check my expedition supplies',()=>act('prepare'));
-  if(t.id==='citizen:guard'&&state.index===8)btn('Supply the watch · 2 shards',()=>act('contract'));
+  if(t.id==='citizen:guard'&&state.catalogue.find(q=>q.id==='seal')?.status==='active')btn('Check my expedition supplies',()=>act('prepare'));
+  if(t.id==='citizen:guard'&&state.catalogue.find(q=>q.id==='hollow')?.status==='completed')btn('Supply the watch · 2 shards',()=>act('contract'));
   if(t.id==='adventure:stump')btn('Calm guardian · 1 restoration seal',()=>act('calm'));
   if(t.id==='adventure:spring'||t.id==='adventure:cook')btn('Rest and recover Health',()=>act('rest'));
   if(t.kind==='resource'||t.kind==='grove')btn(t.kind==='grove'||t.material==='softwood-logs'?'Chop softwood':'Gather resource',()=>act('gather'));
@@ -67,33 +76,84 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   if(t.kind==='heart')btn('Restore the keeper’s heart',()=>act('heart'));
   btn('View quest journal',showJournal);
  }
- function showJournal(){journal=true;current=null;open();renderJournal();}
+ function showJournal(){
+  current=null;windowUi.open('quests');
+  if(windowUi.current()==='quests'){lastJournalKey='';renderJournal();}
+ }
  function renderJournal(){
-  title.textContent='The First Adventure';content.replaceChildren();const a=combat.adventureState();
-  el('p','Begin at Elowen by the village square. Gold diamonds on the map show people, supplies and discoveries. Your next objective is marked with a bright ring.',content);
-  for(const [i,q] of QUESTS.entries()){
-   const d=el('details','',content);d.open=i===a.index;
-   el('summary',(i<a.index?'✓ ':i===a.index?'◆ ':'○ ')+q.title,d);
-   el('p',i<a.index?q.end:q.intro,d);
-   if(i===a.index){
-    for(const [id,text] of q.objectives)el('p',(a.flags.includes(id)?'✓ ':'○ ')+text,d);
-    el('p',a.accepted?(a.ready?'Return to your quest giver.':'Quest in progress.'):'Speak to the quest giver to accept.',d);
+  if(windowUi.current()!=='quests')return;
+  const a=combat.adventureState();
+  const selected=a.catalogue.find(q=>q.id===selectedQuest);
+  if(!selectedQuest||!selected||selected.status==='locked'&&selectedQuest===a.tracked)
+   selectedQuest=a.tracked||a.catalogue.find(q=>q.status==='active'||q.status==='available')?.id||a.catalogue[0]?.id;
+  const entry=a.catalogue.find(q=>q.id===selectedQuest);
+  questBook.replaceChildren();
+  const layout=el('div','',questBook);layout.className='classic-quest-layout';
+  const left=el('nav','',layout);left.className='classic-quest-list';left.setAttribute('aria-label','Quest list');
+  const detail=el('section','',layout);detail.className='classic-quest-detail';
+  const groups=[['In progress',['active','ready']],['Available',['available']],['Completed',['completed']],['Locked',['locked']]];
+  for(const [heading,statuses] of groups){
+   const entries=a.catalogue.filter(q=>statuses.includes(q.status));
+   if(!entries.length)continue;
+   el('h3',heading+' ('+entries.length+')',left);
+   for(const q of entries){
+    const b=el('button',(q.status==='completed'?'✓ ':q.status==='ready'?'◆ ':q.status==='locked'?'◌ ':'✦ ')+q.title,left);
+    b.type='button';b.className='classic-quest-entry status-'+q.status;
+    if(q.id===selectedQuest)b.classList.add('selected');
+    b.setAttribute('aria-current',q.id===selectedQuest?'true':'false');
+    b.addEventListener('click',()=>{selectedQuest=q.id;renderJournal();});
    }
-   el('small','Reward: '+q.coins+' coins',d);
   }
-  el('h3','Professions',content);
-  for(const [name,xp] of Object.entries(a.skills))el('p',name+' · level '+woodcuttingLevel(xp).level+' · '+xp+' XP',content);
-  el('p','Woodcutting · level '+woodcuttingLevel(combat.sandboxSave().professions.woodcuttingXp).level,content);
-  el('p','Hollow clears: '+a.clears+' · Discoveries: '+a.discoveries.length+'/2',content);
-  if(a.run)el('p','Current expedition: '+a.run.kills.length+'/6 guardians · '+a.run.wards.length+'/3 wards · '+Math.floor(a.run.seconds/60)+' min',content);
-  el('p','After the story: repeat the Hollow, forge improved level-6 weapons, sell timber, and supply Elowen’s watch. Existing gear level requirements still apply.',content);
+  if(!entry)return;
+  el('h2',entry.title,detail);
+  el('p',({available:'Available to start',active:'Quest in progress',
+   ready:'Ready to complete',completed:'Quest completed',locked:'Not yet unlocked'})[entry.status],detail).className='quest-state status-'+entry.status;
+  if(entry.status==='locked'){
+   el('h3','Requirements',detail);
+   for(const dep of entry.prerequisites){
+    const prerequisite=a.catalogue.find(q=>q.id===dep);
+    el('p',(prerequisite?.status==='completed'?'✓ ':'○ ')+(prerequisite?.title||dep),detail);
+   }
+  }else{
+   el('p',entry.status==='completed'?entry.end:entry.intro,detail);
+   if(entry.status==='active'||entry.status==='ready'){
+    el('h3','Objectives',detail);
+    for(const [flag,description] of entry.objectives)
+     el('p',(entry.flags.includes(flag)?'✓ ':'○ ')+description,detail).className=entry.flags.includes(flag)?'quest-done':'';
+   }
+   if(entry.status==='available')el('p','Speak to '+(entry.npc==='citizen:guard'?'Elowen':entry.npc==='service:forester'?'Alden':entry.npc.split(':')[1])+' to begin.',detail);
+   if(entry.status!=='completed'){
+    const b=el('button',a.tracked===entry.id?'✓ Currently tracked':'Track this quest',detail);
+    b.disabled=a.tracked===entry.id;b.type='button';
+    b.addEventListener('click',()=>{
+     const result=combat.adventureAction('track',{choice:entry.id},player());
+     notify(result.reason);if(result.ok){changed();renderJournal();}
+    });
+   }
+  }
+  el('p','Reward: '+entry.coins+' coins',detail).className='quest-reward';
+  if(entry.status==='completed')el('p','You have finished this quest.',detail);
+  el('h3','Your adventure',detail);
+  el('p','Hollow clears: '+a.clears+' · Discoveries: '+a.discoveries.length+'/2',detail);
+  if(a.run)el('p','Expedition: '+a.run.kills.length+'/6 guardians · '+a.run.wards.length+'/3 wards',detail);
+  const total=a.catalogue.filter(q=>q.status==='completed').length;
+  el('p','Quests completed: '+total+' / '+a.catalogue.length,detail);
+  lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags])]);
  }
  function objective(){
-  const a=combat.adventureState(),q=a.quest;if(!q)return ADVENTURE_TARGETS.find(t=>t.kind==='entrance');
-  if(!a.accepted||a.ready)return findTarget(q.npc);
-  const key=q.objectives.find(o=>!a.flags.includes(o[0]))?.[0];
+  const a=combat.adventureState(),q=a.quest;
+  if(!q)return null;
+  const progress=a.catalogue.find(x=>x.id===q.id);
+  if(!progress||['completed','locked'].includes(progress.status))return null;
+  if(progress.status==='available'||progress.status==='ready')return findTarget(q.npc);
+  const key=q.objectives.find(o=>!progress.flags.includes(o[0]))?.[0];
   if(key?.startsWith('visit:'))return findTarget(key.slice(6));
-  const ids={'hit:melee':'rowan','hit:magic':'rowan','hit:ranged':'rowan','gather:copper-ore':'copper','gather:tin-ore':'tin','gather:softwood-logs':'softwood','craft:useful':'fletch','inspect:cart':'cart','inspect:tracks':'tracks','inspect:stump':'stump','resolve:guardian':'stump','inspect:journal':'journal','inspect:memorial':'memorial','solve:watch':'scout','prepare:supplies':'inscribe','inspect:entrance':'entrance','dungeon:clear':'entrance'};
+  const ids={'hit:melee':'rowan','hit:magic':'rowan','hit:ranged':'rowan','gather:copper-ore':'copper',
+   'gather:tin-ore':'tin','gather:softwood-logs':'softwood','craft:useful':'fletch',
+   'inspect:cart':'cart','inspect:tracks':'tracks','inspect:stump':'stump',
+   'resolve:guardian':'stump','inspect:journal':'journal','inspect:memorial':'memorial',
+   'solve:watch':'scout','prepare:supplies':'inscribe','inspect:entrance':'entrance',
+   'dungeon:clear':'entrance'};
   return findTarget('adventure:'+ids[key]);
  }
  tracker.addEventListener('click',showJournal);eatButton.addEventListener('click',()=>act('eat'));work.addEventListener('click',()=>act('cancel'));
@@ -101,7 +161,12 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   const a=combat.adventureState(),state=combat.getState();
   const text=a.work?a.work.name+' · '+Math.max(0,a.work.end-state.time).toFixed(1)+'s · tap to cancel':'';
   if(text!==lastWork){work.textContent=text;work.hidden=!text;lastWork=text;}
-  tracker.textContent=a.quest?(a.accepted?'◆ ':'! ')+a.quest.title:'✓ First Adventure complete';
+  const tracking=a.catalogue.find(q=>q.id===a.tracked);
+  tracker.textContent=tracking?(tracking.status==='completed'?'✓ ':tracking.status==='ready'?'◆ ':tracking.status==='active'?'✦ ':'! ')+tracking.title:'✓ All quests complete';
+  if(windowUi.current()==='quests'){
+   const key=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags])]);
+   if(key!==lastJournalKey)renderJournal();
+  }
   eatButton.disabled=state.hp<=0;tracker.hidden=!document.getElementById('classic-creator').hidden;
  }};
 }

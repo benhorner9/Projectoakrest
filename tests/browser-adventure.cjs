@@ -56,8 +56,11 @@ let browser;
   assert.equal(await page.evaluate(()=>oakrestClassicQA.adventureState().index),3);
   assert.deepEqual(await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory),before.inventory);
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveStatus().enabled),true,'adventure save preference survives reload');
-  await page.locator('#adventure-journal').click();assert.equal(await page.locator('#adventure-content details').count(),8);
-  await page.locator('#classic-dialogue-close').click();
+  await page.locator('#adventure-journal').click();
+  assert.equal(await page.locator('.classic-quest-entry').count(),8);
+  assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
+  assert.equal(await page.locator('#classic-quest-book').getByText('The Cart That Never Came').count()>0,true);
+  await page.locator('#classic-quests-close').click();
   mkdirSync('qa/first-adventure',{recursive:true});
   await page.screenshot({path:'qa/first-adventure/village.png'});
   await page.evaluate(()=>{oakrestClassicQA.teleport(23,148);oakrestClassicQA.selectTarget('adventure:scout');});
@@ -69,11 +72,11 @@ let browser;
    await page.setViewportSize(size);await page.locator('#adventure-journal').click();
    const layout=await page.evaluate(()=>{
     const box=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};};
-    return {dialog:box(document.getElementById('classic-dialogue')),journal:box(document.getElementById('adventure-journal')),menu:box(document.querySelector('.classic-item-buttons')),dock:box(document.querySelector('.classic-combat-dock'))};
+    return {quests:box(document.getElementById('classic-quests-window')),journal:box(document.getElementById('adventure-journal')),menu:box(document.querySelector('.classic-item-buttons')),dock:box(document.querySelector('.classic-combat-dock'))};
    });
-   assert.ok(layout.dialog.y>=0&&layout.dialog.bottom<=size.height,JSON.stringify(layout));
+   assert.ok(layout.quests.y>=0&&layout.quests.bottom<=size.height,JSON.stringify(layout));
    assert.ok(layout.menu.bottom<=layout.dock.y,JSON.stringify(layout));
-   await page.locator('#classic-dialogue-close').click();
+   await page.locator('#classic-quests-close').click();
   }
   assert.deepEqual(errors,[]);console.log('PASS: new Classic creator, saving, three combat styles, real crafting, quest journal, reload, wilderness/dungeon rendering, three touch-sized viewports.');
  }finally{await browser?.close();server?.kill();}
