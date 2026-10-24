@@ -1,7 +1,7 @@
 /** Block 2 scene builder. Only the renderer changes: coordinates come from town-layout. */
 import * as THREE from 'three';
 import {OAKREST_BUILDINGS,OAKREST_WELL,FACING,roadQuads} from './town-layout.js';
-import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS} from './classic-town-plan.js';
+import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_PLAZAS,CLASSIC_STALLS,classicRoofColour} from './classic-town-plan.js';
 import {CLASSIC_TREES,CLASSIC_NPCS} from './classic-presentation.js';
 import {OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 const MAT={
@@ -49,7 +49,7 @@ function building(parent,b,i){
  const w=b.w,d=b.d,h=b.kind==='bank'||b.kind==='hall'?4.9:4.1;
  const special=b.kind==='bank'||b.kind==='trade'||b.kind==='store';
  const wall=b.kind==='bank'?MAT.stone:special?MAT.light:MAT.plaster;
- const roofMaterial=b.kind==='bank'?MAT.roofBlue:(i%3===0?MAT.roofRed:i%3===1?MAT.roofGreen:MAT.roofBlue);
+ const roofMaterial=({ '#9b675e':MAT.roofRed,'#728568':MAT.roofGreen,'#627886':MAT.roofBlue})[classicRoofColour(b,i)];
  cube(g,MAT.stone,0,.17,0,w+.5,.34,d+.5);
  for(let plank=-w/2+.5;plank<w/2;plank+=1.3)cube(g,i%2?MAT.trim:MAT.wood,plank,.36,0,.05,.08,d-.45);
  const thick=.32,doorWidth=3.1;
@@ -174,10 +174,7 @@ export function createClassicVillage(scene){
  cube(root,MAT.grass,0,-.18,34,115,.3,130);
  const roads=new THREE.Mesh(pathGeometry(roadQuads(CLASSIC_ROADS,4.1)),new THREE.MeshBasicMaterial({color:'#b6a07e',side:THREE.DoubleSide}));
  root.add(roads);
- cube(root,MAT.sand,0,.01,39,21,.07,22);
- cube(root,MAT.sand,-19,.01,40,11,.055,11);
- cube(root,MAT.sand,22,.01,57,12,.055,11);
- cube(root,MAT.sand,0,.01,74,17,.055,10);
+ for(const p of CLASSIC_PLAZAS)cube(root,MAT.sand,p.x,.01,p.z,p.w,.07,p.d);
  drawPerimeter(root);
  // District marker posts make the town legible as multiple neighbourhoods.
  for(const district of CLASSIC_DISTRICTS){
@@ -214,9 +211,9 @@ export function createClassicVillage(scene){
  for(const offset of [-1.3,1.3])cube(root,MAT.wood,wx+offset,2.55,wz,.25,2.85,.25);
  cube(root,MAT.trim,wx,4.06,wz,3.9,.25,3.5);
  const wellTop=mesh(root,new THREE.ConeGeometry(2.6,1.55,4),MAT.roofRed,wx,4.62,wz);wellTop.rotation.y=Math.PI/4;
- for(const [i,[x,z]] of [[-17,38],[9,38],[19,-7]].entries()){
+ for(const [i,{x,z,roof}] of CLASSIC_STALLS.entries()){
   for(const dx of [-2,2])cube(root,MAT.wood,x+dx,1.4,z,.19,2.7,.19);
-  const canopy=cube(root,[MAT.roofRed,MAT.roofGreen,MAT.roofBlue][i],x,2.8,z,4.65,.2,3.2);
+  const canopy=cube(root,({'#9b675e':MAT.roofRed,'#728568':MAT.roofGreen,'#627886':MAT.roofBlue})[roof],x,2.8,z,4.65,.2,3.2);
   canopy.rotation.z=i%2?.08:-.08;
   cube(root,MAT.darkwood,x,.9,z,3.5,1.1,1.25);
  }
