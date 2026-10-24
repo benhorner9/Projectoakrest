@@ -1,0 +1,10 @@
+#classic-dialogue{max-height:64dvh;overflow:auto;overscroll-behavior:contain;width:min(440px,calc(100vw - 160px))}
+#adventure-content{font-size:14px;line-height:1.45}#adventure-content[hidden]{display:none}
+#adventure-content button{min-height:44px;margin:4px 4px 4px 0;padding:8px 12px;white-space:normal}
+#adventure-content h3{margin:10px 0 6px;color:#e5ca91}#adventure-content p{margin:7px 0}
+#adventure-content details{padding:8px 0;border-bottom:1px solid #8e815b66}#adventure-content summary{cursor:pointer;min-height:36px}
+.adventure-recipe{padding:8px 0;border-bottom:1px solid #8e815b66}.adventure-recipe small{display:block}
+#adventure-journal,#adventure-work{position:fixed;z-index:18;background:#23372eeb;color:#efdfb6;border:1px solid #9a8659;border-radius:5px;font:13px Georgia;min-height:36px;padding:8px 12px;max-width:300px}
+#adventure-journal{position:static;display:block;margin-top:7px;width:100%;text-align:left;font-size:12px;padding:5px 7px}#adventure-work{left:50%;bottom:112px;transform:translateX(-50%)}
+#adventure-work[hidden],#adventure-journal[hidden]{display:none}
+@media(max-height:650px){#adventure-journal{font-size:11px}#classic-dialogue{max-height:65dvh}#adventure-work{bottom:98px}}

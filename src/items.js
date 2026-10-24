@@ -1,3 +1,4 @@
+import {ADVENTURE_MATERIALS} from './adventure-content.js';
 /** Central, stable item identity and art definitions. Legacy saves keep their existing kind/itemId/style format. */
 import {LOADOUTS,ARMOUR,STYLE_ORDER} from './rules.js';
 import {MATERIAL_DROPS} from './combat-feel.js';
@@ -33,6 +34,7 @@ for(const tree of TREE_SPECIES)add('material.'+tree.logId,'material',tree.name+'
  {dropAllowed:false,description:'Logs cut from a '+tree.name+' tree. A resource for future crafting.'});
 // This scroll already exists as a persisted onboarding balance, not as a general monster drop.
 catalogue.push(Object.freeze({id:'scroll.teleport',kind:'scroll',title:'Teleportation Scroll',legacy:Object.freeze({kind:'scroll',itemId:'teleport'}),accent:'#9bcfe6',shape:'scroll',dropAllowed:false}));
+for(const [id,[title,description,shape]] of Object.entries(ADVENTURE_MATERIALS))add('material.'+id,'material',title,{kind:'material',itemId:id},'#bdad85',shape,{description,dropAllowed:['hollow-shard','warden-heart'].includes(id)});
 export const ITEM_CATALOG=Object.freeze(catalogue);
 export const ITEMS_BY_ID=Object.freeze(Object.fromEntries(ITEM_CATALOG.map(item=>[item.id,item])));
 export const DROPPABLE_ITEMS=Object.freeze(ITEM_CATALOG.filter(item=>item.dropAllowed));

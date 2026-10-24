@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+<meta name="theme-color" content="#233a31"/>
+<title>Oakrest — Classic</title>
+<link rel="stylesheet" href="./src/classic.css"/>
+<link rel="stylesheet" href="./src/classic-hud.css"/>
+<link rel="stylesheet" href="./src/classic-character.css"/>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+ <link rel="stylesheet" href="./src/adventure.css" />
+</head>
+<body>
+<main id="classic-app">
+ <div id="classic-game" aria-label="Oakrest 2.5D explorable village"></div>
+ <header class="classic-top" aria-label="Oakrest game title">
+  <div class="brand"><span class="brand-rune">✥</span><strong>OAKREST</strong></div>
+ </header>
+ <aside class="classic-panel" aria-label="Character status">
+  <div class="character-heading">
+   <h1 id="classic-name">The Wanderer</h1>
+   <span>LV <strong id="classic-combat">1</strong></span>
+  </div>
+  <div class="player-hp" role="group" aria-label="Player health">
+   <div class="classic-hp-track player-health"><div id="classic-health-fill"></div></div>
+   <strong id="classic-health-label">100 / 100 HP</strong>
+  </div>
+  <div id="classic-styles" class="styles" role="group" aria-label="Switch combat equipment loadouts">
+   <button type="button" data-style="melee" class="active" aria-pressed="true" title="Melee loadout">⚔ <span>Melee</span></button>
+   <button type="button" data-style="magic" aria-pressed="false" title="Magic loadout">✦ <span>Magic</span></button>
+   <button type="button" data-style="ranged" aria-pressed="false" title="Ranged loadout">➶ <span>Ranged</span></button>
+  </div>
+  <div class="character-subline"><span id="classic-weapon">Iron Longsword</span><span>Style <b id="classic-level">1</b> · HP <b id="classic-vitality">1</b></span></div>
+  <button id="classic-save-indicator" class="save-indicator" type="button" title="Open save settings" aria-label="Open character saving settings">● PRACTICE MODE</button>
+ </aside>
+ <section class="classic-minimap-frame" aria-label="Oakrest minimap">
+  <button type="button" id="classic-minimap-expand" class="minimap-open" aria-label="Expand world map" title="Expand world map">
+   <canvas id="classic-minimap-canvas" width="160" height="160" aria-label="Map of nearby Oakrest"></canvas>
+   <span class="minimap-expand-symbol" aria-hidden="true">↗</span>
+  </button>
+  <div class="location"><span class="location-dot"></span><span id="classic-location">Oakrest Village</span></div>
+ </section>
+ <section id="classic-combat-target" class="classic-combat-target" aria-label="Current monster target" hidden>
+  <div><strong id="classic-target-name">No monster selected</strong><span id="classic-target-level"></span></div>
+  <div class="classic-hp-track"><div id="classic-target-health"></div></div>
+ </section>
+ <section class="classic-combat-dock" aria-label="Combat and abilities">
+  <div class="classic-attack-row">
+   <button type="button" id="classic-attack" aria-label="Attack or stop attacking target">⚔<small>ATTACK</small></button>
+   <div id="classic-ability-buttons" class="classic-ability-buttons" role="group" aria-label="Equipped abilities">
+    <button type="button" data-ability="0">Q <small>Skill 1</small></button>
+    <button type="button" data-ability="1">E <small>Skill 2</small></button>
+    <button type="button" data-ability="2">R <small>Skill 3</small></button>
+    <button type="button" data-ability="3">F <small>Skill 4</small></button>
+   </div>
+   <button type="button" id="classic-dodge">↝<small>DODGE</small></button>
+  </div>
+ </section>
+ <nav class="classic-item-buttons" aria-label="Game menu">
+  <button type="button" id="classic-inventory-toggle" title="Backpack (I)" aria-label="Open backpack"><span aria-hidden="true">▦</span><small>BAG</small></button>
+  <button type="button" id="classic-equipment-toggle" title="Equipment (K)" aria-label="Open equipment"><span aria-hidden="true">♜</span><small>GEAR</small></button>
+  <button type="button" id="classic-abilities-toggle" title="Abilities (L)" aria-label="Open abilities"><span aria-hidden="true">✧</span><small>SKILLS</small></button>
+  <button type="button" id="classic-map-toggle" title="World map (M)" aria-label="Open world map"><span aria-hidden="true">◇</span><small>MAP</small></button>
+  <button type="button" id="classic-settings-toggle" title="Settings" aria-label="Open settings"><span aria-hidden="true">⚙</span><small>MENU</small></button>
+ </nav>
+ <div class="classic-interaction-bar" aria-label="Nearby actions">
+  <button type="button" id="classic-interact-button" aria-label="Interact with nearby character or object" hidden>INTERACT <small>T</small></button>
+  <button type="button" id="classic-pickup" disabled hidden>PICK UP <small>G</small></button>
+ </div>
+ <div id="classic-toasts" class="classic-toast" role="status" aria-live="polite">
+  <span id="classic-action-hint">Welcome to Oakrest.</span>
+ </div>
+ <aside id="classic-item-window" class="classic-item-window" aria-label="Inventory and equipment window" hidden>
+  <header class="classic-item-header">
+   <div><strong id="classic-item-title">Backpack</strong><small id="classic-item-summary">GAME INVENTORY</small></div>
+   <button type="button" id="classic-item-close" aria-label="Close item panel">×</button>
+  </header>
+  <nav class="classic-item-tabs" role="tablist" aria-label="Item menu sections">
+   <button type="button" data-item-tab="inventory">BAG</button>
+   <button type="button" data-item-tab="equipment">GEAR</button>
+   <button type="button" data-item-tab="bank">BANK</button>
+   <button type="button" data-item-tab="shop">SHOP</button>
+   <button type="button" data-item-tab="abilities">SKILLS</button>
+  </nav>
+  <div id="classic-item-content" class="classic-item-scroll"></div>
+ </aside>
+ <aside id="classic-map-window" class="classic-modal" aria-label="World map" hidden>
+  <header class="classic-modal-header"><strong>THE OAKREST VALLEY</strong><button type="button" id="classic-map-close" aria-label="Close map">×</button></header>
+  <p class="classic-modal-intro">Tap a road or clearing to set your walking destination.</p>
+  <canvas id="classic-map-canvas" width="440" height="510" aria-label="Full Oakrest map with roads and services"></canvas>
+  <div class="classic-map-legend"><span>◉ Bank</span><span>◉ Store</span><span>◉ Forester</span><span>◉ Trade</span></div>
+  <div class="classic-map-zoom"><button type="button" id="classic-map-zoom-out" aria-label="Zoom minimap out">−</button><span>MINIMAP SCALE</span><button type="button" id="classic-map-zoom-in" aria-label="Zoom minimap in">+</button></div>
+ </aside>
+ <aside id="classic-settings-window" class="classic-modal classic-settings" aria-label="Game settings and saving" hidden>
+  <header class="classic-modal-header"><strong>GAME SETTINGS</strong><button type="button" id="classic-settings-close" aria-label="Close settings">×</button></header>
+  <h3>Character saving</h3>
+  <section class="classic-save-box" aria-label="Character saving controls">
+   <strong id="classic-save-mode">PRACTICE · NOT SAVING</strong>
+   <p id="classic-save-state" role="status" aria-live="polite">Practice changes reset on reload.</p>
+   <div class="classic-save-actions"><button type="button" id="classic-enable-save">ENABLE SAVING</button><button type="button" id="classic-save-now" disabled>SAVE NOW</button></div>
+  </section>
+  <h3>Your character</h3>
+  <button type="button" id="classic-characters-open" class="classic-characters-open">CHARACTERS · CREATE / SWITCH</button>
+  <p class="classic-muted">Switching characters reloads Classic. Save your current progress first.</p>
+  <h3>Camera</h3>
+  <p class="classic-muted">Arrow keys: ← / → orbit around your character. ↑ / ↓ raise or lower the camera. WASD still walks relative to your view. Home resets the angle.</p>
+  <div class="classic-camera-actions" role="group" aria-label="Adjust camera orientation">
+   <button type="button" data-camera-turn="left" aria-label="Rotate camera left" title="Orbit left (Left arrow)">↶ LEFT</button>
+   <button type="button" data-camera-turn="right" aria-label="Rotate camera right" title="Orbit right (Right arrow)">RIGHT ↷</button>
+   <button type="button" data-camera-turn="up" aria-label="Raise camera" title="Raise view (Up arrow)">↑ RAISE</button>
+   <button type="button" data-camera-turn="down" aria-label="Lower camera" title="Lower view (Down arrow)">↓ LOWER</button>
+   <button type="button" id="classic-camera-reset" aria-label="Reset camera angle" title="Reset view (Home)">RESET VIEW</button>
+  </div>
+  <div class="zoom-group" aria-label="Camera zoom"><button type="button" id="classic-zoom-out" aria-label="Zoom camera out">−</button><span>CAMERA DISTANCE</span><button type="button" id="classic-zoom-in" aria-label="Zoom camera in">+</button></div>
+  <p id="classic-inside" class="hint">Walk through the building doors to enter.</p>
+  <p id="classic-session-xp" class="classic-muted">Session XP until saved mode is enabled.</p>
+  <a class="return-link" href="./index.html">Original Oakrest 3D ↗</a>
+  <p class="save-note">Oakrest Classic uses your existing character save, with a backup and external-change checks when persistent mode is enabled.</p>
+ </aside>
+ <section id="classic-creator" class="classic-creator-overlay" role="dialog" aria-modal="true" aria-label="Create or choose an Oakrest character" hidden>
+  <div class="classic-creator-shell">
+   <header class="classic-creator-header">
+    <div><small>OAKREST · CLASSIC</small><h2>YOUR ADVENTURE BEGINS</h2><p>Choose your adventurer or create someone new. Your look stays with you in every combat style.</p></div>
+    <button id="classic-creator-close" type="button" aria-label="Return to Oakrest">×</button>
+   </header>
+   <section class="classic-creator-roster"><h3>YOUR CHARACTERS <small>Saved in this browser</small></h3>
+    <div id="classic-creator-roster"></div>
+    <button id="classic-creator-new" type="button">+ CREATE CHARACTER</button>
+    <p id="classic-creator-error" role="status" aria-live="polite"></p>
+   </section>
+   <section id="classic-creator-editor" class="classic-creator-editor">
+    <div class="classic-creator-figure">
+     <div class="classic-portrait-ground"><canvas id="classic-creator-preview" width="192" height="256" role="img" aria-label="Live Classic character preview"></canvas></div>
+     <button id="classic-creator-turn" type="button">↻ TURN CHARACTER</button>
+     <p>Starter clothing is permanent underneath your equipment. No gear is granted just by selecting a combat style.</p>
+    </div>
+    <form id="classic-creator-form" novalidate>
+     <label>Character name<input id="classic-creator-name" name="name" type="text" maxlength="20" autocomplete="off" placeholder="Name your adventurer" required/></label>
+     <div class="classic-creator-fields">
+      <label>Character<select name="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
+      <label>Hair style<select name="hairstyle"><option value="short">Short</option><option value="swept">Swept</option><option value="buzz">Buzz cut</option><option value="long">Long</option><option value="ponytail">Ponytail</option><option value="curly">Curly</option></select></label>
+      <label>Base outfit<select name="outfit"><option value="tunic">Tunic</option><option value="wanderer">Wanderer</option><option value="scholar">Scholar</option><option value="traveller">Traveller</option></select></label>
+     </div>
+     <fieldset><legend>Skin tone</legend><div id="classic-creator-skin" class="classic-creator-palettes"></div></fieldset>
+     <fieldset><legend>Hair colour</legend><div id="classic-creator-hair" class="classic-creator-palettes"></div></fieldset>
+     <fieldset><legend>Outfit colour</legend><div id="classic-creator-outfit" class="classic-creator-palettes"></div></fieldset>
+     <button type="submit" class="classic-creator-submit">BEGIN ADVENTURE</button>
+    </form>
+   </section>
+  </div>
+ </section>
+ <div class="joystick" id="classic-joystick" aria-label="Touch movement joystick"><div class="joystick-ring"><div id="classic-stick"></div></div></div>
+ <div id="classic-dialogue" class="dialogue" role="dialog" aria-label="NPC dialogue" hidden>
+  <strong id="classic-dialogue-name">Villager</strong><p id="classic-dialogue-text"></p>
+  <button type="button" id="classic-dialogue-close">Continue</button>
+ </div>
+ <div id="classic-error" class="fatal" role="alert" hidden>Oakrest Classic could not start on this browser. Return to the original game.</div>
+</main>
+<script type="module" src="./src/classic-prototype.js"></script>
+</body>
+</html>
