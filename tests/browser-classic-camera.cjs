@@ -28,7 +28,10 @@ let browser;
   await page.evaluate(()=>{for(let i=0;i<12;i++)oakrestClassicQA.step(.05);});
   await page.keyboard.up('ArrowRight');
   const rotated=await read();
-  assert.ok(Math.abs(rotated.camera.yaw-original.camera.y)>.25,'holding right arrow orbits around player '+JSON.stringify({before:original.camera,after:rotated.camera}));
+  // Angle values wrap at +PI/-PI: assert real orbit distance instead of subtracting yaw.
+  const travel=Math.hypot(rotated.camera.offset.x-original.camera.offset.x,
+   rotated.camera.offset.z-original.camera.offset.z);
+  assert.ok(travel>3,'holding right arrow moves the camera '+JSON.stringify({travel,before:original.camera,after:rotated.camera}));
   assert.ok(Math.hypot(rotated.player.x-original.player.x,rotated.player.z-original.player.z)<.01,
    'rotating camera must not move hero');
   await page.keyboard.down('ArrowUp');
