@@ -128,8 +128,6 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     'Using '+(item?.title||combineSource)+' with… Tap a second material in your bag.');
    button(prompt,'classic-item-action','CANCEL',()=>{combineSource=null;render();});
   }
-  grid(content,inventoryEntries(data),'bag','BACKPACK · FOUR COLUMNS',BAG_MIN_SLOTS);
-  if(detailId)examine(content,detailId);
   if(showMaking){
    const maker=element(content,'section','classic-handcraft');
    element(maker,'h3',null,'MAKE FROM YOUR BACKPACK');
@@ -149,6 +147,9 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
      ()=>craftFromBag('craft',recipe.id),!ready||level<recipe.level);
    }
   }
+  grid(content,inventoryEntries(data),'bag','BACKPACK · FOUR COLUMNS',BAG_MIN_SLOTS);
+  if(detailId)examine(content,detailId);
+
  }
  function renderEquip(){
   const s=view();
