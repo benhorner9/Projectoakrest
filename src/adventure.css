@@ -83,4 +83,4 @@
 @media(max-width:1000px){.classic-skills-window{width:min(580px,calc(100vw - 215px))}}
 @media(max-width:670px){.classic-skills-window{right:59px;width:calc(100vw - 65px);max-width:none}.classic-skill-layout{grid-template-columns:minmax(144px,42%) minmax(0,1fr);gap:5px}.classic-skill-list,.classic-skill-detail{padding:5px}.classic-skill-grid{gap:3px}.classic-skill-card{min-height:45px;padding:3px}}
 /* Eight compact actions including ration: no overlap with the right-hand combat cluster. */
-@media(max-height:700px){.classic-item-buttons{top:149px;gap:2px}.classic-item-buttons button{min-height:34px;height:34px;padding:1px;font-size:14px;line-height:15px}.classic-item-buttons button small{font-size:8px;line-height:9px;margin:0}}
+@media(max-height:700px){.classic-item-buttons{top:171px;gap:2px}.classic-item-buttons button{min-height:34px;height:34px;padding:1px;font-size:14px;line-height:15px}.classic-item-buttons button small{font-size:8px;line-height:9px;margin:0}}
