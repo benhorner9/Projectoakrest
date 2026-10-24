@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OAKREST_BUILDINGS,OAKREST_PATHS} from '../src/town-layout.js';
 import {OAKREST_SERVICES} from '../src/town-services.js';
-import {CLASSIC_LIMITS} from '../src/classic-presentation.js';
+import {CLASSIC_CAMERA,CLASSIC_LIMITS} from '../src/classic-presentation.js';
 import {CLASSIC_MAP_FEATURES,worldToMinimap,minimapToWorld,fullMapTransform,fullMapWorld} from '../src/classic-minimap.js';
 
 test('minimap uses original Oakrest building, road and service definitions (not copies)',()=>{
@@ -41,4 +41,16 @@ test('expanded map screen location converts back to canonical world space',()=>{
    assert.ok(Math.hypot(actual.x-target.x,actual.z-target.z)<1e-8);
   }
  }
+});
+
+test('camera-relative forward movement agrees with fixed north-up minimap',()=>{
+ const camera=CLASSIC_CAMERA;
+ const length=Math.hypot(camera.offsetX,camera.offsetZ);
+ const forward={x:-camera.offsetX/length,z:-camera.offsetZ/length};
+ const origin={x:0,z:39};
+ const mapOrigin=worldToMinimap(origin,origin);
+ const moved=worldToMinimap({x:origin.x+forward.x*4,z:origin.z+forward.z*4},origin);
+ assert.ok(moved.y<mapOrigin.y,'W/northward movement rises on map, not down');
+ assert.ok(Math.abs(moved.x-mapOrigin.x)<(mapOrigin.y-moved.y)*.5,
+  'forward travel should be visibly northward, not a diagonal');
 });
