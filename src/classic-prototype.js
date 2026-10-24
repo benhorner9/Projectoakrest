@@ -583,6 +583,10 @@ if(isQa)window.oakrestClassicQA={
  interactNow:interactNearby,
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
   navigation.stop();selectedTarget=null;draw(0);},
+ projectWorld:(x,z)=>{
+  const p=new THREE.Vector3(x,0,z).project(camera);
+  return {x:p.x,y:-p.y};
+ },
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features()}),
