@@ -43,3 +43,44 @@
  .classic-item-buttons button{height:37px;min-height:37px;padding:2px 1px;font-size:15px;line-height:17px}
  .classic-item-buttons button small{font-size:8px;line-height:10px;margin:0}
 }
+
+/* Classic skills and levels, compact on touch landscape devices. */
+.classic-skills-window{width:min(680px,calc(100vw - 265px));overflow:hidden}
+.classic-skill-book{flex:1;min-height:0;display:flex}
+.classic-skill-layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(176px,43%) minmax(0,1fr);gap:10px}
+.classic-skill-list,.classic-skill-detail{overflow-y:auto;min-height:0;overscroll-behavior:contain;touch-action:pan-y;background:#1e3129;border:1px solid #7e765a;border-radius:5px;padding:8px}
+.classic-skill-list h3,.classic-skill-detail h3{font:700 10px system-ui,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:#dbc58d;margin:10px 0 5px}
+.classic-skill-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.classic-skill-card{display:grid;grid-template-columns:20px 1fr;grid-template-rows:auto auto;align-items:center;gap:0 5px;text-align:left;min-height:51px;padding:5px;border:1px solid #586f5c;border-radius:4px;background:#334e3c;color:#efe2c0}
+.classic-skill-card.active{border-color:#efcf87;background:#5e5039}
+.classic-skill-card .skill-icon{grid-row:1/3;font-size:17px}
+.classic-skill-card .skill-name{font:10px/1.15 system-ui,sans-serif;overflow-wrap:anywhere}
+.classic-skill-card .skill-level{font:700 15px Georgia,serif;color:#f3d89d}
+.classic-skill-detail h2{font:20px Georgia,serif;color:#f2dbac;margin:4px 0 8px}
+.classic-skill-detail p{font:11px/1.5 system-ui,sans-serif;color:#e1e4d5}
+.classic-skill-detail .skill-description{color:#bdc8b8}
+.skill-progress-heading{font:700 12px system-ui,sans-serif;color:#f3d89d;margin:9px 0}
+.skill-xp-track{height:12px;background:#142b22;border:1px solid #7a8a68;border-radius:5px;overflow:hidden}
+.skill-xp-track>div{height:100%;background:linear-gradient(90deg,#7d9f64,#dcc081)}
+.classic-skill-detail .skill-xp-caption{font-size:10px;margin:5px 0 12px}
+.classic-skill-unlock{display:flex;align-items:center;gap:7px;min-height:43px;padding:6px 2px;border-bottom:1px solid #4b5e4a}
+.classic-skill-unlock.locked{opacity:.57}
+.skill-unlock-level{flex:none;font:700 10px system-ui,sans-serif;color:#e7c988;width:35px}
+.skill-unlock-text{flex:1;min-width:0}
+.skill-unlock-text strong{display:block;font:700 11px system-ui,sans-serif}
+.skill-unlock-text small{display:block;font:10px/1.4 system-ui,sans-serif;color:#c3ccbd}
+.skill-unlock-status{font-size:16px;color:#b5d6a0}
+.classic-skill-detail .skill-hint{color:#f0d5a0;border-top:1px solid #677e65;padding-top:9px}
+.classic-handcraft{margin-top:8px;padding:9px;background:#1e3229;border:1px solid #a18c67;border-radius:5px}
+.classic-handcraft h3{margin:4px 0 8px}
+.classic-handcraft .craft-option{padding:9px 0;border-top:1px solid #485c4d}
+.classic-handcraft .craft-option strong{display:block;font:700 12px system-ui,sans-serif;color:#eedcae}
+.classic-handcraft .craft-option small{display:block;margin:5px 0;color:#c7d2c3;font:11px/1.4 system-ui,sans-serif}
+.classic-handcraft .craft-option button{min-height:39px;min-width:120px}
+.classic-handcraft .craft-option button:disabled{opacity:.5}
+.classic-combine-prompt{background:#705533;color:#fff0ca;border:1px solid #e3c384;padding:9px;margin:7px 0;border-radius:4px;font:11px/1.4 system-ui,sans-serif}
+.classic-combine-prompt button{margin-top:5px;min-height:38px}
+@media(max-width:1000px){.classic-skills-window{width:min(580px,calc(100vw - 215px))}}
+@media(max-width:670px){.classic-skills-window{right:59px;width:calc(100vw - 65px);max-width:none}.classic-skill-layout{grid-template-columns:minmax(144px,42%) minmax(0,1fr);gap:5px}.classic-skill-list,.classic-skill-detail{padding:5px}.classic-skill-grid{gap:3px}.classic-skill-card{min-height:45px;padding:3px}}
+/* Eight compact actions including ration: no overlap with the right-hand combat cluster. */
+@media(max-height:700px){.classic-item-buttons{top:149px;gap:2px}.classic-item-buttons button{min-height:34px;height:34px;padding:1px;font-size:14px;line-height:15px}.classic-item-buttons button small{font-size:8px;line-height:9px;margin:0}}
