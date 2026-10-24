@@ -36,3 +36,10 @@
  .classic-quest-entry{font-size:10px;min-height:39px}}
 
 @media(max-width:670px){.classic-quests-window{right:59px;width:calc(100vw - 65px);max-width:none}}
+
+/* Seven right-side actions (including Ration) must not collide with combat at 600px height. */
+@media(max-height:620px){
+ .classic-item-buttons{top:158px;gap:2px}
+ .classic-item-buttons button{height:37px;min-height:37px;padding:2px 1px;font-size:15px;line-height:17px}
+ .classic-item-buttons button small{font-size:8px;line-height:10px;margin:0}
+}
