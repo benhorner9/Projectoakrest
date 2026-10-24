@@ -1,9 +1,10 @@
 /** Block 7: one window at a time, with NPC dialogue taking priority. */
 export function createClassicWindowController({items,map,settings,dialogue,minimap,quests,skills}){
  let current=null;
+ const body=document.getElementById('classic-sidebar-body');
  const close=()=>{
   items.hide();map.hidden=true;settings.hidden=true;dialogue.hidden=true;quests.hidden=true;skills.hidden=true;
-  minimap.setExpanded(false);current=null;
+  minimap.setExpanded(false);current=null;if(body)body.dataset.active='none';
   for(const b of document.querySelectorAll('.classic-item-buttons button'))
    b.setAttribute('aria-pressed','false');
  };
@@ -23,6 +24,7 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
   }else if(name==='dialogue'){
    dialogue.hidden=false;current=name;
   }
+  if(body)body.dataset.active=current||'none';
   const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',
    abilities:'classic-abilities-toggle',map:'classic-map-toggle',quests:'classic-quests-toggle',skills:'classic-skills-toggle',
    settings:'classic-settings-toggle'}[name];
@@ -30,7 +32,7 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
  };
  const hide=()=>close();
  const adopt=name=>{
-  current=name;
+  current=name;if(body)body.dataset.active=name||'none';
   for(const b of document.querySelectorAll('.classic-item-buttons button'))b.setAttribute('aria-pressed','false');
   const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',abilities:'classic-abilities-toggle'}[name];
   if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
