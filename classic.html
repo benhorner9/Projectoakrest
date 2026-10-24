@@ -29,7 +29,15 @@
    </div>
    <div class="weapon-box"><span id="classic-weapon">Iron Longsword</span><small>Level <b id="classic-level">1</b> · Active combat loadout</small></div>
    <p class="hint" id="classic-inside">Walk the village and enter buildings through their doors.</p>
-   <p class="save-note">Combat, loot, shop and bank changes are SESSION-ONLY. Your saved character is not overwritten.</p>
+   <section class="classic-save-box" aria-label="Character saving controls">
+    <strong id="classic-save-mode">PRACTICE · NOT SAVING</strong>
+    <p id="classic-save-state" role="status" aria-live="polite">Practice changes reset on reload.</p>
+    <div class="classic-save-actions">
+      <button type="button" id="classic-enable-save">ENABLE SAVING</button>
+      <button type="button" id="classic-save-now" disabled>SAVE NOW</button>
+    </div>
+   </section>
+   <p class="save-note">Safe practice mode by default. Existing character saves are unchanged until you explicitly enable guarded Classic saving.</p>
  </aside>
  <div class="classic-interaction-bar" aria-label="Interaction controls">
   <span id="classic-action-hint" role="status" aria-live="polite">Tap to move, or select a person or object.</span>
