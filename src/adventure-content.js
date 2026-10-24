@@ -23,6 +23,13 @@ export const QUESTS=Object.freeze([
  {id:'seal',title:'What We Carry Below',npc:'citizen:guard',intro:'We will not send another watch to die. Make a restoration seal, pack three rations and at least twenty arrows or frost scrolls. Inspect the Hollow doorway. These are minimum supplies for a short scouting trip. A full first run can use hundreds of shots or scrolls and many rations: cleared chambers let you return to town and resupply. The seal repairs its outer ward; it will not tame the keeper inside.',objectives:[['prepare:supplies','Bring a seal, 3 rations, and 20 arrows or frost scrolls'],['inspect:entrance','Find the Warden’s Hollow entrance']],end:'Break the roots around each ward, then light it. The keeper reveals a different weakness as its heart cracks. Return when the bell is silent.',coins:20},
  {id:'hollow',title:'The Bell Beneath the Roots',npc:'citizen:guard',intro:'Enter the Hollow, restore its three chamber wards and confront the keeper. Leave by any refuge bell if supplies run low. Fallen adventurers recover here with their belongings; cleared chambers remain cleared until a new expedition.',objectives:[['dungeon:clear','Defeat the Hollow Keeper and restore the heart']],end:'For the first time in years, the woods are quiet. The ward will need tending. Return to the Hollow for shards and hearts, improve your gear, or supply the village with timber.',coins:80}
 ]);
+/** The opening unfolds like a quest book, not a hard-coded eight-step queue.
+ * Training, crafting and cart investigation can be pursued in parallel.
+ */
+export const QUEST_PREREQUISITES=Object.freeze({
+ welcome:[],training:['welcome'],provisions:['welcome'],road:['welcome'],
+ roots:['road'],outpost:['roots'],seal:['outpost','provisions','training'],hollow:['seal']
+});
 const target=(id,name,x,z,kind,extra={})=>({id:'adventure:'+id,name,x,z,kind,reach:3.1,clickRadius:2.2,...extra});
 export const ADVENTURE_TARGETS=Object.freeze([
  target('rowan','Rowan · combat instructor',4,70,'adventure-npc'),
@@ -112,10 +119,24 @@ export const RECIPES=[
 ];
 export function sanitizeAdventure(raw){
  const n=v=>Number.isSafeInteger(v)?Math.max(0,Math.min(200000000,v)):0;
- const index=Math.min(8,n(raw?.index));
- const allowed=new Set(QUESTS.flatMap(q=>q.objectives.map(o=>o[0])));
- return {version:1,autoSave:raw?.autoSave===true,index,accepted:raw?.accepted===true&&index<8,
-  flags:[...new Set((Array.isArray(raw?.flags)?raw.flags:[]).filter(f=>allowed.has(f)))],
+ const oldIndex=Math.min(QUESTS.length,n(raw?.index));
+ const structured=raw?.version>=2&&raw?.quests&&typeof raw.quests==='object';
+ const quests=Object.fromEntries(QUESTS.map((q,i)=>{
+  const allowed=new Set(q.objectives.map(o=>o[0]));
+  const current=structured?raw.quests[q.id]:null;
+  const status=structured?(['active','completed'].includes(current?.status)?current.status:'not-started'):
+   i<oldIndex?'completed':(i===oldIndex&&raw?.accepted===true?'active':'not-started');
+  const incoming=structured?current?.flags:(i===oldIndex?raw?.flags:[]);
+  return [q.id,{status,flags:status==='active'?
+   [...new Set((Array.isArray(incoming)?incoming:[]).filter(f=>allowed.has(f)))]:[]}];
+ }));
+ const index=QUESTS.findIndex(q=>quests[q.id].status!=='completed');
+ const firstUnfinished=index<0?QUESTS.length:index;
+ const active=quests[QUESTS[firstUnfinished]?.id];
+ const tracked=QUESTS.some(q=>q.id===raw?.tracked)?raw.tracked:
+  QUESTS.find(q=>quests[q.id].status==='active')?.id||QUESTS[firstUnfinished]?.id||null;
+ return {version:2,autoSave:raw?.autoSave===true,index:firstUnfinished,accepted:active?.status==='active',
+  flags:active?.flags||[],tracked,quests,
   discoveries:[...new Set((Array.isArray(raw?.discoveries)?raw.discoveries:[]).filter(f=>['spring','bells'].includes(f)))],
   skills:Object.fromEntries(['mining','blacksmithing','fletching','inscription'].map(s=>[s,n(raw?.skills?.[s])])),
   clears:n(raw?.clears),contracts:n(raw?.contracts),deaths:n(raw?.deaths),
