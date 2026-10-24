@@ -607,6 +607,9 @@ if(isQa)window.oakrestClassicQA={
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
   navigation.stop();selectedTarget=null;draw(0);},
  projectWorld:(x,z)=>{
+  // QA may query the projection before the first requestAnimationFrame.
+  // Ensure the saved/test character overlay cannot leave matrices stale.
+  camera.updateMatrixWorld(true);
   const p=new THREE.Vector3(x,0,z).project(camera);
   return {x:p.x,y:-p.y};
  },
