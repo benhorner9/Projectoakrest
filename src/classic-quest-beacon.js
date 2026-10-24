@@ -37,7 +37,6 @@ export function createClassicQuestBeacon(scene,x,z,targetId){
   if(status!==displayed){material.map=textureFor(status);material.needsUpdate=true;displayed=status;}
   const phase=time*2.35+x*.03+z*.02;
   sprite.position.y=4.72+.17*Math.sin(phase);
-  sprite.scale.setScalar(1.03+.045*Math.sin(phase));
   sprite.scale.set(2.05*(1+.045*Math.sin(phase)),2.05*(1+.045*Math.sin(phase)),1);
   material.opacity=.89+.09*Math.sin(phase);
  }};
