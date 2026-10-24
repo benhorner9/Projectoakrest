@@ -27,7 +27,7 @@ let browser;
     return oakrestClassicQA.adventureAction(kind,id,choice);
    },{kind,id,choice});assert.equal(result?.ok,true,JSON.stringify({kind,id,result,state:await page.evaluate(()=>oakrestClassicQA.adventureState())}));return result;
   };
-  const step=async seconds=>page.evaluate(seconds=>{for(let i=0;i<Math.ceil(seconds/.1);i++)oakrestClassicQA.step(.1);},seconds);
+  const step=async seconds=>page.evaluate(seconds=>oakrestClassicQA.advance(seconds),seconds);
   await page.evaluate(()=>{oakrestClassicQA.teleport(5,46);oakrestClassicQA.interactNow();});
   await page.getByRole('button',{name:'Accept quest',exact:true}).click();
   for(const id of ['service:bank','service:store','service:forester']){
@@ -49,6 +49,8 @@ let browser;
   await act('craft','adventure:fletch','arrows');await step(4);await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
+  // The existing save sanitizer omits exhausted stacks (0 logs after fletching).
+  before.inventory.materials=Object.fromEntries(Object.entries(before.inventory.materials).filter(([,amount])=>amount>0));
   mkdirSync('qa/first-adventure',{recursive:true});await page.screenshot({path:'qa/first-adventure/before-reload.png'});
   await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
   assert.equal(await page.evaluate(()=>oakrestClassicQA.adventureState().index),3);

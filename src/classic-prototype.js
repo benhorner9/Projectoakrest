@@ -518,7 +518,7 @@ function moveGame(dt){
  updateLocation();
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
-function draw(dt){
+function draw(dt,render=true){
  if(characterUI?.isOpen())return; // Do not move or fight behind character selection.
  orbitCamera.step(keys,dt);
  const cameraOffset=orbitCamera.offset();
@@ -569,7 +569,7 @@ function draw(dt){
  // Smooth orbit comes from frame-rate-independent angular velocity, not a
  // following lag that could invert navigation while the view is catching up.
  camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
- camera.lookAt(player.x,0,player.z);renderer.render(scene,camera);
+ camera.lookAt(player.x,0,player.z);if(render)renderer.render(scene,camera);
 }
 let last=performance.now();
 function tick(time){
@@ -624,6 +624,9 @@ if(isQa)window.oakrestClassicQA={
   combatLevel:presentationSnapshot(combat.sandboxSave(),style,player).combatLevel,
   selected:selectedTarget?.id||null,lastInteraction,status:lastStatus}),
  step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
+ // Accelerated transaction checks still run every gameplay/UI tick, but submit
+ // only their final frame to WebGL instead of flooding a software GPU queue.
+ advance:seconds=>{let remaining=clamp(Number(seconds)||0,0,120);while(remaining>0){const dt=Math.min(.1,remaining);draw(dt,false);remaining-=dt;}draw(0);},
  selectTarget:id=>chooseInteraction(findClassicInteractable(id)),
  interactNow:interactNearby,
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
