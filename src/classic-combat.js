@@ -64,6 +64,9 @@ export function createClassicCombat({save,random=Math.random}={}){
  }
  const monsters=spawn.map(initialMonster),events=[],projectiles=[],cooldowns=new Map();
  data.groundLoot=Array.isArray(data.groundLoot)?data.groundLoot:[];
+ // Stable within a session, unique across page reloads. Prevent saved drops
+ // from colliding with IDs newly generated in later browser sessions.
+ const dropSession=Date.now().toString(36);
  let nextDrop=0;
  let time=0,style='melee',targetId=null,attackUntil=0,switchUntil=0,dodgeUntil=0,dodgeStart=-Infinity;
  let action=null,queuedAbility=null,queuedStyle=null,shieldUntil=0,deadUntil=0;
@@ -142,7 +145,7 @@ export function createClassicCombat({save,random=Math.random}={}){
    const reward=awardMonsterVictory(data,enemy.type,source.style);
    if(reward.awarded)emit('xp',{style:source.style,amount:XP_BY_MOB[enemy.type],reward});
    const drops=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,
-    ()=> 'classic-'+(++nextDrop)+'-'+Math.floor(time*100));
+    ()=> 'classic-'+dropSession+'-'+(++nextDrop)+'-'+Math.floor(time*100));
    data.groundLoot.push(...drops);
    if(data.groundLoot.length>MAX_GROUND_LOOT)data.groundLoot.splice(0,data.groundLoot.length-MAX_GROUND_LOOT);
    if(drops.length)emit('ground-loot',{count:drops.length,ids:drops.map(d=>d.id)});
