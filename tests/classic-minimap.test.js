@@ -1,13 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OAKREST_BUILDINGS,OAKREST_PATHS} from '../src/town-layout.js';
+import {CLASSIC_ROADS,CLASSIC_PERIMETER} from '../src/classic-town-plan.js';
 import {OAKREST_SERVICES} from '../src/town-services.js';
 import {CLASSIC_CAMERA,CLASSIC_LIMITS,classicScreenBasis} from '../src/classic-presentation.js';
 import {CLASSIC_MAP_FEATURES,worldToMinimap,minimapToWorld,fullMapTransform,fullMapWorld} from '../src/classic-minimap.js';
 
-test('minimap uses original Oakrest building, road and service definitions (not copies)',()=>{
+test('minimap retains all original buildings/services and uses the shared Classic circuit/wall layout',()=>{
  assert.equal(CLASSIC_MAP_FEATURES.buildings,OAKREST_BUILDINGS);
- assert.equal(CLASSIC_MAP_FEATURES.roads,OAKREST_PATHS);
+ assert.equal(CLASSIC_MAP_FEATURES.roads,CLASSIC_ROADS);
+ assert.ok(CLASSIC_ROADS.length>OAKREST_PATHS.length);
+ assert.equal(CLASSIC_MAP_FEATURES.walls,CLASSIC_PERIMETER.walls);
+ assert.equal(CLASSIC_MAP_FEATURES.gates,CLASSIC_PERIMETER.gates);
  assert.equal(CLASSIC_MAP_FEATURES.services,OAKREST_SERVICES);
  assert.equal(CLASSIC_MAP_FEATURES.bounds,CLASSIC_LIMITS);
  assert.equal(CLASSIC_MAP_FEATURES.buildings.length,16);
