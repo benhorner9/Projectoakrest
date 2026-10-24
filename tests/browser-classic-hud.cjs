@@ -27,6 +27,19 @@ let browser;
   assert.equal(map.features.buildings.length,16);
   assert.ok(map.features.services.some(x=>x.id==='bank'&&x.x===-30&&x.z===14));
   assert.deepEqual(map.position,{x:0,z:39});
+  const projected=await page.evaluate(()=>{
+   const qa=oakrestClassicQA;
+   return {here:qa.projectWorld(0,39),north:qa.projectWorld(0,45),south:qa.projectWorld(0,33)};
+  });
+  assert.ok(projected.north.y<projected.here.y,'geographic north projects UP in game');
+  assert.ok(projected.south.y>projected.here.y,'geographic south projects DOWN in game');
+  await page.keyboard.down('w');
+  await page.evaluate(()=>{for(let i=0;i<8;i++)oakrestClassicQA.step(.05);});
+  await page.keyboard.up('w');
+  const movedNorth=await page.evaluate(()=>oakrestClassicQA.state());
+  assert.ok(movedNorth.z>39,'W/up moves geographically north, matching map N');
+  const newMap=await page.evaluate(()=>oakrestClassicQA.minimapState());
+  assert.ok(newMap.position.z>39,'minimap tracks geographic north');
   // Three device sizes: none of the permanent HUD pieces overlap each other.
   for(const size of [{width:1194,height:834},{width:1024,height:768},{width:1180,height:600}]){
    await page.setViewportSize(size);
