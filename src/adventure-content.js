@@ -109,7 +109,7 @@ export const RECIPES=[
  recipe('frost','Inscribe 30 frost scrolls','inventory','inscription',1,{'reed':2,'softwood-logs':1},{material:'frost-scroll',amount:30}),
  recipe('ember','Inscribe 30 ember scrolls','inventory','inscription',1,{'reed':2,'moss-fibre':1},{material:'ember-scroll',amount:30}),
  recipe('seal','Inscribe restoration seal','inventory','inscription',1,{'reed':2,'bronze-bar':1},{material:'ward-seal',amount:1},25),
- recipe('rations','Prepare 3 field rations','inventory','cooking',1,{'reed':2},{material:'ration',amount:3},0),
+ recipe('rations','Bundle 3 field rations','inventory','cooking',1,{'reed':2},{material:'ration',amount:3},12),
  recipe('forged','Forge strengthened longsword','forge','blacksmithing',4,{'bronze-bar':6,'hollow-shard':4,'warden-heart':1},{weapon:'forged_sword',style:'melee'},60),
  recipe('reinforced','Reinforce longbow','inventory','fletching',4,{'softwood-logs':6,'hollow-shard':4,'warden-heart':1},{weapon:'reinforced_bow',style:'ranged'},60),
  recipe('runic','Bind runic frost staff','inventory','inscription',4,{'reed':6,'hollow-shard':4,'warden-heart':1},{weapon:'runic_frost',style:'magic'},60)
