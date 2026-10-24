@@ -1,5 +1,6 @@
 import {createAdventureWorld} from './adventure-world.js';
 import {setupAdventureUI} from './adventure-ui.js';
+import {installClassicIntegratedLayout} from './classic-integrated-layout.js';
 import {setupClassicSkills} from './classic-skills-ui.js';
 import {DUNGEON_ROOMS,ADVENTURE_REGIONS} from './adventure-content.js';
 /** Oakrest Classic Block 3 — input shell around renderer-free navigation.
@@ -31,6 +32,7 @@ import {setupClassicCharacterUI} from './classic-character-ui.js';
 
 const $=id=>document.getElementById(id);
 const root=$('classic-game'),keys=new Set();
+installClassicIntegratedLayout(document);
 installGameZoomGuard(document);
 function readExistingCharacter(){
  const key=k=>storageKey(k,location.pathname);
@@ -217,9 +219,12 @@ function updateLocation(){
   :'Follow the lane to an open doorway to explore building interiors.';
 }
 function resize(){
- const aspect=Math.max(1,innerWidth)/Math.max(1,innerHeight),half=CLASSIC_CAMERA.viewHeight/2/zoom;
+ // The world has its own rectangle; using window dimensions distorts picking
+ // and stretches character sprites once the menu is outside the viewport.
+ const width=Math.max(1,root.clientWidth),height=Math.max(1,root.clientHeight);
+ const aspect=width/height,half=CLASSIC_CAMERA.viewHeight/2/zoom;
  camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;
- camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);
+ camera.updateProjectionMatrix();renderer.setSize(width,height,false);
 }
 function setZoom(n){zoom=clamp(n,CLASSIC_CAMERA.minZoom,CLASSIC_CAMERA.maxZoom);resize();}
 $('classic-zoom-in').addEventListener('click',()=>setZoom(zoom+.12));
@@ -228,7 +233,9 @@ for(const button of document.querySelectorAll('[data-camera-turn]'))
  button.addEventListener('click',()=>orbitCamera.nudge(button.dataset.cameraTurn));
 $('classic-camera-reset').addEventListener('click',()=>orbitCamera.reset());
 root.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom+(e.deltaY<0?.08:-.08));},{passive:false});
-addEventListener('resize',resize);resize();
+addEventListener('resize',resize);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(root);
+resize();
 function screenRay(clientX,clientY){
  const box=renderer.domElement.getBoundingClientRect();
  const x=(clientX-box.left)/box.width*2-1;
