@@ -1,0 +1,272 @@
+/* Oakrest's permanent game frame: the world is a dedicated canvas,
+   not the full window behind overlapping popovers. Keep all RPG actions visible.
+   CSS loads LAST so old absolute HUD declarations cannot override it. */
+#classic-app.oakrest-framed{
+ --frame-stone:#51493a;--frame-gold:#d6bb81;--frame-depth:#16271e;
+ display:grid;grid-template-areas:"top top" "world side" "footer side";
+ grid-template-columns:minmax(0,1fr) clamp(274px,27vw,344px);
+ grid-template-rows:41px minmax(0,1fr) 146px;
+ gap:0;padding:0;isolation:isolate;min-height:0;
+ height:100dvh;overflow:hidden;background:#253a30;
+ border:5px solid #342e24;box-shadow:inset 0 0 0 2px #b49a68;
+}
+#classic-app.oakrest-framed .classic-top{
+ grid-area:top;position:relative;left:auto;right:auto;top:auto;
+ width:auto;transform:none;z-index:1;display:flex;align-items:center;
+ justify-content:center;min-height:0;margin:0;padding:4px 12px;
+ border:0;border-bottom:3px solid #977c4f;border-radius:0;
+ background:linear-gradient(180deg,#4d4937,#2d3b32);
+ box-shadow:inset 0 1px 0 #b9a474;
+}
+#classic-app.oakrest-framed .classic-top .brand{display:flex}
+#classic-app.oakrest-framed .classic-top .brand strong{font:700 16px Georgia,serif;letter-spacing:.15em}
+#classic-app.oakrest-framed #classic-game{
+ grid-area:world;position:relative;display:block;min-width:0;min-height:0;
+ width:100%;height:100%;overflow:hidden;border:0;
+ border-right:3px solid #a78b5d;border-bottom:2px solid #a78b5d;
+ background:#73906b;
+}
+#classic-app.oakrest-framed #classic-game canvas{width:100%;height:100%;display:block;touch-action:none}
+#classic-app.oakrest-framed .classic-sidebar{
+ grid-area:side;min-width:0;min-height:0;display:flex;flex-direction:column;
+ overflow:hidden;position:relative;z-index:2;
+ background:linear-gradient(120deg,#364437,#263b30 35%,#23372e);
+ border-left:2px solid #b49a70;
+ box-shadow:inset 5px 0 8px #0b1a1430;
+}
+#classic-app.oakrest-framed .classic-sidebar-map{
+ display:flex;gap:10px;min-width:0;min-height:0;flex:none;
+ align-items:center;padding:10px 9px 7px;background:#354236;
+ border-bottom:2px solid #816b49;
+}
+#classic-app.oakrest-framed .classic-minimap-frame{
+ position:relative;left:auto;right:auto;top:auto;bottom:auto;
+ z-index:auto;flex:none;width:124px;gap:4px;
+}
+#classic-app.oakrest-framed .minimap-open{
+ width:116px;height:116px;margin:0 auto;
+ border:2px solid #c7aa72!important;box-shadow:0 0 0 3px #3c3528;
+ border-radius:50%;background:#657e5f!important;
+}
+#classic-app.oakrest-framed .minimap-open canvas{width:112px;height:112px}
+#classic-app.oakrest-framed .classic-minimap-frame .location{
+ position:relative;display:block;min-width:0;max-width:124px;
+ padding:3px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ background:transparent;border:0;font:10px system-ui,sans-serif;color:#e9deb9;
+}
+#classic-app.oakrest-framed .classic-side-notes{
+ flex:1;min-width:0;align-self:stretch;
+ display:flex;flex-direction:column;justify-content:center;gap:7px;
+ color:#f1dbaf;
+}
+#classic-app.oakrest-framed .classic-side-label{font:700 12px Georgia,serif;letter-spacing:.03em}
+#classic-app.oakrest-framed .classic-side-hint{font:10px/1.35 system-ui,sans-serif;color:#b8c5af;margin:0}
+#classic-app.oakrest-framed #adventure-journal{
+ position:relative!important;left:auto;top:auto;bottom:auto;transform:none;
+ margin:0;padding:6px 7px;max-width:100%;width:100%;
+ text-align:left;font:10px/1.3 system-ui,sans-serif;
+ min-height:38px;border-color:#9a8158;overflow-wrap:anywhere;
+}
+#classic-app.oakrest-framed .classic-item-buttons{
+ position:relative!important;inset:auto!important;right:auto!important;
+ top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;
+ width:100%;max-width:100%!important;flex:none;
+ display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));
+ grid-auto-flow:row;grid-auto-rows:45px;align-items:stretch;
+ gap:3px;padding:6px;background:#282e26;
+ border-bottom:2px solid #90784e;
+}
+#classic-app.oakrest-framed .classic-item-buttons button{
+ width:100%;height:45px;min-width:0;min-height:0;max-height:none;
+ margin:0;padding:3px 1px!important;border-radius:4px;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ background:#425742;color:#f1e2bd;border:1px solid #80704c;
+ font:17px/1 Georgia,serif;overflow:hidden;
+}
+#classic-app.oakrest-framed .classic-item-buttons button[aria-pressed="true"]{
+ background:#806748;border-color:#f0d192;box-shadow:inset 0 0 0 1px #f0d192;
+}
+#classic-app.oakrest-framed .classic-item-buttons button small{
+ margin:3px 0 0;font:700 8px/1.1 system-ui,sans-serif;
+ letter-spacing:.01em;color:#f1e0b6;
+}
+#classic-app.oakrest-framed .classic-sidebar-body{
+ position:relative;flex:1;min-width:0;min-height:0;display:flex;
+ flex-direction:column;overflow:hidden;padding:6px;
+ background:#2a3e31;
+}
+#classic-app.oakrest-framed .classic-side-idle{
+ display:flex;flex:1;min-height:0;flex-direction:column;
+ justify-content:center;text-align:center;padding:22px 15px;
+ color:#cfd0b9;border:1px solid #7a745a;background:#314638;
+}
+#classic-app.oakrest-framed .classic-side-idle h2{
+ color:#ead19b;letter-spacing:.08em;font:700 15px Georgia,serif;margin:0 0 15px;
+}
+#classic-app.oakrest-framed .classic-side-idle p{font:12px/1.6 system-ui,sans-serif}
+#classic-app.oakrest-framed .classic-sidebar-body:not([data-active="none"]) .classic-side-idle{display:none}
+#classic-app.oakrest-framed .classic-sidebar-body > #classic-item-window,
+#classic-app.oakrest-framed .classic-sidebar-body > .classic-modal,
+#classic-app.oakrest-framed .classic-sidebar-body > #classic-dialogue{
+ position:relative!important;top:auto!important;bottom:auto!important;
+ left:auto!important;right:auto!important;transform:none!important;
+ width:100%!important;max-width:none!important;height:100%!important;
+ max-height:100%!important;min-height:0;flex:1;
+ margin:0;padding:0;border:1px solid #a88d5f;border-radius:3px;
+ background:#263d32;color:#f4e7ce;box-shadow:none;
+ z-index:auto;overflow:hidden;touch-action:pan-y;
+}
+#classic-app.oakrest-framed .classic-sidebar-body > .classic-modal{
+ display:flex;flex-direction:column;gap:6px;padding:9px;
+ overflow-y:auto;overscroll-behavior:contain;
+}
+#classic-app.oakrest-framed .classic-sidebar-body > #classic-dialogue{
+ display:block;overflow-y:auto;padding:10px;
+}
+#classic-app.oakrest-framed #classic-dialogue strong{font-size:14px}
+#classic-app.oakrest-framed #classic-dialogue p{font-size:11px}
+#classic-app.oakrest-framed #adventure-content{font-size:11px}
+#classic-app.oakrest-framed #adventure-content button{margin:3px;min-height:38px}
+#classic-app.oakrest-framed .classic-item-tabs{overflow-x:auto;flex-shrink:0}
+#classic-app.oakrest-framed .classic-item-tabs button{font-size:8px;min-width:0}
+#classic-app.oakrest-framed .classic-item-header strong{font-size:16px}
+#classic-app.oakrest-framed .classic-item-scroll{min-height:0;overflow-y:auto}
+#classic-app.oakrest-framed .classic-quests-window .classic-quest-layout,
+#classic-app.oakrest-framed .classic-skills-window .classic-skill-layout{
+ display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden;
+}
+#classic-app.oakrest-framed .classic-quests-window .classic-quest-list,
+#classic-app.oakrest-framed .classic-skills-window .classic-skill-list{
+ flex:0 0 auto;max-height:42%;overflow-y:auto;min-height:0;
+}
+#classic-app.oakrest-framed .classic-quests-window .classic-quest-detail,
+#classic-app.oakrest-framed .classic-skills-window .classic-skill-detail{
+ flex:1;overflow-y:auto;min-height:0;
+}
+#classic-app.oakrest-framed .classic-quest-book,
+#classic-app.oakrest-framed .classic-skill-book{min-height:0;flex:1}
+#classic-app.oakrest-framed .classic-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#classic-app.oakrest-framed #classic-map-canvas{max-height:none;height:auto;touch-action:manipulation}
+#classic-app.oakrest-framed .classic-action-footer{
+ grid-area:footer;display:grid;position:relative;z-index:3;
+ grid-template-columns:190px minmax(0,1fr);
+ grid-template-rows:minmax(0,1fr) 34px;
+ gap:0 7px;min-height:0;min-width:0;align-items:stretch;
+ padding:6px 7px 4px;background:linear-gradient(180deg,#3e4939,#273b30);
+ border-top:3px solid #aa8d60;border-right:3px solid #aa8d60;
+ box-shadow:inset 0 1px 0 #8f7858;
+}
+#classic-app.oakrest-framed .classic-action-footer .classic-panel{
+ position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+ width:100%!important;height:100%;grid-column:1;grid-row:1/3;z-index:auto;
+ border:1px solid #897456;box-shadow:none;border-radius:4px;
+ background:#2d4235;padding:6px;overflow:hidden;
+}
+#classic-app.oakrest-framed .classic-action-footer .character-heading{margin:0 0 2px}
+#classic-app.oakrest-framed .classic-action-footer .character-heading h1{font-size:13px}
+#classic-app.oakrest-framed .classic-action-footer .player-hp{margin:0 0 4px}
+#classic-app.oakrest-framed .classic-action-footer .styles{gap:2px}
+#classic-app.oakrest-framed .classic-action-footer .styles button{
+ min-height:28px;height:28px;font-size:13px;padding:1px;
+}
+#classic-app.oakrest-framed .classic-action-footer .styles button span{
+ display:inline;font:700 8px system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .classic-action-footer .character-subline{
+ margin:4px 0 3px;font-size:9px;
+}
+#classic-app.oakrest-framed .classic-action-footer .save-indicator{font-size:8px!important}
+#classic-app.oakrest-framed .classic-action-footer .classic-combat-dock{
+ grid-column:2;grid-row:1;align-self:center;
+ position:relative!important;inset:auto!important;top:auto!important;bottom:auto!important;
+ left:auto!important;right:auto!important;transform:none!important;
+ width:100%!important;min-width:0;max-width:none;height:auto;
+ margin:0;padding:6px;background:#2b4034;border:1px solid #857657;
+ border-radius:5px;box-shadow:none;
+}
+#classic-app.oakrest-framed .classic-attack-row{display:flex;gap:3px;align-items:stretch;justify-content:center}
+#classic-app.oakrest-framed .classic-attack-row button{
+ min-height:47px!important;height:49px!important;min-width:0;
+ flex:1;padding:3px!important;font-size:15px;
+}
+#classic-app.oakrest-framed .classic-attack-row #classic-attack{flex:1.3;min-width:51px}
+#classic-app.oakrest-framed .classic-attack-row #classic-dodge{flex:1;min-width:48px}
+#classic-app.oakrest-framed .classic-ability-buttons{flex:3;min-width:0;gap:3px}
+#classic-app.oakrest-framed .classic-ability-buttons button{flex:1;min-width:0!important}
+#classic-app.oakrest-framed .classic-attack-row button small{font-size:8px;margin:3px 0 0}
+#classic-app.oakrest-framed .classic-footer-events{
+ grid-column:2;grid-row:2;min-width:0;min-height:0;
+ display:flex;align-items:center;gap:6px;overflow:hidden;
+}
+#classic-app.oakrest-framed .classic-footer-events #classic-toasts{
+ position:relative!important;inset:auto!important;left:auto!important;right:auto!important;
+ top:auto!important;bottom:auto!important;transform:none!important;
+ flex:1;min-width:0;max-width:none;pointer-events:none;
+ padding:4px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ border:0;box-shadow:none;text-align:left;font:10px/1.3 system-ui;
+}
+#classic-app.oakrest-framed .classic-footer-events .classic-interaction-bar{
+ position:relative!important;inset:auto!important;left:auto!important;right:auto!important;
+ top:auto!important;bottom:auto!important;transform:none!important;
+ order:2;flex:none;max-width:43%;padding:0;margin:0;
+ background:transparent;border:0;box-shadow:none;
+}
+#classic-app.oakrest-framed .classic-footer-events .classic-interaction-bar button{
+ min-height:29px!important;height:29px;padding:4px 8px!important;font-size:10px!important;
+}
+#classic-app.oakrest-framed .classic-footer-events #classic-combat-target{
+ position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+ bottom:auto!important;right:auto!important;transform:none!important;
+ flex:none;width:min(185px,34%);max-height:31px;overflow:hidden;margin:0;
+ border:0;padding:2px 5px;background:#35483a;
+}
+#classic-app.oakrest-framed .classic-footer-events #classic-combat-target>div:first-child{font-size:10px}
+#classic-app.oakrest-framed .classic-footer-events #classic-combat-target .classic-hp-track{margin:2px 0;height:5px}
+#classic-app.oakrest-framed .classic-footer-events #adventure-work{
+ position:relative!important;inset:auto!important;left:auto!important;right:auto!important;
+ top:auto!important;bottom:auto!important;transform:none!important;
+ max-width:170px;min-height:29px;flex:none;margin:0;padding:4px;
+ font-size:10px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
+}
+#classic-app.oakrest-framed #classic-game .joystick{
+ position:absolute!important;left:12px!important;bottom:12px!important;
+ top:auto!important;right:auto!important;transform:none!important;
+ width:100px;height:100px;z-index:6;touch-action:none;
+}
+#classic-app.oakrest-framed #classic-game .joystick-ring{background:#253d30a8}
+/* One unified game frame on both iPad landscape and desktop; don't regress
+   to layer-over-world on small viewports. */
+@media(max-width:1050px){
+ #classic-app.oakrest-framed{grid-template-columns:minmax(0,1fr) 274px;grid-template-rows:36px minmax(0,1fr) 130px}
+ #classic-app.oakrest-framed .classic-sidebar-map{padding:5px;gap:7px}
+ #classic-app.oakrest-framed .classic-minimap-frame{width:102px}
+ #classic-app.oakrest-framed .minimap-open{width:96px;height:96px}
+ #classic-app.oakrest-framed .minimap-open canvas{width:92px;height:92px}
+ #classic-app.oakrest-framed .classic-item-buttons{grid-auto-rows:40px;padding:4px}
+ #classic-app.oakrest-framed .classic-item-buttons button{height:40px}
+ #classic-app.oakrest-framed .classic-action-footer{grid-template-columns:164px minmax(0,1fr)}
+ #classic-app.oakrest-framed .classic-action-footer .character-subline{font-size:8px}
+}
+@media(max-height:670px){
+ #classic-app.oakrest-framed{grid-template-rows:34px minmax(0,1fr) 123px}
+ #classic-app.oakrest-framed .classic-sidebar-map{padding:4px}
+ #classic-app.oakrest-framed .classic-side-hint{display:none}
+ #classic-app.oakrest-framed .classic-item-buttons{grid-auto-rows:38px;gap:2px;padding:3px}
+ #classic-app.oakrest-framed .classic-item-buttons button{height:38px;min-height:0}
+ #classic-app.oakrest-framed .classic-item-buttons button small{font-size:7px}
+ #classic-app.oakrest-framed .classic-action-footer{grid-template-rows:minmax(0,1fr) 30px}
+ #classic-app.oakrest-framed .classic-action-footer .classic-panel{padding:4px}
+ #classic-app.oakrest-framed .classic-action-footer .character-subline{margin:2px 0}
+ #classic-app.oakrest-framed .classic-action-footer .styles button{height:25px;min-height:25px}
+ #classic-app.oakrest-framed .classic-action-footer .classic-combat-dock{padding:3px}
+ #classic-app.oakrest-framed .classic-attack-row button{height:45px!important;min-height:45px!important}
+}
+@media(max-width:740px){
+ #classic-app.oakrest-framed{grid-template-columns:minmax(0,1fr) 230px}
+ #classic-app.oakrest-framed .classic-action-footer{grid-template-columns:140px minmax(0,1fr)}
+ #classic-app.oakrest-framed .classic-side-label{font-size:10px}
+ #classic-app.oakrest-framed .classic-side-notes{gap:3px}
+ #classic-app.oakrest-framed .classic-item-buttons button small{font-size:6px}
+ #classic-app.oakrest-framed .classic-action-footer .character-subline{display:none}
+ #classic-app.oakrest-framed .classic-attack-row button{font-size:12px}
+}
