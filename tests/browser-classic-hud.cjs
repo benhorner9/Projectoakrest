@@ -1,0 +1,85 @@
+const assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+const {resolve}=require('node:path');
+const server=spawn('python3',['-m','http.server','5189','--bind','127.0.0.1'],
+ {cwd:resolve(__dirname,'..'),stdio:'ignore'});
+let browser;
+(async()=>{
+ try{
+  await new Promise(r=>setTimeout(r,1100));
+  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  const context=await browser.newContext({viewport:{width:1194,height:834},hasTouch:true,isMobile:false});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const raw=JSON.stringify({xp:{melee:1000,magic:500,ranged:300,vitality:600},coins:400,
+   gear:{melee:'sword',magic:'frost',ranged:'bow'}});
+  await page.addInitScript(raw=>localStorage.setItem('oakrest-v1',raw),raw);
+  await page.goto('http://127.0.0.1:5189/classic.html?qa=1',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
+  assert.equal(await page.locator('#classic-minimap-canvas').isVisible(),true);
+  assert.equal(await page.locator('#classic-settings-window').isVisible(),false);
+  assert.equal(await page.locator('#classic-item-window').isVisible(),false);
+  assert.equal(await page.locator('#classic-map-window').isVisible(),false);
+  assert.equal(await page.locator('#classic-interact-button').isVisible(),false,
+   'interaction action is hidden when nobody is in reach');
+  const map=await page.evaluate(()=>oakrestClassicQA.minimapState());
+  assert.equal(map.features.buildings.length,16);
+  assert.ok(map.features.services.some(x=>x.id==='bank'&&x.x===-30&&x.z===14));
+  assert.deepEqual(map.position,{x:0,z:39});
+  // Three device sizes: none of the permanent HUD pieces overlap each other.
+  for(const size of [{width:1194,height:834},{width:1024,height:768},{width:1180,height:600}]){
+   await page.setViewportSize(size);
+   const layout=await page.evaluate(()=>{
+    const bounds=id=>{
+     const r=document.querySelector(id).getBoundingClientRect();
+     return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};
+    };
+    return {player:bounds('.classic-panel'),map:bounds('.classic-minimap-frame'),
+     menu:bounds('.classic-item-buttons'),combat:bounds('.classic-combat-dock'),
+     game:bounds('#classic-game'),screen:{width:innerWidth,height:innerHeight}};
+   });
+   const overlap=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.x,b.x))*
+    Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y));
+   for(const [a,b] of [['player','map'],['menu','map'],['menu','combat'],['player','combat']])
+    assert.equal(overlap(layout[a],layout[b]),0,JSON.stringify({size,overlap:[a,b],layout}));
+   for(const name of ['player','map','menu','combat']){
+    const r=layout[name];
+    assert.ok(r.x>=-1&&r.right<=size.width+1&&r.y>=-1&&r.bottom<=size.height+1,
+     JSON.stringify({size,clipped:name,r}));
+   }
+  }
+  await page.setViewportSize({width:1194,height:834});
+  await page.locator('#classic-minimap-expand').click();
+  assert.equal(await page.locator('#classic-map-window').isVisible(),true);
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'map');
+  await page.locator('#classic-inventory-toggle').click();
+  assert.equal(await page.locator('#classic-map-window').isVisible(),false);
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true);
+  assert.equal(await page.locator('#classic-item-content .classic-item-cell').count(),28);
+  await page.locator('#classic-equipment-toggle').click();
+  assert.equal(await page.locator('.classic-paper-slot').count(),9);
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'equipment');
+  await page.locator('#classic-settings-toggle').click();
+  assert.equal(await page.locator('#classic-item-window').isVisible(),false);
+  assert.equal(await page.locator('#classic-settings-window').isVisible(),true);
+  assert.equal(await page.locator('#classic-enable-save').isVisible(),true);
+  await page.locator('#classic-settings-close').click();
+  assert.equal(await page.locator('#classic-settings-window').isVisible(),false);
+  await page.evaluate(()=>oakrestClassicQA.teleport(-30,14));
+  assert.equal(await page.locator('#classic-interact-button').isVisible(),true);
+  await page.locator('#classic-interact-button').click();
+  assert.equal(await page.locator('#classic-item-title').textContent(),'Oakrest Bank');
+  assert.equal(await page.locator('#classic-map-window').isVisible(),false);
+  await page.locator('#classic-item-close').click();
+  await page.locator('#classic-map-toggle').click();
+  await page.locator('#classic-map-zoom-in').click();
+  assert.ok(await page.evaluate(()=>oakrestClassicQA.minimapState().zoom)>3.45);
+  await page.locator('#classic-map-close').click();
+  assert.deepEqual(errors,[],'no browser errors on HUD, minimap or game windows');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-v1')),raw,'HUD has no save writes');
+  console.log('Classic HUD regression passed: canonical minimap, device bounds, single windows, contextual actions and safe saves.');
+  await context.close();
+ }catch(e){console.error(e);process.exitCode=1;}
+ finally{if(browser)await browser.close();server.kill();}
+})().catch(e=>{console.error(e);server.kill();process.exitCode=1;});
