@@ -130,3 +130,23 @@ test('existing backup is never overwritten by enabling a second Classic session'
  assert.equal(m2.enable().ok,true);
  assert.equal(s.storage.getItem(s.backupKey),backup);
 });
+
+test('starter shop ignores test loans; purchased starter gear becomes permanently owned',()=>{
+ const original=defaultSave();original.coins=900;
+ for(const s of ['melee','magic','ranged']){
+  original.inventory.weapons[s]=[];original.gear[s]='none';
+ }
+ const game=createClassicCombat({save:original,random:()=>0.95});
+ const before=game.itemSnapshot('melee').shop.find(x=>x.id==='starter-melee-set');
+ assert.equal(before.owned,false,'practice sword is not owned');
+ assert.ok(before.cost>0,'full set price is charged');
+ const purchase=game.itemAction({type:'buy',id:'starter-melee-set'},{x:30,z:14});
+ assert.equal(purchase.ok,true);
+ assert.equal(purchase.price,before.cost);
+ const persisted=game.persistentSave();
+ assert.ok(persisted.inventory.weapons.melee.includes('sword'),'paid sword persisted');
+ assert.deepEqual(persisted.inventory.weapons.ranged,[],'unpaid range loan excluded');
+ assert.deepEqual(persisted.inventory.weapons.magic,[],'unpaid magic loan excluded');
+ assert.equal(persisted.coins,900-before.cost);
+ assert.deepEqual(original.inventory.weapons.melee,[],'source character unchanged');
+});
