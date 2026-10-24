@@ -11,6 +11,16 @@ import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 // A modest X offset retains the classic oblique feel without making north
 // appear diagonally opposite to the map compass.
 export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:12,offsetZ:-43,viewHeight:32,minZoom:.78,maxZoom:1.48});
+/** Screen-aligned ground-plane axes, shared by controls and the corner minimap.
+ * Camera sits southeast of its target; world east is NOT screen right.
+ */
+export function classicScreenBasis(){
+ const length=Math.hypot(CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.offsetZ);
+ return {
+  right:{x:CLASSIC_CAMERA.offsetZ/length,z:-CLASSIC_CAMERA.offsetX/length},
+  up:{x:-CLASSIC_CAMERA.offsetX/length,z:-CLASSIC_CAMERA.offsetZ/length}
+ };
+}
 export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
 export const CLASSIC_NPCS=Object.freeze([
  ...OAKREST_SERVICES.map(s=>Object.freeze({
