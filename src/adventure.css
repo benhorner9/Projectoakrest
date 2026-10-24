@@ -34,3 +34,5 @@
 @media(max-width:670px){.classic-quest-layout{grid-template-columns:minmax(122px,44%) minmax(0,1fr);gap:5px}
  .classic-quest-list,.classic-quest-detail{padding:6px}
  .classic-quest-entry{font-size:10px;min-height:39px}}
+
+@media(max-width:670px){.classic-quests-window{right:59px;width:calc(100vw - 65px);max-width:none}}
