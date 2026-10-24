@@ -83,3 +83,10 @@
 @media(max-height:620px){.classic-item-buttons{top:171px;gap:3px}.classic-item-buttons button{min-height:40px}.classic-minimap-frame{width:131px}.minimap-open,.minimap-open canvas{width:128px;height:128px}.classic-item-window,.classic-modal{bottom:6px;top:6px}.classic-combat-target{top:8px}.classic-panel{top:7px}.classic-minimap-frame{top:7px}.classic-interaction-bar{bottom:71px}}
 @media(max-width:760px){.classic-panel{width:168px;max-width:none}.character-subline{font-size:9px}.classic-item-buttons{right:5px}.classic-item-window,.classic-modal{right:59px;width:min(330px,calc(100vw - 238px))}.classic-combat-dock{right:6px}.classic-attack-row{gap:3px}.classic-ability-buttons{gap:3px}.classic-ability-buttons button{min-width:39px}.classic-attack-row button#classic-attack{min-width:50px}.classic-attack-row button#classic-dodge{min-width:48px}.classic-toast{max-width:170px}.classic-combat-target{max-width:170px}}
 @media(pointer:fine){.joystick{display:none}}
+
+/* Camera buttons in Settings, secondary input for iPad without a keyboard. */
+.classic-camera-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.classic-camera-actions button{min-height:44px;padding:8px 10px;color:#f0e0bd;background:#405749;border:1px solid #ae956c;border-radius:5px;font:700 11px system-ui,sans-serif;letter-spacing:.02em}
+.classic-camera-actions button:active{background:#775f40}
+.classic-camera-actions #classic-camera-reset{grid-column:1/-1;background:#6f5941}
+.classic-camera-actions button:focus-visible{outline:3px solid #f4d494;outline-offset:2px}
