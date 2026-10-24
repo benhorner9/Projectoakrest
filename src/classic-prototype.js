@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {validSave,defaultSave,STYLE_ORDER} from './rules.js';
 import {readCharacters} from './characters.js';
 import {storageKey} from './storage-key.js';
+import {createClassicSaveManager} from './classic-save-manager.js';
 import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicCombat} from './classic-combat.js';
@@ -27,10 +28,17 @@ function readExistingCharacter(){
   const active=roster.find(x=>x.id===localStorage.getItem(key('oakrest-active-character')));
   const raw=active?localStorage.getItem(key('oakrest-character-save-'+active.id)):
    localStorage.getItem(key('oakrest-v1'));
-  return {profile:active||null,save:raw?validSave(JSON.parse(raw)):defaultSave(),existing:!!raw};
+  return {profile:active||null,save:raw?validSave(JSON.parse(raw)):defaultSave(),existing:!!raw,raw};
  }catch{return {profile:null,save:defaultSave(),existing:false};}
 }
 const existing=readExistingCharacter(),navigation=createClassicNavigation(),combat=createClassicCombat({save:existing.save});
+const saveManager=createClassicSaveManager({storage:localStorage,pathname:location.pathname,
+ profile:existing.profile,baselineRaw:existing.raw,
+ onStatus:result=>{
+  const state=document.getElementById('classic-save-state');
+  if(state)state.textContent=result.reason;
+ }});
+let sessionMutated=false,needsSave=false,lastSavedAt=0;
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
@@ -74,6 +82,47 @@ const selectableWorld=[];
 village.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
 const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
 function feedback(text){lastStatus=text;statusText.textContent=text;}
+function showSaveState(message=null){
+ const s=saveManager.status();
+ $('classic-save-mode').textContent=s.blocked?'SAVE LOCKED · RELOAD':
+  s.enabled?'PERSISTENT · GUARDED':'PRACTICE · NOT SAVING';
+ $('classic-enable-save').disabled=s.enabled||!s.canEnable;
+ $('classic-enable-save').textContent=s.blocked?'LOCKED':'ENABLE SAVING';
+ $('classic-save-now').disabled=!s.enabled;
+ if(message)$('classic-save-state').textContent=message;
+ else if(s.blocked)$('classic-save-state').textContent=s.blocked;
+ else if(s.enabled)$('classic-save-state').textContent=
+  needsSave?'Unsaved changes · saving automatically':'All changes saved · rollback backup retained';
+ else $('classic-save-state').textContent=existing.profile?
+  'Changes are temporary. Enable before practising to save new progress.':
+  'Select an existing character in the original game first.';
+}
+function saveNow(){
+ if(!saveManager.status().enabled)return false;
+ const result=saveManager.save(combat.persistentSave());
+ needsSave=!result.ok;
+ if(result.ok)lastSavedAt=combat.getState().time;
+ showSaveState(result.reason);
+ if(!result.ok)feedback(result.reason);
+ return result.ok;
+}
+function markProgress(){
+ sessionMutated=true;
+ if(saveManager.status().enabled){needsSave=true;showSaveState();}
+}
+$('classic-enable-save').addEventListener('click',()=>{
+ if(sessionMutated){
+  const message='This practice session has changed. Reload Classic before enabling saving so test items and XP cannot accidentally be imported.';
+  showSaveState(message);feedback(message);return;
+ }
+ if(!existing.profile){
+  showSaveState('Create or select a saved character in the original game first.');return;
+ }
+ if(!confirm('Enable saved character progression in Oakrest Classic? Your original save will be backed up first. Future combat, inventory, banking and shop changes will then be saved to this character.'))return;
+ const result=saveManager.enable();
+ showSaveState(result.reason);feedback(result.reason);
+});
+$('classic-save-now').addEventListener('click',saveNow);
 function showInteraction(target){
  if(target?.service==='bank'||target?.service==='store'){
   navigation.stop();
@@ -244,7 +293,7 @@ function pickUp(id){
  feedback(result.reason);
  if(result.ok){
   pendingDrop=null;
-  itemUi?.render();refreshHud();
+  itemUi?.render();refreshHud();markProgress();
  }
  return result.ok;
 }
@@ -288,6 +337,7 @@ for(const b of document.querySelectorAll('[data-ability]'))
  b.addEventListener('click',()=>useCombatAbility(Number(b.dataset.ability)));
 function combatEvents(events){
  for(const event of events){
+  if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
   else if(event.type==='release')lastReleaseUntil=event.time+.18;
   else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
@@ -416,6 +466,7 @@ function draw(dt){
  }
  const events=combat.tick(dt,player);
  combatEvents(events);
+ if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
  const state=combat.getState();
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
@@ -448,9 +499,18 @@ function tick(time){
 }
 itemUi=setupClassicItems({
  combat,player:()=>player,style:()=>style,notify:feedback,
- changed:next=>{if(STYLE_ORDER.includes(next))switchStyle(next);refreshHud();}
+ changed:next=>{
+  if(STYLE_ORDER.includes(next))switchStyle(next);
+  else markProgress();
+  refreshHud();
+ }
 });
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
+showSaveState();
+addEventListener('pagehide',()=>{if(needsSave)saveNow();});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden&&needsSave)saveNow();
+});
 camera.position.set(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
 camera.lookAt(player.x,0,player.z);
 requestAnimationFrame(tick);
@@ -471,8 +531,10 @@ if(isQa)window.oakrestClassicQA={
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
  itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
-  const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();}return result;
+  const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();markProgress();}return result;
  },pickupDrop:id=>pickUp(id),openItemMenu:tab=>itemUi.open(tab),
  useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
- savedState:()=>JSON.stringify(existing.save)
+ savedState:()=>JSON.stringify(existing.save),
+ saveStatus:()=>saveManager.status(),enableSaving:()=>{if(sessionMutated)return {ok:false};const r=saveManager.enable();showSaveState(r.reason);return r;},
+ saveNow,persistentSnapshot:()=>combat.persistentSave()
 };
