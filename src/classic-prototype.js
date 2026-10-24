@@ -411,6 +411,15 @@ function updateCombatUi(snapshot){
  }
  $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
 }
+function updateContextActions(){
+ const interaction=nearbyClassicInteraction(player),drop=combat.nearestLoot(player);
+ interactButton.hidden=!interaction;
+ $('classic-pickup').hidden=!drop;
+ $('classic-pickup').disabled=!drop;
+ if(interaction)interactButton.title='Talk to '+interaction.name;
+ if(drop)$('classic-pickup').title='Pick up nearby loot';
+ $('classic-interact-button').parentNode.hidden=!interaction&&!drop;
+}
 function interactNearby(){
  const candidate=nearbyClassicInteraction(player);
  if(candidate){navigation.stop();selectedTarget=null;showInteraction(candidate);}
@@ -425,15 +434,16 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
  if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
  if(e.key.toLowerCase()==='t')interactNearby();
- if(e.key.toLowerCase()==='i')itemUi.open('inventory');
- if(e.key.toLowerCase()==='k')itemUi.open('equipment');
- if(e.key.toLowerCase()==='l')itemUi.open('abilities');
+ if(e.key.toLowerCase()==='i')windowUi.open('inventory');
+ if(e.key.toLowerCase()==='k')windowUi.open('equipment');
+ if(e.key.toLowerCase()==='l')windowUi.open('abilities');
+ if(e.key.toLowerCase()==='m')windowUi.open('map');
  if(e.key.toLowerCase()==='g')pickUp();
  if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
  if(e.code==='Space')triggerDodge();
  const bindings=['q','e','r','f'];
  if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
- if(e.key==='Escape'){dialogue.hidden=true;itemUi.hide();navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;}
+ if(e.key==='Escape'){windowUi.hide();navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;}
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 function releaseAll(){
@@ -505,9 +515,11 @@ function draw(dt){
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
  groundView.update(state.groundLoot,state.time);
- const nearest=combat.nearestLoot(player);
- const pickup=$('classic-pickup');pickup.disabled=!nearest;
- pickup.title=nearest?'Pick up nearby item':'No loot within reach';
+ minimap.update({player,facing:look,destination:navigation.state().goal,
+  monsters:state.monsters,drops:state.groundLoot},state.time);
+ if(!$('classic-toasts').classList.contains('is-critical')&&state.time>=toastUntil)
+  $('classic-toasts').classList.add('is-faded');
+ updateContextActions();
  if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
@@ -538,10 +550,15 @@ itemUi=setupClassicItems({
   if(STYLE_ORDER.includes(next))switchStyle(next);
   else markProgress();
   refreshHud();
- }
+ },
+ onOpen:tab=>windowUi?.adopt(tab),
+ onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
 });
+windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
+ settings:$('classic-settings-window'),dialogue,minimap});
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
-showSaveState();
+showSaveState();updateContextActions();
+minimap.update({player,facing:look,monsters:combat.getState().monsters,drops:combat.getState().groundLoot},0,true);
 addEventListener('pagehide',()=>{if(needsSave)saveNow();});
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden&&needsSave)saveNow();
@@ -565,9 +582,11 @@ if(isQa)window.oakrestClassicQA={
   navigation.stop();selectedTarget=null;draw(0);},
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features()}),
+ openWindow:name=>windowUi.open(name),windowState:()=>windowUi.current(),
  itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
   const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();markProgress();}return result;
- },pickupDrop:id=>pickUp(id),openItemMenu:tab=>itemUi.open(tab),
+ },pickupDrop:id=>pickUp(id),openItemMenu:tab=>windowUi.open(tab),
  useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
  savedState:()=>JSON.stringify(existing.save),
  saveStatus:()=>saveManager.status(),enableSaving:()=>{if(sessionMutated)return {ok:false};const r=saveManager.enable();showSaveState(r.reason);return r;},
