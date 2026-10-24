@@ -7,19 +7,20 @@ import {EQUIPMENT_SLOTS} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.js';
 
-// Canonical +Z is NORTH on the map. Keep the 2.5D camera on the SOUTH
-// (negative-Z) side of the character so northward travel rises on screen.
-// A modest X offset retains the classic oblique feel without making north
-// appear diagonally opposite to the map compass.
+// Canonical +Z is NORTH on the map. These values describe the INITIAL
+// south-of-player oblique view. The player may orbit/tilt freely afterward;
+// all live controls use the orbit offset rather than these defaults.
 export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:12,offsetZ:-43,viewHeight:32,minZoom:.78,maxZoom:1.48});
-/** Screen-aligned ground-plane axes, shared by controls and the corner minimap.
- * Camera sits southeast of its target; world east is NOT screen right.
+/** Screen-aligned ground-plane axes for any live orbit offset.
+ * Shared by controls and the corner minimap; geographic east is not
+ * necessarily screen right once the camera rotates.
  */
-export function classicScreenBasis(){
- const length=Math.hypot(CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.offsetZ);
+export function classicScreenBasis(offset=CLASSIC_CAMERA){
+ const x=offset.x??offset.offsetX,z=offset.z??offset.offsetZ;
+ const length=Math.hypot(x,z)||1;
  return {
-  right:{x:CLASSIC_CAMERA.offsetZ/length,z:-CLASSIC_CAMERA.offsetX/length},
-  up:{x:-CLASSIC_CAMERA.offsetX/length,z:-CLASSIC_CAMERA.offsetZ/length}
+  right:{x:z/length,z:-x/length},
+  up:{x:-x/length,z:-z/length}
  };
 }
 export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
@@ -144,9 +145,9 @@ export function findClassicPath(start,end){
  return compact;
 }
 /** Direction index 0 faces the viewer; 4 faces away; rest turn clockwise. */
-export function spriteDirection(facingX,facingZ){
+export function spriteDirection(facingX,facingZ,cameraOffset=CLASSIC_CAMERA){
  const length=Math.hypot(facingX,facingZ)||1;
- const vx=CLASSIC_CAMERA.offsetX, vz=CLASSIC_CAMERA.offsetZ;
+ const vx=cameraOffset.x??cameraOffset.offsetX,vz=cameraOffset.z??cameraOffset.offsetZ;
  const cameraLength=Math.hypot(vx,vz),front=(facingX*vx+facingZ*vz)/(length*cameraLength);
  const side=(facingX*vz-facingZ*vx)/(length*cameraLength);
  return (Math.round(Math.atan2(side,front)*4/Math.PI)+8)%8;

@@ -15,14 +15,14 @@ export const CLASSIC_MAP_FEATURES=Object.freeze({
 /** Match the ACTUAL control orientation on the angled 2.5D game view.
  * The large world map is north-up; the corner minimap is camera-aligned.
  */
-export function worldToMinimap(point,centre,size=160,scale=3.45){
- const {right,up}=classicScreenBasis();
+export function worldToMinimap(point,centre,size=160,scale=3.45,cameraOffset){
+ const {right,up}=classicScreenBasis(cameraOffset);
  const dx=point.x-centre.x,dz=point.z-centre.z;
  return {x:size/2+(dx*right.x+dz*right.z)*scale,
   y:size/2-(dx*up.x+dz*up.z)*scale};
 }
-export function minimapToWorld(point,centre,size=160,scale=3.45){
- const {right,up}=classicScreenBasis();
+export function minimapToWorld(point,centre,size=160,scale=3.45,cameraOffset){
+ const {right,up}=classicScreenBasis(cameraOffset);
  const horizontal=(point.x-size/2)/scale,vertical=(size/2-point.y)/scale;
  return {x:centre.x+horizontal*right.x+vertical*up.x,
   z:centre.z+horizontal*right.z+vertical*up.z};
@@ -88,8 +88,8 @@ function marker(ctx,p,kind,full){
  ctx.font='bold '+(full?12:10)+'px system-ui';
  ctx.fillText(({bank:'B',store:'S',skill:'F',trade:'T'})[kind]||'•',p.x,p.y+1);
 }
-function playerArrow(ctx,at,facing,large=false){
- const basis=large?{right:{x:1,z:0},up:{x:0,z:1}}:classicScreenBasis();
+function playerArrow(ctx,at,facing,large=false,cameraOffset){
+ const basis=large?{right:{x:1,z:0},up:{x:0,z:1}}:classicScreenBasis(cameraOffset);
  const horizontal=(facing.x||0)*basis.right.x+(facing.z||0)*basis.right.z;
  const vertical=(facing.x||0)*basis.up.x+(facing.z||0)*basis.up.z;
  const angle=Math.atan2(horizontal,vertical);
@@ -100,7 +100,7 @@ function playerArrow(ctx,at,facing,large=false){
  ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r*.63,r*.7);ctx.lineTo(0,r*.3);
  ctx.lineTo(-r*.63,r*.7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
-function markers(ctx,project,{player,facing,destination,monsters=[],drops=[]},full=false){
+function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cameraOffset},full=false){
  for(const s of OAKREST_SERVICES){
   const p=project({x:s.x,z:s.z});
   if(p.x<6||p.y<6||p.x>ctx.canvas.width-6||p.y>ctx.canvas.height-6)continue;
@@ -119,7 +119,7 @@ function markers(ctx,project,{player,facing,destination,monsters=[],drops=[]},fu
  for(const drop of drops){
   const p=project(drop);ctx.fillStyle='#f4ce7d';ctx.fillRect(p.x-2,p.y-2,4,4);
  }
- playerArrow(ctx,project(player),facing,full);
+ playerArrow(ctx,project(player),facing,full,cameraOffset);
 }
 export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
  const ctx=canvas.getContext('2d'),full=fullCanvas.getContext('2d');
@@ -140,7 +140,7 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
   // Use exactly the same right/up vectors as WASD and the touch joystick.
   // Canvas source coordinates are east-right/north-up, and the transform
   // rotates/mirrors the cached village into the camera's actual orientation.
-  const {right,up}=classicScreenBasis();
+  const {right,up}=classicScreenBasis(data.cameraOffset);
   const a=right.x*ratio,b=-up.x*ratio,c=-right.z*ratio,d=up.z*ratio;
   ctx.save();
   ctx.transform(a,b,c,d,
@@ -148,14 +148,14 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
    size/2-b*centre.x-d*centre.y);
   ctx.drawImage(staticMap,0,0);
   ctx.restore();
-  const point=p=>worldToMinimap(p,data.player,size,zoom);
+  const point=p=>worldToMinimap(p,data.player,size,zoom,data.cameraOffset);
   markers(ctx,point,data);
   ctx.restore();
   ctx.strokeStyle='#c3a779';ctx.lineWidth=3;
   ctx.beginPath();ctx.arc(size/2,size/2,size/2-2,0,Math.PI*2);ctx.stroke();
   ctx.font='bold 12px system-ui';ctx.fillStyle='#fff0bd';ctx.textAlign='center';
   const north=worldToMinimap({x:data.player.x,z:data.player.z+1},
-   data.player,size,size/2-14);
+   data.player,size,size/2-14,data.cameraOffset);
   ctx.fillText('N',north.x,north.y);
  };
  const drawLarge=(data)=>{

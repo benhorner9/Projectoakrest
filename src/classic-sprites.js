@@ -148,14 +148,14 @@ export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',ha
  const sprite=new THREE.Sprite(material);sprite.scale.set(2.65,3.55,1);
  sprite.center.set(.5,0);
  let lastKey='';
- function update({facing={x:0,z:1},step=0,pose='idle',style:nextStyle=style,worn:nextWorn=worn}={}){
+ function update({facing={x:0,z:1},cameraOffset,step=0,pose='idle',style:nextStyle=style,worn:nextWorn=worn}={}){
   const config={style:nextStyle,coat,skin,hair,outfit,hairstyle,sex,
    helm:nextWorn.helm||null,shield:!!(nextStyle==='melee'&&nextWorn.offhand),
    offhand:nextWorn.offhand||null,boots:nextWorn.boots||null,arrows:!!nextWorn.arrows,
    amulet:!!nextWorn.amulet,ring:!!nextWorn.ring,
    chest:nextWorn.chest||null,legs:nextWorn.legs||null,pose,
    weapon:npc?(armed?'sword':'none'):(nextWorn.weapon||'none')};
-  const dir=spriteDirection(facing.x,facing.z),frame=step%3,key=keyFor(config,dir,frame);
+  const dir=spriteDirection(facing.x,facing.z,cameraOffset),frame=step%3,key=keyFor(config,dir,frame);
   if(key===lastKey)return;
   if(!textureCache.has(key))textureCache.set(key,renderActor({...config,dir,step:frame}));
   sprite.material.map=textureCache.get(key);sprite.material.needsUpdate=true;lastKey=key;

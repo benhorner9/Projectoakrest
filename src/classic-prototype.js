@@ -8,6 +8,7 @@ import {storageKey} from './storage-key.js';
 import {createClassicSaveManager} from './classic-save-manager.js';
 import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
+import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicGroundLoot} from './classic-loot-view.js';
@@ -53,6 +54,7 @@ function savedWorn(){
 }
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
+const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
 let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
 const scene=new THREE.Scene();
@@ -177,7 +179,7 @@ function refreshHud(){
   const chosen=b.dataset.style===style;
   b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));
  }
- hero.update({facing:look,style,worn:view.worn});
+ hero.update({facing:look,style,worn:view.worn,cameraOffset:orbitCamera.offset()});
 }
 function switchStyle(which){
  if(!combat.styleSwitch(which))return;
@@ -206,6 +208,9 @@ function resize(){
 function setZoom(n){zoom=clamp(n,CLASSIC_CAMERA.minZoom,CLASSIC_CAMERA.maxZoom);resize();}
 $('classic-zoom-in').addEventListener('click',()=>setZoom(zoom+.12));
 $('classic-zoom-out').addEventListener('click',()=>setZoom(zoom-.12));
+for(const button of document.querySelectorAll('[data-camera-turn]'))
+ button.addEventListener('click',()=>orbitCamera.nudge(button.dataset.cameraTurn));
+$('classic-camera-reset').addEventListener('click',()=>orbitCamera.reset());
 root.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom+(e.deltaY<0?.08:-.08));},{passive:false});
 addEventListener('resize',resize);resize();
 function screenRay(clientX,clientY){
@@ -435,9 +440,10 @@ function interactNearby(){
 interactButton.addEventListener('click',interactNearby);
 document.addEventListener('keydown',e=>{
  if(characterUI?.isOpen()||['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
- if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space'].includes(e.key))e.preventDefault();
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space','Home'].includes(e.key))e.preventDefault();
  keys.add(e.key.toLowerCase());
  if(e.repeat)return;
+ if(e.key==='Home')orbitCamera.reset();
  if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
  if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
  if(e.key.toLowerCase()==='t')interactNearby();
@@ -459,13 +465,13 @@ function releaseAll(){
 }
 addEventListener('blur',releaseAll);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
-const {right:basisRight,up:basisUp}=classicScreenBasis();
 function axesFromKeys(){
- const h=Number(keys.has('d')||keys.has('arrowright'))-
-  Number(keys.has('a')||keys.has('arrowleft'))+input.x;
- const v=Number(keys.has('w')||keys.has('arrowup'))-
-  Number(keys.has('s')||keys.has('arrowdown'))-input.z;
- return {x:basisRight.x*h+basisUp.x*v,z:basisRight.z*h+basisUp.z*v};
+ // Arrows orbit/tilt the camera exclusively; only WASD / touch joystick move.
+ // Sample the SAME live basis used by the camera and rotating corner minimap.
+ const {right,up}=classicScreenBasis(orbitCamera.offset());
+ const h=Number(keys.has('d'))-Number(keys.has('a'))+input.x;
+ const v=Number(keys.has('w'))-Number(keys.has('s'))-input.z;
+ return {x:right.x*h+up.x*v,z:right.z*h+up.z*v};
 }
 function moveGame(dt){
  const previous={...player};
@@ -497,6 +503,8 @@ function moveGame(dt){
 }
 function draw(dt){
  if(characterUI?.isOpen())return; // Do not move or fight behind character selection.
+ orbitCamera.step(keys,dt);
+ const cameraOffset=orbitCamera.offset();
  const movement=moveGame(dt);
  if(dodgeTravel&&dt>0){
   const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
@@ -506,7 +514,7 @@ function draw(dt){
  }
  const before=combat.getState(),target=before.target;
  if(target&&movement.kind==='idle'&&!navigation.state().waypoints.length&&
-  !keys.size&&Math.hypot(input.x,input.z)<.12&&before.weapon!=='No equipped weapon'){
+  !['w','a','s','d'].some(key=>keys.has(key))&&Math.hypot(input.x,input.z)<.12&&before.weapon!=='No equipped weapon'){
   const dx=target.x-player.x,dz=target.z-player.z,range=
    before.style==='melee'?2.2:before.style==='magic'?14:20;
   if(Math.hypot(dx,dz)>range+.5){
@@ -521,7 +529,7 @@ function draw(dt){
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
  groundView.update(state.groundLoot,state.time);
- minimap.update({player,facing:look,destination:navigation.state().goal,
+ minimap.update({player,facing:look,destination:navigation.state().goal,cameraOffset,
   monsters:state.monsters,drops:state.groundLoot},state.time);
  if(!$('classic-toasts').classList.contains('is-critical')&&state.time>=toastUntil)
   $('classic-toasts').classList.add('is-faded');
@@ -532,16 +540,17 @@ function draw(dt){
  hero.update({facing:look,style,
   step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
   pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
-  worn:savedWorn()});
+  worn:savedWorn(),cameraOffset});
  for(const [i,n] of npcActors.entries())
-  n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee'});
+  n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee',cameraOffset});
  if(pointerMark.visible){
   markerTime+=dt;pointerMark.material.opacity=.55+.25*Math.sin(markerTime*4);
   pointerMark.scale.setScalar(1+.1*Math.sin(markerTime*4));
  }
- const follow=.14;
- const next=new THREE.Vector3(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
- camera.position.lerp(next,1-Math.pow(1-follow,Math.max(1,dt*60)));
+ // Keep real camera, movement basis and minimap synchronised each frame.
+ // Smooth orbit comes from frame-rate-independent angular velocity, not a
+ // following lag that could invert navigation while the view is catching up.
+ camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
  camera.lookAt(player.x,0,player.z);renderer.render(scene,camera);
 }
 let last=performance.now();
@@ -573,13 +582,14 @@ characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.path
 $('classic-characters-open').addEventListener('click',()=>characterUI.show());
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
 showSaveState();updateContextActions();
-minimap.update({player,facing:look,monsters:combat.getState().monsters,drops:combat.getState().groundLoot},0,true);
+minimap.update({player,facing:look,cameraOffset:orbitCamera.offset(),monsters:combat.getState().monsters,drops:combat.getState().groundLoot},0,true);
 if(!existing.profile&&!existing.existing)characterUI.show();
 addEventListener('pagehide',()=>{if(needsSave)saveNow();});
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden&&needsSave)saveNow();
 });
-camera.position.set(player.x+CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.elevation,player.z+CLASSIC_CAMERA.offsetZ);
+const initialCameraOffset=orbitCamera.offset();
+camera.position.set(player.x+initialCameraOffset.x,initialCameraOffset.y,player.z+initialCameraOffset.z);
 camera.lookAt(player.x,0,player.z);
 requestAnimationFrame(tick);
 const isQa=new URLSearchParams(location.search).has('qa')&&
@@ -597,12 +607,17 @@ if(isQa)window.oakrestClassicQA={
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
   navigation.stop();selectedTarget=null;draw(0);},
  projectWorld:(x,z)=>{
+  // QA may query the projection before the first requestAnimationFrame.
+  // Ensure the saved/test character overlay cannot leave matrices stale.
+  camera.updateMatrixWorld(true);
   const p=new THREE.Vector3(x,0,z).project(camera);
   return {x:p.x,y:-p.y};
  },
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
- minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features()}),
+ minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
+ cameraState:()=>orbitCamera.state(),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
+ resetCamera:()=>{orbitCamera.reset();draw(0);},
  openWindow:name=>windowUi.open(name),windowState:()=>windowUi.current(),
  itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
   const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();markProgress();}return result;
