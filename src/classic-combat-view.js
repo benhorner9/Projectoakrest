@@ -38,6 +38,12 @@ function labelTexture(name,level){
 const assets={mossling:makeTexture('mossling'),boar:makeTexture('boar')};
 export function createClassicCombatView(scene,spawns){
  const actors=new Map(),warningMeshes=new Map(),projectileNodes=[];
+ // A subtle ground circle replaces hard "target lock" visuals.
+ const selectedRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.06,40),
+  new THREE.MeshBasicMaterial({color:'#f5d58e',transparent:true,opacity:.76,
+   side:THREE.DoubleSide,depthWrite:false,depthTest:false}));
+ selectedRing.rotation.x=-Math.PI/2;selectedRing.position.y=.09;selectedRing.renderOrder=4;
+ selectedRing.visible=false;scene.add(selectedRing);
  for(const e of spawns){
   let model;
   if(e.type==='bandit'||e.type==='dummy'){
@@ -99,12 +105,21 @@ export function createClassicCombatView(scene,spawns){
  const projectileGeometry=new THREE.SphereGeometry(.16,8,6);
  function update(snapshot){
   const t=snapshot.time;
+  const selected=snapshot.target;
+  selectedRing.visible=!!selected&&!selected.dead&&!selected.hidden;
+  if(selectedRing.visible){
+   selectedRing.position.x=selected.x;selectedRing.position.z=selected.z;
+   selectedRing.scale.setScalar(1+.05*Math.sin(t*4));
+  }
   for(const enemy of snapshot.monsters){
    const actor=actors.get(enemy.id);
    if(!actor)continue;
    const show=!enemy.dead&&!enemy.hidden,hit=enemy.hitFlashUntil>t;
    actor.sprite.visible=show;actor.shadow.visible=show;
-   actor.label.visible=show;actor.hpBackground.visible=show;actor.hpFill.visible=show;
+   actor.label.visible=show;
+   // Avoid floating health bars on every peaceful creature.
+   const displayHealth=show&&(enemy.hp<enemy.maxHp||enemy.aggro||selected?.id===enemy.id);
+   actor.hpBackground.visible=displayHealth;actor.hpFill.visible=displayHealth;
    actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro ? .06 : 0),enemy.z);
    actor.shadow.position.set(enemy.x,.035,enemy.z);
    actor.label.position.set(enemy.x,enemy.type==='boar'?3.5:3.65,enemy.z);
@@ -134,6 +149,7 @@ export function createClassicCombatView(scene,spawns){
  function hitObjects(){return [...actors.entries()].map(([id,a])=>({id,object:a.sprite}));}
  return {update,hitObjects,
   dispose(){
+   scene.remove(selectedRing);selectedRing.geometry.dispose();selectedRing.material.dispose();
    for(const mesh of projectileNodes){scene.remove(mesh);mesh.material.dispose();}
    for(const [id,mesh] of warningMeshes){scene.remove(mesh);mesh.geometry.dispose();mesh.material.dispose();}
    for(const actor of actors.values()){
