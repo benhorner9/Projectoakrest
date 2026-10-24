@@ -34,6 +34,18 @@ export const CLASSIC_LOOP_PATHS=Object.freeze([
  frozenPath([[-53,39],[-46,39],[-39,39]]),
  frozenPath([[53,39],[46,39],[39,39]])
 ]);
+/** Exact town floor slabs and roof palettes shared by village renderer and map. */
+export const CLASSIC_PLAZAS=Object.freeze([
+ {x:0,z:39,w:21,d:22},{x:-19,z:40,w:11,d:11},
+ {x:22,z:57,w:12,d:11},{x:0,z:74,w:17,d:10}
+]);
+export const CLASSIC_STALLS=Object.freeze([
+ {x:-17,z:38,roof:'#9b675e'},
+ {x:9,z:38,roof:'#728568'},
+ {x:19,z:-7,roof:'#627886'}
+]);
+export const classicRoofColour=(building,index)=>building.kind==='bank'?'#627886':
+ ['#9b675e','#728568','#627886'][index%3];
 export const CLASSIC_ROADS=Object.freeze([...OAKREST_PATHS,...CLASSIC_LOOP_PATHS]);
 const segment=(id,x1,z1,x2,z2)=>Object.freeze({id,a:Object.freeze([x1,z1]),b:Object.freeze([x2,z2])});
 export const CLASSIC_PERIMETER=Object.freeze({
