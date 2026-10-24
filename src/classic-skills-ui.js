@@ -2,7 +2,7 @@ import {skillBookSnapshot,CLASSIC_SKILLS} from './classic-skill-catalogue.js';
 const make=(parent,tag,name,text)=>{const e=document.createElement(tag);if(name)e.className=name;if(text!==undefined)e.textContent=String(text);parent.append(e);return e;};
 export function setupClassicSkills({combat,windowUi}){
  const host=document.getElementById('classic-skill-book');
- let selected='melee',lastKey='';
+ let selected='melee',lastKey='',lastPoll=-Infinity;
  function render(){
   if(windowUi.current()!=='skills')return;
   const skills=skillBookSnapshot(combat.sandboxSave());
@@ -56,6 +56,8 @@ export function setupClassicSkills({combat,windowUi}){
  return {open(){selected=CLASSIC_SKILLS.some(s=>s.id===selected)?selected:'melee';lastKey='';windowUi.open('skills');render();},
   render,
   tick(){if(windowUi.current()!=='skills')return;
+   const time=combat.getState().time;
+   if(time-lastPoll<.35)return;lastPoll=time;
    const key=JSON.stringify(skillBookSnapshot(combat.sandboxSave()).map(s=>[s.id,s.totalXp]));
    if(key!==lastKey)render();
   }};
