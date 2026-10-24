@@ -61,6 +61,7 @@
   <button type="button" id="classic-inventory-toggle" title="Backpack (I)" aria-label="Open backpack"><span aria-hidden="true">▦</span><small>BAG</small></button>
   <button type="button" id="classic-equipment-toggle" title="Equipment (K)" aria-label="Open equipment"><span aria-hidden="true">♜</span><small>GEAR</small></button>
   <button type="button" id="classic-abilities-toggle" title="Abilities (L)" aria-label="Open abilities"><span aria-hidden="true">✧</span><small>SKILLS</small></button>
+  <button type="button" id="classic-quests-toggle" title="Quest journal (U)" aria-label="Open quest journal"><span aria-hidden="true">📜</span><small>QUESTS</small></button>
   <button type="button" id="classic-map-toggle" title="World map (M)" aria-label="Open world map"><span aria-hidden="true">◇</span><small>MAP</small></button>
   <button type="button" id="classic-settings-toggle" title="Settings" aria-label="Open settings"><span aria-hidden="true">⚙</span><small>MENU</small></button>
  </nav>
@@ -85,11 +86,15 @@
   </nav>
   <div id="classic-item-content" class="classic-item-scroll"></div>
  </aside>
+ <aside id="classic-quests-window" class="classic-modal classic-quests-window" aria-label="Quest journal" hidden>
+  <header class="classic-modal-header"><strong>QUEST JOURNAL</strong><button type="button" id="classic-quests-close" aria-label="Close quest journal">×</button></header>
+  <div id="classic-quest-book" class="classic-quest-book"></div>
+ </aside>
  <aside id="classic-map-window" class="classic-modal" aria-label="World map" hidden>
   <header class="classic-modal-header"><strong>THE OAKREST VALLEY</strong><button type="button" id="classic-map-close" aria-label="Close map">×</button></header>
   <p class="classic-modal-intro">Tap a road or clearing to set your walking destination.</p>
   <canvas id="classic-map-canvas" width="440" height="510" aria-label="Full Oakrest map with roads and services"></canvas>
-  <div class="classic-map-legend"><span>◉ Bank</span><span>◉ Store</span><span>◉ Forester</span><span>◉ Trade</span></div>
+  <div class="classic-map-legend"><span>◉ Bank</span><span>◉ Store</span><span>◉ Forester</span><span>◉ Trade</span><span>✦ Quest available</span><span>✓ Quest ready</span></div>
   <div class="classic-map-zoom"><button type="button" id="classic-map-zoom-out" aria-label="Zoom minimap out">−</button><span>MINIMAP SCALE</span><button type="button" id="classic-map-zoom-in" aria-label="Zoom minimap in">+</button></div>
  </aside>
  <aside id="classic-settings-window" class="classic-modal classic-settings" aria-label="Game settings and saving" hidden>
