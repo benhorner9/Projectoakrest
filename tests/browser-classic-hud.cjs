@@ -40,6 +40,29 @@ let browser;
   assert.ok(movedNorth.z>39,'W/up moves geographically north, matching map N');
   const newMap=await page.evaluate(()=>oakrestClassicQA.minimapState());
   assert.ok(newMap.position.z>39,'minimap tracks geographic north');
+  // Regression: left on WASD and the joystick share camera basis with map.
+  const beforeLeft=await page.evaluate(()=>oakrestClassicQA.state());
+  await page.keyboard.down('a');
+  await page.evaluate(()=>{for(let i=0;i<8;i++)oakrestClassicQA.step(.05);});
+  await page.keyboard.up('a');
+  const afterLeft=await page.evaluate(()=>oakrestClassicQA.state());
+  const leftMap=await page.evaluate(async ({from,to})=>{
+   const {worldToMinimap}=await import('./src/classic-minimap.js');
+   return worldToMinimap(to,from);
+  },{from:beforeLeft,to:afterLeft});
+  assert.ok(leftMap.x<80,'pressing left MUST move the minimap position left');
+  const beforeRight=afterLeft;
+  await page.keyboard.down('d');
+  await page.evaluate(()=>{for(let i=0;i<8;i++)oakrestClassicQA.step(.05);});
+  await page.keyboard.up('d');
+  const afterRight=await page.evaluate(()=>oakrestClassicQA.state());
+  const rightMap=await page.evaluate(async ({from,to})=>{
+   const {worldToMinimap}=await import('./src/classic-minimap.js');
+   return worldToMinimap(to,from);
+  },{from:beforeRight,to:afterRight});
+  assert.ok(rightMap.x>80,'pressing right MUST move the minimap position right');
+  assert.ok(Math.abs(leftMap.y-80)<1,'left movement must not reverse or jump vertically');
+  assert.ok(Math.abs(rightMap.y-80)<1,'right movement must not reverse or jump vertically');
   // Three device sizes: none of the permanent HUD pieces overlap each other.
   for(const size of [{width:1194,height:834},{width:1024,height:768},{width:1180,height:600}]){
    await page.setViewportSize(size);
