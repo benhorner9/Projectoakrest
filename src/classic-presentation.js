@@ -5,6 +5,7 @@ import {OAKREST_BUILDINGS,OAKREST_WELL,OAKREST_PATHS,localBuildingPosition} from
 import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './rules.js';
 import {EQUIPMENT_SLOTS} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
+import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.js';
 
 // Canonical +Z is NORTH on the map. Keep the 2.5D camera on the SOUTH
 // (negative-Z) side of the character so northward travel rises on screen.
@@ -36,7 +37,13 @@ export const CLASSIC_TREES=Object.freeze(Array.from({length:70},(_,i)=>{
  const column=i%14,row=Math.floor(i/14);
  const x=-50+column*7.5+(row%2?2:0),z=-13+row*23+(column%3)*2;
  return {x,z,r:.85+(i%4)*.1};
-}).filter(t=>Math.abs(t.x)>38||t.z>86||t.z< -12));
+}).filter(t=>{
+ // Trees outside the defensive ring still frame the village, but may not
+ // puncture stonework, choke gateways or obstruct continuous side streets.
+ if(t.x>CLASSIC_PERIMETER.west-2&&t.x<CLASSIC_PERIMETER.east+2&&
+  t.z>CLASSIC_PERIMETER.south-2&&t.z<CLASSIC_PERIMETER.north+2)return false;
+ return Math.abs(t.x)>38||t.z>86||t.z< -12;
+}));
 
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function inBounds(x,z,radius=.4){
@@ -48,6 +55,7 @@ export function inBounds(x,z,radius=.4){
  */
 export function solidAt(x,z,radius=.38){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!inBounds(x,z,radius))return true;
+ if(wallSolidAt(x,z,radius))return true;
  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.r+radius)return true;
  for(const tree of CLASSIC_TREES)if(Math.hypot(x-tree.x,z-tree.z)<tree.r+radius)return true;
  for(const tree of OAKREST_GROVES)if(Math.hypot(x-tree.x,z-tree.z)<.85+radius)return true;
@@ -154,4 +162,4 @@ export function presentationSnapshot(save,style,position){
   weaponName:LOADOUTS[chosen]?.[s.gear?.[chosen]]?.title||'Unarmed',
   worn,position:{x:position.x,z:position.z},indoors:occupantBuilding(position.x,position.z)?.id||null};
 }
-export const classicStreetPaths=OAKREST_PATHS;
+export const classicStreetPaths=CLASSIC_ROADS;
