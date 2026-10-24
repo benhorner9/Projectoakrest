@@ -116,7 +116,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(o.slot)data.inventory.slotted.push(o.slot);
   if(o.armour)data.inventory.armour.push(o.armour);
   if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
-  if(['shield','arrows','frost','ember','rations','seal'].includes(r.id))flag('craft:useful');
+  if(['shield','arrows','frost','ember','seal'].includes(r.id))flag('craft:useful');
   emit('adventure',{reason:'Made: '+r.title+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'')});
   return ok('Made: '+r.title);
  }
