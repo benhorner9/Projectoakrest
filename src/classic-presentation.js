@@ -7,13 +7,13 @@ import {EQUIPMENT_SLOTS} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.js';
 
-// Canonical +Z is NORTH on the map. Keep the 2.5D camera on the SOUTH
-// (negative-Z) side of the character so northward travel rises on screen.
-// A modest X offset retains the classic oblique feel without making north
-// appear diagonally opposite to the map compass.
+// Canonical +Z is NORTH on the map. These values describe the INITIAL
+// south-of-player oblique view. The player may orbit/tilt freely afterward;
+// all live controls use the orbit offset rather than these defaults.
 export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:12,offsetZ:-43,viewHeight:32,minZoom:.78,maxZoom:1.48});
-/** Screen-aligned ground-plane axes, shared by controls and the corner minimap.
- * Camera sits southeast of its target; world east is NOT screen right.
+/** Screen-aligned ground-plane axes for any live orbit offset.
+ * Shared by controls and the corner minimap; geographic east is not
+ * necessarily screen right once the camera rotates.
  */
 export function classicScreenBasis(offset=CLASSIC_CAMERA){
  const x=offset.x??offset.offsetX,z=offset.z??offset.offsetZ;
