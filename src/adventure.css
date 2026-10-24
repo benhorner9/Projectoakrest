@@ -39,7 +39,7 @@
 
 /* Seven right-side actions (including Ration) must not collide with combat at 600px height. */
 @media(max-height:620px){
- .classic-item-buttons{top:158px;gap:2px}
+ .classic-item-buttons{top:173px;gap:2px}
  .classic-item-buttons button{height:37px;min-height:37px;padding:2px 1px;font-size:15px;line-height:17px}
  .classic-item-buttons button small{font-size:8px;line-height:10px;margin:0}
 }
