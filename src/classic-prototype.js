@@ -12,6 +12,8 @@ import {createClassicCombat} from './classic-combat.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicGroundLoot} from './classic-loot-view.js';
 import {setupClassicItems} from './classic-items-ui.js';
+import {createClassicMinimap} from './classic-minimap.js';
+import {createClassicWindowController} from './classic-ui-controller.js';
 import {createClassicNavigation} from './classic-navigation.js';
 import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
  nearbyClassicInteraction,classicInteractionCopy} from './classic-interactions.js';
@@ -68,7 +70,9 @@ const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vect
 const village=createClassicVillage(scene);
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const groundView=createClassicGroundLoot(scene);
-let itemUi=null;
+let itemUi=null,windowUi=null;
+const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
+ onDestination:point=>{windowUi?.hide();queueDestination(point);}});
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#d9ad87',
  hair:existing.profile?.hairColor||'#493529'});
 const heroShadow=makeGroundShadow();
@@ -89,9 +93,20 @@ let markerTime=0;
 const selectableWorld=[];
 village.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
 const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
-function feedback(text){lastStatus=text;statusText.textContent=text;}
+let toastUntil=0;
+function feedback(text){
+ lastStatus=text;statusText.textContent=text;
+ const toast=$('classic-toasts');
+ const critical=/save failed|save locked|changed by another|could not save|storage failed|save conflict/i.test(text);
+ toast.classList.remove('is-faded');toast.classList.toggle('is-critical',critical);
+ toastUntil=critical?Infinity:combat.getState().time+3.2;
+}
 function showSaveState(message=null){
  const s=saveManager.status();
+ const pill=$('classic-save-indicator');
+ pill.classList.toggle('is-saved',s.enabled);
+ pill.classList.toggle('is-blocked',!!s.blocked);
+ pill.textContent=s.blocked?'● SAVE LOCKED':s.enabled?'● SAVING ENABLED':'● PRACTICE MODE';
  $('classic-save-mode').textContent=s.blocked?'SAVE LOCKED · RELOAD':
   s.enabled?'PERSISTENT · GUARDED':'PRACTICE · NOT SAVING';
  $('classic-enable-save').disabled=s.enabled||!s.canEnable;
@@ -135,17 +150,17 @@ $('classic-save-now').addEventListener('click',saveNow);
 function showInteraction(target){
  if(target?.service==='bank'||target?.service==='store'){
   navigation.stop();
-  itemUi.open(target.service==='bank'?'bank':'shop');
-  feedback('Using '+target.place+' · session-only transactions.');
+  windowUi.open(target.service==='bank'?'bank':'shop');
+  feedback('Talking to '+target.name+'.');
   return;
  }
  const copy=classicInteractionCopy(target,combat.sandboxSave());
  $('classic-dialogue-name').textContent=copy.title;
  $('classic-dialogue-text').textContent=copy.body;
- dialogue.hidden=false;lastInteraction=target.id;
+ windowUi.open('dialogue');lastInteraction=target.id;
  feedback('Talking to '+target.name+'.');
 }
-$('classic-dialogue-close').addEventListener('click',()=>{dialogue.hidden=true;});
+$('classic-dialogue-close').addEventListener('click',()=>windowUi.hide());
 function refreshHud(){
  wornCache=null;
  const view=presentationSnapshot(combat.sandboxSave(),style,player);
@@ -232,7 +247,7 @@ function chooseInteraction(target){
 function chooseEnemy(id){
  const result=combat.chooseTarget(id,player);
  if(result){
-  navigation.stop();selectedTarget=null;pointerMark.visible=false;dialogue.hidden=true;
+  navigation.stop();selectedTarget=null;pointerMark.visible=false;windowUi?.hide();
   const e=combat.getState().monsters.find(m=>m.id===id);
   feedback('Target locked: '+e.name+' · Level '+e.level);
  }else feedback('Target out of range or obstructed.');
@@ -250,7 +265,7 @@ function queueDestination(point){
  if(enemy){chooseEnemy(enemy.id);return;}
  const target=closestClickedInteractable(point);
  if(target){chooseInteraction(target);return;}
- selectedTarget=null;dialogue.hidden=true;
+ selectedTarget=null;windowUi?.hide();
  const result=navigation.moveTo(player,point);
  if(result.ok){placeMark(point.x,point.z);feedback(result.arrived?'You are here.':'Walking to destination…');}
  else{pointerMark.visible=false;feedback(result.reason);}
@@ -317,9 +332,17 @@ function chooseLoot(id){
  else feedback('Approaching dropped item…');
 }
 $('classic-pickup').addEventListener('click',()=>pickUp());
-$('classic-inventory-toggle').addEventListener('click',()=>itemUi.open('inventory'));
-$('classic-equipment-toggle').addEventListener('click',()=>itemUi.open('equipment'));
-$('classic-abilities-toggle').addEventListener('click',()=>itemUi.open('abilities'));
+$('classic-inventory-toggle').addEventListener('click',()=>windowUi.open('inventory'));
+$('classic-equipment-toggle').addEventListener('click',()=>windowUi.open('equipment'));
+$('classic-abilities-toggle').addEventListener('click',()=>windowUi.open('abilities'));
+$('classic-map-toggle').addEventListener('click',()=>windowUi.open('map'));
+$('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
+$('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
+$('classic-save-indicator').addEventListener('click',()=>windowUi.open('settings'));
+$('classic-map-close').addEventListener('click',()=>windowUi.hide());
+$('classic-settings-close').addEventListener('click',()=>windowUi.hide());
+$('classic-map-zoom-in').addEventListener('click',()=>minimap.setZoom(minimap.zoom()+.55));
+$('classic-map-zoom-out').addEventListener('click',()=>minimap.setZoom(minimap.zoom()-.55));
 function toggleAttack(){
  const state=combat.getState();
  if(state.targetId){combat.stopTarget();navigation.stop();feedback('Combat target released.');return;}
@@ -372,6 +395,7 @@ function updateCombatUi(snapshot){
  $('classic-health-label').textContent=snapshot.hp+' / '+snapshot.maxHp+' HP';
  $('classic-health-fill').style.width=(100*snapshot.hp/Math.max(1,snapshot.maxHp))+'%';
  const target=snapshot.target;
+ $('classic-combat-target').hidden=!target;
  $('classic-target-name').textContent=target?target.name:'No monster selected';
  $('classic-target-level').textContent=target?'Lv '+target.level:'';
  $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
