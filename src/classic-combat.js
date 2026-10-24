@@ -438,7 +438,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
   adventureAction:(kind,options,player)=>{
    if(!canFight())return {ok:false,reason:'Wait until you recover.'};
    const result=adventureSystem?.action(kind,{...options,time,player,threatened:monsters.some(m=>m.aggro&&!m.dead)})||{ok:false,reason:'Adventure unavailable'};
-   if(result.ok&&['gather','craft','enter','leave'].includes(kind))stopTarget();
+   if(result.ok&&['gather','craft','combine','enter','leave'].includes(kind))stopTarget();
    return result;
   },
   itemAction,pickup,nearestLoot,itemSnapshot,

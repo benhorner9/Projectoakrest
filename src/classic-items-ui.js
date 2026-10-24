@@ -1,4 +1,6 @@
 import {findClassicInteractable} from './classic-interactions.js';
+import {RECIPES,ADVENTURE_MATERIALS} from './adventure-content.js';
+import {woodcuttingLevel} from './woodcutting.js';
 /** Classic 2.5D inventory and economy presentation.
  * DOM concerns stay here. All mutations use combat.itemAction and combat.pickup.
  */
@@ -28,6 +30,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const content=q(host,'classic-item-content'),close=q(host,'classic-item-close');
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,arrange=false,moveStart=null,selectedBank=null,selectedShop=null;
+ let combineSource=null,showMaking=false;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
@@ -35,6 +38,13 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   notify(result.reason||(result.ok?'Action completed':'Action unavailable'));
   if(result.ok)changed();
   render();return result.ok;
+ }
+ function craftFromBag(kind,choice){
+  const result=combat.adventureAction(kind,{choice},player());
+  notify(result?.reason||'Unable to make that.');
+  if(result?.ok)changed();
+  detailId=null;combineSource=null;render();
+  return result?.ok===true;
  }
  function showDetails(id){detailId=id;render();}
  function tile(grid,entry,index,scope){
@@ -53,6 +63,11 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     if(!moveStart){moveStart={scope,index};render();return;}
     if(moveStart.scope===scope)transact({type:'reorder',scope,from:moveStart.index,to:index});
     moveStart=null;render();return;
+   }
+   if(mode==='inventory'&&combineSource){
+    if(entry.kind==='material'&&entry.id!==combineSource)craftFromBag('combine',{first:combineSource,second:entry.id});
+    else {combineSource=null;notify('Choose a different material to combine.');render();}
+    return;
    }
    if(mode==='bank'){
     selectedBank={...entry,scope};
@@ -85,6 +100,11 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    const fact=element(ex,'div','classic-item-fact');
    element(fact,'span',null,key);element(fact,'strong',null,value);
   }
+  if(details.item.kind==='material'&&RECIPES.some(r=>r.station==='inventory'&&Object.hasOwn(r.cost,details.item.legacy.itemId))){
+   button(ex,'classic-item-action','USE WITH…',()=>{
+    combineSource=details.item.legacy.itemId;detailId=null;render();
+   });
+  }
   if(details.action)button(ex,'classic-item-action',
    details.equipped?'UNEQUIP':'EQUIP',
    ()=>transact(details.action),!details.allowed);
@@ -92,14 +112,44 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  }
  function renderInventory(){
   const data=save(),s=view();
-  element(content,'p','classic-muted','Your backpack · '+s.coins+' coins · Tap an item to examine.');
+  element(content,'p','classic-muted','Your backpack · '+s.coins+' coins · Tap an item to examine or use materials together.');
   const actions=element(content,'div','classic-item-actions');
   button(actions,arrange?'classic-item-action selected':'classic-item-action',
    arrange?'FINISH ARRANGING':'ARRANGE SLOTS',()=>{
     arrange=!arrange;moveStart=null;render();
    });
+  const make=button(actions,'classic-item-action',showMaking?'HIDE RECIPES':'MAKE FROM BAG',()=>{
+   showMaking=!showMaking;combineSource=null;render();
+  });
+  make.setAttribute('aria-expanded',String(showMaking));
+  if(combineSource){
+   const item=getItem('material.'+combineSource);
+   const prompt=element(content,'div','classic-combine-prompt',
+    'Using '+(item?.title||combineSource)+' with… Tap a second material in your bag.');
+   button(prompt,'classic-item-action','CANCEL',()=>{combineSource=null;render();});
+  }
+  if(showMaking){
+   const maker=element(content,'section','classic-handcraft');
+   element(maker,'h3',null,'MAKE FROM YOUR BACKPACK');
+   element(maker,'p','classic-muted','Fletching, Inscription and Fieldcraft are made by hand. Metalwork still requires a forge.');
+   const materials=data.inventory.materials,progress=data.adventure?.skills||{};
+   for(const recipe of RECIPES.filter(r=>r.station==='inventory')){
+    const row=element(maker,'div','craft-option');
+    element(row,'strong',null,recipe.title);
+    element(row,'small',null,Object.entries(recipe.cost).map(([id,n])=>
+     (ADVENTURE_MATERIALS[id]?.[0]||getItem('material.'+id)?.title||id)+
+     ' '+(materials[id]||0)+'/'+n).join(' · '));
+    const level=recipe.profession?woodcuttingLevel(progress[recipe.profession]||0).level:99;
+    const ready=Object.entries(recipe.cost).every(([id,n])=>(materials[id]||0)>=n);
+    element(row,'small',null,(recipe.profession?recipe.profession+' level '+recipe.level+' · ':'')+
+     (ready?'Materials ready':'Gather more materials'));
+    button(row,'classic-item-action',ready&&level>=recipe.level?'MAKE':'LOCKED / MATERIALS',
+     ()=>craftFromBag('craft',recipe.id),!ready||level<recipe.level);
+   }
+  }
   grid(content,inventoryEntries(data),'bag','BACKPACK · FOUR COLUMNS',BAG_MIN_SLOTS);
   if(detailId)examine(content,detailId);
+
  }
  function renderEquip(){
   const s=view();
@@ -217,10 +267,10 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  }
  function open(next='inventory'){
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
-  mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;
+  mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;combineSource=null;
   host.hidden=false;render();onOpen(next);
  }
- function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;onClose();}
+ function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;combineSource=null;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
  return {open,hide,render,isOpen:()=>!host.hidden};

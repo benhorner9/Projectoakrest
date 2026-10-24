@@ -1,5 +1,6 @@
 import {createAdventureWorld} from './adventure-world.js';
 import {setupAdventureUI} from './adventure-ui.js';
+import {setupClassicSkills} from './classic-skills-ui.js';
 import {DUNGEON_ROOMS,ADVENTURE_REGIONS} from './adventure-content.js';
 /** Oakrest Classic Block 3 — input shell around renderer-free navigation.
  * Retains the original character save and all gameplay rules untouched.
@@ -83,7 +84,7 @@ const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const groundView=createClassicGroundLoot(scene);
-let itemUi=null,windowUi=null,characterUI=null;
+let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
 const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
  onDestination:point=>{windowUi?.hide();queueDestination(point);}});
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#f0ceaa',
@@ -380,6 +381,8 @@ $('classic-pickup').addEventListener('click',()=>pickUp());
 $('classic-inventory-toggle').addEventListener('click',()=>windowUi.open('inventory'));
 $('classic-equipment-toggle').addEventListener('click',()=>windowUi.open('equipment'));
 $('classic-abilities-toggle').addEventListener('click',()=>windowUi.open('abilities'));
+$('classic-skills-toggle').addEventListener('click',()=>skillsUi?.open());
+$('classic-skills-close').addEventListener('click',()=>windowUi.hide());
 $('classic-map-toggle').addEventListener('click',()=>windowUi.open('map'));
 $('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
 $('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
@@ -492,6 +495,7 @@ document.addEventListener('keydown',e=>{
  if(e.key.toLowerCase()==='i')windowUi.open('inventory');
  if(e.key.toLowerCase()==='k')windowUi.open('equipment');
  if(e.key.toLowerCase()==='l')windowUi.open('abilities');
+ if(e.key.toLowerCase()==='v')skillsUi?.open();
  if(e.key.toLowerCase()==='m')windowUi.open('map');
  if(e.key.toLowerCase()==='u')adventureUi.showJournal();
  if(e.key.toLowerCase()==='h'){const r=combat.adventureAction('eat',{},player);feedback(r.reason);if(r.ok)markProgress();}
@@ -579,7 +583,7 @@ function draw(dt,render=true){
  const adventureState=combat.adventureState();
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
- adventureUi?.tick();
+ adventureUi?.tick();skillsUi?.tick();
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state);
  groundView.update(state.groundLoot,state.time);
@@ -625,7 +629,8 @@ itemUi=setupClassicItems({
  onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
- settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window')});
+ settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window')});
+skillsUi=setupClassicSkills({combat,windowUi});
 adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
  changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
  teleport:p=>{disengageFromCombat();player.x=p.x;player.z=p.z;navigation.stop();dodgeTravel=null;selectedTarget=null;}});
@@ -683,7 +688,7 @@ if(isQa)window.oakrestClassicQA={
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
  cameraState:()=>orbitCamera.state(),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
- openWindow:name=>windowUi.open(name),windowState:()=>windowUi.current(),
+ openWindow:name=>name==='skills'?skillsUi.open():windowUi.open(name),windowState:()=>windowUi.current(),
  itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
   const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();markProgress();}return result;
  },pickupDrop:id=>pickUp(id),openItemMenu:tab=>windowUi.open(tab),

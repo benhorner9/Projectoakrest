@@ -95,7 +95,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   return ok(t.text||t.name);
  }
  function craftCheck(id,station){
-  const r=RECIPES.find(r=>r.id===id&&r.station===station);if(!r)return no('Use the appropriate workshop.');
+  const r=RECIPES.find(r=>r.id===id&&r.station===station);if(!r)return no('This recipe needs another crafting method or workstation.');
   if(r.profession&&woodcuttingLevel(a.skills[r.profession]).level<r.level)return no(r.profession+' level '+r.level+' required.');
   if(!enough(r.cost))return no('You need all the listed materials in your backpack.');
   const o=r.result;
@@ -105,6 +105,36 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(o.slot&&(data.inventory.slotted.includes(o.slot)||data.bank.slotted.includes(o.slot)))return no('You already own this equipment.');
   if(!o.material&&inventoryKeyList(data).length>=28)return no('Make room in your backpack.');
   return {...ok('Ready'),recipe:r};
+ }
+ function finishCraft(r){
+  // Materials and inventory rules are checked again at the instant of crafting.
+  const check=craftCheck(r.id,r.station);
+  if(!check.ok)return check;
+  const o=r.result;spend(r.cost);
+  if(o.material)add(o.material,o.amount);
+  if(o.weapon)grantWeapon(o.style,o.weapon,false);
+  if(o.slot)data.inventory.slotted.push(o.slot);
+  if(o.armour)data.inventory.armour.push(o.armour);
+  if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
+  if(['shield','arrows','frost','ember','seal'].includes(r.id))flag('craft:useful');
+  emit('adventure',{reason:'Made: '+r.title+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'')});
+  return ok('Made: '+r.title);
+ }
+ /** No station interaction necessary; selecting two materials selects an
+  * unambiguous matching craft. More complex shared inputs use the recipe book. */
+ function handcraft(recipeId,threatened){
+  if(work)return no('Finish or cancel your current work first.');
+  if(threatened)return no('Cannot craft while enemies are attacking.');
+  const check=craftCheck(recipeId,'inventory');
+  return check.ok?finishCraft(check.recipe):check;
+ }
+ function combine(first,second,threatened){
+  if(typeof first!=='string'||typeof second!=='string'||first===second)return no('Choose two different crafting materials.');
+  const matches=RECIPES.filter(r=>r.station==='inventory'&&
+   Object.hasOwn(r.cost,first)&&Object.hasOwn(r.cost,second));
+  if(!matches.length)return no('These items cannot be combined. Check the Skills unlock list.');
+  if(matches.length>1)return no('Several recipes use those materials. Choose a result from MAKE in your backpack.');
+  return handcraft(matches[0].id,threatened);
  }
  function begin(target,time,recipeId){
   if(work)return no('Finish or cancel your current work first.');
@@ -133,15 +163,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(time<w.end)return;
   work=null;
   if(w.recipe){
-   const check=craftCheck(w.recipe.id,w.target.station);if(!check.ok){emit('adventure-notice',check);return;}
-   const r=w.recipe,o=r.result;spend(r.cost);
-   if(o.material)add(o.material,o.amount);
-   if(o.weapon)grantWeapon(o.style,o.weapon,false);
-   if(o.slot)data.inventory.slotted.push(o.slot);
-   if(o.armour)data.inventory.armour.push(o.armour);
-   if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
-   if(['shield','arrows','frost','ember'].includes(r.id))flag('craft:useful');
-   emit('adventure',{reason:'Made: '+r.title});
+   const made=finishCraft(w.recipe);
+   if(!made.ok)emit('adventure-notice',{reason:made.reason});
   }else if(w.material==='softwood-logs'){
    const result=chopOnce(data,trees.get(w.target.id),time,random);
    if(result.success){flag('gather:softwood-logs');emit('adventure',{reason:'Gathered softwood logs · +35 Woodcutting XP'});}
@@ -160,9 +183,11 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    a.tracked=q.id;emit('adventure',{reason:'Tracking '+q.title});
    return ok('Tracking '+q.title);
   }
+  if(kind==='craft'&&!target)return handcraft(choice,threatened);
+  if(kind==='combine'&&!target)return combine(choice?.first,choice?.second,threatened);
   if(kind==='eat'){
    if(time<eatUntil)return no('Wait before eating again.');
-   if((mats.ration||0)<1)return no('Prepare field rations at the village kitchen.');
+   if((mats.ration||0)<1)return no('Make field rations from reeds in your backpack.');
    if(!heal(35))return no('You are already at full Health.');
    mats.ration--;eatUntil=time+8;emit('adventure',{reason:'Ate a ration · restored Health'});return ok('Restored up to 35 Health.');
   }
@@ -181,7 +206,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }
   if(kind==='calm'&&target.id==='adventure:stump'){
    if(progress('roots').status!=='active'||progress('roots').flags.includes('resolve:guardian'))return no('The guardian is already quiet, or the investigation has not begun.');
-   if(!enough({'ward-seal':1}))return no('Bring a restoration seal from Iona’s desk.');
+   if(!enough({'ward-seal':1}))return no('Craft a restoration seal in your backpack using reeds and a bronze bar.');
    spend({'ward-seal':1});calmGuardian();flag('resolve:guardian');return ok('The roots loosen. You have spared the guardian.');
   }
   if(kind==='answer'&&target.id==='adventure:scout'){

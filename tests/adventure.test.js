@@ -40,13 +40,13 @@ test('fresh character completes all eight quests using real resources, combat, a
  h.reload();assert.equal(h.combat.persistentSave().inventory.weapons.magic.includes('frost'),true,'issued weapons survive reload, not session loans');
  success(h.act('accept','adventure:smith'));
  for(const id of ['adventure:copper','adventure:tin','adventure:softwood']){success(h.act('gather',id));h.step(8);h.act('cancel');}
- success(h.act('craft','adventure:fletch','arrows'));h.step(4);
+ success(h.act('craft',null,'arrows'));h.step(4);
  success(h.act('finish','adventure:smith'));assert.equal(h.combat.adventureState().index,3);
  success(h.act('accept','citizen:guard'));success(h.act('inspect','adventure:cart'));success(h.act('inspect','adventure:tracks'));success(h.act('finish','citizen:guard'));
  success(h.act('accept','service:forester'));success(h.act('inspect','adventure:stump'));
  success(h.act('craft','adventure:forge','bar'));h.step(4);
  for(let i=0;i<2;i++){success(h.act('gather','adventure:reed'));h.step(7);}
- success(h.act('craft','adventure:inscribe','seal'));h.step(4);
+ success(h.act('craft',null,'seal'));h.step(4);
  success(h.act('calm','adventure:stump'));assert.ok(h.combat.getState().monsters.find(m=>m.id==='guardian').dead);
  success(h.act('finish','service:forester'));
  success(h.act('accept','adventure:scout'));success(h.act('inspect','adventure:journal'));success(h.act('inspect','adventure:memorial'));
@@ -56,7 +56,7 @@ test('fresh character completes all eight quests using real resources, combat, a
  for(const id of ['adventure:copper','adventure:tin']){success(h.act('gather',id));h.step(8);}
  success(h.act('craft','adventure:forge','bar'));h.step(4);
  for(let i=0;i<2;i++){success(h.act('gather','adventure:reed'));h.step(7);}
- success(h.act('craft','adventure:inscribe','seal'));h.step(4);
+ success(h.act('craft',null,'seal'));h.step(4);
  success(h.act('prepare','citizen:guard'));success(h.act('inspect','adventure:entrance'));success(h.act('finish','citizen:guard'));
  assert.equal(h.reload().adventure.index,7);
  success(h.act('accept','citizen:guard'));success(h.act('enter','adventure:entrance'));
@@ -66,7 +66,7 @@ test('fresh character completes all eight quests using real resources, combat, a
  success(h.act('leave','adventure:exit-0'));
  for(let batch=0;batch<40;batch++){
   success(h.act('gather','adventure:softwood'));h.step(8);h.act('cancel');h.step(65);
-  success(h.act('craft','adventure:fletch','arrows'));h.step(4);
+  success(h.act('craft',null,'arrows'));h.step(4);
  }
  h.reload();success(h.act('enter','adventure:entrance'));h.combat.styleSwitch('ranged');h.step(.3);
  let elapsed=0;

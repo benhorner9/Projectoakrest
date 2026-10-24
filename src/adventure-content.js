@@ -1,9 +1,9 @@
 /** First Adventure content. Coordinates are shared by collision, map and renderer. */
 export const ADVENTURE_MATERIALS = Object.freeze({
- 'copper-ore':['Copper ore','Smelt with tin at the forge.','token'],
- 'tin-ore':['Tin ore','Smelt with copper at the forge.','token'],
+ 'copper-ore':['Copper ore','Requires the forge to smelt with tin; cannot be worked by hand.','token'],
+ 'tin-ore':['Tin ore','Requires the forge to smelt with copper.','token'],
  'bronze-bar':['Bronze bar','A useful metal for shields and armour.','token'],
- 'reed':['River reed','Pulp for Inscription, or bind into a field ration.','fibre'],
+ 'reed':['River reed','Combine with timber for scrolls and bows, or bundle into field rations.','fibre'],
  'frost-scroll':['Frost scroll','One is consumed by every Frostwood spell, including abilities.','scroll'],
  'ember-scroll':['Ember scroll','One is consumed by every Ember spell, including abilities.','scroll'],
  'field-arrows':['Field ammunition','One per ranged attack; Rapid Shot uses three.','arrows'],
@@ -16,7 +16,7 @@ export const ADVENTURE_MATERIAL_IDS=Object.freeze(Object.keys(ADVENTURE_MATERIAL
 export const QUESTS=Object.freeze([
  {id:'welcome',title:'A Place Behind the Walls',npc:'citizen:guard',intro:'I am Elowen, keeper of the north gate. Three nights ago the old warning bell rang beneath the forest. Before I send you out, learn who will help you return. Visit Mara at the bank, Darrin at the shop, and Alden in the Forester’s Lodge.',objectives:[['visit:service:bank','Meet Mara inside the bank'],['visit:service:store','Meet Darrin inside the shop'],['visit:service:forester','Meet Alden in the lodge']],end:'Now you know the people behind these walls. The bell belonged to our vanished outpost. Rowan can teach you to survive the road there.',coins:20},
  {id:'training',title:'Three Ways to Survive',npc:'adventure:rowan',intro:'The forest does not fight one way. I will issue a sword, bow and staff. Switch styles and land a hit with each on this dummy. Frost spells need frost scrolls; the bow needs field ammunition. Your gear belongs to you once you accept.',objectives:[['hit:melee','Land a Melee hit on the dummy'],['hit:magic','Land a Magic hit on the dummy'],['hit:ranged','Land a Ranged hit on the dummy']],end:'Heavy roots yield to magic. Fragile casters fear arrows. Rushing creatures leave openings for steel. Watch the ground before their attacks.',coins:15},
- {id:'provisions',title:'Made by Your Own Hands',npc:'adventure:smith',intro:'A borrowed blade will not mend itself. Mine copper and tin at the west quarry, cut a softwood log, and make something useful here. A shield, ammunition or spell scrolls will do. Alden provides a forestry axe.',objectives:[['gather:copper-ore','Mine copper at the west quarry'],['gather:tin-ore','Mine tin at the west quarry'],['gather:softwood-logs','Cut a softwood log'],['craft:useful','Craft a shield, ammunition or scrolls']],end:'Those supplies are yours. Keep making them; Darrin pays for excess timber. The broken cart on the north road never reached our forge.',coins:25},
+ {id:'provisions',title:'Made by Your Own Hands',npc:'adventure:smith',intro:'A borrowed blade will not mend itself. Mine copper and tin at the west quarry, cut a softwood log, and make something useful straight from your backpack. A shield, ammunition or spell scrolls will do. Alden provides a forestry axe.',objectives:[['gather:copper-ore','Mine copper at the west quarry'],['gather:tin-ore','Mine tin at the west quarry'],['gather:softwood-logs','Cut a softwood log'],['craft:useful','Craft a shield, ammunition or scrolls']],end:'Those supplies are yours. Keep making them; Darrin pays for excess timber. The broken cart on the north road never reached our forge.',coins:25},
  {id:'road',title:'The Cart That Never Came',npc:'citizen:guard',intro:'A supply cart vanished just beyond the north gate. Examine the broken axle and the tracks by the creek. Read what happened before you decide what to fight.',objectives:[['inspect:cart','Examine the cart in the near woodland'],['inspect:tracks','Follow the tracks beside the creek']],end:'No robbery, then. The driver fled something growing through the earth. Alden once patrolled that forest. Show him what you found.',coins:30},
  {id:'roots',title:'Roots That Listen',npc:'service:forester',intro:'The bell held a ward against something below us. Examine the singing stump in the deep wood. Its guardian is bound to the roots: defeat it, or craft a restoration seal and calm it. Both will expose the same wound.',objectives:[['inspect:stump','Read the signs at the singing stump'],['resolve:guardian','Defeat the Rootbound Guardian or calm it with a seal']],end:'That black sap is not a sickness. It is the old ward leaking. Follow the eastern trail to the abandoned watch. I left a friend there many years ago.',coins:35},
  {id:'outpost',title:'The Last Watch',npc:'adventure:scout',intro:'I am Nessa. I followed the bell here, too. The watch’s journal is torn, but the memorial and its map survived. Read both, then tell me what the keepers were protecting.',objectives:[['inspect:journal','Read the watchkeeper’s journal'],['inspect:memorial','Examine the outpost memorial'],['solve:watch','Tell Nessa why the ward was built']],end:'They were protecting the forest from a wounded guardian, not burying treasure. We must repair its heart. Take that truth back to Elowen.',coins:40},
@@ -37,9 +37,6 @@ export const ADVENTURE_TARGETS=Object.freeze([
  target('scribe','Iona · inscription desk',-19,40,'adventure-npc'),
  target('scout','Nessa · outpost scout',23,150,'adventure-npc'),
  target('forge','Village forge',31,59,'station',{station:'forge'}),
- target('fletch','Fletching bench',-24,49,'station',{station:'fletch'}),
- target('inscribe','Inscription desk',-19,43,'station',{station:'inscribe'}),
- target('cook','Camp kitchen',12,39,'station',{station:'cook'}),
  target('copper','Copper seam',-24,91,'resource',{material:'copper-ore',profession:'mining',seconds:4}),
  target('tin','Tin seam',-31,95,'resource',{material:'tin-ore',profession:'mining',seconds:4}),
  target('reed','Creek reeds',26,106,'resource',{material:'reed',seconds:3}),
@@ -107,15 +104,15 @@ export const RECIPES=[
  recipe('sword','Forge iron longsword','forge','blacksmithing',1,{'bronze-bar':3},{weapon:'sword',style:'melee'}),
  recipe('mail','Forge recruit mail','forge','blacksmithing',3,{'bronze-bar':5},{armour:'starter-mail'},40),
  recipe('helm','Forge recruit helm','forge','blacksmithing',2,{'bronze-bar':3},{slot:'recruit-helm'},30),
- recipe('arrows','Fletch 30 field ammunition','fletch','fletching',1,{'softwood-logs':1},{material:'field-arrows',amount:30}),
- recipe('bow','Shape oak longbow','fletch','fletching',1,{'softwood-logs':4,'reed':2},{weapon:'bow',style:'ranged'},30),
- recipe('frost','Inscribe 30 frost scrolls','inscribe','inscription',1,{'reed':2,'softwood-logs':1},{material:'frost-scroll',amount:30}),
- recipe('ember','Inscribe 30 ember scrolls','inscribe','inscription',1,{'reed':2,'moss-fibre':1},{material:'ember-scroll',amount:30}),
- recipe('seal','Inscribe restoration seal','inscribe','inscription',1,{'reed':2,'bronze-bar':1},{material:'ward-seal',amount:1},25),
- recipe('rations','Prepare 3 field rations','cook',null,1,{'reed':2},{material:'ration',amount:3},0),
+ recipe('arrows','Fletch 30 field ammunition','inventory','fletching',1,{'softwood-logs':1},{material:'field-arrows',amount:30}),
+ recipe('bow','Shape oak longbow','inventory','fletching',1,{'softwood-logs':4,'reed':2},{weapon:'bow',style:'ranged'},30),
+ recipe('frost','Inscribe 30 frost scrolls','inventory','inscription',1,{'reed':2,'softwood-logs':1},{material:'frost-scroll',amount:30}),
+ recipe('ember','Inscribe 30 ember scrolls','inventory','inscription',1,{'reed':2,'moss-fibre':1},{material:'ember-scroll',amount:30}),
+ recipe('seal','Inscribe restoration seal','inventory','inscription',1,{'reed':2,'bronze-bar':1},{material:'ward-seal',amount:1},25),
+ recipe('rations','Bundle 3 field rations','inventory','cooking',1,{'reed':2},{material:'ration',amount:3},12),
  recipe('forged','Forge strengthened longsword','forge','blacksmithing',4,{'bronze-bar':6,'hollow-shard':4,'warden-heart':1},{weapon:'forged_sword',style:'melee'},60),
- recipe('reinforced','Reinforce longbow','fletch','fletching',4,{'softwood-logs':6,'hollow-shard':4,'warden-heart':1},{weapon:'reinforced_bow',style:'ranged'},60),
- recipe('runic','Bind runic frost staff','inscribe','inscription',4,{'reed':6,'hollow-shard':4,'warden-heart':1},{weapon:'runic_frost',style:'magic'},60)
+ recipe('reinforced','Reinforce longbow','inventory','fletching',4,{'softwood-logs':6,'hollow-shard':4,'warden-heart':1},{weapon:'reinforced_bow',style:'ranged'},60),
+ recipe('runic','Bind runic frost staff','inventory','inscription',4,{'reed':6,'hollow-shard':4,'warden-heart':1},{weapon:'runic_frost',style:'magic'},60)
 ];
 export function sanitizeAdventure(raw){
  const n=v=>Number.isSafeInteger(v)?Math.max(0,Math.min(200000000,v)):0;
@@ -138,7 +135,7 @@ export function sanitizeAdventure(raw){
  return {version:2,autoSave:raw?.autoSave===true,index:firstUnfinished,accepted:active?.status==='active',
   flags:active?.flags||[],tracked,quests,
   discoveries:[...new Set((Array.isArray(raw?.discoveries)?raw.discoveries:[]).filter(f=>['spring','bells'].includes(f)))],
-  skills:Object.fromEntries(['mining','blacksmithing','fletching','inscription'].map(s=>[s,n(raw?.skills?.[s])])),
+  skills:Object.fromEntries(['mining','blacksmithing','fletching','inscription','cooking'].map(s=>[s,n(raw?.skills?.[s])])),
   clears:n(raw?.clears),contracts:n(raw?.contracts),deaths:n(raw?.deaths),
   run:raw?.run&&typeof raw.run==='object'?{
    kills:[...new Set((Array.isArray(raw.run.kills)?raw.run.kills:[]).filter(id=>ADVENTURE_SPAWNS.some(m=>m.room!==undefined&&m.id===id)))],
