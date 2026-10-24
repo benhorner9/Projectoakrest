@@ -34,7 +34,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
    for(const q of offering){
     el('h3',q.title,content);
     el('p',q.status==='ready'?q.end:q.intro,content);
-    if(q.status==='available')btn('Start '+q.title,()=>act('accept',q.id));
+    if(q.status==='available')btn('Accept quest',()=>act('accept',q.id));
     else {
      for(const [id,description] of q.objectives)
       el('p',(q.flags.includes(id)?'✓ ':'○ ')+description,content);
