@@ -627,7 +627,7 @@ if(isQa)window.oakrestClassicQA={
  selectTarget:id=>chooseInteraction(findClassicInteractable(id)),
  interactNow:interactNearby,
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
-  navigation.stop();selectedTarget=null;draw(0);},
+  navigation.stop();combat.stopTarget();dodgeTravel=null;selectedTarget=null;draw(0);},
  projectWorld:(x,z)=>{
   // QA may query the projection before the first requestAnimationFrame.
   // Ensure the saved/test character overlay cannot leave matrices stale.

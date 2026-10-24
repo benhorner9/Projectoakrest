@@ -25,7 +25,7 @@ let browser;
     const {findClassicInteractable}=await import('./src/classic-interactions.js');const t=findClassicInteractable(id);
     if(t)oakrestClassicQA.teleport(t.x,t.z-1.6);
     return oakrestClassicQA.adventureAction(kind,id,choice);
-   },{kind,id,choice});assert.equal(result?.ok,true,result?.reason);return result;
+   },{kind,id,choice});assert.equal(result?.ok,true,JSON.stringify({kind,id,result,state:await page.evaluate(()=>oakrestClassicQA.adventureState())}));return result;
   };
   const step=async seconds=>page.evaluate(seconds=>{for(let i=0;i<Math.ceil(seconds/.1);i++)oakrestClassicQA.step(.1);},seconds);
   await page.evaluate(()=>{oakrestClassicQA.teleport(5,46);oakrestClassicQA.interactNow();});
@@ -40,7 +40,12 @@ let browser;
   }
   await act('finish','adventure:rowan');
   await act('accept','adventure:smith');
-  for(const id of ['adventure:copper','adventure:tin','adventure:softwood']){await act('gather',id);await step(id.endsWith('softwood')?30:5);if(id.endsWith('softwood'))for(let attempt=0;attempt<4&&!await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory.materials['softwood-logs']>0);attempt++)await step(30);await act('cancel');}
+  for(const [id,material] of [['adventure:copper','copper-ore'],['adventure:tin','tin-ore'],['adventure:softwood','softwood-logs']]){
+   await act('gather',id);await step(id.endsWith('softwood')?30:5);
+   if(id.endsWith('softwood'))for(let attempt=0;attempt<4&&!await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory.materials['softwood-logs']>0);attempt++)await step(30);
+   assert.ok(await page.evaluate(material=>oakrestClassicQA.adventureState().flags.includes('gather:'+material),material),'gather objective registered: '+material);
+   await act('cancel');
+  }
   await act('craft','adventure:fletch','arrows');await step(4);await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
