@@ -15,11 +15,12 @@ export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:12,offsetZ:-43,v
 /** Screen-aligned ground-plane axes, shared by controls and the corner minimap.
  * Camera sits southeast of its target; world east is NOT screen right.
  */
-export function classicScreenBasis(){
- const length=Math.hypot(CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.offsetZ);
+export function classicScreenBasis(offset=CLASSIC_CAMERA){
+ const x=offset.x??offset.offsetX,z=offset.z??offset.offsetZ;
+ const length=Math.hypot(x,z)||1;
  return {
-  right:{x:CLASSIC_CAMERA.offsetZ/length,z:-CLASSIC_CAMERA.offsetX/length},
-  up:{x:-CLASSIC_CAMERA.offsetX/length,z:-CLASSIC_CAMERA.offsetZ/length}
+  right:{x:z/length,z:-x/length},
+  up:{x:-x/length,z:-z/length}
  };
 }
 export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
@@ -144,9 +145,9 @@ export function findClassicPath(start,end){
  return compact;
 }
 /** Direction index 0 faces the viewer; 4 faces away; rest turn clockwise. */
-export function spriteDirection(facingX,facingZ){
+export function spriteDirection(facingX,facingZ,cameraOffset=CLASSIC_CAMERA){
  const length=Math.hypot(facingX,facingZ)||1;
- const vx=CLASSIC_CAMERA.offsetX, vz=CLASSIC_CAMERA.offsetZ;
+ const vx=cameraOffset.x??cameraOffset.offsetX,vz=cameraOffset.z??cameraOffset.offsetZ;
  const cameraLength=Math.hypot(vx,vz),front=(facingX*vx+facingZ*vz)/(length*cameraLength);
  const side=(facingX*vz-facingZ*vx)/(length*cameraLength);
  return (Math.round(Math.atan2(side,front)*4/Math.PI)+8)%8;
