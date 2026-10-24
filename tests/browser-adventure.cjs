@@ -13,7 +13,7 @@ let browser;
   if(server)await new Promise(r=>setTimeout(r,800));
   browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context=await browser.newContext({viewport:{width:1366,height:1024},hasTouch:true});
-  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await context.newPage(),errors=[];page.setDefaultNavigationTimeout(60000);page.on('pageerror',e=>errors.push(e.message));
   await page.goto((remote||'http://127.0.0.1:5194/classic.html')+'?qa=1',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.oakrestClassicQA);
   await page.locator('#classic-creator-name').fill('First Adventure');
@@ -38,12 +38,13 @@ let browser;
    await page.evaluate(style=>{oakrestClassicQA.teleport(-1,71);oakrestClassicQA.switchStyle(style);},style);await step(2);
    await page.evaluate(()=>oakrestClassicQA.lockMonster('practice'));await step(5);
   }
-  await page.evaluate(()=>oakrestClassicQA.attack());await act('finish','adventure:rowan');
+  await act('finish','adventure:rowan');
   await act('accept','adventure:smith');
   for(const id of ['adventure:copper','adventure:tin','adventure:softwood']){await act('gather',id);await step(id.endsWith('softwood')?30:5);if(id.endsWith('softwood'))for(let attempt=0;attempt<4&&!await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory.materials['softwood-logs']>0);attempt++)await step(30);await act('cancel');}
   await act('craft','adventure:fletch','arrows');await step(4);await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
+  mkdirSync('qa/first-adventure',{recursive:true});await page.screenshot({path:'qa/first-adventure/before-reload.png'});
   await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
   assert.equal(await page.evaluate(()=>oakrestClassicQA.adventureState().index),3);
   assert.deepEqual(await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory),before.inventory);

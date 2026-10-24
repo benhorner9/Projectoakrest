@@ -128,6 +128,13 @@ test('crafting checks quantities at completion, cancels out of reach and preserv
  for(const recipe of RECIPES)assert.ok(Object.keys(recipe.cost).length>0);
 });
 
+test('starting resource work releases an old combat target instead of walking back to it',()=>{
+ const h=harness();h.player={x:-1,z:71};assert.ok(h.combat.chooseTarget('practice',h.player));
+ success(h.act('gather','adventure:copper'));
+ assert.equal(h.combat.getState().targetId,null);
+ h.step(5);assert.equal(h.combat.persistentSave().inventory.materials['copper-ore'],1);
+});
+
 test('actual combat death preserves inventory and chamber kills, then re-entry does not charge another seal',()=>{
  const d=fresh();d.adventure=sanitizeAdventure({index:7,accepted:true,run:{kills:['hollow-root-0','hollow-root-1'],wards:[0],complete:false}});
  d.inventory.materials={'ward-seal':2,'bronze-bar':3};

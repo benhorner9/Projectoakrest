@@ -419,7 +419,12 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
   adventureState:()=>adventureSystem?.state(),
   adventureVisit:id=>adventureSystem?.visit(id),
   adventureCanPass:z=>!adventureSystem||adventureSystem.canPass(z),
-  adventureAction:(kind,options,player)=>{if(!canFight())return {ok:false,reason:'Wait until you recover.'};return adventureSystem?.action(kind,{...options,time,player,threatened:monsters.some(m=>m.aggro&&!m.dead)})||{ok:false,reason:'Adventure unavailable'};},
+  adventureAction:(kind,options,player)=>{
+   if(!canFight())return {ok:false,reason:'Wait until you recover.'};
+   const result=adventureSystem?.action(kind,{...options,time,player,threatened:monsters.some(m=>m.aggro&&!m.dead)})||{ok:false,reason:'Adventure unavailable'};
+   if(result.ok&&['gather','craft','enter','leave'].includes(kind))stopTarget();
+   return result;
+  },
   itemAction,pickup,nearestLoot,itemSnapshot,
   sandboxSave:()=>JSON.parse(JSON.stringify(data)),
   persistentSave};

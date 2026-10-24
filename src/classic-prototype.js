@@ -160,6 +160,7 @@ $('classic-enable-save').addEventListener('click',()=>{
 });
 $('classic-save-now').addEventListener('click',saveNow);
 function showInteraction(target){
+ combat.stopTarget();
  lastInteraction=target.id;
  if(adventureUi?.talk(target))return;
  adventureUi?.hideContent();
@@ -254,6 +255,7 @@ function placeMark(x,z){
 }
 function chooseInteraction(target){
  if(!target)return false;
+ combat.stopTarget();
  dialogue.hidden=true;selectedTarget=target;
  placeMark(target.x,target.z);
  const result=navigation.interactWith(player,target);
