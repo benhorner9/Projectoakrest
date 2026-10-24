@@ -1,5 +1,5 @@
 /** Stateful adventure transactions. The combat session owns this save; no storage here. */
-import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_SPAWNS,sanitizeAdventure} from './adventure-content.js';
+import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_SPAWNS,QUEST_PREREQUISITES,sanitizeAdventure} from './adventure-content.js';
 import {woodcuttingLevel,canCutTree,newTreeState,chopOnce,respawnTree} from './woodcutting.js';
 import {inventoryKeyList} from './item-slot-layout.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -8,9 +8,37 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  data.adventure=sanitizeAdventure(data.adventure);
  const a=data.adventure,mats=data.inventory.materials;
  const trees=new Map(),respawns=new Map();let work=null,eatUntil=0;
- const quest=()=>QUESTS[a.index]||null;
- const flag=f=>{if(a.accepted&&quest()?.objectives.some(o=>o[0]===f)&&!a.flags.includes(f)){a.flags.push(f);emit('adventure',{reason:'Journal updated'});}};
- const ready=()=>!!quest()&&quest().objectives.every(o=>a.flags.includes(o[0]));
+ const progress=id=>a.quests[id];
+ const completed=id=>progress(id)?.status==='completed';
+ const unlocked=q=>(QUEST_PREREQUISITES[q.id]||[]).every(completed);
+ const readyFor=q=>progress(q.id)?.status==='active'&&q.objectives.every(o=>progress(q.id).flags.includes(o[0]));
+ const questStatus=q=>{
+  const p=progress(q.id);
+  if(p.status==='completed')return 'completed';
+  if(p.status==='active')return readyFor(q)?'ready':'active';
+  return unlocked(q)?'available':'locked';
+ };
+ const quest=()=>QUESTS.find(q=>q.id===a.tracked&&questStatus(q)!=='locked')||
+  QUESTS.find(q=>questStatus(q)==='ready')||
+  QUESTS.find(q=>questStatus(q)==='active')||
+  QUESTS.find(q=>questStatus(q)==='available')||null;
+ const syncLegacy=()=>{
+  const index=QUESTS.findIndex(q=>!completed(q.id));
+  a.index=index<0?QUESTS.length:index;
+  a.accepted=progress(QUESTS[a.index]?.id)?.status==='active';
+  a.flags=[...(progress(QUESTS[a.index]?.id)?.flags||[])];
+ };
+ const flag=f=>{
+  let changed=false;
+  for(const q of QUESTS){
+   const p=progress(q.id);
+   if(p.status==='active'&&q.objectives.some(o=>o[0]===f)&&!p.flags.includes(f)){
+    p.flags.push(f);changed=true;
+   }
+  }
+  if(changed){syncLegacy();emit('adventure',{reason:'Journal updated'});}
+ };
+ const ready=()=>!!quest()&&readyFor(quest());
  const enough=cost=>Object.entries(cost).every(([id,n])=>(mats[id]||0)>=n);
  const spend=cost=>{for(const [id,n] of Object.entries(cost))mats[id]-=n;};
  const roomFor=(id,amount=1)=>((mats[id]||0)+amount<=9999)&&((mats[id]||0)>0||inventoryKeyList(data).length<28);
@@ -28,9 +56,11 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(e.type==='dead'){a.deaths++;emit('adventure',{reason:'Recovered belongings; cleared Hollow chambers remain cleared.'});}
  }
  function visit(id){flag('visit:'+id);}
- function accept(id){
-  const q=quest();if(!q||q.npc!==id||a.accepted)return no('No new quest here.');
-  a.accepted=true;a.autoSave=true;a.flags=[];
+ function accept(id,choice){
+  const q=QUESTS.find(q=>q.npc===id&&(!choice||q.id===choice)&&questStatus(q)==='available');
+  if(!q)return no('No new quest available here.');
+  progress(q.id).status='active';progress(q.id).flags=[];a.tracked=q.id;a.autoSave=true;
+  syncLegacy();
   if(q.id==='training'){
    for(const [s,w] of [['melee','sword'],['magic','frost'],['ranged','bow']])grantWeapon(s,w);
    add('frost-scroll',40);add('field-arrows',40);add('ration',3);
@@ -38,9 +68,15 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(q.id==='provisions')teach();
   emit('adventure',{reason:'Started: '+q.title});return ok(q.intro);
  }
- function finish(id){
-  const q=quest();if(!q||q.npc!==id||!a.accepted||!ready())return no('There is still work to do.');
-  data.coins=Math.min(10000000,data.coins+q.coins);a.index++;a.accepted=false;a.flags=[];
+ function finish(id,choice){
+  const q=QUESTS.find(q=>q.npc===id&&(!choice||q.id===choice)&&readyFor(q));
+  if(!q)return no('There is still work to do.');
+  data.coins=Math.min(10000000,data.coins+q.coins);
+  progress(q.id).status='completed';progress(q.id).flags=[];
+  a.tracked=QUESTS.find(x=>questStatus(x)==='ready')?.id||
+   QUESTS.find(x=>questStatus(x)==='active')?.id||
+   QUESTS.find(x=>questStatus(x)==='available')?.id||null;
+  syncLegacy();
   emit('adventure',{reason:'Completed: '+q.title+' · '+q.coins+' coins'});return ok(q.end);
  }
  function teach(){
@@ -118,6 +154,12 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  }
  function action(kind,{target,choice,time,player,threatened=false}={}){
   if(kind==='cancel'){work=null;return ok('Work cancelled.');}
+  if(kind==='track'){
+   const q=QUESTS.find(q=>q.id===choice);
+   if(!q||questStatus(q)==='locked')return no('That quest is not yet available.');
+   a.tracked=q.id;emit('adventure',{reason:'Tracking '+q.title});
+   return ok('Tracking '+q.title);
+  }
   if(kind==='eat'){
    if(time<eatUntil)return no('Wait before eating again.');
    if((mats.ration||0)<1)return no('Prepare field rations at the village kitchen.');
@@ -125,8 +167,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    mats.ration--;eatUntil=time+8;emit('adventure',{reason:'Ate a ration · restored Health'});return ok('Restored up to 35 Health.');
   }
   if(!target||distance(player,target)>target.reach||!sight(player,target))return no('Move within reach first.');
-  if(kind==='accept')return accept(target.id);
-  if(kind==='finish')return finish(target.id);
+  if(kind==='accept')return accept(target.id,choice);
+  if(kind==='finish')return finish(target.id,choice);
   if(kind==='teach'&&target.id==='service:forester')return teach();
   if(kind==='inspect')return inspect(target.id);
   if(kind==='gather'||kind==='craft'){
@@ -138,12 +180,12 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    heal(999);return ok('Rested and recovered Health.');
   }
   if(kind==='calm'&&target.id==='adventure:stump'){
-   if(a.index!==4||!a.accepted||a.flags.includes('resolve:guardian'))return no('The guardian is already quiet, or the investigation has not begun.');
+   if(progress('roots').status!=='active'||progress('roots').flags.includes('resolve:guardian'))return no('The guardian is already quiet, or the investigation has not begun.');
    if(!enough({'ward-seal':1}))return no('Bring a restoration seal from Iona’s desk.');
    spend({'ward-seal':1});calmGuardian();flag('resolve:guardian');return ok('The roots loosen. You have spared the guardian.');
   }
   if(kind==='answer'&&target.id==='adventure:scout'){
-   if(!a.flags.includes('inspect:journal')||!a.flags.includes('inspect:memorial'))return no('Read the journal and memorial before answering.');
+   if(!progress('outpost').flags.includes('inspect:journal')||!progress('outpost').flags.includes('inspect:memorial'))return no('Read the journal and memorial before answering.');
    if(choice!=='protect')return no('Nessa shakes her head. Read the memorial again: whom did the watch serve?');
    flag('solve:watch');return ok('They kept the forest alive. The Hollow is a wound, not a treasure vault.');
   }
@@ -152,7 +194,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    flag('prepare:supplies');return ok('Elowen checks your supplies. You keep them for the journey.');
   }
   if(kind==='enter'&&target.kind==='entrance'){
-   if(a.index<7)return no('Finish preparing with Elowen before entering.');
+   if(!completed('seal'))return no('Finish preparing with Elowen before entering.');
    if(threatened)return no('Lose your pursuers before descending.');
    if(!a.run||a.run.complete){
     if(!enough({'ward-seal':1}))return no('Each new expedition needs one restoration seal.');
@@ -181,7 +223,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    spend({'softwood-logs':5});data.coins=Math.min(10000000,data.coins+8);emit('adventure',{reason:'Sold 5 logs for 8 coins'});return ok('Good timber. Oakrest always needs repairs.');
   }
   if(kind==='contract'&&target.id==='citizen:guard'){
-   if(a.index<8||a.contracts>=a.clears)return no('Complete another Hollow expedition to supply the watch.');
+   if(!completed('hollow')||a.contracts>=a.clears)return no('Complete another Hollow expedition to supply the watch.');
    if(!enough({'hollow-shard':2}))return no('Bring two Hollow shards.');
    spend({'hollow-shard':2});a.contracts++;data.coins=Math.min(10000000,data.coins+35);add('ration',3);
    emit('adventure',{reason:'Watch supplied · 35 coins and 3 rations'});return ok('These will hold the ward until your next expedition.');
@@ -189,6 +231,9 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   return no('That action is unavailable here.');
  }
  return {action,event,visit,tick,flag,ready,craftCheck,
-  state:()=>({...structuredClone(a),quest:quest(),ready:ready(),work:work?{name:work.recipe?.title||work.material,start:work.start,end:work.end}:null}),
+  state:()=>({...structuredClone(a),quest:quest(),ready:ready(),
+   catalogue:QUESTS.map(q=>({...q,status:questStatus(q),flags:[...progress(q.id).flags],
+    prerequisites:QUEST_PREREQUISITES[q.id]||[]})),
+   work:work?{name:work.recipe?.title||work.material,start:work.start,end:work.end}:null}),
   canPass:z=>z<241||!!a.run&&(z<269?a.run.wards.includes(0):z<297?a.run.wards.includes(1):a.run.wards.includes(2))};
 }
