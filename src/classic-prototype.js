@@ -13,6 +13,7 @@ import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
+import {combatApproachPoint,breaksPlayerAttackIntent} from './classic-combat-intent.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicQuestBeacon} from './classic-quest-beacon.js';
 import {availableQuestGivers} from './classic-quest-indicators.js';
@@ -58,6 +59,7 @@ function savedWorn(){
  return wornCache;
 }
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
+let combatPursuitId=null;
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
@@ -258,7 +260,7 @@ function placeMark(x,z){
 }
 function chooseInteraction(target){
  if(!target)return false;
- combat.stopTarget();
+ disengageFromCombat();
  dialogue.hidden=true;selectedTarget=target;
  placeMark(target.x,target.z);
  const result=navigation.interactWith(player,target);
@@ -267,25 +269,43 @@ function chooseInteraction(target){
  feedback('Approaching '+target.name+'…');
  return true;
 }
+function disengageFromCombat(){
+ const wasFighting=!!combat.getState().targetId;
+ combatPursuitId=null;
+ combat.stopTarget('player-movement');
+ return wasFighting;
+}
+function chaseSelectedEnemy(){
+ const state=combat.getState();
+ if(!combatPursuitId||state.targetId!==combatPursuitId){combatPursuitId=null;return;}
+ const enemy=state.target;
+ if(!enemy){combatPursuitId=null;return;}
+ const destination=combatApproachPoint(player,enemy,state.reach);
+ if(!destination){if(navigation.state().waypoints.length)navigation.stop();return;}
+ // Path only while the original click-to-attack order is still active.
+ // Manual movement or any new destination cancels this order instantly.
+ if(navigation.state().waypoints.length)return;
+ const path=navigation.moveTo(player,destination);
+ if(!path.ok){
+  combatPursuitId=null;combat.stopTarget('unreachable');
+  feedback('Cannot reach that creature. Choose another approach.');
+ }
+}
 function chooseEnemy(id){
  const result=combat.chooseTarget(id,player);
  if(result){
-  navigation.stop();selectedTarget=null;pointerMark.visible=false;windowUi?.hide();
+  navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;windowUi?.hide();
+  combatPursuitId=id;
+  chaseSelectedEnemy();
   const e=combat.getState().monsters.find(m=>m.id===id);
-  feedback('Target locked: '+e.name+' · Level '+e.level);
- }else feedback('Target out of range or obstructed.');
+  if(combat.getState().targetId===id)feedback('Attacking '+e.name+' · Move to disengage');
+ }else feedback('Creature too far away or behind an obstacle.');
  return result;
-}
-function closestEnemyAt(point){
- if(!point)return null;
- const enemy=combat.getState().monsters.filter(e=>!e.dead).sort((a,b)=>
-  Math.hypot(point.x-a.x,point.z-a.z)-Math.hypot(point.x-b.x,point.z-b.z))[0];
- return enemy&&Math.hypot(point.x-enemy.x,point.z-enemy.z)<2.3?enemy:null;
 }
 function queueDestination(point){
  if(!point)return;
- const enemy=closestEnemyAt(point);
- if(enemy){chooseEnemy(enemy.id);return;}
+ // Any ground tap is a movement order, never an implicit monster lock.
+ disengageFromCombat();navigation.stop();
  const target=closestClickedInteractable(point);
  if(target){chooseInteraction(target);return;}
  selectedTarget=null;windowUi?.hide();
@@ -326,7 +346,8 @@ function updateStick(clientX,clientY){
 }
 joy.addEventListener('pointerdown',e=>{
  e.preventDefault();joystickId=e.pointerId;joy.setPointerCapture(e.pointerId);
- updateStick(e.clientX,e.clientY);selectedTarget=null;pointerMark.visible=false;
+ disengageFromCombat();navigation.stop();updateStick(e.clientX,e.clientY);
+ selectedTarget=null;pointerMark.visible=false;
 });
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joystickId)updateStick(e.clientX,e.clientY);});
 function releaseJoy(e){
@@ -346,6 +367,7 @@ function pickUp(id){
  return result.ok;
 }
 function chooseLoot(id){
+ disengageFromCombat();navigation.stop();
  const drop=combat.getState().groundLoot.find(item=>item.id===id);
  if(!drop)return;
  if(Math.hypot(player.x-drop.x,player.z-drop.z)<=3.2){pickUp(id);return;}
@@ -369,13 +391,13 @@ $('classic-settings-close').addEventListener('click',()=>windowUi.hide());
 $('classic-map-zoom-in').addEventListener('click',()=>minimap.setZoom(minimap.zoom()+.55));
 $('classic-map-zoom-out').addEventListener('click',()=>minimap.setZoom(minimap.zoom()-.55));
 function toggleAttack(){
+ // The button is attack/retarget only; it is no longer a sticky lock/unlock switch.
  const state=combat.getState();
- if(state.targetId){combat.stopTarget();navigation.stop();feedback('Combat target released.');return;}
- const enemy=state.monsters.filter(m=>!m.dead&&!m.retreating&&m.hp>0)
+ const enemy=state.monsters.filter(m=>!m.dead&&!m.hidden&&!m.retreating&&m.hp>0)
   .sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z))
   .find(m=>Math.hypot(m.x-player.x,m.z-player.z)<29);
  if(enemy)chooseEnemy(enemy.id);
- else feedback('Tap a monster north of the village to lock it.');
+ else feedback('Tap a nearby creature to attack. Walking always cancels combat.');
 }
 function useCombatAbility(index){
  const ability=combat.getState().abilities[index];
@@ -385,6 +407,7 @@ function useCombatAbility(index){
 }
 function triggerDodge(){
  if(!combat.dodge())return;
+ disengageFromCombat();
  const keysDir=axesFromKeys(),length=Math.hypot(keysDir.x,keysDir.z);
  dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
  navigation.stop();feedback('Dodged!');
@@ -428,8 +451,8 @@ function updateCombatUi(snapshot){
  $('classic-target-level').textContent=target?'Lv '+target.level:'';
  $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
  const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
- attack.firstChild.textContent=target?'✕':'⚔';
- attack.querySelector('small').textContent=target?'STOP':'ATTACK';
+ attack.firstChild.textContent='⚔';
+ attack.querySelector('small').textContent='ATTACK';
  for(const b of document.querySelectorAll('[data-ability]')){
   const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
   const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
@@ -453,7 +476,7 @@ function updateContextActions(){
 }
 function interactNearby(){
  const candidate=nearbyClassicInteraction(player);
- if(candidate){navigation.stop();selectedTarget=null;showInteraction(candidate);}
+ if(candidate){disengageFromCombat();navigation.stop();selectedTarget=null;showInteraction(candidate);}
  else feedback('Walk closer to a person, sign or training tree.');
 }
 interactButton.addEventListener('click',interactNearby);
@@ -477,11 +500,11 @@ document.addEventListener('keydown',e=>{
  if(e.code==='Space')triggerDodge();
  const bindings=['q','e','r','f'];
  if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
- if(e.key==='Escape'){windowUi.hide();navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;}
+ if(e.key==='Escape'){disengageFromCombat();windowUi.hide();navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;}
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 function releaseAll(){
- keys.clear();input.x=0;input.z=0;navigation.stop();selectedTarget=null;pointerMark.visible=false;
+ keys.clear();input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
  stick.style.transform='';
 }
 addEventListener('blur',releaseAll);
@@ -497,6 +520,10 @@ function axesFromKeys(){
 function moveGame(dt){
  const previous={...player};
  const update=navigation.step(player,axesFromKeys(),dt);
+ if(breaksPlayerAttackIntent(update)){
+  const wasFighting=disengageFromCombat();
+  if(wasFighting)feedback('You disengage and move freely.');
+ }
  if(!combat.adventureCanPass(update.position.z)&&update.position.z>210){navigation.stop();feedback('Restore this chamber’s ward before proceeding.');}
  else {player.x=update.position.x;player.z=update.position.z;}
  if(update.heading){look=update.heading;walkClock+=dt;}
@@ -528,22 +555,23 @@ function draw(dt,render=true){
  orbitCamera.step(keys,dt);
  const cameraOffset=orbitCamera.offset();
  const movement=moveGame(dt);
+ // Stop approaching as soon as the monster is actually in weapon range:
+ // don't walk through its sprite or past it to an old path waypoint.
+ if(combatPursuitId){
+  const engaging=combat.getState(),enemy=engaging.target;
+  if(enemy&&engaging.targetId===combatPursuitId&&
+   Math.hypot(player.x-enemy.x,player.z-enemy.z)<=Math.max(.75,engaging.reach-.26))
+   navigation.stop();
+ }
  if(dodgeTravel&&dt>0){
   const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
   const moved=slideMove(player,direction.x*slice*12.5,direction.z*slice*12.5);
   if(combat.adventureCanPass(moved.z)){player.x=moved.x;player.z=moved.z;}
   dodgeTravel.remaining-=slice;if(dodgeTravel.remaining<=0)dodgeTravel=null;
  }
- const before=combat.getState(),target=before.target;
- if(target&&movement.kind==='idle'&&!navigation.state().waypoints.length&&
-  !['w','a','s','d'].some(key=>keys.has(key))&&Math.hypot(input.x,input.z)<.12&&before.weapon!=='No equipped weapon'){
-  const dx=target.x-player.x,dz=target.z-player.z,range=
-   before.style==='melee'?2.2:before.style==='magic'?14:20;
-  if(Math.hypot(dx,dz)>range+.5){
-   const d=Math.hypot(dx,dz);
-   navigation.moveTo(player,{x:target.x-dx/d*range,z:target.z-dz/d*range});
-  }
- }
+ // Follow only a deliberate click-to-attack. Never recreate pursuit after
+ // a ground click, WASD, joystick, Escape, dodge or non-combat interaction.
+ if(movement.kind==='idle'&&!navigation.state().waypoints.length)chaseSelectedEnemy();
  const events=combat.tick(dt,player);
  combatEvents(events);
  if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
@@ -600,7 +628,7 @@ windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window')
  settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window')});
 adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
  changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
- teleport:p=>{player.x=p.x;player.z=p.z;navigation.stop();combat.stopTarget();dodgeTravel=null;selectedTarget=null;}});
+ teleport:p=>{disengageFromCombat();player.x=p.x;player.z=p.z;navigation.stop();dodgeTravel=null;selectedTarget=null;}});
 if(existing.profile&&existing.save.adventure?.autoSave){saveManager.enable();showSaveState();}
 characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.pathname,
  onOpen:()=>{windowUi.hide();releaseAll();combat.reset();},
@@ -642,7 +670,7 @@ if(isQa)window.oakrestClassicQA={
  selectTarget:id=>chooseInteraction(findClassicInteractable(id)),
  interactNow:interactNearby,
  teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
-  navigation.stop();combat.stopTarget();dodgeTravel=null;selectedTarget=null;draw(0);},
+  navigation.stop();disengageFromCombat();dodgeTravel=null;selectedTarget=null;draw(0);},
  projectWorld:(x,z)=>{
   // QA may query the projection before the first requestAnimationFrame.
   // Ensure the saved/test character overlay cannot leave matrices stale.

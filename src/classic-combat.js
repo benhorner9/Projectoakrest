@@ -86,11 +86,19 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
  const skills=()=>styleWeapon()?equippedSkills(data,style,data.gear[style]):[null,null,null,null];
  const canFight=()=>hp>0&&time>=deadUntil;
  const snapshot=()=>styleWeapon()?combatSourceSnapshot(data,style,styleWeapon()):null;
- function stopTarget(){targetId=null;action=null;queuedAbility=null;emit('target-lost');}
+ function stopTarget(reason='disengaged'){
+  // Cancels windups and queued offensive skills immediately, but never refunds
+  // an already fired projectile or bypasses the real weapon cooldown.
+  if(targetId||action||queuedAbility){
+   targetId=null;action=null;queuedAbility=null;
+   emit('target-lost',{reason});
+  }
+}
  function chooseTarget(id,player){
   const e=monsters.find(m=>m.id===id);
   if(e?.room!==undefined&&(!data.adventure?.run||!adventureSystem?.canPass(e.startZ)))return false;
   if(!e||!isAlive(e)||dist(e,player)>30||!wallClear(player,e))return false;
+  if(targetId!==id){action=null;queuedAbility=null;}
   targetId=id;emit('target',{id,name:e.name,level:e.level});return true;
  }
  function styleSwitch(next){
@@ -280,10 +288,12 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
    const cfg=ENEMY_COMBAT[e.type];
    if(e.boss){const phase=e.hp/e.maxHp>.66?0:e.hp/e.maxHp>.33?1:2;if(e.phase!==phase){e.phase=phase;emit('adventure-notice',{reason:'The keeper shifts: '+['roots yield to Magic','exposed echoes yield to Ranged','cracked heart yields to Melee'][phase]+'. Watch its warning shape.'});}e.weak=['magic','ranged','melee'][phase];e.pattern=[{kind:'charge',engage:10,length:10,width:1.7,windup:1.5,cooldown:4.4,damage:24},{kind:'pounce',engage:14,radius:3,windup:1.7,cooldown:4.2,damage:22},{kind:'cleave',engage:5,radius:5,halfAngle:1.1,windup:1.3,cooldown:3.8,damage:24}][phase];}
    const spec=e.pattern||ENEMY_PATTERNS[e.type];
-   if(isOakrestSafe(player.x,player.z)||!canFight()){
-    e.aggro=false;e.warning=null;e.retreating=dist(e,{x:e.startX,z:e.startZ})>.1;
-   }
-   const decision=e.room!==undefined?(Math.abs(player.z-e.startZ)>21?'retreat':e.aggro?'pursue':dist(e,player)<(e.boss?15:10)?'acquire':'idle'):enemyBehaviour(e.type,e,player,e.aggro);
+   const safeOrDead=isOakrestSafe(player.x,player.z)||!canFight();
+   if(safeOrDead){e.aggro=false;e.warning=null;}
+   const decision=safeOrDead?
+    (dist(e,{x:e.startX,z:e.startZ})>.1?'retreat':'idle'):
+    e.room!==undefined?(Math.abs(player.z-e.startZ)>21?'retreat':e.aggro?'pursue':dist(e,player)<(e.boss?15:10)?'acquire':'idle'):
+    enemyBehaviour(e.type,e,player,e.aggro);
    if(decision==='retreat'||e.retreating||decision==='return'){
     e.aggro=false;e.warning=null;e.retreating=true;
     const toHome=toward(e,{x:e.startX,z:e.startZ});
@@ -344,7 +354,10 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
    hp=maxHealth(levelFromXp(data.xp.vitality).level);
    deadUntil=0;emit('revive',{hp});
   }
-  if(targetId&&!getTarget())targetId=null;
+  if(targetId){
+   const target=getTarget();
+   if(!target||dist(player,target)>30)stopTarget('target-out-of-range');
+  }
   if(!action&&time>=attackUntil&&time>=switchUntil){
    if(queuedStyle){const next=queuedStyle;queuedStyle=null;styleSwitch(next);}
    else if(queuedAbility){
@@ -404,6 +417,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
   const weapon=styleWeapon(),maxHp=maxHealth(levelFromXp(data.xp.vitality).level);
   return {time,style,hp,maxHp,attackUntil,switchUntil,dodgeUntil,deadUntil,
    targetId,target:getTarget(),weapon:weapon?.title||'No equipped weapon',
+   reach:weapon?.reach||0,
    abilities:skills().map((a,index)=>a?{index,id:a.id,name:a.name,kind:a.kind,
     cooldownEnd:cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),a))||0,
     cooldown:a.cooldown||0}:null),
@@ -411,7 +425,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
    projectiles:projectiles.map(p=>({x:p.x,z:p.z,kind:p.kind,style:p.source.style})),
    progression:{...data.xp},defeated:data.defeated||0,
    groundLoot:data.groundLoot.map(drop=>({...drop})),coins:data.coins,
-   combatLevel:combatLevelFromXp(data.xp),targetLocked:!!getTarget(),
+   combatLevel:combatLevelFromXp(data.xp),
+   // Kept as an alias for older QA tooling; a target is an attack intent, not a movement lock.
+   targetLocked:!!getTarget(),attacking:!!getTarget(),
    action:action?{type:action.type,until:action.impactAt,style:action.style}:null};
  }
  return {tick,getState,chooseTarget,stopTarget,styleSwitch,queueAbility,queueBasic,dodge,drain,
