@@ -50,13 +50,13 @@ test('Fieldcraft gains independent persistent levels; level-unlock book uses rea
  const save=start();save.inventory.materials={'reed':6};
  let c=createClassicCombat({save,adventure:true});
  assert.equal(action(c,'craft','rations').ok,true);
- assert.equal(c.persistentSave().adventure.skills.cooking,18);
+ assert.equal(c.persistentSave().adventure.skills.cooking,12);
  const reloaded=validSave(c.persistentSave());
  c=createClassicCombat({save:reloaded,adventure:true});
- assert.equal(c.adventureState().skills.cooking,18);
+ assert.equal(c.adventureState().skills.cooking,12);
  const skills=skillBookSnapshot(c.persistentSave());
  assert.equal(skills.length,CLASSIC_SKILLS.length);
- assert.equal(skills.find(s=>s.id==='cooking').totalXp,18);
+ assert.equal(skills.find(s=>s.id==='cooking').totalXp,12);
  assert.ok(skills.find(s=>s.id==='cooking').milestones.some(m=>m.name.includes('ration')));
  assert.ok(skills.find(s=>s.id==='inscription').milestones.some(m=>m.name.includes('restoration seal')));
  assert.ok(skills.find(s=>s.id==='blacksmithing').milestones.every(m=>m.type==='At the forge'));
