@@ -400,14 +400,17 @@ function updateCombatUi(snapshot){
  $('classic-target-level').textContent=target?'Lv '+target.level:'';
  $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
  const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
- attack.textContent=target?'STOP · J':'ATTACK · J';
+ attack.firstChild.textContent=target?'✕':'⚔';
+ attack.querySelector('small').textContent=target?'STOP':'ATTACK';
  for(const b of document.querySelectorAll('[data-ability]')){
   const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
   const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
   b.disabled=!ability||snapshot.hp<=0||seconds>0;
   b.classList.toggle('on-cooldown',seconds>0);
-  b.textContent='QERF'[index]+' · '+(ability?.name||'Locked')+
-   (seconds>0?' '+seconds.toFixed(1)+'s':'');
+  b.firstChild.textContent='QERF'[index];
+  const hint=b.querySelector('small');
+  hint.textContent=seconds>0?seconds.toFixed(1)+'s':ability?.name||'Locked';
+  b.title=ability?.name||'Locked ability';
  }
  $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
 }
