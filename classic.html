@@ -7,6 +7,7 @@
 <title>Oakrest — Classic</title>
 <link rel="stylesheet" href="./src/classic.css"/>
 <link rel="stylesheet" href="./src/classic-hud.css"/>
+<link rel="stylesheet" href="./src/classic-character.css"/>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 </head>
 <body>
@@ -98,6 +99,9 @@
    <p id="classic-save-state" role="status" aria-live="polite">Practice changes reset on reload.</p>
    <div class="classic-save-actions"><button type="button" id="classic-enable-save">ENABLE SAVING</button><button type="button" id="classic-save-now" disabled>SAVE NOW</button></div>
   </section>
+  <h3>Your character</h3>
+  <button type="button" id="classic-characters-open" class="classic-characters-open">CHARACTERS · CREATE / SWITCH</button>
+  <p class="classic-muted">Switching characters reloads Classic. Save your current progress first.</p>
   <h3>Camera</h3>
   <div class="zoom-group" aria-label="Camera zoom"><button type="button" id="classic-zoom-out" aria-label="Zoom camera out">−</button><span>CAMERA DISTANCE</span><button type="button" id="classic-zoom-in" aria-label="Zoom camera in">+</button></div>
   <p id="classic-inside" class="hint">Walk through the building doors to enter.</p>
@@ -105,6 +109,38 @@
   <a class="return-link" href="./index.html">Original Oakrest 3D ↗</a>
   <p class="save-note">Oakrest Classic uses your existing character save, with a backup and external-change checks when persistent mode is enabled.</p>
  </aside>
+ <section id="classic-creator" class="classic-creator-overlay" role="dialog" aria-modal="true" aria-label="Create or choose an Oakrest character" hidden>
+  <div class="classic-creator-shell">
+   <header class="classic-creator-header">
+    <div><small>OAKREST · CLASSIC</small><h2>YOUR ADVENTURE BEGINS</h2><p>Choose your adventurer or create someone new. Your look stays with you in every combat style.</p></div>
+    <button id="classic-creator-close" type="button" aria-label="Return to Oakrest">×</button>
+   </header>
+   <section class="classic-creator-roster"><h3>YOUR CHARACTERS <small>Saved in this browser</small></h3>
+    <div id="classic-creator-roster"></div>
+    <button id="classic-creator-new" type="button">+ CREATE CHARACTER</button>
+    <p id="classic-creator-error" role="status" aria-live="polite"></p>
+   </section>
+   <section id="classic-creator-editor" class="classic-creator-editor">
+    <div class="classic-creator-figure">
+     <div class="classic-portrait-ground"><canvas id="classic-creator-preview" width="192" height="256" role="img" aria-label="Live Classic character preview"></canvas></div>
+     <button id="classic-creator-turn" type="button">↻ TURN CHARACTER</button>
+     <p>Starter clothing is permanent underneath your equipment. No gear is granted just by selecting a combat style.</p>
+    </div>
+    <form id="classic-creator-form" novalidate>
+     <label>Character name<input id="classic-creator-name" name="name" type="text" maxlength="20" autocomplete="off" placeholder="Name your adventurer" required/></label>
+     <div class="classic-creator-fields">
+      <label>Character<select name="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
+      <label>Hair style<select name="hairstyle"><option value="short">Short</option><option value="swept">Swept</option><option value="buzz">Buzz cut</option><option value="long">Long</option><option value="ponytail">Ponytail</option><option value="curly">Curly</option></select></label>
+      <label>Base outfit<select name="outfit"><option value="tunic">Tunic</option><option value="wanderer">Wanderer</option><option value="scholar">Scholar</option><option value="traveller">Traveller</option></select></label>
+     </div>
+     <fieldset><legend>Skin tone</legend><div id="classic-creator-skin" class="classic-creator-palettes"></div></fieldset>
+     <fieldset><legend>Hair colour</legend><div id="classic-creator-hair" class="classic-creator-palettes"></div></fieldset>
+     <fieldset><legend>Outfit colour</legend><div id="classic-creator-outfit" class="classic-creator-palettes"></div></fieldset>
+     <button type="submit" class="classic-creator-submit">BEGIN ADVENTURE</button>
+    </form>
+   </section>
+  </div>
+ </section>
  <div class="joystick" id="classic-joystick" aria-label="Touch movement joystick"><div class="joystick-ring"><div id="classic-stick"></div></div></div>
  <div id="classic-dialogue" class="dialogue" role="dialog" aria-label="NPC dialogue" hidden>
   <strong id="classic-dialogue-name">Villager</strong><p id="classic-dialogue-text"></p>
