@@ -1,12 +1,14 @@
 /** Oakrest Classic minimap: one canonical village model, no secondary scene.
  * Roads, footprints and service anchors come from the gameplay modules.
  */
-import {OAKREST_BUILDINGS,OAKREST_PATHS,OAKREST_WELL,localBuildingPosition} from './town-layout.js';
+import {OAKREST_BUILDINGS,OAKREST_WELL,localBuildingPosition} from './town-layout.js';
+import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS} from './classic-town-plan.js';
 import {OAKREST_SERVICES,OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 import {CLASSIC_LIMITS,CLASSIC_TREES,classicScreenBasis} from './classic-presentation.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const CLASSIC_MAP_FEATURES=Object.freeze({
- bounds:CLASSIC_LIMITS,buildings:OAKREST_BUILDINGS,roads:OAKREST_PATHS,
+ bounds:CLASSIC_LIMITS,buildings:OAKREST_BUILDINGS,roads:CLASSIC_ROADS,
+ walls:CLASSIC_PERIMETER.walls,gates:CLASSIC_PERIMETER.gates,districts:CLASSIC_DISTRICTS,
  trees:[...CLASSIC_TREES,...OAKREST_GROVES],well:OAKREST_WELL,
  services:OAKREST_SERVICES,notices:OAKREST_NOTICES
 });
@@ -38,10 +40,20 @@ function terrain(ctx,project,width,height,scale){
  ctx.fillStyle='#6b8664';ctx.fillRect(0,0,width,height);
  ctx.lineCap='round';ctx.lineJoin='round';
  ctx.strokeStyle='#b6a27d';ctx.lineWidth=Math.max(2,5.4*scale);
- for(const road of OAKREST_PATHS){
+ for(const road of CLASSIC_ROADS){
   ctx.beginPath();road.forEach(([x,z],i)=>{
    const p=project({x,z});i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
   });ctx.stroke();
+ }
+ // Draw the very same collidable stone perimeter and the open gateways.
+ ctx.strokeStyle='#5b6d64';ctx.lineCap='butt';ctx.lineWidth=Math.max(2,1.2*scale);
+ for(const wall of CLASSIC_PERIMETER.walls){
+  const a=project({x:wall.a[0],z:wall.a[1]}),b=project({x:wall.b[0],z:wall.b[1]});
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+ }
+ for(const gate of CLASSIC_PERIMETER.gates){
+  const at=project(gate);
+  ctx.fillStyle='#f2d49a';ctx.beginPath();ctx.arc(at.x,at.y,Math.max(2,scale*.48),0,Math.PI*2);ctx.fill();
  }
  ctx.fillStyle='#a59a79';
  const well=project(OAKREST_WELL);
