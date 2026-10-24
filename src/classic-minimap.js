@@ -3,20 +3,27 @@
  */
 import {OAKREST_BUILDINGS,OAKREST_PATHS,OAKREST_WELL,localBuildingPosition} from './town-layout.js';
 import {OAKREST_SERVICES,OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
-import {CLASSIC_LIMITS,CLASSIC_TREES} from './classic-presentation.js';
+import {CLASSIC_LIMITS,CLASSIC_TREES,classicScreenBasis} from './classic-presentation.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const CLASSIC_MAP_FEATURES=Object.freeze({
  bounds:CLASSIC_LIMITS,buildings:OAKREST_BUILDINGS,roads:OAKREST_PATHS,
  trees:[...CLASSIC_TREES,...OAKREST_GROVES],well:OAKREST_WELL,
  services:OAKREST_SERVICES,notices:OAKREST_NOTICES
 });
+/** Match the ACTUAL control orientation on the angled 2.5D game view.
+ * The large world map is north-up; the corner minimap is camera-aligned.
+ */
 export function worldToMinimap(point,centre,size=160,scale=3.45){
- return {x:size/2+(point.x-centre.x)*scale,
-  y:size/2-(point.z-centre.z)*scale};
+ const {right,up}=classicScreenBasis();
+ const dx=point.x-centre.x,dz=point.z-centre.z;
+ return {x:size/2+(dx*right.x+dz*right.z)*scale,
+  y:size/2-(dx*up.x+dz*up.z)*scale};
 }
 export function minimapToWorld(point,centre,size=160,scale=3.45){
- return {x:centre.x+(point.x-size/2)/scale,
-  z:centre.z-(point.y-size/2)/scale};
+ const {right,up}=classicScreenBasis();
+ const horizontal=(point.x-size/2)/scale,vertical=(size/2-point.y)/scale;
+ return {x:centre.x+horizontal*right.x+vertical*up.x,
+  z:centre.z+horizontal*right.z+vertical*up.z};
 }
 export function fullMapTransform(width,height,pad=16){
  const b=CLASSIC_LIMITS,spanX=b.maxX-b.minX,spanZ=b.maxZ-b.minZ;
@@ -70,7 +77,10 @@ function marker(ctx,p,kind,full){
  ctx.fillText(({bank:'B',store:'S',skill:'F',trade:'T'})[kind]||'•',p.x,p.y+1);
 }
 function playerArrow(ctx,at,facing,large=false){
- const angle=Math.atan2(facing.x||0,facing.z||1);
+ const basis=large?{right:{x:1,z:0},up:{x:0,z:1}}:classicScreenBasis();
+ const horizontal=(facing.x||0)*basis.right.x+(facing.z||0)*basis.right.z;
+ const vertical=(facing.x||0)*basis.up.x+(facing.z||0)*basis.up.z;
+ const angle=Math.atan2(horizontal,vertical);
  ctx.save();ctx.translate(at.x,at.y);ctx.rotate(angle);
  ctx.shadowColor='#0d2b20';ctx.shadowBlur=large?10:6;
  ctx.fillStyle='#fff0b9';ctx.strokeStyle='#2b3d2b';ctx.lineWidth=2;
@@ -115,15 +125,26 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
   ctx.save();ctx.beginPath();ctx.arc(canvas.width/2,canvas.height/2,canvas.width/2-2,0,Math.PI*2);ctx.clip();
   ctx.fillStyle='#647d5f';ctx.fillRect(0,0,canvas.width,canvas.height);
   const centre=sourceAt(data.player),size=canvas.width,ratio=zoom/t.scale;
-  ctx.drawImage(staticMap,(size/2-centre.x*ratio),(size/2-centre.y*ratio),
-   staticMap.width*ratio,staticMap.height*ratio);
+  // Use exactly the same right/up vectors as WASD and the touch joystick.
+  // Canvas source coordinates are east-right/north-up, and the transform
+  // rotates/mirrors the cached village into the camera's actual orientation.
+  const {right,up}=classicScreenBasis();
+  const a=right.x*ratio,b=-up.x*ratio,c=-right.z*ratio,d=up.z*ratio;
+  ctx.save();
+  ctx.transform(a,b,c,d,
+   size/2-a*centre.x-c*centre.y,
+   size/2-b*centre.x-d*centre.y);
+  ctx.drawImage(staticMap,0,0);
+  ctx.restore();
   const point=p=>worldToMinimap(p,data.player,size,zoom);
   markers(ctx,point,data);
   ctx.restore();
   ctx.strokeStyle='#c3a779';ctx.lineWidth=3;
   ctx.beginPath();ctx.arc(size/2,size/2,size/2-2,0,Math.PI*2);ctx.stroke();
   ctx.font='bold 12px system-ui';ctx.fillStyle='#fff0bd';ctx.textAlign='center';
-  ctx.fillText('N',size/2,16);
+  const north=worldToMinimap({x:data.player.x,z:data.player.z+1},
+   data.player,size,size/2-14);
+  ctx.fillText('N',north.x,north.y);
  };
  const drawLarge=(data)=>{
   const width=fullCanvas.width,height=fullCanvas.height;
