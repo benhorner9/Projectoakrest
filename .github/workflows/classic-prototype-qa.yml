@@ -7,12 +7,17 @@ on:
       - 'classic.html'
       - 'src/classic*.js'
       - 'src/classic.css'
+      - 'src/classic-hud.css'
+      - 'src/classic-minimap.js'
+      - 'src/classic-ui-controller.js'
       - 'scripts/build.mjs'
       - 'tests/classic-presentation.test.js'
       - 'tests/classic-interactions.test.js'
       - 'tests/classic-combat.test.js'
       - 'tests/classic-items.test.js'
       - 'tests/classic-save-manager.test.js'
+      - 'tests/classic-minimap.test.js'
+      - 'tests/browser-classic-hud.cjs'
       - 'tests/browser-classic-save.cjs'
       - 'tests/browser-classic.cjs'
       - '.github/workflows/classic-prototype-qa.yml'
@@ -36,7 +41,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
-      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js tests/classic-items.test.js tests/classic-save-manager.test.js
+      - run: node --test tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js tests/classic-items.test.js tests/classic-save-manager.test.js tests/classic-minimap.test.js
       - run: npm run build
       - name: Verify prototype copied and fingerprinted
         run: |
@@ -47,3 +52,5 @@ jobs:
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic.cjs
       - name: Verify guarded persisted character round-trip in Chromium
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-save.cjs
+      - name: Verify minimap, layout, context controls and exclusive game windows
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-hud.cjs
