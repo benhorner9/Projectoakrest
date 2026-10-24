@@ -13,18 +13,22 @@ let browser;
   const context=await browser.newContext({viewport:{width:1194,height:834},hasTouch:true,deviceScaleFactor:1});
   const page=await context.newPage();
   page.on('pageerror',error=>errors.push(error.message));
-  const raw=JSON.stringify({xp:{melee:120,magic:30,ranged:30,vitality:125},gear:{melee:'sword',magic:'frost',ranged:'bow'}});
+  const {defaultSave}=await import('../src/rules.js');
+  const raw=JSON.stringify(defaultSave());
   await page.addInitScript(raw=>localStorage.setItem('oakrest-v1',raw),raw);
   await page.goto('http://127.0.0.1:5192/classic.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
   const read=()=>page.evaluate(()=>({camera:oakrestClassicQA.cameraState(),player:oakrestClassicQA.state(),map:oakrestClassicQA.minimapState()}));
   const original=await read();
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.characterCreatorState().open),false,'camera QA must start gameplay, not character creation');
   // Explicit held arrow keys must move ONLY camera, never hero.
   await page.keyboard.down('ArrowRight');
+  const captured=await page.evaluate(()=>oakrestClassicQA.cameraKeys());
+  assert.ok(captured.includes('arrowright'),'keydown was blocked: '+JSON.stringify({captured,creator:await page.evaluate(()=>oakrestClassicQA.characterCreatorState())}));
   await page.evaluate(()=>{for(let i=0;i<12;i++)oakrestClassicQA.step(.05);});
   await page.keyboard.up('ArrowRight');
   const rotated=await read();
-  assert.ok(Math.abs(rotated.camera.yaw-original.camera.y)>.25,'holding right arrow orbits around player');
+  assert.ok(Math.abs(rotated.camera.yaw-original.camera.y)>.25,'holding right arrow orbits around player '+JSON.stringify({before:original.camera,after:rotated.camera}));
   assert.ok(Math.hypot(rotated.player.x-original.player.x,rotated.player.z-original.player.z)<.01,
    'rotating camera must not move hero');
   await page.keyboard.down('ArrowUp');
