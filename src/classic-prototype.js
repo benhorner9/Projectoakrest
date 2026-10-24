@@ -612,5 +612,14 @@ if(isQa)window.oakrestClassicQA={
  saveStatus:()=>saveManager.status(),enableSaving:()=>{if(sessionMutated)return {ok:false};const r=saveManager.enable();showSaveState(r.reason);return r;},
  saveNow,persistentSnapshot:()=>combat.persistentSave(),
   characterCreatorState:()=>({open:characterUI.isOpen(),appearance:existing.profile||null}),
-  openCharacterCreator:()=>characterUI.show()
+  openCharacterCreator:()=>characterUI.show(),
+  wornVisual:()=>savedWorn(),
+  heroPixelSignature:()=>{
+   const image=hero.sprite.material.map?.image;
+   if(!image)return null;
+   const ctx=image.getContext('2d'),bytes=ctx.getImageData(0,0,image.width,image.height).data;
+   let hash=2166136261;
+   for(let i=0;i<bytes.length;i++)hash=Math.imul(hash^bytes[i],16777619);
+   return hash>>>0;
+  }
 };
