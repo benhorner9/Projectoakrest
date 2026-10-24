@@ -7,7 +7,7 @@ import {readCharacters} from './characters.js';
 import {storageKey} from './storage-key.js';
 import {createClassicSaveManager} from './classic-save-manager.js';
 import {installGameZoomGuard} from './touch-gestures.js';
-import {CLASSIC_CAMERA,CLASSIC_NPCS,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
+import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicCombat} from './classic-combat.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicGroundLoot} from './classic-loot-view.js';
@@ -455,9 +455,7 @@ function releaseAll(){
 }
 addEventListener('blur',releaseAll);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
-const cameraLen=Math.hypot(CLASSIC_CAMERA.offsetX,CLASSIC_CAMERA.offsetZ);
-const basisRight={x:CLASSIC_CAMERA.offsetZ/cameraLen,z:-CLASSIC_CAMERA.offsetX/cameraLen};
-const basisUp={x:-CLASSIC_CAMERA.offsetX/cameraLen,z:-CLASSIC_CAMERA.offsetZ/cameraLen};
+const {right:basisRight,up:basisUp}=classicScreenBasis();
 function axesFromKeys(){
  const h=Number(keys.has('d')||keys.has('arrowright'))-
   Number(keys.has('a')||keys.has('arrowleft'))+input.x;
