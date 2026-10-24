@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OAKREST_BUILDINGS,OAKREST_PATHS} from '../src/town-layout.js';
 import {OAKREST_SERVICES} from '../src/town-services.js';
-import {CLASSIC_CAMERA,CLASSIC_LIMITS} from '../src/classic-presentation.js';
+import {CLASSIC_CAMERA,CLASSIC_LIMITS,classicScreenBasis} from '../src/classic-presentation.js';
 import {CLASSIC_MAP_FEATURES,worldToMinimap,minimapToWorld,fullMapTransform,fullMapWorld} from '../src/classic-minimap.js';
 
 test('minimap uses original Oakrest building, road and service definitions (not copies)',()=>{
@@ -17,13 +17,19 @@ test('minimap uses original Oakrest building, road and service definitions (not 
   assert.deepEqual([service.x,service.z],[building.x,building.z]);
  }
 });
-test('minimap geographic projection is north-up with stable player centre',()=>{
+test('corner minimap matches screen-left, screen-right and screen-up controls',()=>{
  const player={x:-13,z:40};
+ const {right,up}=classicScreenBasis();
  assert.deepEqual(worldToMinimap(player,player),{x:80,y:80});
- const north=worldToMinimap({x:player.x,z:player.z+6},player);
- assert.ok(north.y<80);
- const east=worldToMinimap({x:player.x+6,z:player.z},player);
- assert.ok(east.x>80);
+ const left=worldToMinimap({x:player.x-right.x*6,z:player.z-right.z*6},player);
+ const rightPoint=worldToMinimap({x:player.x+right.x*6,z:player.z+right.z*6},player);
+ const forward=worldToMinimap({x:player.x+up.x*6,z:player.z+up.z*6},player);
+ assert.ok(left.x<80,'joystick left must move left on minimap, never right');
+ assert.ok(rightPoint.x>80,'joystick right must move right on minimap');
+ assert.ok(forward.y<80,'joystick up must move up on minimap');
+ assert.ok(Math.abs(left.y-80)<1e-8,'left input cannot cause diagonal minimap motion');
+ assert.ok(Math.abs(rightPoint.y-80)<1e-8);
+ assert.ok(Math.abs(forward.x-80)<1e-8);
  for(const target of [{x:-30,z:14},{x:30,z:14},{x:15,z:64.5},{x:2,z:77}]){
   const px=worldToMinimap(target,player,160,3.3),back=minimapToWorld(px,player,160,3.3);
   assert.ok(Math.abs(back.x-target.x)<1e-8);
@@ -43,14 +49,14 @@ test('expanded map screen location converts back to canonical world space',()=>{
  }
 });
 
-test('camera-relative forward movement agrees with fixed north-up minimap',()=>{
+test('camera-forward movement points straight up on aligned corner minimap',()=>{
  const camera=CLASSIC_CAMERA;
  const length=Math.hypot(camera.offsetX,camera.offsetZ);
  const forward={x:-camera.offsetX/length,z:-camera.offsetZ/length};
  const origin={x:0,z:39};
  const mapOrigin=worldToMinimap(origin,origin);
  const moved=worldToMinimap({x:origin.x+forward.x*4,z:origin.z+forward.z*4},origin);
- assert.ok(moved.y<mapOrigin.y,'W/northward movement rises on map, not down');
- assert.ok(Math.abs(moved.x-mapOrigin.x)<(mapOrigin.y-moved.y)*.5,
-  'forward travel should be visibly northward, not a diagonal');
+ assert.ok(moved.y<mapOrigin.y,'W camera-forward movement rises on minimap');
+ assert.ok(Math.abs(moved.x-mapOrigin.x)<1e-8,
+  'camera-forward travel must be straight up on the small minimap');
 });
