@@ -616,7 +616,7 @@ if(isQa)window.oakrestClassicQA={
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
- cameraState:()=>orbitCamera.state(),cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
+ cameraState:()=>orbitCamera.state(),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
  openWindow:name=>windowUi.open(name),windowState:()=>windowUi.current(),
  itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
