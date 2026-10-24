@@ -6,7 +6,11 @@ import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './
 import {EQUIPMENT_SLOTS} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 
-export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:27,offsetZ:35,viewHeight:32,minZoom:.78,maxZoom:1.48});
+// Canonical +Z is NORTH on the map. Keep the 2.5D camera on the SOUTH
+// (negative-Z) side of the character so northward travel rises on screen.
+// A modest X offset retains the classic oblique feel without making north
+// appear diagonally opposite to the map compass.
+export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:12,offsetZ:-43,viewHeight:32,minZoom:.78,maxZoom:1.48});
 export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:95});
 export const CLASSIC_NPCS=Object.freeze([
  ...OAKREST_SERVICES.map(s=>Object.freeze({
