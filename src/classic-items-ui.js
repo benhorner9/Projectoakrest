@@ -21,7 +21,7 @@ function icon(parent,id){
  const src=itemIconUrl(id);if(!src)return;
  const img=element(parent,'img','classic-item-icon');img.alt='';img.src=src;img.width=42;img.height=42;
 }
-export function setupClassicItems({combat,player,style,notify,changed}){
+export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=>{},onClose=()=>{}}){
  const host=document.getElementById('classic-item-window');
  const title=q(host,'classic-item-title'),subtitle=q(host,'classic-item-summary');
  const content=q(host,'classic-item-content'),close=q(host,'classic-item-close');
@@ -91,7 +91,7 @@ export function setupClassicItems({combat,player,style,notify,changed}){
  }
  function renderInventory(){
   const data=save(),s=view();
-  element(content,'p','classic-muted','Owned items · '+s.coins+' coins · Tap to examine. Use ARRANGE to move tiles.');
+  element(content,'p','classic-muted','Your backpack · '+s.coins+' coins · Tap an item to examine.');
   const actions=element(content,'div','classic-item-actions');
   button(actions,arrange?'classic-item-action selected':'classic-item-action',
    arrange?'FINISH ARRANGING':'ARRANGE SLOTS',()=>{
@@ -203,7 +203,7 @@ export function setupClassicItems({combat,player,style,notify,changed}){
    tab.setAttribute('aria-selected',String(tab.dataset.itemTab===mode));
   }
   title.textContent={inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store',abilities:'Abilities'}[mode];
-  subtitle.textContent='BLOCK 5 · SESSION-ONLY · CHANGES RESET WHEN YOU LEAVE';
+  subtitle.textContent='OAKREST · CHARACTER INVENTORY';
   content.replaceChildren();
   if(mode==='inventory')renderInventory();
   else if(mode==='equipment')renderEquip();
@@ -214,9 +214,9 @@ export function setupClassicItems({combat,player,style,notify,changed}){
  function open(next='inventory'){
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
   mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;
-  host.hidden=false;render();
+  host.hidden=false;render();onOpen(next);
  }
- function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;}
+ function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
  return {open,hide,render,isOpen:()=>!host.hidden};
