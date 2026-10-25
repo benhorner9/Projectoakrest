@@ -419,6 +419,8 @@ $('classic-skills-close').addEventListener('click',()=>windowUi.hide());
 $('classic-map-toggle').addEventListener('click',()=>windowUi.open('map'));
 $('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
 $('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
+$('classic-social-toggle').addEventListener('click',()=>windowUi.open('social'));
+$('classic-social-close').addEventListener('click',()=>windowUi.hide());
 $('classic-save-indicator').addEventListener('click',()=>windowUi.open('settings'));
 $('classic-map-close').addEventListener('click',()=>windowUi.hide());
 $('classic-quests-close').addEventListener('click',()=>windowUi.hide());
@@ -685,7 +687,7 @@ itemUi=setupClassicItems({
  onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
- settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window')});
+ settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window'),social:$('classic-social-window')});
 skillsUi=setupClassicSkills({combat,windowUi});
 adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
  changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
