@@ -717,7 +717,18 @@ minimap.update({player,facing:look,cameraOffset:orbitCamera.offset(),
  monsters:combat.getState().monsters,drops:combat.getState().groundLoot,
  questGivers:availableQuestGivers(combat.adventureState(),findClassicInteractable),
  adventure:combat.adventureState()},0,true);
-if(!existing.profile&&!existing.existing)characterUI.show();
+// The original 3D homepage can seed oakrest-dev-v1 before a new visitor
+// clicks "Play Classic". Offer the Classic character chooser on that one
+// explicit transition rather than silently dropping them into practice mode.
+// Consume the marker so an intentional "Original Adventurer" selection works.
+const cameFromDevLauncher=(()=>{
+ try{
+  const value=sessionStorage.getItem('oakrest-dev-classic-from-home')==='1';
+  sessionStorage.removeItem('oakrest-dev-classic-from-home');
+  return value;
+ }catch{return false;}
+})();
+if(!existing.profile&&(!existing.existing||cameFromDevLauncher))characterUI.show();
 addEventListener('pagehide',()=>{if(needsSave)saveNow();});
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden&&needsSave)saveNow();
