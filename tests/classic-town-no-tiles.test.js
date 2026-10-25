@@ -18,7 +18,7 @@ test('main town paths and common use the authentic irregular road/plaza geometry
  assert.equal(trails.length,verges.length);
  for(const p of CLASSIC_PLAZAS){
   const outline=plazaOutline(p);
-  assert.ok(outline.length>=8,'commons have natural silhouettes, not squares');
-  assert.ok(new Set(outline.map(point=>point.join(','))).size>=8);
+  assert.ok(outline.length>=24,'commons need smoothly irregular outlines, not squares or octagons');
+  assert.ok(new Set(outline.map(point=>point.join(','))).size>=24);
  }
 });
