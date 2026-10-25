@@ -1,0 +1,42 @@
+/** Block 7: one window at a time, with NPC dialogue taking priority. */
+export function createClassicWindowController({items,map,settings,dialogue,minimap,quests,skills}){
+ let current=null;
+ const body=document.getElementById('classic-sidebar-body');
+ const close=()=>{
+  items.hide();map.hidden=true;settings.hidden=true;dialogue.hidden=true;quests.hidden=true;skills.hidden=true;
+  minimap.setExpanded(false);current=null;if(body)body.dataset.active='none';
+  for(const b of document.querySelectorAll('.classic-item-buttons button'))
+   b.setAttribute('aria-pressed','false');
+ };
+ const open=(name)=>{
+  if(name===current){close();return;}
+  close();
+  if(['inventory','equipment','abilities','bank','shop'].includes(name)){
+   items.open(name);current=name;
+  }else if(name==='skills'){
+   skills.hidden=false;current=name;
+  }else if(name==='quests'){
+   quests.hidden=false;current=name;
+  }else if(name==='map'){
+   map.hidden=false;minimap.setExpanded(true);current=name;
+  }else if(name==='settings'){
+   settings.hidden=false;current=name;
+  }else if(name==='dialogue'){
+   dialogue.hidden=false;current=name;
+  }
+  if(body)body.dataset.active=current||'none';
+  const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',
+   abilities:'classic-abilities-toggle',map:'classic-map-toggle',quests:'classic-quests-toggle',skills:'classic-skills-toggle',
+   settings:'classic-settings-toggle'}[name];
+  if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
+ };
+ const hide=()=>close();
+ const adopt=name=>{
+  current=name;if(body)body.dataset.active=name||'none';
+  for(const b of document.querySelectorAll('.classic-item-buttons button'))b.setAttribute('aria-pressed','false');
+  const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',abilities:'classic-abilities-toggle'}[name];
+  if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
+ };
+ const isOpen=()=>current!==null;
+ return {open,hide,isOpen,adopt,current:()=>current};
+}

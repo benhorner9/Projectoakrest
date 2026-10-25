@@ -1,0 +1,721 @@
+import {createAdventureWorld} from './adventure-world.js';
+import {setupAdventureUI} from './adventure-ui.js';
+import {installClassicIntegratedLayout} from './classic-integrated-layout.js';
+import {setupClassicSkills} from './classic-skills-ui.js';
+import {DUNGEON_ROOMS,ADVENTURE_REGIONS} from './adventure-content.js';
+/** Oakrest Classic Block 3 — input shell around renderer-free navigation.
+ * Retains the original character save and all gameplay rules untouched.
+ */
+import * as THREE from 'three';
+import {validSave,defaultSave,STYLE_ORDER} from './rules.js';
+import {readCharacters} from './characters.js';
+import {storageKey} from './storage-key.js';
+import {createClassicSaveManager} from './classic-save-manager.js';
+import {installGameZoomGuard} from './touch-gestures.js';
+import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
+import {createClassicOrbitCamera} from './classic-camera-controls.js';
+import {createClassicCombat} from './classic-combat.js';
+import {combatApproachPoint,breaksPlayerAttackIntent} from './classic-combat-intent.js';
+import {createClassicCombatView} from './classic-combat-view.js';
+import {createClassicQuestBeacon} from './classic-quest-beacon.js';
+import {availableQuestGivers} from './classic-quest-indicators.js';
+import {createClassicGroundLoot} from './classic-loot-view.js';
+import {setupClassicItems} from './classic-items-ui.js';
+import {createClassicMinimap} from './classic-minimap.js';
+import {createClassicWindowController} from './classic-ui-controller.js';
+import {createClassicNavigation} from './classic-navigation.js';
+import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
+ nearbyClassicInteraction,classicInteractionCopy} from './classic-interactions.js';
+import {createClassicVillage} from './classic-village.js';
+import {makeClassicActor,makeGroundShadow} from './classic-sprites.js';
+import {setupClassicCharacterUI} from './classic-character-ui.js';
+
+const $=id=>document.getElementById(id);
+const root=$('classic-game'),keys=new Set();
+installClassicIntegratedLayout(document);
+installGameZoomGuard(document);
+function readExistingCharacter(){
+ const key=k=>storageKey(k,location.pathname);
+ try{
+  const roster=readCharacters(localStorage,key('oakrest-characters-v1'));
+  const active=roster.find(x=>x.id===localStorage.getItem(key('oakrest-active-character')));
+  const raw=active?localStorage.getItem(key('oakrest-character-save-'+active.id)):
+   localStorage.getItem(key('oakrest-v1'));
+  return {profile:active||null,save:raw?validSave(JSON.parse(raw)):defaultSave(),existing:!!raw,raw};
+ }catch{return {profile:null,save:defaultSave(),existing:false};}
+}
+const existing=readExistingCharacter(),navigation=createClassicNavigation(),combat=createClassicCombat({save:existing.save,adventure:true});
+const saveManager=createClassicSaveManager({storage:localStorage,pathname:location.pathname,
+ profile:existing.profile,baselineRaw:existing.raw,
+ onStatus:result=>{
+  const state=document.getElementById('classic-save-state');
+  if(state)state.textContent=result.reason;
+ }});
+let sessionMutated=false,needsSave=false,lastSavedAt=0;
+let wornCache=null,wornCacheStyle=null;
+function savedWorn(){
+ if(!wornCache||wornCacheStyle!==style){
+  // Temporary simulation-loaned weapons must not masquerade as equipped items.
+  wornCache=presentationSnapshot(combat.persistentSave(),style,player).worn;
+  wornCacheStyle=style;
+ }
+ return wornCache;
+}
+const player={x:0,z:39},input={x:0,z:0},npcActors=[];
+let combatPursuitId=null;
+let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
+const orbitCamera=createClassicOrbitCamera();
+let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
+let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#b4c9ad');
+scene.fog=new THREE.Fog('#b4c9ad',75,160);
+scene.add(new THREE.HemisphereLight('#fff1d4','#657f68',2.1));
+const sun=new THREE.DirectionalLight('#ffedc8',2.2);sun.position.set(-27,55,36);scene.add(sun);
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ root.append(renderer.domElement);
+}catch(err){$('classic-error').hidden=false;throw err;}
+const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
+const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+const village=createClassicVillage(scene);
+const adventureWorld=createAdventureWorld(scene);
+let adventureUi=null;
+const combatView=createClassicCombatView(scene,combat.getState().monsters);
+const groundView=createClassicGroundLoot(scene);
+let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
+const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
+ onDestination:point=>{windowUi?.hide();queueDestination(point);}});
+const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#f0ceaa',
+ hair:existing.profile?.hairColor||'#39271f',coat:existing.profile?.outfitColor||'#607b7c',
+ outfit:existing.profile?.outfit||'tunic',hairstyle:existing.profile?.hairstyle||'short',
+ sex:existing.profile?.sex||'male'});
+const heroShadow=makeGroundShadow();
+scene.add(hero.sprite,heroShadow);
+for(const npc of CLASSIC_NPCS){
+ const actor=makeClassicActor({style:'melee',coat:npc.colour,skin:'#dbaf8d',
+  hair:npc.role==='guard'?'#4b3029':'#72533c',npc:true,armed:npc.role==='guard'});
+ const shadow=makeGroundShadow();
+ scene.add(actor.sprite,shadow);
+ actor.sprite.position.set(npc.x,.08,npc.z);
+ shadow.position.set(npc.x,.04,npc.z);
+ const beacon=createClassicQuestBeacon(scene,npc.x,npc.z,npc.targetId);
+ npcActors.push({...npc,actor,shadow,beacon});
+}
+const pointerMark=new THREE.Mesh(new THREE.RingGeometry(.54,.66,24),
+ new THREE.MeshBasicMaterial({color:'#e6d29b',side:THREE.DoubleSide,transparent:true,opacity:.82,depthWrite:false}));
+pointerMark.rotation.x=-Math.PI/2;pointerMark.position.y=.08;pointerMark.visible=false;scene.add(pointerMark);
+let markerTime=0;
+const selectableWorld=[];
+village.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
+adventureWorld.root.traverse(node=>{if(node.userData.interactId)selectableWorld.push(node);});
+const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
+let toastUntil=0;
+function feedback(text){
+ lastStatus=text;statusText.textContent=text;
+ const toast=$('classic-toasts');
+ const critical=/save failed|save locked|changed by another|could not save|storage failed|save conflict/i.test(text);
+ toast.classList.remove('is-faded');toast.classList.toggle('is-critical',critical);
+ toastUntil=critical?Infinity:combat.getState().time+3.2;
+}
+function showSaveState(message=null){
+ const s=saveManager.status();
+ const pill=$('classic-save-indicator');
+ pill.classList.toggle('is-saved',s.enabled);
+ pill.classList.toggle('is-blocked',!!s.blocked);
+ pill.textContent=s.blocked?'● SAVE LOCKED':s.enabled?'● SAVING ENABLED':'● PRACTICE MODE';
+ $('classic-save-mode').textContent=s.blocked?'SAVE LOCKED · RELOAD':
+  s.enabled?'PERSISTENT · GUARDED':'PRACTICE · NOT SAVING';
+ $('classic-enable-save').disabled=s.enabled||!s.canEnable;
+ $('classic-enable-save').textContent=s.blocked?'LOCKED':'ENABLE SAVING';
+ $('classic-save-now').disabled=!s.enabled;
+ if(message)$('classic-save-state').textContent=message;
+ else if(s.blocked)$('classic-save-state').textContent=s.blocked;
+ else if(s.enabled)$('classic-save-state').textContent=
+  needsSave?'Unsaved changes · saving automatically':'All changes saved · rollback backup retained';
+ else $('classic-save-state').textContent=existing.profile?
+  'Changes are temporary. Enable before practising to save new progress.':
+  'Select an existing character in the original game first.';
+}
+function saveNow(){
+ if(!saveManager.status().enabled)return false;
+ const result=saveManager.save(combat.persistentSave());
+ needsSave=!result.ok;
+ if(result.ok)lastSavedAt=combat.getState().time;
+ showSaveState(result.reason);
+ if(!result.ok)feedback(result.reason);
+ return result.ok;
+}
+function markProgress(){
+ wornCache=null;
+ sessionMutated=true;
+ if(saveManager.status().enabled){needsSave=true;showSaveState();}
+}
+$('classic-enable-save').addEventListener('click',()=>{
+ if(sessionMutated){
+  const message='This practice session has changed. Reload Classic before enabling saving so test items and XP cannot accidentally be imported.';
+  showSaveState(message);feedback(message);return;
+ }
+ if(!existing.profile){
+  showSaveState('Create or select a saved character in the original game first.');return;
+ }
+ if(!confirm('Enable saved character progression in Oakrest Classic? Your original save will be backed up first. Future combat, inventory, banking and shop changes will then be saved to this character.'))return;
+ const result=saveManager.enable();
+ showSaveState(result.reason);feedback(result.reason);
+});
+$('classic-save-now').addEventListener('click',saveNow);
+function showInteraction(target){
+ combat.stopTarget();
+ lastInteraction=target.id;
+ if(adventureUi?.talk(target))return;
+ adventureUi?.hideContent();
+ if(target?.service==='bank'||target?.service==='store'){
+  navigation.stop();
+  windowUi.open(target.service==='bank'?'bank':'shop');
+  feedback('Talking to '+target.name+'.');
+  return;
+ }
+ const copy=classicInteractionCopy(target,combat.sandboxSave());
+ $('classic-dialogue-name').textContent=copy.title;
+ $('classic-dialogue-text').textContent=copy.body;
+ windowUi.open('dialogue');lastInteraction=target.id;
+ feedback('Talking to '+target.name+'.');
+}
+$('classic-dialogue-close').addEventListener('click',()=>windowUi.hide());
+function refreshHud(){
+ wornCache=null;
+ const view=presentationSnapshot(combat.persistentSave(),style,player);
+ $('classic-name').textContent=existing.profile?.name||'The Wanderer';
+ $('classic-combat').textContent=view.combatLevel;
+ $('classic-vitality').textContent=view.vitality;
+ $('classic-weapon').textContent=view.weaponName;
+ $('classic-level').textContent=view.styleLevel;
+ for(const b of document.querySelectorAll('[data-style]')){
+  const chosen=b.dataset.style===style;
+  b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));
+ }
+ hero.update({facing:look,style,worn:view.worn,cameraOffset:orbitCamera.offset()});
+}
+function switchStyle(which){
+ if(!combat.styleSwitch(which))return;
+ const current=combat.getState().style;
+ if(current!==style){style=current;refreshHud();}
+ else feedback('Style switch queued until your attack finishes.');
+}
+for(const b of document.querySelectorAll('[data-style]'))
+ b.addEventListener('click',()=>switchStyle(b.dataset.style));
+function updateLocation(){
+ const building=occupantBuilding(player.x,player.z);
+ const id=building?.id||null;
+ if(id!==lastInside){lastInside=id;village.updateCutaway(id);}
+ $('classic-location').textContent=building
+  ?building.kind==='bank'?'Oakrest Bank':building.kind==='store'?'General Store':
+   building.kind==='forester'?'Forester Lodge':building.kind==='trade'?'Trade Hall':building.id.replace(/-/g,' ')
+  :player.z>210?(DUNGEON_ROOMS.find(r=>player.z>=r.minZ&&player.z<=r.maxZ)?.name||'Warden’s Hollow'):player.z>80?([...ADVENTURE_REGIONS].sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z))[0].name):'Oakrest Village';
+ $('classic-inside').textContent=building?'You are indoors; the roof has lifted.'
+  :'Follow the lane to an open doorway to explore building interiors.';
+}
+function resize(){
+ // The world has its own rectangle; using window dimensions distorts picking
+ // and stretches character sprites once the menu is outside the viewport.
+ const width=Math.max(1,root.clientWidth),height=Math.max(1,root.clientHeight);
+ const aspect=width/height,half=CLASSIC_CAMERA.viewHeight/2/zoom;
+ camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;
+ camera.updateProjectionMatrix();renderer.setSize(width,height,false);
+}
+function setZoom(n){zoom=clamp(n,CLASSIC_CAMERA.minZoom,CLASSIC_CAMERA.maxZoom);resize();}
+$('classic-zoom-in').addEventListener('click',()=>setZoom(zoom+.12));
+$('classic-zoom-out').addEventListener('click',()=>setZoom(zoom-.12));
+for(const button of document.querySelectorAll('[data-camera-turn]'))
+ button.addEventListener('click',()=>orbitCamera.nudge(button.dataset.cameraTurn));
+$('classic-camera-reset').addEventListener('click',()=>orbitCamera.reset());
+root.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom+(e.deltaY<0?.08:-.08));},{passive:false});
+addEventListener('resize',resize);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(root);
+resize();
+function screenRay(clientX,clientY){
+ const box=renderer.domElement.getBoundingClientRect();
+ const x=(clientX-box.left)/box.width*2-1;
+ const y=1-(clientY-box.top)/box.height*2;
+ raycaster.setFromCamera(new THREE.Vector2(x,y),camera);
+}
+function destinationAt(clientX,clientY){
+ screenRay(clientX,clientY);
+ const hit=new THREE.Vector3();
+ return raycaster.ray.intersectPlane(groundPlane,hit)?{x:hit.x,z:hit.z}:null;
+}
+function selectedFromRay(clientX,clientY){
+ screenRay(clientX,clientY);
+ const npcHit=raycaster.intersectObjects(npcActors.map(n=>n.actor.sprite),false)[0];
+ if(npcHit){
+  const npc=npcActors.find(n=>n.actor.sprite===npcHit.object);
+  if(npc)return findClassicInteractable(npc.targetId);
+ }
+ const worldHits=raycaster.intersectObjects(selectableWorld,true);
+ for(const hit of worldHits){
+  let obj=hit.object;
+  while(obj&&!obj.userData.interactId)obj=obj.parent;
+  const target=obj&&findClassicInteractable(obj.userData.interactId);
+  if(target)return target;
+ }
+ return null;
+}
+function placeMark(x,z){
+ pointerMark.position.set(x,.08,z);pointerMark.visible=true;markerTime=0;
+}
+function chooseInteraction(target){
+ if(!target)return false;
+ disengageFromCombat();
+ dialogue.hidden=true;selectedTarget=target;
+ placeMark(target.x,target.z);
+ const result=navigation.interactWith(player,target);
+ if(result.interaction){showInteraction(result.interaction);selectedTarget=null;return true;}
+ if(!result.ok){feedback(result.reason);selectedTarget=null;return false;}
+ feedback('Approaching '+target.name+'…');
+ return true;
+}
+function disengageFromCombat(){
+ const wasFighting=!!combat.getState().targetId;
+ combatPursuitId=null;
+ combat.stopTarget('player-movement');
+ return wasFighting;
+}
+function chaseSelectedEnemy(){
+ const state=combat.getState();
+ if(!combatPursuitId||state.targetId!==combatPursuitId){combatPursuitId=null;return;}
+ const enemy=state.target;
+ if(!enemy){combatPursuitId=null;return;}
+ const destination=combatApproachPoint(player,enemy,state.reach);
+ if(!destination){if(navigation.state().waypoints.length)navigation.stop();return;}
+ // Path only while the original click-to-attack order is still active.
+ // Manual movement or any new destination cancels this order instantly.
+ if(navigation.state().waypoints.length)return;
+ const path=navigation.moveTo(player,destination);
+ if(!path.ok){
+  combatPursuitId=null;combat.stopTarget('unreachable');
+  feedback('Cannot reach that creature. Choose another approach.');
+ }
+}
+function chooseEnemy(id){
+ const result=combat.chooseTarget(id,player);
+ if(result){
+  navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;windowUi?.hide();
+  combatPursuitId=id;
+  chaseSelectedEnemy();
+  const e=combat.getState().monsters.find(m=>m.id===id);
+  if(combat.getState().targetId===id)feedback('Attacking '+e.name+' · Move to disengage');
+ }else feedback('Creature too far away or behind an obstacle.');
+ return result;
+}
+function queueDestination(point){
+ if(!point)return;
+ // Any ground tap is a movement order, never an implicit monster lock.
+ disengageFromCombat();navigation.stop();
+ const target=closestClickedInteractable(point);
+ if(target){chooseInteraction(target);return;}
+ selectedTarget=null;windowUi?.hide();
+ const result=navigation.moveTo(player,point);
+ if(result.ok){placeMark(point.x,point.z);feedback(result.arrived?'You are here.':'Walking to destination…');}
+ else{pointerMark.visible=false;feedback(result.reason);}
+}
+let canvasDown=null;
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(e.button!==0)return;
+ canvasDown={id:e.pointerId,x:e.clientX,y:e.clientY};
+},{passive:true});
+renderer.domElement.addEventListener('pointerup',e=>{
+ if(!canvasDown||e.pointerId!==canvasDown.id)return;
+ const down=canvasDown;canvasDown=null;
+ if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>13)return;
+ screenRay(e.clientX,e.clientY);
+ const lootObjects=groundView.hitObjects();
+ const lootHits=raycaster.intersectObjects(lootObjects.map(o=>o.object),false);
+ const drop=lootHits[0]&&lootObjects.find(x=>x.object===lootHits[0].object);
+ if(drop){chooseLoot(drop.id);return;}
+ const hit=raycaster.intersectObjects(combatView.hitObjects().map(o=>o.object),false)[0];
+ const monster=hit&&combatView.hitObjects().find(o=>o.object===hit.object);
+ if(monster){chooseEnemy(monster.id);return;}
+ const target=selectedFromRay(e.clientX,e.clientY);
+ if(target)chooseInteraction(target);
+ else queueDestination(destinationAt(e.clientX,e.clientY));
+});
+renderer.domElement.addEventListener('pointercancel',()=>{canvasDown=null;});
+const joy=$('classic-joystick'),stick=$('classic-stick');
+let joystickId=null;
+function updateStick(clientX,clientY){
+ const box=joy.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
+ const dx=clientX-cx,dy=clientY-cy,len=Math.hypot(dx,dy),radius=box.width*.36;
+ const ux=dx/Math.max(1,len),uy=dy/Math.max(1,len),amount=clamp(len/radius,0,1);
+ input.x=ux*amount;input.z=uy*amount;
+ stick.style.transform=`translate(${ux*Math.min(radius,len)}px,${uy*Math.min(radius,len)}px)`;
+}
+joy.addEventListener('pointerdown',e=>{
+ e.preventDefault();joystickId=e.pointerId;joy.setPointerCapture(e.pointerId);
+ disengageFromCombat();navigation.stop();updateStick(e.clientX,e.clientY);
+ selectedTarget=null;pointerMark.visible=false;
+});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===joystickId)updateStick(e.clientX,e.clientY);});
+function releaseJoy(e){
+ if(e.pointerId===joystickId){joystickId=null;input.x=0;input.z=0;stick.style.transform='';}
+}
+joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
+let pendingDrop=null;
+function pickUp(id){
+ const item=id||combat.nearestLoot(player)?.id;
+ if(!item){feedback('No loot within reach.');return false;}
+ const result=combat.pickup(player,item);
+ feedback(result.reason);
+ if(result.ok){
+  pendingDrop=null;
+  itemUi?.render();refreshHud();markProgress();
+ }
+ return result.ok;
+}
+function chooseLoot(id){
+ disengageFromCombat();navigation.stop();
+ const drop=combat.getState().groundLoot.find(item=>item.id===id);
+ if(!drop)return;
+ if(Math.hypot(player.x-drop.x,player.z-drop.z)<=3.2){pickUp(id);return;}
+ pendingDrop=id;
+ const route=navigation.moveTo(player,{x:drop.x,z:drop.z});
+ if(!route.ok){feedback(route.reason);pendingDrop=null;}
+ else feedback('Approaching dropped item…');
+}
+$('classic-pickup').addEventListener('click',()=>pickUp());
+$('classic-inventory-toggle').addEventListener('click',()=>windowUi.open('inventory'));
+$('classic-equipment-toggle').addEventListener('click',()=>windowUi.open('equipment'));
+$('classic-abilities-toggle').addEventListener('click',()=>windowUi.open('abilities'));
+$('classic-skills-toggle').addEventListener('click',()=>skillsUi?.open());
+$('classic-skills-close').addEventListener('click',()=>windowUi.hide());
+$('classic-map-toggle').addEventListener('click',()=>windowUi.open('map'));
+$('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
+$('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
+$('classic-save-indicator').addEventListener('click',()=>windowUi.open('settings'));
+$('classic-map-close').addEventListener('click',()=>windowUi.hide());
+$('classic-quests-close').addEventListener('click',()=>windowUi.hide());
+$('classic-quests-toggle').addEventListener('click',()=>adventureUi?.showJournal());
+$('classic-settings-close').addEventListener('click',()=>windowUi.hide());
+$('classic-map-zoom-in').addEventListener('click',()=>minimap.setZoom(minimap.zoom()+.55));
+$('classic-map-zoom-out').addEventListener('click',()=>minimap.setZoom(minimap.zoom()-.55));
+function toggleAttack(){
+ // The button is attack/retarget only; it is no longer a sticky lock/unlock switch.
+ const state=combat.getState();
+ const enemy=state.monsters.filter(m=>!m.dead&&!m.hidden&&!m.retreating&&m.hp>0)
+  .sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z))
+  .find(m=>Math.hypot(m.x-player.x,m.z-player.z)<29);
+ if(enemy)chooseEnemy(enemy.id);
+ else feedback('Tap a nearby creature to attack. Walking always cancels combat.');
+}
+function useCombatAbility(index){
+ const ability=combat.getState().abilities[index];
+ if(!ability){feedback('Ability slot locked or empty.');return;}
+ if(!combat.queueAbility(index))feedback('Ability unavailable or cooling down.');
+ else feedback(ability.name+' activated.');
+}
+function triggerDodge(){
+ if(!combat.dodge())return;
+ disengageFromCombat();
+ const keysDir=axesFromKeys(),length=Math.hypot(keysDir.x,keysDir.z);
+ dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
+ navigation.stop();feedback('Dodged!');
+}
+$('classic-attack').addEventListener('click',toggleAttack);
+$('classic-dodge').addEventListener('click',triggerDodge);
+for(const b of document.querySelectorAll('[data-ability]'))
+ b.addEventListener('click',()=>useCombatAbility(Number(b.dataset.ability)));
+function combatEvents(events){
+ for(const event of events){
+  if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
+  if(event.type==='style'){style=event.style;refreshHud();}
+  else if(event.type==='release')lastReleaseUntil=event.time+.18;
+  else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
+  else if(event.type==='miss')feedback('Miss');
+  else if(event.type==='defeated')feedback(event.name+' defeated');
+  else if(event.type==='adventure'){markProgress();if(!event.reason.startsWith('Used '))feedback(event.reason);}
+  else if(event.type==='adventure-notice')feedback(event.reason);
+  else if(event.type==='xp'){
+   refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
+  }else if(event.type==='warning')feedback('Enemy attack incoming — MOVE or DODGE!');
+  else if(event.type==='hurt')feedback('You took '+event.damage+' damage');
+  else if(event.type==='dead'){
+   navigation.stop();dodgeTravel=null;feedback('Defeated — respawning in Oakrest');
+  }else if(event.type==='revive'){
+   windowUi.hide();
+   player.x=0;player.z=39;navigation.stop();feedback('Respawned in Oakrest');
+  }else if(event.type==='heal')feedback('Healed '+event.amount+' HP');
+  else if(event.type==='dash'){
+   const moved=slideMove(player,look.x*event.distance,look.z*event.distance);
+   if(combat.adventureCanPass(moved.z)){player.x=moved.x;player.z=moved.z;}
+  }
+ }
+}
+function updateCombatUi(snapshot){
+ $('classic-health-label').textContent=snapshot.hp+' / '+snapshot.maxHp+' HP';
+ $('classic-health-fill').style.width=(100*snapshot.hp/Math.max(1,snapshot.maxHp))+'%';
+ const target=snapshot.target;
+ $('classic-combat-target').hidden=!target;
+ $('classic-target-name').textContent=target?target.name+(target.weak?' · weak to '+target.weak:''):'No monster selected';
+ $('classic-target-level').textContent=target?'Lv '+target.level:'';
+ $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
+ const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
+ attack.firstChild.textContent='⚔';
+ attack.querySelector('small').textContent='ATTACK';
+ for(const b of document.querySelectorAll('[data-ability]')){
+  const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
+  const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
+  b.disabled=!ability||snapshot.hp<=0||seconds>0;
+  b.classList.toggle('on-cooldown',seconds>0);
+  b.firstChild.textContent='QERF'[index];
+  const hint=b.querySelector('small');
+  hint.textContent=seconds>0?seconds.toFixed(1)+'s':ability?.name||'Locked';
+  b.title=ability?.name||'Locked ability';
+ }
+ $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
+}
+function updateContextActions(){
+ const interaction=nearbyClassicInteraction(player),drop=combat.nearestLoot(player);
+ interactButton.hidden=!interaction;
+ $('classic-pickup').hidden=!drop;
+ $('classic-pickup').disabled=!drop;
+ if(interaction)interactButton.title='Talk to '+interaction.name;
+ if(drop)$('classic-pickup').title='Pick up nearby loot';
+ $('classic-interact-button').parentNode.hidden=!interaction&&!drop;
+}
+function interactNearby(){
+ const candidate=nearbyClassicInteraction(player);
+ if(candidate){disengageFromCombat();navigation.stop();selectedTarget=null;showInteraction(candidate);}
+ else feedback('Walk closer to a person, sign or training tree.');
+}
+interactButton.addEventListener('click',interactNearby);
+document.addEventListener('keydown',e=>{
+ if(characterUI?.isOpen()||['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space','Home'].includes(e.key))e.preventDefault();
+ keys.add(e.key.toLowerCase());
+ if(e.repeat)return;
+ if(e.key==='Home')orbitCamera.reset();
+ if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
+ if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
+ if(e.key.toLowerCase()==='t')interactNearby();
+ if(e.key.toLowerCase()==='i')windowUi.open('inventory');
+ if(e.key.toLowerCase()==='k')windowUi.open('equipment');
+ if(e.key.toLowerCase()==='l')windowUi.open('abilities');
+ if(e.key.toLowerCase()==='v')skillsUi?.open();
+ if(e.key.toLowerCase()==='m')windowUi.open('map');
+ if(e.key.toLowerCase()==='u')adventureUi.showJournal();
+ if(e.key.toLowerCase()==='h'){const r=combat.adventureAction('eat',{},player);feedback(r.reason);if(r.ok)markProgress();}
+ if(e.key.toLowerCase()==='g')pickUp();
+ if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
+ if(e.code==='Space')triggerDodge();
+ const bindings=['q','e','r','f'];
+ if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
+ if(e.key==='Escape'){disengageFromCombat();windowUi.hide();navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;}
+});
+document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function releaseAll(){
+ keys.clear();input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
+ stick.style.transform='';
+}
+addEventListener('blur',releaseAll);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
+function axesFromKeys(){
+ // Arrows orbit/tilt the camera exclusively; only WASD / touch joystick move.
+ // Sample the SAME live basis used by the camera and rotating corner minimap.
+ const {right,up}=classicScreenBasis(orbitCamera.offset());
+ const h=Number(keys.has('d'))-Number(keys.has('a'))+input.x;
+ const v=Number(keys.has('w'))-Number(keys.has('s'))-input.z;
+ return {x:right.x*h+up.x*v,z:right.z*h+up.z*v};
+}
+function moveGame(dt){
+ const previous={...player};
+ const update=navigation.step(player,axesFromKeys(),dt);
+ if(breaksPlayerAttackIntent(update)){
+  const wasFighting=disengageFromCombat();
+  if(wasFighting)feedback('You disengage and move freely.');
+ }
+ if(!combat.adventureCanPass(update.position.z)&&update.position.z>210){navigation.stop();feedback('Restore this chamber’s ward before proceeding.');}
+ else {player.x=update.position.x;player.z=update.position.z;}
+ if(update.heading){look=update.heading;walkClock+=dt;}
+ else walkClock=0;
+ if(update.interaction){
+  showInteraction(update.interaction);selectedTarget=null;pointerMark.visible=false;
+ }else if(update.failed){
+  feedback(update.failed);selectedTarget=null;pointerMark.visible=false;
+ }else if(update.kind==='manual'&&selectedTarget){
+  selectedTarget=null;pointerMark.visible=false;
+  feedback('Manual movement — tap a person or object to interact.');
+ }
+ if(pointerMark.visible&&update.kind==='path'&&update.remaining===0){
+  pointerMark.visible=false;feedback('Destination reached.');
+ }
+ hero.sprite.position.set(player.x,.08,player.z);
+ heroShadow.position.set(player.x,.04,player.z);
+ // Hero sprite is drawn once in draw(), not twice per frame.
+ if(pendingDrop){
+  const item=combat.getState().groundLoot.find(x=>x.id===pendingDrop);
+  if(!item||Math.hypot(player.x-item.x,player.z-item.z)<=3.2)pickUp(pendingDrop);
+  else if(!navigation.state().waypoints.length&&update.kind==='idle'){feedback('Cannot reach dropped item.');pendingDrop=null;}
+ }
+ updateLocation();
+ return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
+}
+function draw(dt,render=true){
+ if(characterUI?.isOpen())return; // Do not move or fight behind character selection.
+ orbitCamera.step(keys,dt);
+ const cameraOffset=orbitCamera.offset();
+ const movement=moveGame(dt);
+ // Stop approaching as soon as the monster is actually in weapon range:
+ // don't walk through its sprite or past it to an old path waypoint.
+ if(combatPursuitId){
+  const engaging=combat.getState(),enemy=engaging.target;
+  if(enemy&&engaging.targetId===combatPursuitId&&
+   Math.hypot(player.x-enemy.x,player.z-enemy.z)<=Math.max(.75,engaging.reach-.26))
+   navigation.stop();
+ }
+ if(dodgeTravel&&dt>0){
+  const slice=Math.min(dt,dodgeTravel.remaining),direction=dodgeTravel.direction;
+  const moved=slideMove(player,direction.x*slice*12.5,direction.z*slice*12.5);
+  if(combat.adventureCanPass(moved.z)){player.x=moved.x;player.z=moved.z;}
+  dodgeTravel.remaining-=slice;if(dodgeTravel.remaining<=0)dodgeTravel=null;
+ }
+ // Follow only a deliberate click-to-attack. Never recreate pursuit after
+ // a ground click, WASD, joystick, Escape, dodge or non-combat interaction.
+ if(movement.kind==='idle'&&!navigation.state().waypoints.length)chaseSelectedEnemy();
+ const events=combat.tick(dt,player);
+ combatEvents(events);
+ if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
+ const state=combat.getState();
+ const adventureState=combat.adventureState();
+ adventureWorld.update(adventureState,player,cameraOffset,state.time);
+ for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
+ adventureUi?.tick();skillsUi?.tick();
+ if(state.style!==style){style=state.style;refreshHud();}
+ combatView.update(state);
+ groundView.update(state.groundLoot,state.time);
+ minimap.update({player,facing:look,destination:navigation.state().goal,cameraOffset,
+  monsters:state.monsters,drops:state.groundLoot,objective:adventureUi?.objective(),
+  questGivers:availableQuestGivers(adventureState,findClassicInteractable),adventure:adventureState},state.time);
+ if(!$('classic-toasts').classList.contains('is-critical')&&state.time>=toastUntil)
+  $('classic-toasts').classList.add('is-faded');
+ updateContextActions();
+ if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
+ hero.sprite.position.set(player.x,.08,player.z);
+ heroShadow.position.set(player.x,.04,player.z);
+ hero.update({facing:look,style,
+  step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
+  pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
+  worn:savedWorn(),cameraOffset});
+ for(const [i,n] of npcActors.entries())
+  n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee',cameraOffset});
+ if(pointerMark.visible){
+  markerTime+=dt;pointerMark.material.opacity=.55+.25*Math.sin(markerTime*4);
+  pointerMark.scale.setScalar(1+.1*Math.sin(markerTime*4));
+ }
+ // Keep real camera, movement basis and minimap synchronised each frame.
+ // Smooth orbit comes from frame-rate-independent angular velocity, not a
+ // following lag that could invert navigation while the view is catching up.
+ camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
+ camera.lookAt(player.x,0,player.z);if(render)renderer.render(scene,camera);
+}
+let last=performance.now();
+function tick(time){
+ requestAnimationFrame(tick);
+ if(document.hidden){last=time;return;}
+ const dt=clamp((time-last)/1000,0,.06);last=time;draw(dt);
+}
+itemUi=setupClassicItems({
+ combat,player:()=>player,style:()=>style,notify:feedback,
+ changed:next=>{
+  if(STYLE_ORDER.includes(next))switchStyle(next);
+  else markProgress();
+  refreshHud();
+ },
+ onOpen:tab=>windowUi?.adopt(tab),
+ onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
+});
+windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
+ settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window')});
+skillsUi=setupClassicSkills({combat,windowUi});
+adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
+ changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
+ teleport:p=>{disengageFromCombat();player.x=p.x;player.z=p.z;navigation.stop();dodgeTravel=null;selectedTarget=null;}});
+if(existing.profile&&existing.save.adventure?.autoSave){saveManager.enable();showSaveState();}
+characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.pathname,
+ onOpen:()=>{windowUi.hide();releaseAll();combat.reset();},
+ beforeSwitch:()=>{
+  if(needsSave&&saveManager.status().enabled&&!saveNow())return false;
+  return !sessionMutated||saveManager.status().enabled||
+   confirm('Unsaved practice changes will be lost when changing characters. Continue?');
+ }
+});
+$('classic-characters-open').addEventListener('click',()=>characterUI.show());
+feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
+showSaveState();updateContextActions();
+minimap.update({player,facing:look,cameraOffset:orbitCamera.offset(),
+ monsters:combat.getState().monsters,drops:combat.getState().groundLoot,
+ questGivers:availableQuestGivers(combat.adventureState(),findClassicInteractable),
+ adventure:combat.adventureState()},0,true);
+if(!existing.profile&&!existing.existing)characterUI.show();
+addEventListener('pagehide',()=>{if(needsSave)saveNow();});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden&&needsSave)saveNow();
+});
+const initialCameraOffset=orbitCamera.offset();
+camera.position.set(player.x+initialCameraOffset.x,initialCameraOffset.y,player.z+initialCameraOffset.z);
+camera.lookAt(player.x,0,player.z);
+requestAnimationFrame(tick);
+const isQa=new URLSearchParams(location.search).has('qa')&&
+ (['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname));
+if(isQa)window.oakrestClassicQA={
+ state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
+  pathLength:navigation.state().waypoints.length,hasSavedProfile:existing.existing,
+  npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&
+   village.roofs.find(x=>x.id===occupantBuilding(player.x,player.z)?.id)?.roofs.visible===false,
+  combatLevel:presentationSnapshot(combat.sandboxSave(),style,player).combatLevel,
+  selected:selectedTarget?.id||null,lastInteraction,status:lastStatus}),
+ step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
+ // Accelerated transaction checks still run every gameplay/UI tick, but submit
+ // only their final frame to WebGL instead of flooding a software GPU queue.
+ advance:seconds=>{let remaining=clamp(Number(seconds)||0,0,120);while(remaining>0){const dt=Math.min(.1,remaining);draw(dt,false);remaining-=dt;}draw(0);},
+ selectTarget:id=>chooseInteraction(findClassicInteractable(id)),
+ interactNow:interactNearby,
+ teleport:(x,z)=>{if(!Number.isFinite(x)||!Number.isFinite(z))return;player.x=x;player.z=z;
+  navigation.stop();disengageFromCombat();dodgeTravel=null;selectedTarget=null;draw(0);},
+ projectWorld:(x,z)=>{
+  // QA may query the projection before the first requestAnimationFrame.
+  // Ensure the saved/test character overlay cannot leave matrices stale.
+  camera.updateMatrixWorld(true);
+  const p=new THREE.Vector3(x,0,z).project(camera);
+  return {x:p.x,y:-p.y};
+ },
+ navigationState:()=>navigation.state(),
+ combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
+ cameraState:()=>orbitCamera.state(),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
+ resetCamera:()=>{orbitCamera.reset();draw(0);},
+ openWindow:name=>name==='skills'?skillsUi.open():windowUi.open(name),windowState:()=>windowUi.current(),
+ itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
+  const result=combat.itemAction(action,player);if(result.ok){refreshHud();itemUi.render();markProgress();}return result;
+ },pickupDrop:id=>pickUp(id),openItemMenu:tab=>windowUi.open(tab),
+ useAbility:index=>useCombatAbility(index),attack:toggleAttack,dodge:triggerDodge,
+ savedState:()=>JSON.stringify(existing.save),
+ saveStatus:()=>saveManager.status(),enableSaving:()=>{if(sessionMutated)return {ok:false};const r=saveManager.enable();showSaveState(r.reason);return r;},
+ saveNow,persistentSnapshot:()=>combat.persistentSave(),
+  characterCreatorState:()=>({open:characterUI.isOpen(),appearance:existing.profile||null}),
+  openCharacterCreator:()=>characterUI.show(),
+  wornVisual:()=>savedWorn(),
+  adventureState:()=>combat.adventureState(),
+  questBeacons:()=>[...npcActors.map(n=>({id:n.targetId,visible:n.beacon.sprite.visible})),
+   ...availableQuestGivers(combat.adventureState(),findClassicInteractable)],
+  adventureAction:(kind,id,choice)=>{const r=combat.adventureAction(kind,{target:findClassicInteractable(id),choice},player);if(r.ok){if(r.teleport){player.x=r.teleport.x;player.z=r.teleport.z;navigation.stop();}markProgress();refreshHud();}return r;},
+  heroPixelSignature:()=>{
+   const image=hero.sprite.material.map?.image;
+   if(!image)return null;
+   const ctx=image.getContext('2d'),bytes=ctx.getImageData(0,0,image.width,image.height).data;
+   let hash=2166136261;
+   for(let i=0;i<bytes.length;i++)hash=Math.imul(hash^bytes[i],16777619);
+   return hash>>>0;
+  }
+};

@@ -1,0 +1,86 @@
+#classic-dialogue{max-height:64dvh;overflow:auto;overscroll-behavior:contain;width:min(440px,calc(100vw - 160px))}
+#adventure-content{font-size:14px;line-height:1.45}#adventure-content[hidden]{display:none}
+#adventure-content button{min-height:44px;margin:4px 4px 4px 0;padding:8px 12px;white-space:normal}
+#adventure-content h3{margin:10px 0 6px;color:#e5ca91}#adventure-content p{margin:7px 0}
+#adventure-content details{padding:8px 0;border-bottom:1px solid #8e815b66}#adventure-content summary{cursor:pointer;min-height:36px}
+.adventure-recipe{padding:8px 0;border-bottom:1px solid #8e815b66}.adventure-recipe small{display:block}
+#adventure-journal,#adventure-work{position:fixed;z-index:18;background:#23372eeb;color:#efdfb6;border:1px solid #9a8659;border-radius:5px;font:13px Georgia;min-height:36px;padding:8px 12px;max-width:300px}
+#adventure-journal{position:static;display:block;margin-top:7px;width:100%;text-align:left;font-size:12px;padding:5px 7px}#adventure-work{left:50%;bottom:112px;transform:translateX(-50%)}
+#adventure-work[hidden],#adventure-journal[hidden]{display:none}
+@media(max-height:650px){#adventure-journal{font-size:11px}#classic-dialogue{max-height:65dvh}#adventure-work{bottom:98px}}
+
+/* RuneScape-inspired, always accessible quest book. Scroll and tap work on iPad Safari. */
+.classic-quests-window{width:min(630px,calc(100vw - 270px));overflow:hidden}
+.classic-quest-book{min-height:0;flex:1;display:flex;flex-direction:column}
+.classic-quest-layout{display:grid;grid-template-columns:minmax(190px,43%) minmax(0,1fr);gap:12px;min-height:0;flex:1}
+.classic-quest-list,.classic-quest-detail{min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:8px 10px;background:#1e3129;border:1px solid #7e765a;border-radius:5px}
+.classic-quest-list h3,.classic-quest-detail h3{font:700 11px system-ui,sans-serif;color:#d7c08e;letter-spacing:.08em;margin:12px 0 7px}
+.classic-quest-entry{display:block;width:100%;text-align:left;background:#30483a;color:#e5dabb;border:1px solid transparent;border-radius:3px;min-height:39px;margin:3px 0;padding:8px;font:12px/1.3 system-ui,sans-serif}
+.classic-quest-entry.status-active,.classic-quest-entry.status-ready{color:#f4d687}
+.classic-quest-entry.status-available{color:#f2e7b6}
+.classic-quest-entry.status-completed{color:#9cc9a4}
+.classic-quest-entry.status-locked{color:#87978b}
+.classic-quest-entry.selected{background:#594c33;border-color:#e3c47c}
+.classic-quest-detail h2{font:20px Georgia,serif;color:#f1dfba;margin:6px 0}
+.classic-quest-detail p{font:12px/1.48 system-ui,sans-serif;color:#e6e6d6}
+.classic-quest-detail .quest-state{font-weight:700;color:#dfbc78;margin:5px 0 12px}
+.classic-quest-detail .quest-state.status-completed{color:#9cc9a4}
+.classic-quest-detail .quest-state.status-locked{color:#a0a59a}
+.classic-quest-detail .quest-done{color:#9cc9a4}
+.classic-quest-detail .quest-reward{border-top:1px solid #6e785e;padding-top:10px;color:#e9d397}
+.classic-quest-detail button{width:100%;min-height:44px;padding:9px;background:#7b6342;border:1px solid #d7bc87;border-radius:5px;color:#fff0ce;font:700 12px system-ui,sans-serif}
+.classic-quest-detail button:disabled{opacity:.65}
+@media(max-width:1000px){.classic-quests-window{width:min(570px,calc(100vw - 215px))}}
+@media(max-width:670px){.classic-quest-layout{grid-template-columns:minmax(122px,44%) minmax(0,1fr);gap:5px}
+ .classic-quest-list,.classic-quest-detail{padding:6px}
+ .classic-quest-entry{font-size:10px;min-height:39px}}
+
+@media(max-width:670px){.classic-quests-window{right:59px;width:calc(100vw - 65px);max-width:none}}
+
+/* Seven right-side actions (including Ration) must not collide with combat at 600px height. */
+@media(max-height:620px){
+ .classic-item-buttons{top:173px;gap:2px}
+ .classic-item-buttons button{height:37px;min-height:37px;padding:2px 1px;font-size:15px;line-height:17px}
+ .classic-item-buttons button small{font-size:8px;line-height:10px;margin:0}
+}
+
+/* Classic skills and levels, compact on touch landscape devices. */
+.classic-skills-window{width:min(680px,calc(100vw - 265px));overflow:hidden}
+.classic-skill-book{flex:1;min-height:0;display:flex}
+.classic-skill-layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(176px,43%) minmax(0,1fr);gap:10px}
+.classic-skill-list,.classic-skill-detail{overflow-y:auto;min-height:0;overscroll-behavior:contain;touch-action:pan-y;background:#1e3129;border:1px solid #7e765a;border-radius:5px;padding:8px}
+.classic-skill-list h3,.classic-skill-detail h3{font:700 10px system-ui,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:#dbc58d;margin:10px 0 5px}
+.classic-skill-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.classic-skill-card{display:grid;grid-template-columns:20px 1fr;grid-template-rows:auto auto;align-items:center;gap:0 5px;text-align:left;min-height:51px;padding:5px;border:1px solid #586f5c;border-radius:4px;background:#334e3c;color:#efe2c0}
+.classic-skill-card.active{border-color:#efcf87;background:#5e5039}
+.classic-skill-card .skill-icon{grid-row:1/3;font-size:17px}
+.classic-skill-card .skill-name{font:10px/1.15 system-ui,sans-serif;overflow-wrap:anywhere}
+.classic-skill-card .skill-level{font:700 15px Georgia,serif;color:#f3d89d}
+.classic-skill-detail h2{font:20px Georgia,serif;color:#f2dbac;margin:4px 0 8px}
+.classic-skill-detail p{font:11px/1.5 system-ui,sans-serif;color:#e1e4d5}
+.classic-skill-detail .skill-description{color:#bdc8b8}
+.skill-progress-heading{font:700 12px system-ui,sans-serif;color:#f3d89d;margin:9px 0}
+.skill-xp-track{height:12px;background:#142b22;border:1px solid #7a8a68;border-radius:5px;overflow:hidden}
+.skill-xp-track>div{height:100%;background:linear-gradient(90deg,#7d9f64,#dcc081)}
+.classic-skill-detail .skill-xp-caption{font-size:10px;margin:5px 0 12px}
+.classic-skill-unlock{display:flex;align-items:center;gap:7px;min-height:43px;padding:6px 2px;border-bottom:1px solid #4b5e4a}
+.classic-skill-unlock.locked{opacity:.57}
+.skill-unlock-level{flex:none;font:700 10px system-ui,sans-serif;color:#e7c988;width:35px}
+.skill-unlock-text{flex:1;min-width:0}
+.skill-unlock-text strong{display:block;font:700 11px system-ui,sans-serif}
+.skill-unlock-text small{display:block;font:10px/1.4 system-ui,sans-serif;color:#c3ccbd}
+.skill-unlock-status{font-size:16px;color:#b5d6a0}
+.classic-skill-detail .skill-hint{color:#f0d5a0;border-top:1px solid #677e65;padding-top:9px}
+.classic-handcraft{margin-top:8px;padding:9px;background:#1e3229;border:1px solid #a18c67;border-radius:5px}
+.classic-handcraft h3{margin:4px 0 8px}
+.classic-handcraft .craft-option{padding:9px 0;border-top:1px solid #485c4d}
+.classic-handcraft .craft-option strong{display:block;font:700 12px system-ui,sans-serif;color:#eedcae}
+.classic-handcraft .craft-option small{display:block;margin:5px 0;color:#c7d2c3;font:11px/1.4 system-ui,sans-serif}
+.classic-handcraft .craft-option button{min-height:39px;min-width:120px}
+.classic-handcraft .craft-option button:disabled{opacity:.5}
+.classic-combine-prompt{background:#705533;color:#fff0ca;border:1px solid #e3c384;padding:9px;margin:7px 0;border-radius:4px;font:11px/1.4 system-ui,sans-serif}
+.classic-combine-prompt button{margin-top:5px;min-height:38px}
+@media(max-width:1000px){.classic-skills-window{width:min(580px,calc(100vw - 215px))}}
+@media(max-width:670px){.classic-skills-window{right:59px;width:calc(100vw - 65px);max-width:none}.classic-skill-layout{grid-template-columns:minmax(144px,42%) minmax(0,1fr);gap:5px}.classic-skill-list,.classic-skill-detail{padding:5px}.classic-skill-grid{gap:3px}.classic-skill-card{min-height:45px;padding:3px}}
+/* Eight compact actions including ration: no overlap with the right-hand combat cluster. */
+@media(max-height:700px){.classic-item-buttons{top:171px;gap:2px}.classic-item-buttons button{min-height:34px;height:34px;padding:1px;font-size:14px;line-height:15px}.classic-item-buttons button small{font-size:8px;line-height:9px;margin:0}}

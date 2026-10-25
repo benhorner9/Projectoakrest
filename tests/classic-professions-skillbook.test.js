@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {freshCharacterSave,validSave} from '../src/rules.js';
+import {createClassicCombat} from '../src/classic-combat.js';
+import {RECIPES,ADVENTURE_TARGETS} from '../src/adventure-content.js';
+import {skillBookSnapshot,CLASSIC_SKILLS} from '../src/classic-skill-catalogue.js';
+import {woodcuttingLevel} from '../src/woodcutting.js';
+const start=()=>{const d=freshCharacterSave();d.onboarding.area='world';return d;};
+const action=(c,kind,choice)=>c.adventureAction(kind,{choice},{x:0,z:39});
+test('only metalwork is a world crafting station; all other crafts use the backpack',()=>{
+ assert.deepEqual(ADVENTURE_TARGETS.filter(t=>t.kind==='station').map(t=>t.station),['forge']);
+ assert.ok(RECIPES.filter(r=>r.station==='inventory').length>=7);
+ assert.ok(RECIPES.filter(r=>r.station==='forge').length>=5);
+ assert.ok(RECIPES.every(r=>r.profession));
+});
+test('backpack makes ammunition without a bench, spends resources and trains fletching',()=>{
+ const save=start();save.inventory.materials={'softwood-logs':3,'reed':3};
+ const c=createClassicCombat({save,adventure:true,random:()=>.1});
+ const r=action(c,'craft','arrows');
+ assert.equal(r.ok,true,r.reason);
+ const post=c.persistentSave();
+ assert.equal(post.inventory.materials['softwood-logs'],2);
+ assert.equal(post.inventory.materials['field-arrows'],30);
+ assert.equal(post.adventure.skills.fletching,18);
+ assert.equal(action(c,'craft','arrows').ok,true);
+ assert.equal(c.persistentSave().adventure.skills.fletching,36);
+});
+test('use-with requires two actual different components and fails safely without a valid pairing',()=>{
+ const save=start();save.inventory.materials={'reed':4,'moss-fibre':2,'copper-ore':2};
+ const c=createClassicCombat({save,adventure:true});
+ assert.equal(action(c,'combine',{first:'reed',second:'copper-ore'}).ok,false);
+ assert.equal(action(c,'combine',{first:'reed',second:'reed'}).ok,false);
+ assert.equal(c.persistentSave().inventory.materials.reed,4);
+ const made=action(c,'combine',{first:'reed',second:'moss-fibre'});
+ assert.equal(made.ok,true,made.reason);
+ const after=c.persistentSave();
+ assert.equal(after.inventory.materials.reed,2);
+ assert.equal(after.inventory.materials['moss-fibre'],1);
+ assert.equal(after.inventory.materials['ember-scroll'],30);
+ assert.equal(after.adventure.skills.inscription,18);
+});
+test('metalwork cannot be crafted from the backpack and cannot duplicate owned items',()=>{
+ const save=start();save.inventory.materials={'copper-ore':2,'tin-ore':2,'bronze-bar':7};
+ const c=createClassicCombat({save,adventure:true});
+ assert.equal(action(c,'craft','bar').ok,false,'smelting needs the forge');
+ assert.equal(action(c,'craft','shield').ok,false);
+ assert.equal(c.persistentSave().inventory.materials['bronze-bar'],7);
+});
+test('Fieldcraft gains independent persistent levels; level-unlock book uses real recipes',()=>{
+ const save=start();save.inventory.materials={'reed':6};
+ let c=createClassicCombat({save,adventure:true});
+ assert.equal(action(c,'craft','rations').ok,true);
+ assert.equal(c.persistentSave().adventure.skills.cooking,12);
+ const reloaded=validSave(c.persistentSave());
+ c=createClassicCombat({save:reloaded,adventure:true});
+ assert.equal(c.adventureState().skills.cooking,12);
+ const skills=skillBookSnapshot(c.persistentSave());
+ assert.equal(skills.length,CLASSIC_SKILLS.length);
+ assert.equal(skills.find(s=>s.id==='cooking').totalXp,12);
+ assert.ok(skills.find(s=>s.id==='cooking').milestones.some(m=>m.name.includes('ration')));
+ assert.ok(skills.find(s=>s.id==='inscription').milestones.some(m=>m.name.includes('restoration seal')));
+ assert.ok(skills.find(s=>s.id==='blacksmithing').milestones.every(m=>m.type==='At the forge'));
+ assert.ok(skills.find(s=>s.id==='woodcutting').milestones.length>=7);
+ assert.equal(skills.find(s=>s.id==='melee').level,1);
+});
+test('failed crafting never changes saves, bank values, materials or XP',()=>{
+ const save=start();save.inventory.materials={'reed':1,'softwood-logs':1};
+ const c=createClassicCombat({save,adventure:true});
+ const before=JSON.stringify(c.persistentSave());
+ assert.equal(action(c,'craft','frost').ok,false);
+ assert.equal(action(c,'combine',{first:'reed',second:'softwood-logs'}).ok,false);
+ assert.equal(JSON.stringify(c.persistentSave()),before);
+});
