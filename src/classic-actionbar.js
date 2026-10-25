@@ -22,9 +22,33 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
  instructions.textContent='1–8 · actions  ·  Tab · switch style';
  heading.append(instructions);
  deck.insertBefore(heading,deck.firstChild);
- const kinds=[...buttons.map((_,index)=>'ability'+index),'eat','drink','dodge','attack'];
+ const kinds=[...buttons.map((_,index)=>'ability'+index)];
  const utilityBtns=[$('oakrest-food-slot'),$('oakrest-potion-slot'),$('classic-dodge'),$('classic-attack')];
  const all=[...buttons,...utilityBtns];
+ // Only the four utility positions may be rearranged. The first four slots
+ // remain authoritative equipped abilities for the current combat style.
+ const defaults=['eat','drink','dodge','attack'];
+ const utilityByName=Object.fromEntries(defaults.map((name,i)=>[name,utilityBtns[i]]));
+ const scope=doc.defaultView?.location?.pathname?.split('/').includes('oakrest-dev')?'oakrest-dev':'oakrest';
+ const preferenceKey=scope+'-ui-action-slots-v1';
+ const validOrder=order=>Array.isArray(order)&&order.length===4&&
+  new Set(order).size===4&&order.every(name=>defaults.includes(name));
+ let utilityOrder=defaults.slice();
+ try{
+  const previous=JSON.parse(doc.defaultView.localStorage.getItem(preferenceKey)||'null');
+  if(validOrder(previous))utilityOrder=previous;
+ }catch{}
+ const applyUtilityOrder=()=>{
+  utilityOrder.forEach((name,i)=>{
+   const element=utilityByName[name],slot=i+5;
+   element.style.gridColumn=String(slot);
+   element.dataset.hotbarSlot=String(slot);
+   element.setAttribute('aria-keyshortcuts',String(slot));
+  });
+ };
+ const saveUtilityOrder=()=>{
+  try{doc.defaultView?.localStorage?.setItem(preferenceKey,JSON.stringify(utilityOrder));}catch{}
+ };
  // Appearance only: input handling, combat authority and persisted
  // equipped abilities remain unchanged. Each icon is a reusable SVG sprite.
  const iconByKind={hit:'slash',sweep:'sweep',shield:'shield',dash:'dash',
@@ -70,20 +94,21 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
    if(all[index].disabled){feedback('Ability unavailable or on cooldown.');return false;}
    all[index].click();return true;
   }
-  if(index===4||index===5){
-   if(all[index].disabled){feedback(index===4?'No rations available or Health is full.':'No woodland tonic available or Health is full.');return false;}
-   const action=index===4?'eat':'drink';
-   return consume(action);
+  const action=utilityOrder[index-4],element=utilityByName[action];
+  if(!element||element.disabled){
+   if(action==='eat')feedback('No rations available or Health is full.');
+   if(action==='drink')feedback('No woodland tonic available or Health is full.');
+   return false;
   }
-  if(all[index].disabled)return false;
-  all[index].click();return true;
+  if(action==='eat'||action==='drink')return consume(action);
+  element.click();return true;
  };
  bindClassicPress(utilityBtns[0],()=>{consume('eat');});
  bindClassicPress(utilityBtns[1],()=>{consume('drink');});
  const first=doc.querySelector('.classic-ability-buttons');
  first.setAttribute('aria-label','Four equipped abilities for the current combat style');
  for(let i=0;i<4;i++)all[i].dataset.hotbarSlot=String(i+1);
- for(let i=4;i<8;i++)all[i].dataset.hotbarSlot=String(i+1);
+ applyUtilityOrder();
  function update(snapshot){
   if(!snapshot)return;
   const style=snapshot.style||'melee';
@@ -114,5 +139,55 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
  const styleHead=doc.createElement('div');styleHead.className='oakrest-combat-stance';
  deck.insertBefore(styleHead,deck.querySelector('.classic-action-footer'));
  styleHead.append(styles);
- return {update,activate:use,slots:()=>kinds.slice()};
+ // iPad-friendly edit surface: choose an action for slots 5–8. Assigning an
+ // action automatically swaps it with its current position. No in-combat
+ // handler or character inventory/save record is changed.
+ const edit=doc.createElement('button');
+ edit.type='button';edit.id='oakrest-hotbar-edit';
+ edit.className='oakrest-hotbar-edit';
+ edit.textContent='ARRANGE';edit.setAttribute('aria-controls','oakrest-hotbar-editor');
+ edit.setAttribute('aria-expanded','false');
+ edit.title='Rearrange food, potion, dodge and attack across slots 5–8';
+ heading.append(edit);
+ const editor=doc.createElement('div');
+ editor.id='oakrest-hotbar-editor';editor.className='oakrest-hotbar-editor';
+ editor.setAttribute('role','group');
+ editor.setAttribute('aria-label','Arrange utility action slots 5 through 8');
+ editor.hidden=true;deck.append(editor);
+ const selects=[];
+ const labels={eat:'Food',drink:'Potion',dodge:'Dodge',attack:'Attack'};
+ for(let i=0;i<4;i++){
+  const label=doc.createElement('label');
+  label.className='oakrest-hotbar-choice';label.textContent='SLOT '+(i+5);
+  const select=doc.createElement('select');
+  select.id='oakrest-hotbar-select-'+(i+5);
+  select.setAttribute('aria-label','Action for quick slot '+(i+5));
+  for(const name of defaults){
+   const option=doc.createElement('option');
+   option.value=name;option.textContent=labels[name];select.append(option);
+  }
+  select.addEventListener('change',()=>{
+   const other=utilityOrder.indexOf(select.value);
+   if(other<0||other===i)return;
+   [utilityOrder[i],utilityOrder[other]]=[utilityOrder[other],utilityOrder[i]];
+   applyUtilityOrder();saveUtilityOrder();
+   selects.forEach((node,index)=>{node.value=utilityOrder[index];});
+  });
+  label.append(select);editor.append(label);selects.push(select);
+ }
+ const reset=doc.createElement('button');
+ reset.type='button';reset.className='oakrest-hotbar-reset';
+ reset.textContent='RESET';
+ reset.title='Restore default utility slot order';
+ reset.addEventListener('click',()=>{
+  utilityOrder=defaults.slice();applyUtilityOrder();saveUtilityOrder();
+  selects.forEach((node,index)=>{node.value=utilityOrder[index];});
+ });
+ editor.append(reset);
+ edit.addEventListener('click',()=>{
+  editor.hidden=!editor.hidden;
+  edit.setAttribute('aria-expanded',String(!editor.hidden));
+  if(!editor.hidden)selects.forEach((node,index)=>{node.value=utilityOrder[index];});
+ });
+ return {update,activate:use,slots:()=>[...kinds,...utilityOrder]};
 }
