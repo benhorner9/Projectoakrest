@@ -381,3 +381,21 @@
  background:#26342cdd!important;color:#f9dba2!important;
  font:700 9px/1.2 system-ui,sans-serif!important;text-align:left;
 }
+
+/* Large enough for simultaneous movement and ability activation on iPad. */
+#classic-app.oakrest-framed #oakrest-action-deck{min-height:158px;max-height:176px}
+#classic-app.oakrest-framed .oakrest-combat-stance{
+ min-height:44px;max-height:44px;height:44px;
+}
+#classic-app.oakrest-framed #classic-styles button{
+ height:44px!important;min-height:44px!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button{
+ min-height:44px!important;
+}
+@media(max-height:680px){
+ #classic-app.oakrest-framed #oakrest-action-deck{min-height:151px;max-height:151px}
+ #classic-app.oakrest-framed .oakrest-combat-stance{
+  min-height:44px;max-height:44px;height:44px;
+ }
+}
