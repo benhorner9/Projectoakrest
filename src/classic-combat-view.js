@@ -11,7 +11,11 @@ const makeTexture=(kind)=>{
   poly('#243d35',[[10,91],[23,60],[17,36],[35,28],[48,9],[62,28],[80,36],[73,64],[89,92]]);
   poly('#6b8061',[[19,88],[31,57],[29,38],[47,24],[66,38],[64,59],[78,88]]);
   for(const side of [-1,1])poly('#b09a68',[[48+side*17,39],[48+side*31,18],[48+side*25,5],[48+side*17,25]]);
-  poly('#b1e2cd',[[48,43],[57,58],[48,74],[39,58]]);rect('#def2d7',37,34,6,5);rect('#def2d7',55,34,6,5);
+  if(kind==='guardian'){
+   poly('#6b8d56',[[12,53],[6,30],[29,38],[35,12],[43,38],[65,14],[64,39],[88,31],[82,58]]);
+   rect('#d6c389',38,39,7,5);rect('#d6c389',53,39,7,5);
+  }
+  poly(kind==='keeper'?'#b1e2cd':'#c5b37b',[[48,43],[57,58],[48,74],[39,58]]);rect('#def2d7',37,34,6,5);rect('#def2d7',55,34,6,5);
  }else if(kind==='mossling'){
   poly('#293c2e',[[20,79],[12,67],[26,29],[42,18],[68,26],[82,68],[74,82]]);
   poly('#6c9760',[[22,78],[17,63],[29,32],[43,22],[65,30],[77,64],[70,78]]);
@@ -133,10 +137,11 @@ export function createClassicCombatView(scene,spawns){
    actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro ? .06 : 0),enemy.z);
    actor.shadow.position.set(enemy.x,.035,enemy.z);
    actor.label.position.set(enemy.x,enemy.boss?5.6:enemy.id==='guardian'?4.6:enemy.type==='boar'?3.5:3.65,enemy.z);
-   actor.hpBackground.position.set(enemy.x,2.72,enemy.z);
+   const healthHeight=actor.sprite.scale.y+.15;
+   actor.hpBackground.position.set(enemy.x,healthHeight,enemy.z);
    const fraction=Math.max(.005,enemy.hp/enemy.maxHp);
    actor.hpFill.scale.set(fraction,1,1);
-   actor.hpFill.position.set(enemy.x-(1-fraction)*1.125,2.735,enemy.z);
+   actor.hpFill.position.set(enemy.x-(1-fraction)*1.125,healthHeight+.015,enemy.z);
    actor.sprite.material.color.set(hit?'#f9ad89':enemy.weak==='magic'?'#bad6cf':enemy.weak==='ranged'?'#cabce0':'#ffffff');
    actor.update({facing:actor.facing||{x:0,z:1},cameraOffset,pose:enemy.warning?'windup':t<(actor.releaseUntil||0)?'strike':'idle',step:Math.hypot(dx,dz)>.001?1+Math.floor(t*5)%2:0});
   }

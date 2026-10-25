@@ -98,7 +98,7 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  // Equipment drawn after hands ensures correctly attached 2D silhouette.
  const wx=grip.weapon.x,wy=grip.weapon.y;
  c.save();
- if(style==='melee'&&weapon!=='none'){c.translate(grip.hand.x,grip.hand.y);c.rotate(pose==='windup'?-.65:pose==='strike'?1.05:0);c.translate(-grip.hand.x,-grip.hand.y);}
+ if(style==='melee'&&weapon!=='none'){c.translate(grip.hand.x,grip.hand.y);c.rotate(pose==='windup'?.2:pose==='strike'?-1.05:0);c.translate(-grip.hand.x,-grip.hand.y);}
  if(weapon!=='none'&&style==='melee'){
   if(/dagger/i.test(weapon)){
    fill(c,'#e3ded1',wx-2,wy-3,4,25);fill(c,'#8a6b4a',wx-2,wy+20,4,12);
@@ -130,10 +130,10 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  }
  c.restore();
  // The grip sits on top of the weapon handle at the same anchor in every pose.
- if(weapon!=='none'){
+ {
   fill(c,line,grip.hand.x-6,grip.hand.y-4,12,10);
   fill(c,skin,grip.hand.x-4,grip.hand.y-3,9,7);
-  if(style==='ranged'||/greatsword|staff/i.test(weapon)){
+  if(weapon!=='none'&&(style==='ranged'||/greatsword|staff/i.test(weapon))){
    c.strokeStyle=coat;c.lineWidth=9;c.beginPath();c.moveTo(30,57);c.lineTo(grip.hand.x-10,grip.hand.y+5);c.stroke();
    fill(c,skin,grip.hand.x-13,grip.hand.y+1,8,7);
   }
