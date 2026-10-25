@@ -19,7 +19,7 @@ let browser;
   await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
   assert.equal(await page.locator('#classic-minimap-canvas').isVisible(),true);
   assert.equal(await page.locator('#classic-settings-window').isVisible(),false);
-  assert.equal(await page.locator('#classic-item-window').isVisible(),false);
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'Bag starts open in the new right-side MMORPG dock');
   assert.equal(await page.locator('#classic-map-window').isVisible(),false);
   assert.equal(await page.locator('#classic-interact-button').isVisible(),false,
    'interaction action is hidden when nobody is in reach');
