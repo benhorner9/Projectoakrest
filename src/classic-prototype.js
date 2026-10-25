@@ -223,6 +223,9 @@ function refreshHud(){
   b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));
  }
  hero.update({facing:look,style,worn:view.worn,cameraOffset:orbitCamera.offset()});
+ // Switching combat style changes equipped hotkeys immediately, even while
+ // the render loop is paused for menus or a backgrounded browser tab.
+ actionbar.update(combat.getState());
 }
 function switchStyle(which){
  if(!combat.styleSwitch(which))return;
