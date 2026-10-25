@@ -57,6 +57,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
  // Session-only practice weapons for characters who have not yet completed
  // onboarding. Nothing here reaches browser storage or the source character.
  for(const s of STYLE_ORDER){
+  if(adventure&&data.characterFresh===true)continue;
   if(!data.inventory?.weapons?.[s]?.length){
    const loan={melee:'sword',magic:'frost',ranged:'bow'}[s];
    // A banked weapon is real ownership. Never duplicate it with a practice
@@ -208,7 +209,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
    ...combatSourceSnapshot(data,current.style,weapon),weapon};
   const enemy=getTarget(),ability=current.ability||{};
   if(!spendSupply(current.style,weapon,current.ability))return;
-  emit('release',{style:current.style,kind:ability.kind||'basic'});
+  emit('release',{style:current.style,kind:ability.kind||'basic',family:slotFamily(current.style,data.gear[current.style])});
   if(current.type==='basic'){
    if(current.style==='melee')strike(player,weapon.basic,source,{kind:'hit',reach:weapon.reach,
     bleed:slotFamily(current.style,data.gear[current.style])==='daggers'?1.5:0});

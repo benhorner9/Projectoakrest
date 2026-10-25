@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {defaultSave,validSave} from '../src/rules.js';
+import {defaultSave,validSave,freshCharacterSave} from '../src/rules.js';
 import {createClassicCombat} from '../src/classic-combat.js';
 const fresh=()=>{const s=validSave(defaultSave());s.onboarding={area:'world',complete:true};s.inventory.weapons={melee:[],magic:[],ranged:[]};s.gear={melee:'none',magic:'none',ranged:'none'};return s;};
 test('practice weapons cannot become permanent property through banking',()=>{
@@ -32,4 +32,10 @@ test('earned starter drop replaces a loan; rejected pickup keeps practice state'
  assert.deepEqual(persisted.inventory.weapons.melee,['sword']);
  assert.equal(persisted.coins,s.coins,'real first pickup must not salvage as duplicate');
  assert.deepEqual(persisted.groundLoot,[]);
+});
+
+test('fresh adventure starts visibly unarmed without hidden practice loans',()=>{
+ const save=freshCharacterSave(),before=JSON.stringify(save),sim=createClassicCombat({save,adventure:true});
+ for(const style of ['melee','magic','ranged'])assert.deepEqual(sim.sandboxSave().inventory.weapons[style],[]);
+ assert.equal(JSON.stringify(save),before);
 });
