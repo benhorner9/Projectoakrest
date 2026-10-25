@@ -57,7 +57,17 @@ const url='http://127.0.0.1:5278/';
   assert.equal(await page.locator('#classic-error').isVisible(),false,
    'WebGL renderer successfully initialized');
   const creator=page.locator('#classic-creator');
-  assert.equal(await creator.isVisible(),true,'fresh player sees character creator');
+  await creator.waitFor({state:'visible',timeout:20000}).catch(async err=>{
+   const state=await page.evaluate(()=>({
+    canvas:!!document.querySelector('#classic-game canvas'),
+    creatorHidden:document.getElementById('classic-creator')?.hidden,
+    existingSave:!!localStorage.getItem('oakrest-dev-v1'),
+    roster:!!localStorage.getItem('oakrest-dev-characters-v1'),
+    gameError:document.getElementById('classic-error')?.hidden,
+    knownKeys:Object.keys(localStorage).filter(k=>k.includes('oakrest'))
+   }));
+   throw Error('Fresh character selection missing: '+JSON.stringify({state,errors,consoleErrors,httpErrors,failedRequests})+' | '+err.message);
+  });
   await page.locator('#classic-creator-name').fill('Ipad Tester');
   await page.locator('.classic-creator-submit').tap();
   await page.waitForFunction(()=>document.getElementById('classic-name')?.textContent==='Ipad Tester',
