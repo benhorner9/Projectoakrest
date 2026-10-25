@@ -14,6 +14,7 @@
  <link rel="stylesheet" href="./src/classic-rebirth-ui.css" />
  <link rel="stylesheet" href="./src/classic-ui-rebirth-v2.css" />
  <link rel="stylesheet" href="./src/classic-mmorpg-ui.css" />
+ <link rel="stylesheet" href="./src/oakrest-forged-hud.css" />
 </head>
 <body>
 <main id="classic-app">
@@ -31,9 +32,9 @@
    <strong id="classic-health-label">100 / 100 HP</strong>
   </div>
   <div id="classic-styles" class="styles" role="group" aria-label="Switch combat equipment loadouts">
-   <button type="button" data-style="melee" class="active" aria-pressed="true" title="Melee loadout">⚔ <span>Melee</span></button>
-   <button type="button" data-style="magic" aria-pressed="false" title="Magic loadout">✦ <span>Magic</span></button>
-   <button type="button" data-style="ranged" aria-pressed="false" title="Ranged loadout">➶ <span>Ranged</span></button>
+   <button type="button" data-style="melee" class="active" aria-pressed="true" title="Melee loadout"><svg class="oakrest-style-icon oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><use href="./src/oakrest-ui-icons.svg#melee"></use></svg> <span>Melee</span></button>
+   <button type="button" data-style="magic" aria-pressed="false" title="Magic loadout"><svg class="oakrest-style-icon oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><use href="./src/oakrest-ui-icons.svg#magic"></use></svg> <span>Magic</span></button>
+   <button type="button" data-style="ranged" aria-pressed="false" title="Ranged loadout"><svg class="oakrest-style-icon oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><use href="./src/oakrest-ui-icons.svg#ranged"></use></svg> <span>Ranged</span></button>
   </div>
   <div class="character-subline"><span id="classic-weapon">Iron Longsword</span><span>Style <b id="classic-level">1</b> · HP <b id="classic-vitality">1</b></span></div>
   <button id="classic-save-indicator" class="save-indicator" type="button" title="Open save settings" aria-label="Open character saving settings">● PRACTICE MODE</button>
@@ -63,13 +64,13 @@
   </div>
  </section>
  <nav class="classic-item-buttons" aria-label="Game menu">
-  <button type="button" id="classic-inventory-toggle" title="Backpack (I)" aria-label="Open backpack"><span aria-hidden="true">▦</span><small>BAG</small></button>
-  <button type="button" id="classic-equipment-toggle" title="Equipment (K)" aria-label="Open equipment"><span aria-hidden="true">♜</span><small>GEAR</small></button>
-  <button type="button" id="classic-abilities-toggle" title="Equipped combat abilities (L)" aria-label="Edit combat abilities"><span aria-hidden="true">⚒</span><small>COMBAT</small></button>
-  <button type="button" id="classic-skills-toggle" title="Skills and unlocks (V)" aria-label="Open character skills and unlocks"><span aria-hidden="true">♧</span><small>SKILLS</small></button>
-  <button type="button" id="classic-quests-toggle" title="Quest journal (U)" aria-label="Open quest journal"><span aria-hidden="true">✒</span><small>QUESTS</small></button>
-  <button type="button" id="classic-map-toggle" title="World map (M)" aria-label="Open world map"><span aria-hidden="true">◇</span><small>MAP</small></button>
-  <button type="button" id="classic-social-toggle" title="Social and multiplayer status" aria-label="Open social panel"><span aria-hidden="true">♧</span><small>SOCIAL</small></button>
+  <button type="button" id="classic-inventory-toggle" title="Backpack (I)" aria-label="Open backpack"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#bag"></use></svg><small>BAG</small></button>
+  <button type="button" id="classic-equipment-toggle" title="Equipment (K)" aria-label="Open equipment"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#gear"></use></svg><small>GEAR</small></button>
+  <button type="button" id="classic-abilities-toggle" title="Equipped combat abilities (L)" aria-label="Edit combat abilities"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#combat"></use></svg><small>COMBAT</small></button>
+  <button type="button" id="classic-skills-toggle" title="Skills and unlocks (V)" aria-label="Open character skills and unlocks"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#skills"></use></svg><small>SKILLS</small></button>
+  <button type="button" id="classic-quests-toggle" title="Quest journal (U)" aria-label="Open quest journal"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#quests"></use></svg><small>QUESTS</small></button>
+  <button type="button" id="classic-map-toggle" title="World map (M)" aria-label="Open world map"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#map"></use></svg><small>MAP</small></button>
+  <button type="button" id="classic-social-toggle" title="Social and multiplayer status" aria-label="Open social panel"><svg class="oakrest-ui-icon" aria-hidden="true" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><use href="./src/oakrest-ui-icons.svg#social"></use></svg><small>SOCIAL</small></button>
  </nav>
  <div class="classic-interaction-bar" aria-label="Nearby actions">
   <button type="button" id="classic-interact-button" aria-label="Interact with nearby character or object" hidden>INTERACT <small>T</small></button>
