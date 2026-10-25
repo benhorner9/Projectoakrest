@@ -1,3 +1,4 @@
+import {OAKREST_PALETTE,organicRoadPolygons,plazaOutline} from './classic-art-direction.js';
 import {ADVENTURE_PATHS,ADVENTURE_WALLS,ADVENTURE_TREES,ADVENTURE_TARGETS,ADVENTURE_SCENERY,DUNGEON_ROOMS} from './adventure-content.js';
 /** Oakrest Classic minimap: one canonical village model, no secondary scene.
  * Roads, footprints and service anchors come from the gameplay modules.
@@ -53,15 +54,15 @@ function polygon(ctx,project,corners,color){
  ctx.closePath();ctx.fillStyle=color;ctx.fill();
 }
 function terrain(ctx,project,width,height,scale){
- ctx.fillStyle='#73956c';ctx.fillRect(0,0,width,height);
- rect(ctx,project,{x:0,z:34,w:115,d:130},scale,'#73956c');
+ ctx.fillStyle=OAKREST_PALETTE.meadow;ctx.fillRect(0,0,width,height);
+ rect(ctx,project,{x:0,z:34,w:115,d:130},scale,OAKREST_PALETTE.meadow);
  for(const ground of ADVENTURE_SCENERY.ground)rect(ctx,project,ground,scale);
  for(const [i,room] of DUNGEON_ROOMS.entries()){
   rect(ctx,project,{x:0,z:(room.minZ+room.maxZ)/2,w:33,d:room.maxZ-room.minZ},
    scale,ADVENTURE_SCENERY.roomColours[i]);
  }
  // The village uses mitred 4.1m road polygons; outer tracks are 3.6m wide.
- for(const quad of roadQuads(CLASSIC_ROADS,4.1))polygon(ctx,project,quad,'#b6a07e');
+ for(const quad of organicRoadPolygons(CLASSIC_ROADS))polygon(ctx,project,quad,OAKREST_PALETTE.path);
  ctx.lineCap='butt';ctx.lineJoin='miter';ctx.strokeStyle='#a08e6b';
  ctx.lineWidth=Math.max(1,3.6*scale);
  for(const path of ADVENTURE_PATHS){
@@ -69,7 +70,7 @@ function terrain(ctx,project,width,height,scale){
    const p=project({x,z});i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
   });ctx.stroke();
  }
- for(const plaza of CLASSIC_PLAZAS)rect(ctx,project,plaza,scale,'#c9af83');
+ for(const plaza of CLASSIC_PLAZAS)polygon(ctx,project,plazaOutline(plaza),OAKREST_PALETTE.earth);
  for(const creek of ADVENTURE_SCENERY.creek)rect(ctx,project,creek,scale,creek.color);
  // Stone defensive walls and separate dungeon corridors have real openings.
  ctx.strokeStyle='#879083';ctx.lineCap='butt';ctx.lineWidth=Math.max(1,.9*scale);

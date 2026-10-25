@@ -1,3 +1,4 @@
+import {OAKREST_PALETTE,classicPixelRatio} from './classic-art-direction.js';
 import {createAdventureWorld} from './adventure-world.js';
 import {setupAdventureUI} from './adventure-ui.js';
 import {installClassicIntegratedLayout} from './classic-integrated-layout.js';
@@ -68,10 +69,10 @@ const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
 let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
 const scene=new THREE.Scene();
-scene.background=new THREE.Color('#b4c9ad');
-scene.fog=new THREE.Fog('#b4c9ad',75,160);
-scene.add(new THREE.HemisphereLight('#fff1d4','#657f68',2.1));
-const sun=new THREE.DirectionalLight('#ffedc8',2.2);sun.position.set(-27,55,36);scene.add(sun);
+scene.background=new THREE.Color(OAKREST_PALETTE.sky);
+scene.fog=new THREE.Fog(OAKREST_PALETTE.sky,75,160);
+scene.add(new THREE.HemisphereLight(OAKREST_PALETTE.sun,OAKREST_PALETTE.shade,1.7));
+const sun=new THREE.DirectionalLight(OAKREST_PALETTE.sun,1.8);sun.position.set(-27,55,36);scene.add(sun);
 let renderer;
 try{
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -224,7 +225,7 @@ function resize(){
  const width=Math.max(1,root.clientWidth),height=Math.max(1,root.clientHeight);
  const aspect=width/height,half=CLASSIC_CAMERA.viewHeight/2/zoom;
  camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;
- camera.updateProjectionMatrix();renderer.setSize(width,height,false);
+ camera.updateProjectionMatrix();renderer.setPixelRatio(classicPixelRatio(width,height,devicePixelRatio));renderer.setSize(width,height,false);
 }
 function setZoom(n){zoom=clamp(n,CLASSIC_CAMERA.minZoom,CLASSIC_CAMERA.maxZoom);resize();}
 $('classic-zoom-in').addEventListener('click',()=>setZoom(zoom+.12));
@@ -669,6 +670,7 @@ requestAnimationFrame(tick);
 const isQa=new URLSearchParams(location.search).has('qa')&&
  (['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname));
 if(isQa)window.oakrestClassicQA={
+ renderStats:()=>({calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),width:renderer.domElement.width,height:renderer.domElement.height}),
  state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
   pathLength:navigation.state().waypoints.length,hasSavedProfile:existing.existing,
   npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&

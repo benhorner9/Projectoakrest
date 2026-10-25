@@ -11,7 +11,7 @@ import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.j
 // Canonical +Z is NORTH on the map. These values describe the INITIAL
 // south-of-player oblique view. The player may orbit/tilt freely afterward;
 // all live controls use the orbit offset rather than these defaults.
-export const CLASSIC_CAMERA=Object.freeze({elevation:48,offsetX:12,offsetZ:-43,viewHeight:32,minZoom:.78,maxZoom:1.48});
+export const CLASSIC_CAMERA=Object.freeze({elevation:38,offsetX:12,offsetZ:-43,viewHeight:32,minZoom:.78,maxZoom:1.48});
 /** Screen-aligned ground-plane axes for any live orbit offset.
  * Shared by controls and the corner minimap; geographic east is not
  * necessarily screen right once the camera rotates.

@@ -1,3 +1,4 @@
+import {createClassicTerrain} from './classic-terrain-view.js';
 /** Block 2 scene builder. Only the renderer changes: coordinates come from town-layout. */
 import * as THREE from 'three';
 import {OAKREST_BUILDINGS,OAKREST_WELL,FACING,roadQuads} from './town-layout.js';
@@ -171,10 +172,7 @@ function pathGeometry(quads){
 }
 export function createClassicVillage(scene){
  const root=new THREE.Group();scene.add(root);
- cube(root,MAT.grass,0,-.18,34,115,.3,130);
- const roads=new THREE.Mesh(pathGeometry(roadQuads(CLASSIC_ROADS,4.1)),new THREE.MeshBasicMaterial({color:'#b6a07e',side:THREE.DoubleSide}));
- root.add(roads);
- for(const p of CLASSIC_PLAZAS)cube(root,MAT.sand,p.x,.01,p.z,p.w,.07,p.d);
+ createClassicTerrain(root);
  drawPerimeter(root);
  // District marker posts make the town legible as multiple neighbourhoods.
  for(const district of CLASSIC_DISTRICTS){
