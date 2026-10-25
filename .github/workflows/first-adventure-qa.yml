@@ -20,6 +20,7 @@ jobs:
       - run: node tests/browser-adventure.cjs
       - run: node tests/browser-classic-framed.cjs
       - run: node tests/browser-classic-mmorpg-ui.cjs
+      - run: node tests/browser-forged-hud.cjs
       - run: node tests/browser-classic-dev-launch.cjs
       - run: node tests/browser-classic-rebirth-v2.cjs
       - run: node tests/browser-classic-free-combat.cjs
