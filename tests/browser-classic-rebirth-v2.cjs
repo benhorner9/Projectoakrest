@@ -44,7 +44,7 @@ let browser;
    assert.equal(overlap(l.dock,l.world),0,'attack buttons stay clear of world');
    assert.ok(overlap(l.dock,l.side)>100,'eight-slot bar belongs inside right-hand sidebar');
    assert.ok(l.buttons.every(h=>h>=40),'touch menu target size '+JSON.stringify({size,l}));
-   assert.ok(Math.abs(l.canvas.width-l.world.width)<3,'renderer tracks usable viewport');
+   assert.ok(Math.abs(l.canvas.width-l.world.width)<=4,'renderer tracks the usable viewport minus the 3px frame border');
   }
   await page.setViewportSize({width:1194,height:834});
   mkdirSync('qa/rebirth',{recursive:true});
