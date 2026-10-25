@@ -61,6 +61,8 @@ let browser;
  const initial=await page.locator('#oakrest-action-deck').getAttribute('data-combat-style');
  assert.equal(initial,'melee');
  await page.locator('[data-style=magic]').click();
+ const immediate=await page.evaluate(()=>({state:oakrestClassicQA.state().style,combat:oakrestClassicQA.combatState().style,active:[...document.querySelectorAll('[data-style]')].map(e=>[e.dataset.style,e.className,e.disabled]),hotbar:document.getElementById('oakrest-action-deck').dataset.combatStyle}));
+ console.log('STYLE SWITCH AFTER TAP',JSON.stringify(immediate));
  await page.evaluate(()=>oakrestClassicQA.advance(.4));
  assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'magic');
  assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
