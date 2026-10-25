@@ -13,6 +13,7 @@
  <link rel="stylesheet" href="./src/classic-integrated-ui.css" />
  <link rel="stylesheet" href="./src/classic-rebirth-ui.css" />
  <link rel="stylesheet" href="./src/classic-ui-rebirth-v2.css" />
+ <link rel="stylesheet" href="./src/classic-mmorpg-ui.css" />
 </head>
 <body>
 <main id="classic-app">
@@ -42,6 +43,7 @@
    <canvas id="classic-minimap-canvas" width="160" height="160" aria-label="Map of nearby Oakrest"></canvas>
    <span class="minimap-expand-symbol" aria-hidden="true">↗</span>
   </button>
+  <button type="button" id="classic-settings-toggle" class="oakrest-map-settings" title="Game settings" aria-label="Open game settings">⚙</button>
   <div class="location"><span class="location-dot"></span><span id="classic-location">Oakrest Village</span></div>
  </section>
  <section id="classic-combat-target" class="classic-combat-target" aria-label="Current monster target" hidden>
@@ -63,11 +65,11 @@
  <nav class="classic-item-buttons" aria-label="Game menu">
   <button type="button" id="classic-inventory-toggle" title="Backpack (I)" aria-label="Open backpack"><span aria-hidden="true">▦</span><small>BAG</small></button>
   <button type="button" id="classic-equipment-toggle" title="Equipment (K)" aria-label="Open equipment"><span aria-hidden="true">♜</span><small>GEAR</small></button>
-  <button type="button" id="classic-abilities-toggle" title="Combat abilities (L)" aria-label="Open combat abilities"><span aria-hidden="true">✧</span><small>ABILITIES</small></button>
-  <button type="button" id="classic-skills-toggle" title="Levels and unlocks (V)" aria-label="Open character levels and skill unlocks"><span aria-hidden="true">✦</span><small>LEVELS</small></button>
-  <button type="button" id="classic-quests-toggle" title="Quest journal (U)" aria-label="Open quest journal"><span aria-hidden="true">☷</span><small>QUESTS</small></button>
+  <button type="button" id="classic-abilities-toggle" title="Equipped combat abilities (L)" aria-label="Edit combat abilities"><span aria-hidden="true">⚒</span><small>COMBAT</small></button>
+  <button type="button" id="classic-skills-toggle" title="Skills and unlocks (V)" aria-label="Open character skills and unlocks"><span aria-hidden="true">♧</span><small>SKILLS</small></button>
+  <button type="button" id="classic-quests-toggle" title="Quest journal (U)" aria-label="Open quest journal"><span aria-hidden="true">✒</span><small>QUESTS</small></button>
   <button type="button" id="classic-map-toggle" title="World map (M)" aria-label="Open world map"><span aria-hidden="true">◇</span><small>MAP</small></button>
-  <button type="button" id="classic-settings-toggle" title="Settings" aria-label="Open settings"><span aria-hidden="true">⚙</span><small>MENU</small></button>
+  <button type="button" id="classic-social-toggle" title="Social and multiplayer status" aria-label="Open social panel"><span aria-hidden="true">♧</span><small>SOCIAL</small></button>
  </nav>
  <div class="classic-interaction-bar" aria-label="Nearby actions">
   <button type="button" id="classic-interact-button" aria-label="Interact with nearby character or object" hidden>INTERACT <small>T</small></button>
@@ -104,6 +106,12 @@
   <canvas id="classic-map-canvas" width="440" height="510" aria-label="Full Oakrest map with roads and services"></canvas>
   <div class="classic-map-legend"><span>◉ Bank</span><span>◉ Store</span><span>◉ Forester</span><span>◉ Trade</span><span>✦ Quest available</span><span>✓ Quest ready</span></div>
   <div class="classic-map-zoom"><button type="button" id="classic-map-zoom-out" aria-label="Zoom minimap out">−</button><span>MINIMAP SCALE</span><button type="button" id="classic-map-zoom-in" aria-label="Zoom minimap in">+</button></div>
+ </aside>
+ <aside id="classic-social-window" class="classic-modal oakrest-social-window" aria-label="Social and multiplayer" hidden>
+  <header class="classic-modal-header"><strong>OAKREST · SOCIAL</strong><button type="button" id="classic-social-close" aria-label="Close social panel">×</button></header>
+  <p class="classic-muted">Oakrest is currently a single-player prototype. Public, Private, Party, Clan and Trade channels are prepared in the chat panel, but no multiplayer server is connected.</p>
+  <h3>Future multiplayer</h3>
+  <p class="classic-muted">Friends, parties, clans and trading will become available when authenticated multiplayer services are built. You can send local-only chat messages now without transmitting them to anyone else.</p>
  </aside>
  <aside id="classic-settings-window" class="classic-modal classic-settings" aria-label="Game settings and saving" hidden>
   <header class="classic-modal-header"><strong>GAME SETTINGS</strong><button type="button" id="classic-settings-close" aria-label="Close settings">×</button></header>
