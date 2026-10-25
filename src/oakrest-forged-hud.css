@@ -1,0 +1,378 @@
+/* OAKREST · THE FORGED HUD
+ * Pure presentation pass. The Three.js world, terrain, village meshes, camera,
+ * NPCs, collision, player stats and character saves are intentionally untouched.
+ * UI assets use original Oakrest symbols, not reused RuneScape artwork.
+ */
+#classic-app.oakrest-framed{
+ --forged-metal:#141715;--forged-leather:#28251e;--forged-gold:#bf985d;
+ --forged-bright:#f2d5a1;--forged-inner:#101b18;--forged-dim:#a59a80;
+ grid-template-columns:minmax(0,1fr) clamp(354px,35vw,510px)!important;
+ grid-template-rows:minmax(0,1fr) clamp(192px,27.5vh,282px)!important;
+ background:#100f0e!important;
+}
+/* Interface contours are dimensional while the world stays unmodified. */
+#classic-app.oakrest-framed .classic-sidebar{
+ background:
+  repeating-linear-gradient(135deg,transparent 0 3px,#c3ab7933 3.5px,transparent 4px 7px),
+  linear-gradient(100deg,#3a352b 0%,#141c19 4%,#161b18 95%,#443729 100%)!important;
+ background-size:9px 9px,auto;
+ border-left:4px solid #211c16!important;
+ box-shadow:inset 2px 0 #b89d68,inset 4px 0 #514938,inset -2px 0 #a78854,
+  -6px 0 18px #070b0980!important;
+}
+/* Discrete carved edge motifs only on the INTERFACE, not on ground/game. */
+#classic-app.oakrest-framed .classic-sidebar::before,
+#classic-app.oakrest-framed .oakrest-chat::before,
+#classic-app.oakrest-framed #oakrest-action-deck::after{
+ content:"";position:absolute;z-index:12;pointer-events:none;
+ inset:3px;border:1px solid #b58d4e76;
+ box-shadow:inset 0 0 0 1px #000b,0 0 0 1px #191c19;
+}
+#classic-app.oakrest-framed .classic-sidebar-map{
+ height:clamp(160px,29vh,286px)!important;
+ background:
+  radial-gradient(circle at 50% 36%,#615640 0,#3a3429 41%,#1a201c 78%,#0d1412 100%)!important;
+ border-bottom:4px double #b2935c!important;
+ box-shadow:inset 0 -7px 14px #080d0b,0 3px 0 #171b16!important;
+}
+#classic-app.oakrest-framed .classic-sidebar-map::before,
+#classic-app.oakrest-framed .classic-sidebar-map::after{
+ content:"✦";position:absolute;z-index:2;pointer-events:none;top:50%;
+ color:#c6a57480;font:19px Georgia,serif;
+ text-shadow:0 2px 2px #000;
+}
+#classic-app.oakrest-framed .classic-sidebar-map::before{left:6px}
+#classic-app.oakrest-framed .classic-sidebar-map::after{right:6px}
+#classic-app.oakrest-framed .minimap-open{
+ width:clamp(142px,27vh,262px)!important;
+ height:clamp(142px,27vh,262px)!important;
+ border:6px ridge #ba9c65!important;
+ box-shadow:0 0 0 2px #110f0d,0 0 0 5px #544936,0 0 0 7px #b1905b,
+  0 12px 20px #000a,inset 0 0 18px #101b15!important;
+ background:#283b28!important;
+}
+#classic-app.oakrest-framed .minimap-open canvas{
+ width:100%!important;height:100%!important;
+ filter:saturate(1.13) contrast(1.06);
+}
+#classic-app.oakrest-framed .minimap-open::after{
+ content:"";pointer-events:none;position:absolute;inset:0;border-radius:50%;
+ box-shadow:inset 0 0 21px 9px #13140ed2,inset 0 0 2px 1px #ecddad;
+}
+#classic-app.oakrest-framed .minimap-expand-symbol{
+ z-index:2;border:1px solid #d6b67b!important;
+ border-radius:50%!important;background:#22271eee!important;
+ padding:4px 6px!important;
+}
+#classic-app.oakrest-framed .classic-minimap-frame .oakrest-map-settings{
+ border:3px ridge #bea06d!important;background:
+ radial-gradient(circle at 37% 25%,#736043,#22211d 75%)!important;
+ color:#e9c68d!important;box-shadow:0 4px 8px #0009;
+}
+#classic-app.oakrest-framed .classic-sidebar-map #adventure-journal{
+ border:2px ridge #9f8355!important;
+ background:linear-gradient(110deg,#292b23ed,#17241ddd)!important;
+ color:#f2d7a5!important;text-shadow:0 1px #000;
+ box-shadow:inset 0 1px #d0b47c40,0 3px 7px #0007!important;
+}
+/* Seven Oakrest glyphs: original designs, one family, legible at iPad size. */
+#classic-app.oakrest-framed .classic-item-buttons{
+ height:66px!important;grid-template-rows:66px!important;
+ padding:4px 5px!important;gap:3px!important;
+ background:
+  repeating-linear-gradient(90deg,transparent 0 16px,#bfa77c0c 17px,transparent 18px 28px),
+  linear-gradient(180deg,#61513a 0%,#2b2a25 8%,#191e1b 93%,#55442f)!important;
+ border-top:2px solid #2c241d!important;
+ border-bottom:4px ridge #a58a5a!important;
+}
+#classic-app.oakrest-framed .classic-item-buttons button{
+ height:55px!important;min-height:55px!important;max-height:55px!important;
+ background:linear-gradient(148deg,#3d3b32 0%,#1b221f 46%,#121916 100%)!important;
+ border:2px groove #706049!important;border-radius:5px!important;
+ box-shadow:inset 1px 1px #cab17c27,inset -2px -2px #0006,0 2px 2px #0008!important;
+}
+#classic-app.oakrest-framed .classic-item-buttons button[aria-pressed="true"]{
+ background:linear-gradient(156deg,#836b44,#3b3325 56%,#27251d)!important;
+ border:2px solid #e1b46f!important;box-shadow:
+ inset 0 0 0 1px #f4d99b88,inset 0 1px 10px #e7af4820,0 0 9px #e0bd706b!important;
+}
+#classic-app.oakrest-framed .classic-item-buttons button[aria-pressed="true"]::after{
+ content:"";position:absolute;height:2px;left:6px;right:6px;bottom:0;
+ background:#f0cd90;box-shadow:0 0 6px #ebca9c;border-radius:3px;
+}
+#classic-app.oakrest-framed .oakrest-ui-icon{
+ display:block;flex:none;width:26px;height:26px;
+ stroke:#c8ae7d;filter:drop-shadow(1px 1px 1px #000c);
+}
+#classic-app.oakrest-framed .classic-item-buttons button[aria-pressed="true"] .oakrest-ui-icon{
+ stroke:#f4d49c;filter:drop-shadow(0 0 4px #c9a15c9a);
+}
+#classic-app.oakrest-framed .classic-item-buttons button small{
+ font:700 9px/1.1 Georgia,serif!important;
+ letter-spacing:.03em;color:#dfcfb1!important;margin-top:3px!important;
+ text-shadow:0 1px #000;
+}
+#classic-app.oakrest-framed .classic-sidebar-body{
+ padding:6px 7px!important;
+ background:
+  radial-gradient(circle at 50% 5%,#3c362963,transparent 56%),
+  repeating-linear-gradient(0deg,#f6e1bd05 0 1px,transparent 1px 4px),
+  linear-gradient(120deg,#222721,#141b18)!important;
+ border-bottom:4px ridge #ad8f5b!important;
+}
+#classic-app.oakrest-framed .classic-sidebar-body > #classic-item-window,
+#classic-app.oakrest-framed .classic-sidebar-body > .classic-modal,
+#classic-app.oakrest-framed .classic-sidebar-body > #classic-dialogue{
+ border:2px solid #756348!important;border-radius:4px!important;
+ background:
+ radial-gradient(ellipse at 70% 0,#343026a6,transparent 46%),
+ linear-gradient(140deg,#262d27,#141a17 75%,#252b23)!important;
+ box-shadow:inset 0 0 0 1px #c9a66e39,inset 0 0 20px #070a09a2!important;
+}
+#classic-app.oakrest-framed .classic-item-header,
+#classic-app.oakrest-framed .classic-modal-header{
+ background:linear-gradient(90deg,#343023ed,#1b2520);
+ border-bottom:2px double #9b814f!important;
+ padding:7px 11px!important;min-height:48px!important;
+}
+#classic-app.oakrest-framed .classic-item-header strong,
+#classic-app.oakrest-framed .classic-modal-header strong{
+ color:#f1d49a!important;
+ text-shadow:0 1px #000;letter-spacing:.055em;
+ font:700 19px/1.2 Georgia,serif!important;
+}
+#classic-app.oakrest-framed .classic-item-header small{
+ color:#ad9d7f!important;font:700 8px/1.2 system-ui,sans-serif!important;
+ letter-spacing:.1em;
+}
+#classic-app.oakrest-framed #classic-item-close,
+#classic-app.oakrest-framed .classic-modal-header button{
+ min-width:36px;height:36px!important;border:1px solid #ac8f5d!important;
+ color:#efdab0;background:#34332c!important;
+ box-shadow:inset 0 1px #f5d59940!important;
+}
+#classic-app.oakrest-framed .classic-item-tabs{
+ padding:4px!important;background:#1c201c!important;
+ border-bottom:1px solid #b498674f!important;gap:3px!important;
+}
+#classic-app.oakrest-framed .classic-item-tabs button{
+ border:1px solid #665c49!important;
+ background:linear-gradient(180deg,#34372e,#1c251f)!important;
+ min-height:35px!important;color:#c6b996!important;
+ border-radius:3px!important;
+}
+#classic-app.oakrest-framed .classic-item-tabs button.active{
+ background:linear-gradient(180deg,#766044,#493b2d)!important;
+ border-color:#d2ac74!important;color:#ffe8b6!important;
+}
+#classic-app.oakrest-framed .classic-item-scroll{
+ padding:6px 8px 14px!important;scrollbar-color:#886b40 #1a201a;
+}
+/* Six inventory columns match the reference's density; underlying
+ * original 96 inventory positions and persistent ordering are unchanged. */
+#classic-app.oakrest-framed .classic-four-grid{
+ display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:3px!important;
+}
+#classic-app.oakrest-framed .classic-item-cell{
+ display:flex;align-items:center;justify-content:center;
+ position:relative;aspect-ratio:1!important;min-height:0!important;
+ padding:2px!important;border:1px solid #81704e!important;
+ border-radius:3px!important;
+ background:
+ radial-gradient(circle at 48% 36%,#454941,#242b25 68%,#151c18 100%)!important;
+ box-shadow:inset 0 0 0 2px #0e1411d9,inset 0 2px 6px #a09c7916,
+  0 1px 2px #000a!important;
+}
+#classic-app.oakrest-framed .classic-item-cell.empty{
+ background:linear-gradient(150deg,#222923,#171d19 75%)!important;
+ border-color:#494c3b!important;
+}
+#classic-app.oakrest-framed .classic-item-cell:not(.empty):active{
+ border-color:#f0c17a!important;background:#58523b!important;
+}
+#classic-app.oakrest-framed .classic-item-icon{
+ display:block;width:min(80%,50px)!important;height:min(80%,50px)!important;
+ max-width:50px!important;max-height:50px!important;
+ object-fit:contain;image-rendering:auto;
+ filter:drop-shadow(1px 3px 1px #000c) contrast(1.1) saturate(1.2);
+}
+#classic-app.oakrest-framed .classic-item-qty{
+ position:absolute;right:4px;bottom:3px!important;color:#f9db92!important;
+ font:bold 10px/1 Georgia,serif!important;text-shadow:1px 2px #000,0 0 4px #000;
+}
+#classic-app.oakrest-framed .classic-section-title{
+ margin:8px 0 6px;color:#d5b477!important;
+ letter-spacing:.1em;font:700 10px/1.2 Georgia,serif;
+}
+#classic-app.oakrest-framed .classic-item-actions{gap:5px}
+#classic-app.oakrest-framed .classic-item-action,
+#classic-app.oakrest-framed .craft-option button{
+ border:1px solid #99875b!important;border-radius:3px!important;
+ background:linear-gradient(180deg,#4b503d,#273c2e)!important;
+ color:#fae6ba!important;min-height:37px;padding:6px 8px;
+ box-shadow:inset 0 1px #e9cf8733;
+}
+#classic-app.oakrest-framed .classic-examine,
+#classic-app.oakrest-framed .classic-handcraft{
+ background:#232b25!important;border:1px solid #7c6b4a!important;
+}
+/* Proper framed chat rather than a dark empty rectangle. */
+#classic-app.oakrest-framed .oakrest-chat{
+ background:
+  radial-gradient(ellipse at 15% 0,#26302766,transparent 60%),
+  repeating-linear-gradient(0deg,#fff9da03 0 1px,transparent 1px 5px),
+  linear-gradient(180deg,#151b18,#0a100e)!important;
+ border-top:4px ridge #b69760!important;border-right:4px ridge #a78956!important;
+ box-shadow:inset 0 0 0 2px #5b4c37,inset 0 0 22px #000a!important;
+}
+#classic-app.oakrest-framed .oakrest-chat-channels{
+ min-height:36px!important;padding:4px 7px 0!important;gap:4px!important;
+ background:linear-gradient(180deg,#413c2e,#242921 55%,#151d18)!important;
+ border-bottom:2px solid #806844!important;
+}
+#classic-app.oakrest-framed .oakrest-chat-channel-button{
+ position:relative;border:1px solid #84704e!important;
+ border-radius:5px 5px 0 0!important;
+ background:linear-gradient(180deg,#3a3b32,#1c241e)!important;
+ color:#d4c6a7!important;font:700 11px Georgia,serif!important;
+ box-shadow:inset 0 1px #b39b623d;
+}
+#classic-app.oakrest-framed .oakrest-chat-channel-button.active{
+ background:linear-gradient(180deg,#7a6343,#293c31)!important;
+ border-color:#c7a36b!important;color:#ffe6b7!important;
+ box-shadow:inset 0 0 0 1px #b69c5f70;
+}
+#classic-app.oakrest-framed .oakrest-chat-log{
+ padding:9px 14px!important;
+ font:12px/1.52 Georgia,serif!important;color:#e0ddc8!important;
+ text-shadow:0 1px #000;
+}
+#classic-app.oakrest-framed .oakrest-chat-time{color:#a7a89b}
+#classic-app.oakrest-framed .oakrest-chat-line[data-channel=game] .oakrest-chat-channel{color:#dfb95d}
+#classic-app.oakrest-framed .oakrest-chat-line[data-channel=local] .oakrest-chat-channel{color:#83c69d}
+#classic-app.oakrest-framed .oakrest-chat-compose{
+ background:linear-gradient(180deg,#343629,#151d18)!important;
+ padding:5px 9px!important;border-top:2px ridge #9a8255!important;
+}
+#classic-app.oakrest-framed .oakrest-chat-input{
+ background:#0a100e!important;border:1px solid #927e58!important;
+ border-radius:3px!important;color:#f5e0b6!important;
+ box-shadow:inset 0 2px 6px #000a;
+}
+#classic-app.oakrest-framed .oakrest-chat-input:focus{
+ outline:1px solid #dbb979;
+}
+#classic-app.oakrest-framed .oakrest-chat-send{
+ background:linear-gradient(170deg,#6d593c,#324b39)!important;
+ border:1px solid #c5a069!important;color:#ffe3b1!important;
+}
+#classic-app.oakrest-framed .oakrest-chat-notice{
+ padding:2px 12px;color:#a4a58c!important;
+ font:9px/1.25 Georgia,serif!important;
+ background:#171d18!important;
+}
+/* Eight etched action sockets, clear ability feedback and reliable labels. */
+#classic-app.oakrest-framed #oakrest-action-deck{
+ padding:6px 9px 9px!important;min-height:157px;max-height:178px;
+ background:
+  repeating-linear-gradient(90deg,transparent 0 7px,#c4ac7a0e 7px 8px),
+  linear-gradient(180deg,#504634 0%,#24271f 11%,#141c18 93%,#5c492f 100%)!important;
+ border-top:4px ridge #c09a60!important;
+ box-shadow:inset 0 0 0 2px #4c412f,0 -3px 9px #000b;
+}
+#classic-app.oakrest-framed .oakrest-action-heading{min-height:19px}
+#classic-app.oakrest-framed .oakrest-action-title{
+ color:#f6d59a!important;font:700 12px/1.3 Georgia,serif!important;
+ letter-spacing:.055em;text-shadow:0 2px #000;
+}
+#classic-app.oakrest-framed .oakrest-action-hint{font:9px Georgia,serif!important;color:#a99c7e}
+#classic-app.oakrest-framed .oakrest-combat-stance{min-height:42px!important;max-height:42px!important}
+#classic-app.oakrest-framed #classic-styles button{
+ height:42px!important;min-height:42px!important;
+ background:linear-gradient(175deg,#403c30,#222a23 90%)!important;
+ border:2px groove #86724c!important;box-shadow:inset 0 1px #d9b57c38!important;
+ color:#e7d4b0!important;
+}
+#classic-app.oakrest-framed #classic-styles button.active{
+ background:linear-gradient(175deg,#705538,#3d3429 75%)!important;
+ border:2px solid #d7ae70!important;
+ color:#ffe1aa!important;box-shadow:inset 0 0 0 1px #f5d391,0 0 7px #bb8e4d70!important;
+}
+#classic-app.oakrest-framed #classic-styles .oakrest-style-icon{
+ width:23px!important;height:23px!important;
+ stroke:#d4b27c;
+}
+#classic-app.oakrest-framed #classic-styles button span{
+ font:700 12px Georgia,serif!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row{
+ grid-template-columns:repeat(8,minmax(0,1fr));
+ gap:4px!important;height:100%;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button{
+ position:relative;border:2px groove #8d7851!important;border-radius:4px!important;
+ background:radial-gradient(ellipse at 45% 18%,#555246,#2c2f2a 56%,#131b17)!important;
+ box-shadow:inset 0 0 0 2px #090f0c,0 2px 3px #0009!important;
+ color:#f0c888!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button[data-ability-kind="empty"]{
+ color:#756c59!important;background:linear-gradient(150deg,#252b26,#141c18)!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck[data-combat-style="melee"] button[data-ability]:not(.is-empty){
+ background:radial-gradient(ellipse at 40% 25%,#753f32,#2c221e 78%)!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck[data-combat-style="ranged"] button[data-ability]:not(.is-empty){
+ background:radial-gradient(ellipse at 40% 25%,#507344,#1d2f22 78%)!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck[data-combat-style="magic"] button[data-ability]:not(.is-empty){
+ background:radial-gradient(ellipse at 40% 25%,#395b7d,#172937 78%)!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button.on-cooldown{
+ filter:saturate(.38);box-shadow:inset 0 0 11px #000b!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button:disabled{
+ opacity:.6!important;filter:saturate(.43);
+}
+#classic-app.oakrest-framed .oakrest-action-icon{
+ width:min(80%,35px);height:min(67%,39px);min-height:24px;
+ stroke:currentColor;fill:none;pointer-events:none;
+ filter:drop-shadow(1px 2px 1px #000a);
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button small{
+ display:block!important;width:100%;max-width:100%!important;
+ margin:2px 0 0!important;color:#f5d8a4!important;
+ font:700 8px/1.05 Georgia,serif!important;
+ overflow-wrap:anywhere!important;white-space:normal!important;
+ text-align:center;text-shadow:0 1px #000;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button::after{
+ bottom:1px;right:2px;background:#11190fec!important;
+ color:#e4bd80!important;border:1px solid #82704d;
+ border-radius:2px;padding:2px 3px;font:700 8px Georgia,serif;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button:focus-visible{
+ outline:2px solid #f4d199!important;outline-offset:-3px!important;
+}
+#classic-app.oakrest-framed .classic-footer-events #classic-toasts{
+ font:11px/1.25 Georgia,serif!important;color:#d9bb7e!important;
+}
+@media(max-height:680px){
+ #classic-app.oakrest-framed .classic-sidebar-map{height:clamp(142px,27vh,188px)!important}
+ #classic-app.oakrest-framed .minimap-open{width:clamp(130px,26vh,176px)!important;height:clamp(130px,26vh,176px)!important}
+ #classic-app.oakrest-framed .classic-item-buttons{height:60px!important;grid-template-rows:60px!important}
+ #classic-app.oakrest-framed .classic-item-buttons button{height:50px!important;min-height:50px!important;max-height:50px!important}
+ #classic-app.oakrest-framed #oakrest-action-deck{min-height:148px;max-height:148px}
+ #classic-app.oakrest-framed #classic-styles button{height:40px!important;min-height:40px!important}
+}
+@media(max-width:950px){
+ #classic-app.oakrest-framed .oakrest-action-hint{display:none}
+ #classic-app.oakrest-framed .classic-item-buttons button small{font-size:8px!important}
+ #classic-app.oakrest-framed .classic-item-buttons .oakrest-ui-icon{width:22px;height:22px}
+ #classic-app.oakrest-framed .oakrest-action-icon{width:min(84%,31px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #classic-app.oakrest-framed *,#classic-app.oakrest-framed *::before,#classic-app.oakrest-framed *::after{
+ transition:none!important;animation:none!important;
+ }
+}
