@@ -41,7 +41,7 @@ const url='http://127.0.0.1:5278/';
   assert.ok(hit?.height>=44,'Classic launch button is easy to tap on iPad');
   await launcher.tap();
   await page.waitForURL(/\/oakrest-dev\/classic\.html/);
-  await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000}).catch(async err=>{
+  await page.waitForFunction(()=>!!document.querySelector('#classic-game canvas'),{timeout:30000}).catch(async err=>{
    const state=await page.evaluate(()=>({
     url:location.href,title:document.title,stage:document.readyState,
     supportsWebGL:!!document.createElement('canvas').getContext('webgl'),
@@ -60,10 +60,19 @@ const url='http://127.0.0.1:5278/';
   assert.equal(await creator.isVisible(),true,'fresh player sees character creator');
   await page.locator('#classic-creator-name').fill('Ipad Tester');
   await page.locator('.classic-creator-submit').tap();
-  await page.waitForFunction(()=>document.getElementById('classic-creator').hidden,{timeout:30000});
-  await page.waitForFunction(()=>window.oakrestClassicQA?.characterCreatorState().appearance?.name==='Ipad Tester',
+  await page.waitForFunction(()=>document.getElementById('classic-name')?.textContent==='Ipad Tester',
    {timeout:30000});
+  assert.equal(await page.locator('#classic-creator').isVisible(),false);
   assert.equal(await page.locator('#classic-name').textContent(),'Ipad Tester');
+  // Public players launch without ?qa. Only enable the developer QA helpers
+  // after demonstrating that normal character creation works unassisted.
+  await page.goto(url+'oakrest-dev/classic.html?qa=1',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000}).catch(async err=>{
+   const state=await page.evaluate(()=>({url:location.href,canvas:!!document.querySelector('#classic-game canvas'),
+    fatal:document.getElementById('classic-error')?.hidden,
+    creator:document.getElementById('classic-creator')?.hidden}));
+   throw Error('Developer QA entry did not initialize '+JSON.stringify({state,errors,consoleErrors,httpErrors,failedRequests})+' | '+err.message);
+  });
   assert.equal(await page.locator('#classic-game canvas').isVisible(),true);
   assert.equal(await page.locator('#oakrest-chat').isVisible(),true);
   assert.equal(await page.locator('#oakrest-action-deck').isVisible(),true);
