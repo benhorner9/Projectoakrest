@@ -1,3 +1,5 @@
+import {bindClassicPress} from './classic-touch-press.js';
+import {setupClassicFieldNotes} from './classic-field-notes.js';
 import {citizenRoutine} from './classic-world-life.js';
 import {OAKREST_PALETTE,classicPixelRatio} from './classic-art-direction.js';
 import {createAdventureWorld} from './adventure-world.js';
@@ -35,6 +37,7 @@ import {setupClassicCharacterUI} from './classic-character-ui.js';
 const $=id=>document.getElementById(id);
 const root=$('classic-game'),keys=new Set();
 installClassicIntegratedLayout(document);
+const fieldNotes=setupClassicFieldNotes(document);
 installGameZoomGuard(document);
 function readExistingCharacter(){
  const key=k=>storageKey(k,location.pathname);
@@ -117,7 +120,7 @@ adventureWorld.root.traverse(node=>{if(node.userData.interactId)selectableWorld.
 const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interactButton=$('classic-interact-button');
 let toastUntil=0;
 function feedback(text){
- lastStatus=text;statusText.textContent=text;
+ lastStatus=text;statusText.textContent=text;fieldNotes.record(text);
  const toast=$('classic-toasts');
  const critical=/save failed|save locked|changed by another|could not save|storage failed|save conflict/i.test(text);
  toast.classList.remove('is-faded');toast.classList.toggle('is-critical',critical);
@@ -208,7 +211,7 @@ function switchStyle(which){
  else feedback('Style switch queued until your attack finishes.');
 }
 for(const b of document.querySelectorAll('[data-style]'))
- b.addEventListener('click',()=>switchStyle(b.dataset.style));
+ bindClassicPress(b,()=>switchStyle(b.dataset.style));
 function updateLocation(){
  const building=occupantBuilding(player.x,player.z);
  const id=building?.id||null;
@@ -355,6 +358,7 @@ function updateStick(clientX,clientY){
  stick.style.transform=`translate(${ux*Math.min(radius,len)}px,${uy*Math.min(radius,len)}px)`;
 }
 joy.addEventListener('pointerdown',e=>{
+ if(joystickId!==null&&joystickId!==e.pointerId)return;
  e.preventDefault();joystickId=e.pointerId;joy.setPointerCapture(e.pointerId);
  disengageFromCombat();navigation.stop();updateStick(e.clientX,e.clientY);
  selectedTarget=null;pointerMark.visible=false;
@@ -363,7 +367,7 @@ joy.addEventListener('pointermove',e=>{if(e.pointerId===joystickId)updateStick(e
 function releaseJoy(e){
  if(e.pointerId===joystickId){joystickId=null;input.x=0;input.z=0;stick.style.transform='';}
 }
-joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
+joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);joy.addEventListener('lostpointercapture',releaseJoy);
 let pendingDrop=null;
 function pickUp(id){
  const item=id||combat.nearestLoot(player)?.id;
@@ -424,10 +428,10 @@ function triggerDodge(){
  dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
  navigation.stop();feedback('Dodged!');
 }
-$('classic-attack').addEventListener('click',toggleAttack);
-$('classic-dodge').addEventListener('click',triggerDodge);
+bindClassicPress($('classic-attack'),toggleAttack);
+bindClassicPress($('classic-dodge'),triggerDodge);
 for(const b of document.querySelectorAll('[data-ability]'))
- b.addEventListener('click',()=>useCombatAbility(Number(b.dataset.ability)));
+ bindClassicPress(b,()=>useCombatAbility(Number(b.dataset.ability)));
 function combatEvents(events){
  for(const event of events){
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
@@ -494,6 +498,7 @@ function interactNearby(){
 interactButton.addEventListener('click',interactNearby);
 document.addEventListener('keydown',e=>{
  if(characterUI?.isOpen()||['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
+ if(e.target?.closest?.('button')&&['Enter',' '].includes(e.key))return;
  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Space','Home'].includes(e.key))e.preventDefault();
  keys.add(e.key.toLowerCase());
  if(e.repeat)return;
@@ -517,7 +522,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 function releaseAll(){
- keys.clear();input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
+ keys.clear();joystickId=null;canvasDown=null;input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
  stick.style.transform='';
 }
 addEventListener('blur',releaseAll);
@@ -598,6 +603,7 @@ function draw(dt,render=true){
  village.update(state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
  adventureUi?.tick();skillsUi?.tick();
+ fieldNotes.update({name:existing.profile?.name,xp:state.progression,saved:saveManager.status().enabled});
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state,cameraOffset,player);
  groundView.update(state.groundLoot,state.time);
