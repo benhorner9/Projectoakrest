@@ -11,6 +11,11 @@ let browser;
  await new Promise(r=>setTimeout(r,900));
  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const context=await browser.newContext({viewport:{width:1194,height:834},hasTouch:true,isMobile:false});
+ // Stable existing-profile fixture means this test measures the actual HUD,
+ // not an unrelated first-run character-creation dialog.
+ const {defaultSave}=await import('../src/rules.js');
+ const fixture=JSON.stringify(defaultSave());
+ await context.addInitScript(raw=>localStorage.setItem('oakrest-v1',raw),fixture);
  const page=await context.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5282/classic.html?qa=1',{waitUntil:'domcontentloaded'});
