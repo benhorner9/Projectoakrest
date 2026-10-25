@@ -32,6 +32,13 @@ let browser;
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`http://127.0.0.1:${server.address().port}/oakrest-dev/classic.html?qa=1`,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.oakrestClassicQA);
+ for(const viewport of [{width:1366,height:1024},{width:1194,height:834},{width:820,height:630}]){
+  await page.setViewportSize(viewport);
+  await page.locator('[data-ability="0"] small').evaluate(el=>el.textContent='Heavy Slash');
+  const label=await page.locator('[data-ability="0"] small').evaluate(el=>{const r=el.getBoundingClientRect(),b=el.parentElement.getBoundingClientRect();return {fits:r.left>=b.left&&r.right<=b.right&&r.bottom<=b.bottom,wrap:getComputedStyle(el).whiteSpace,overflow:el.scrollWidth>el.clientWidth};});
+  assert.equal(label.fits,true,JSON.stringify({viewport,label}));assert.equal(label.wrap,'normal');assert.equal(label.overflow,false);
+ }
+ await page.setViewportSize({width:1194,height:834});
  await page.locator('#classic-settings-toggle').click();
  assert.equal(await page.locator('#classic-audio-enabled').isChecked(),false);
  assert.equal(await page.locator('#classic-audio-volume').inputValue(),'0.65');
