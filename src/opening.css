@@ -40,7 +40,7 @@
 
 /* Legacy character creator has a higher z-index than the old intro; without
  * this the new Classic launch CTA is visible but impossible to tap. */
-#intro.classic-dev-entry{z-index:150!important}
+#intro.classic-dev-entry{z-index:3500!important}
 #intro.classic-dev-entry .panel{
  max-height:calc(100dvh - 20px);overflow-y:auto;touch-action:pan-y;
 }
