@@ -590,12 +590,16 @@ function draw(dt,render=true){
  if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
  const state=combat.getState();
  const adventureState=combat.adventureState();
+ // Accelerated QA executes all movement, combat, rewards and guarded saves,
+ // then presents its final frame. Do not flood Canvas/WebGL with intermediate
+ // minimap and sprite uploads that cannot be displayed.
+ if(!render)return;
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
  village.update(state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
  adventureUi?.tick();skillsUi?.tick();
  if(state.style!==style){style=state.style;refreshHud();}
- combatView.update(state);
+ combatView.update(state,cameraOffset,player);
  groundView.update(state.groundLoot,state.time);
  minimap.update({player,facing:look,destination:navigation.state().goal,cameraOffset,
   monsters:state.monsters,drops:state.groundLoot,objective:adventureUi?.objective(),
@@ -625,10 +629,10 @@ function draw(dt,render=true){
  camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
  camera.lookAt(player.x,0,player.z);if(render)renderer.render(scene,camera);
 }
-let last=performance.now();
+let last=performance.now(),qaPaused=false;
 function tick(time){
  requestAnimationFrame(tick);
- if(document.hidden){last=time;return;}
+ if(document.hidden||qaPaused){last=time;return;}
  const dt=clamp((time-last)/1000,0,.06);last=time;draw(dt);
 }
 itemUi=setupClassicItems({
@@ -675,6 +679,7 @@ requestAnimationFrame(tick);
 const isQa=new URLSearchParams(location.search).has('qa')&&
  (['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname));
 if(isQa)window.oakrestClassicQA={
+ pauseAutomaticLoop:(paused=true)=>{qaPaused=!!paused;last=performance.now();},
  worldLife:()=>npcActors.map(n=>({id:n.id,x:n.actor.sprite.position.x,z:n.actor.sprite.position.z})),
  renderStats:()=>({batching:village.batching,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),width:renderer.domElement.width,height:renderer.domElement.height}),
  state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
