@@ -50,7 +50,15 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
    const ref=doc.createElementNS('http://www.w3.org/2000/svg','use');
    icon.append(ref);element.prepend(icon);
   }
-  const target=spriteBase+iconName,ref=icon.firstElementChild;
+  const target=spriteBase+iconName;
+  // Older WebKit may expose SVG firstElementChild late even after append.
+  // Reuse or recreate the <use> safely; a missing sprite must never prevent
+  // world initialization, movement, inventory or character creation.
+  let ref=icon.querySelector('use');
+  if(!ref){
+   ref=doc.createElementNS('http://www.w3.org/2000/svg','use');
+   icon.append(ref);
+  }
   if(ref.getAttribute('href')!==target)ref.setAttribute('href',target);
   const small=element.querySelector('small');if(small)small.textContent=sub;
   element.title=description;
