@@ -416,3 +416,12 @@
  #classic-app.oakrest-framed .oakrest-action-hint{display:none!important}
  #classic-app.oakrest-framed .oakrest-hotbar-choice{font-size:8px}
 }
+
+/* Minimum 44 CSS-pixel combat-style targets for real two-thumb iPad play.
+ * Preserve the existing style switching and touch listeners unchanged. */
+#classic-app.oakrest-framed .oakrest-combat-stance{
+ min-height:44px!important;max-height:44px!important;height:44px!important;
+}
+#classic-app.oakrest-framed #classic-styles button{
+ min-height:44px!important;height:44px!important;
+}
