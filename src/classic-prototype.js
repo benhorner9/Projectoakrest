@@ -243,6 +243,12 @@ function updateLocation(){
   ?building.kind==='bank'?'Oakrest Bank':building.kind==='store'?'General Store':
    building.kind==='forester'?'Forester Lodge':building.kind==='trade'?'Trade Hall':building.id.replace(/-/g,' ')
   :player.z>210?(DUNGEON_ROOMS.find(r=>player.z>=r.minZ&&player.z<=r.maxZ)?.name||'Warden’s Hollow'):player.z>80?([...ADVENTURE_REGIONS].sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z))[0].name):'Oakrest Village';
+ const areaDescription=$('classic-area-description');
+ if(areaDescription)areaDescription.textContent=building
+  ?'Inside the village · Visit services and explore.'
+  :player.z>210?'The depths beyond the village walls.'
+  :player.z>80?'Beyond Oakrest · Explore the frontier.'
+  :'A home for adventurers, traders and new arrivals.';
  $('classic-inside').textContent=building?'You are indoors; the roof has lifted.'
   :'Follow the lane to an open doorway to explore building interiors.';
 }

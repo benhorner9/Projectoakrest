@@ -30,7 +30,23 @@ let browser;
  assert.equal(await page.locator('.classic-item-buttons svg.oakrest-ui-icon use').count(),7);
  assert.equal(await page.locator('#classic-styles svg.oakrest-style-icon use').count(),3);
  assert.equal(await page.locator('#classic-item-window').isVisible(),true);
- assert.ok((await page.locator('#classic-item-content').innerText()).includes('SIX COLUMNS'));
+ assert.equal(await page.locator('#classic-item-window > .classic-item-tabs').isVisible(),false,
+  'duplicate Bag / Gear / Bank / Shop navigation must not appear');
+ assert.equal(await page.locator('#classic-item-window > .classic-item-header').isVisible(),false,
+  'redundant Backpack header and X control must not appear');
+ assert.equal(await page.locator('#classic-item-content > .classic-four-grid').count(),1,
+  'the inventory grid is the first visible item-content element');
+ assert.equal(await page.locator('#classic-item-content > .classic-muted').count(),0);
+ assert.equal(await page.locator('.oakrest-place-card #classic-location').count(),1);
+ assert.equal(await page.locator('.oakrest-place-card #classic-settings-toggle').count(),1);
+ assert.equal(await page.locator('.classic-minimap-frame #classic-settings-toggle').count(),0);
+ assert.equal(await page.locator('.oakrest-place-card').getByText(/players online/i).count(),0);
+ const locationBefore=await page.locator('#classic-location').textContent();
+ await page.evaluate(()=>oakrestClassicQA.teleport(-30,14));
+ assert.match(await page.locator('#classic-location').textContent(),/Bank/);
+ await page.evaluate(()=>oakrestClassicQA.teleport(0,0));
+ assert.notEqual(await page.locator('#classic-location').textContent(),'Oakrest Bank');
+ assert.notEqual(locationBefore,'', 'location is connected to real game state');
  const layout=(await page.evaluate(()=>{
   const r=selector=>{
    const b=document.querySelector(selector).getBoundingClientRect();

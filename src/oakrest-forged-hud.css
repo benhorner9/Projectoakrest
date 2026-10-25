@@ -425,3 +425,124 @@
 #classic-app.oakrest-framed #classic-styles button{
  min-height:44px!important;height:44px!important;
 }
+
+
+/* Approved Oakrest iPad inventory refinement: no duplicated navigation,
+   false online counts, floating tool strip or dead space around the map. */
+#classic-app.oakrest-framed .classic-sidebar-map{
+ display:flex!important;justify-content:space-between!important;
+ align-items:center!important;gap:9px!important;
+ padding:10px 12px!important;
+}
+#classic-app.oakrest-framed .oakrest-place-card{
+ position:relative;z-index:3;flex:1 1 0;min-width:0;min-height:0;
+ align-self:stretch;padding:12px 10px 52px;
+ display:flex;flex-direction:column;align-items:stretch;gap:7px;
+ color:#d8d1b7;text-align:left;
+ border:2px solid #ae8d55;border-radius:5px;
+ background:linear-gradient(145deg,#252c25eb,#101d19e8);
+ box-shadow:inset 0 0 0 2px #584a33,inset 0 1px 8px #ad8b3840;
+ overflow:hidden;
+}
+#classic-app.oakrest-framed .oakrest-place-top{
+ display:flex;align-items:center;justify-content:space-between;gap:5px;
+ padding-bottom:4px;border-bottom:1px solid #8f78534d;
+}
+#classic-app.oakrest-framed .oakrest-place-brand{
+ font:700 clamp(13px,1.35vw,19px)/1.2 Georgia,serif;
+ letter-spacing:.11em;color:#f3dbad;text-shadow:0 1px #000;
+}
+#classic-app.oakrest-framed .oakrest-place-kicker{
+ font:700 8px/1.15 system-ui,sans-serif;
+ letter-spacing:.08em;color:#a9aa8d;
+}
+#classic-app.oakrest-framed .oakrest-place-card .location{
+ display:block!important;position:static!important;inset:auto!important;
+ width:100%;max-width:100%;margin:0;padding:0;
+ white-space:normal;overflow-wrap:anywhere;
+ background:transparent!important;border:0!important;
+ color:#efd09a!important;text-align:left;
+ font:700 clamp(12px,1.35vw,16px)/1.22 Georgia,serif!important;
+}
+#classic-app.oakrest-framed .oakrest-place-card .location-dot{display:none!important}
+#classic-app.oakrest-framed .oakrest-place-description{
+ font:10px/1.4 system-ui,sans-serif;
+ color:#b5bca9;overflow-wrap:anywhere;margin:0;
+}
+#classic-app.oakrest-framed .oakrest-place-top .oakrest-map-settings{
+ position:static!important;inset:auto!important;transform:none!important;
+ flex:none;display:grid!important;place-items:center;
+ width:30px!important;height:30px!important;min-height:30px!important;
+ padding:0!important;margin:0!important;
+ border:1px solid #8c7552!important;border-radius:4px!important;
+ color:#dbc499!important;font:19px/1 Georgia,serif!important;
+ background:#2d342a!important;
+ box-shadow:inset 0 1px #bb9b5230!important;
+}
+#classic-app.oakrest-framed .classic-sidebar-map .classic-minimap-frame{
+ flex:none!important;width:auto!important;min-width:0!important;
+ margin:0!important;inset:auto!important;
+}
+#classic-app.oakrest-framed .classic-sidebar-map .minimap-open{
+ width:clamp(126px,23vh,212px)!important;
+ height:clamp(126px,23vh,212px)!important;
+}
+#classic-app.oakrest-framed .classic-sidebar-map #adventure-journal{
+ position:absolute!important;z-index:9;
+ left:17px!important;right:auto!important;top:auto!important;bottom:14px!important;
+ width:calc(100% - clamp(126px,23vh,212px) - 44px)!important;
+ max-width:unset!important;min-width:0!important;
+ max-height:42px;min-height:34px!important;overflow:hidden;
+ text-overflow:ellipsis;
+}
+/* Main Bag/Gear/Combat tabs are the only permanent inventory navigation.
+   Legacy hidden elements retain their IDs for internal window handling. */
+#classic-app.oakrest-framed #classic-item-window > .classic-item-header,
+#classic-app.oakrest-framed #classic-item-window > .classic-item-tabs{
+ display:none!important;
+}
+#classic-app.oakrest-framed #classic-item-window{
+ display:flex;flex-direction:column;min-height:0;
+}
+#classic-app.oakrest-framed #classic-item-window[hidden]{display:none!important}
+#classic-app.oakrest-framed #classic-item-content{
+ flex:1;min-height:0;padding:5px 6px 12px!important;
+ scrollbar-color:#967b4d #151c18;
+}
+#classic-app.oakrest-framed #classic-item-content > .classic-four-grid{
+ margin:0!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:3px!important;
+}
+#classic-app.oakrest-framed #classic-item-content .classic-item-icon{
+ width:min(74%,40px)!important;height:min(74%,40px)!important;
+}
+#classic-app.oakrest-framed #classic-item-content .classic-item-cell{
+ min-height:0!important;aspect-ratio:1!important;
+}
+#classic-app.oakrest-framed .classic-bag-tools{
+ margin:12px 1px 4px;padding:6px 8px;
+ border:1px solid #675b41;border-radius:3px;background:#1c241e;
+}
+#classic-app.oakrest-framed .classic-bag-tools > summary{
+ cursor:pointer;min-height:32px;display:flex;align-items:center;
+ color:#d2bc8f;font:700 10px/1.3 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .classic-bag-tools > summary:focus-visible,
+#classic-app.oakrest-framed .oakrest-map-settings:focus-visible{
+ outline:2px solid #f7d591;outline-offset:2px;
+}
+@media(max-width:1000px){
+ #classic-app.oakrest-framed .oakrest-place-card{
+  padding:8px 7px 44px;gap:4px;
+ }
+ #classic-app.oakrest-framed .oakrest-place-description{font-size:9px}
+ #classic-app.oakrest-framed .classic-sidebar-map{gap:6px!important;padding:7px 9px!important}
+ #classic-app.oakrest-framed .classic-sidebar-map #adventure-journal{
+  left:12px!important;bottom:10px!important;
+  width:calc(100% - clamp(126px,23vh,212px) - 34px)!important;
+ }
+}
+@media(max-height:680px){
+ #classic-app.oakrest-framed .oakrest-place-description{display:none}
+ #classic-app.oakrest-framed .oakrest-place-card{padding-bottom:39px}
+}
