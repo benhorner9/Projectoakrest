@@ -351,3 +351,20 @@
  #classic-app.oakrest-framed .oakrest-chat-channel-button{min-height:34px}
 }
 @media(prefers-reduced-motion:reduce){#classic-app.oakrest-framed *{transition:none!important;animation:none!important}}
+
+/* Settings sits beside the round minimap instead of consuming a game tab. */
+#classic-app.oakrest-framed .classic-minimap-frame .oakrest-map-settings{
+ position:absolute;top:7px;right:-49px;z-index:8;
+ display:grid;place-items:center;
+ width:38px;height:38px;min-height:38px;padding:3px;
+ border:2px solid #9c8054!important;border-radius:50%;
+ background:radial-gradient(circle,#474436,#222a25)!important;
+ color:#f2d9a8!important;font-size:21px;
+}
+#classic-app.oakrest-framed .classic-minimap-frame .oakrest-map-settings:hover{
+ background:#435846!important;
+}
+#classic-app.oakrest-framed .oakrest-social-window h3{
+ color:#f0d4a2;font:700 15px Georgia,serif;margin:6px 0;
+}
+#classic-app.oakrest-framed .classic-chat-not-connected{opacity:.7}
