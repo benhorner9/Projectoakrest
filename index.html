@@ -200,8 +200,10 @@
   <script>
     // Keep production's launcher unchanged. Development has a separate playable
     // Classic route; surface it even if the old 3D engine cannot initialize.
-    if (location.pathname.split('/').includes('oakrest-dev'))
+    if (location.pathname.split('/').includes('oakrest-dev')) {
       document.getElementById('oakrest-classic-launch').hidden = false;
+      document.getElementById('intro').classList.add('classic-dev-entry');
+    }
   </script>
   <script type="module" src="./src/main.js"></script>
 </body>
