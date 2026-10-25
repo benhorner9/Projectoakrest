@@ -1,3 +1,4 @@
+import {createOakrestTree} from './classic-village.js';
 import * as THREE from 'three';
 import {ADVENTURE_TARGETS,ADVENTURE_PATHS,ADVENTURE_TREES,ADVENTURE_WALLS,DUNGEON_ROOMS,ADVENTURE_SCENERY} from './adventure-content.js';
 import {makeClassicActor} from './classic-sprites.js';
@@ -28,10 +29,8 @@ export function createAdventureWorld(scene){
  for(const w of ADVENTURE_WALLS){box(w.x,1.4,w.z,w.w,2.8,w.d,'#65716b');box(w.x,2.85,w.z,w.w+.2,.15,w.d+.2,'#889584');}
  // The creek runs beside, rather than across, its accessible investigation path.
  for(const creek of ADVENTURE_SCENERY.creek)box(creek.x,creek.y,creek.z,creek.w,creek.h,creek.d,creek.color);
- for(const t of ADVENTURE_TREES){
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.35,t.r,3,5),mat('#6c5944'));trunk.position.set(t.x,1.5,t.z);root.add(trunk);
-  const crown=new THREE.Mesh(new THREE.ConeGeometry(2,4,6),mat(t.z>125?'#385743':'#5d7d50'));crown.position.set(t.x,4,t.z);root.add(crown);
- }
+ for(const [i,t] of ADVENTURE_TREES.entries())createOakrestTree(root,t.x,t.z,i,.9);
+
  const gates=[241,269,297].map(z=>box(0,1.5,z,6,3,.5,'#769b91'));
  const markers=new Map();
  for(const t of ADVENTURE_TARGETS){
