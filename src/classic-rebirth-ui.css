@@ -39,7 +39,7 @@
 #classic-app.oakrest-framed .classic-action-footer .styles button span{font-size:10px;display:block}
 #classic-app.oakrest-framed .classic-action-footer .character-subline{font-size:10px}
 #classic-app.oakrest-framed .classic-action-footer .classic-combat-dock{background:#214438;border-color:#577961}
-#classic-app.oakrest-framed .classic-attack-row button small{font-size:10px}
+#classic-app.oakrest-framed .classic-attack-row button small{font-size:10px;line-height:11px;white-space:normal;overflow-wrap:anywhere;max-width:none;text-overflow:clip}
 #classic-app.oakrest-framed .classic-footer-events #classic-toasts{font-size:12px}
 @media(max-width:1050px){#classic-app.oakrest-framed .classic-action-footer{grid-template-columns:182px minmax(0,1fr)}}
 @media(max-height:670px){
@@ -51,3 +51,7 @@
  #classic-app.oakrest-framed .classic-side-idle{padding:12px}
 }
 @media(prefers-reduced-motion:reduce){#classic-app *{scroll-behavior:auto;transition:none!important;animation:none!important}}
+
+.classic-audio-control{display:flex;align-items:center;gap:12px;min-height:44px;color:#eee4cd}.classic-audio-control input[type=range]{flex:1;min-width:80px;accent-color:#a6bd89}.classic-damage-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}.classic-damage{position:absolute;left:0;top:0;font:700 22px Georgia,serif;color:#fff2d0;text-shadow:0 2px 3px #151b18,1px 0 #151b18,-1px 0 #151b18;will-change:transform}.classic-damage.hurt{color:#f5a594}.classic-damage.heal{color:#b8e1ae}
+
+@media(max-width:900px){#classic-app.oakrest-framed .classic-ability-buttons button{font-size:12px}#classic-app.oakrest-framed .classic-ability-buttons button small{font-size:9px;line-height:10px;margin-top:1px}}
