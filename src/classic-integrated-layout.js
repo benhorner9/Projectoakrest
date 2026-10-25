@@ -32,7 +32,7 @@ export function installClassicIntegratedLayout(doc=document){
  node('p','',idle).textContent='Choose BAG, GEAR, LEVELS or QUESTS to open your adventurer’s book.';
  node('p','',idle).textContent='The world stays fully visible while you browse.';
  for(const id of ['classic-item-window','classic-skills-window','classic-quests-window',
-  'classic-map-window','classic-settings-window','classic-dialogue'])body.append(get(id));
+  'classic-map-window','classic-social-window','classic-settings-window','classic-dialogue'])body.append(get(id));
  const footer=node('footer','classic-action-footer',app);
  footer.setAttribute('aria-label','Character and combat controls');
  footer.append(doc.querySelector('.classic-panel'),doc.querySelector('.classic-combat-dock'));
