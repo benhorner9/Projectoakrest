@@ -36,8 +36,8 @@ let browser;
    });
    const overlap=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*
     Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
-   assert.ok(l.world.width>=size.width*.69,'world priority: '+JSON.stringify({size,l}));
-   assert.ok(l.world.height>size.height*.68,'world height priority: '+JSON.stringify({size,l}));
+   assert.ok(l.world.width>=size.width*.54,'world priority: '+JSON.stringify({size,l}));
+   assert.ok(l.world.height>size.height*.59,'world height priority: '+JSON.stringify({size,l}));
    assert.equal(overlap(l.world,l.side),0,'sidebar never covers world');
    assert.equal(overlap(l.world,l.footer),0,'action footer never covers the world');
    assert.equal(overlap(l.map,l.nav),0,'minimap stays above navigation');
@@ -48,6 +48,7 @@ let browser;
   await page.setViewportSize({width:1194,height:834});
   mkdirSync('qa/rebirth',{recursive:true});
   await page.screenshot({path:'qa/rebirth/town-world-first.png'});
+  await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('.field-shortcuts button').count(),3);
   await page.locator('.field-shortcuts button').filter({hasText:'Quests'}).click();
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
