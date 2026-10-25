@@ -399,3 +399,11 @@
   min-height:44px;max-height:44px;height:44px;
  }
 }
+
+/* Long translated ability names must wrap safely on narrow action buttons. */
+#classic-app.oakrest-framed #oakrest-action-deck .classic-attack-row button small{
+ display:block!important;max-width:100%!important;white-space:normal!important;
+ overflow-wrap:anywhere!important;word-break:normal!important;
+ overflow:visible!important;line-height:10px!important;
+ text-align:center;text-overflow:clip!important;
+}
