@@ -25,9 +25,11 @@ const url='http://127.0.0.1:5278/';
   const context=await browser.newContext({
    viewport:{width:1194,height:834},hasTouch:true,isMobile:true,deviceScaleFactor:1
   });
-  const page=await context.newPage(),errors=[],failedRequests=[];
+  const page=await context.newPage(),errors=[],failedRequests=[],consoleErrors=[],httpErrors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  page.on('requestfailed',req=>failedRequests.push(req.url()));
+  page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
+  page.on('response',res=>{if(res.status()>=400)httpErrors.push([res.status(),res.url()]);});
+  page.on('requestfailed',req=>failedRequests.push(req.url()+': '+req.failure()?.errorText));
   await page.goto(url+'oakrest/',{waitUntil:'domcontentloaded'});
   assert.equal(await page.locator('#oakrest-classic-launch').isVisible(),false,
    'public production must not advertise an unshipped Classic game');
@@ -39,7 +41,19 @@ const url='http://127.0.0.1:5278/';
   assert.ok(hit?.height>=44,'Classic launch button is easy to tap on iPad');
   await launcher.tap();
   await page.waitForURL(/\/oakrest-dev\/classic\.html/);
-  await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
+  await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000}).catch(async err=>{
+   const state=await page.evaluate(()=>({
+    url:location.href,title:document.title,stage:document.readyState,
+    supportsWebGL:!!document.createElement('canvas').getContext('webgl'),
+    supportsWebGL2:!!document.createElement('canvas').getContext('webgl2'),
+    supportsRandomUUID:!!crypto.randomUUID,
+    domError:document.getElementById('classic-error')?.textContent,
+    fatalHidden:document.getElementById('classic-error')?.hidden,
+    scriptTags:[...document.scripts].map(s=>s.src||s.type),
+    loadedCanvas:!!document.querySelector('#classic-game canvas')
+   })).catch(e=>({probeError:String(e)}));
+   throw Error('Classic launch did not initialize: '+JSON.stringify({state,errors,consoleErrors,httpErrors,failedRequests})+' | '+err.message);
+  });
   assert.equal(await page.locator('#classic-error').isVisible(),false,
    'WebGL renderer successfully initialized');
   const creator=page.locator('#classic-creator');
