@@ -147,7 +147,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
      ()=>craftFromBag('craft',recipe.id),!ready||level<recipe.level);
    }
   }
-  grid(content,inventoryEntries(data),'bag','BACKPACK · FOUR COLUMNS',BAG_MIN_SLOTS);
+  grid(content,inventoryEntries(data),'bag','BACKPACK · SIX COLUMNS',BAG_MIN_SLOTS);
   if(detailId)examine(content,detailId);
 
  }
