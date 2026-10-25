@@ -59,6 +59,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
  for(const s of STYLE_ORDER){
   if(!data.inventory?.weapons?.[s]?.length){
    const loan={melee:'sword',magic:'frost',ranged:'bow'}[s];
+   // A banked weapon is real ownership. Never duplicate it with a practice
+   // loan, which would otherwise strip the legitimate withdrawal on save.
+   if(data.bank?.weapons?.[s]?.includes(loan))continue;
    loaned[s]=loan;
    data.inventory??={};data.inventory.weapons??={};data.inventory.weapons[s]=[loan];
    data.gear??={};data.gear[s]=loan;
@@ -375,6 +378,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
  function itemAction(action,player){
   const atBank=canCompleteInteraction(player,findClassicInteractable('service:bank'));
   const atStore=canCompleteInteraction(player,findClassicInteractable('service:store'));
+  if(action?.type==='bank'&&action.kind==='weapon'&&
+   action.direction==='deposit'&&loaned[action.style]===action.id)
+   return {ok:false,reason:'Practice weapons cannot be banked. Earn or buy your own weapon.'};
   // Session-only loaned basic weapons must never count as owned by shop logic.
   // Temporarily exclude them from this purchase, then reinstate only loans
   // that weren't truly purchased. No other transaction touches ownership.
@@ -398,7 +404,17 @@ export function createClassicCombat({save,random=Math.random,adventure=false}={}
   return result;
  }
  function pickup(player,id){
-  const result=classicPickup(data,player,id);
+  const drop=data.groundLoot.find(d=>d.id===id);
+  const loan=drop?.kind==='weapon'&&loaned[drop.style]===drop.itemId;
+  if(loan)data.inventory.weapons[drop.style]=data.inventory.weapons[drop.style].filter(w=>w!==drop.itemId);
+  let result;
+  try{result=classicPickup(data,player,id);}
+  finally{
+   if(loan){
+    if(result?.ok)delete loaned[drop.style];
+    else data.inventory.weapons[drop.style].push(drop.itemId);
+   }
+  }
   if(result.ok)emit('pickup',{reason:result.reason,id});
   return result;
  }
