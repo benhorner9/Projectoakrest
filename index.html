@@ -201,8 +201,14 @@
     // Keep production's launcher unchanged. Development has a separate playable
     // Classic route; surface it even if the old 3D engine cannot initialize.
     if (location.pathname.split('/').includes('oakrest-dev')) {
-      document.getElementById('oakrest-classic-launch').hidden = false;
+      const classicLaunch = document.getElementById('oakrest-classic-launch');
+      classicLaunch.hidden = false;
       document.getElementById('intro').classList.add('classic-dev-entry');
+      classicLaunch.addEventListener('click', () => {
+        // Legacy 3D initializes its own unnamed save on first visit. Tell
+        // Classic this is a fresh entry so it offers a proper character choice.
+        try { sessionStorage.setItem('oakrest-dev-classic-from-home', '1'); } catch {}
+      });
     }
   </script>
   <script type="module" src="./src/main.js"></script>
