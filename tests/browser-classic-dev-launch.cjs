@@ -90,30 +90,21 @@ const url='http://127.0.0.1:5278/';
   await page.locator('[data-style=magic]').tap();
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'magic');
   assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
-  // Test a genuine directional joystick pointer transaction with app's
-  // movement integrator; no synthetic teleport or privileged in-game action.
-  await page.evaluate(()=>{
-   oakrestClassicQA.pauseAutomaticLoop();
-   const joystick=document.getElementById('classic-joystick');
-   const r=joystick.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;
-   joystick.dispatchEvent(new PointerEvent('pointerdown',{
-    bubbles:true,cancelable:true,pointerId:17,pointerType:'touch',clientX:x,clientY:y,isPrimary:true
-   }));
-   joystick.dispatchEvent(new PointerEvent('pointermove',{
-    bubbles:true,cancelable:true,pointerId:17,pointerType:'touch',clientX:x,clientY:y-37,isPrimary:true
-   }));
-  });
+  // Playwright's mouse API creates an actual active pointer across both
+  // browser engines. Dispatching a fabricated PointerEvent causes both
+  // Chromium and WebKit to reject setPointerCapture (no active pointer).
+  const joyRect=await page.locator('#classic-joystick').boundingBox();
+  assert.ok(joyRect?.width>50&&joyRect?.height>50,'touch joystick exists on iPad-sized viewport');
+  const jx=joyRect.x+joyRect.width/2,jy=joyRect.y+joyRect.height/2;
+  await page.mouse.move(jx,jy);
+  await page.mouse.down();
+  await page.mouse.move(jx,jy-37,{steps:4});
   const before=await page.evaluate(()=>oakrestClassicQA.state());
   await page.evaluate(()=>oakrestClassicQA.advance(.35));
   const after=await page.evaluate(()=>oakrestClassicQA.state());
+  await page.mouse.up();
   assert.ok(Math.abs(after.z-before.z)+Math.abs(after.x-before.x)>.02,
-   'new player can move using on-screen touch joystick');
-  await page.evaluate(()=>{
-   const joystick=document.getElementById('classic-joystick'),r=joystick.getBoundingClientRect();
-   joystick.dispatchEvent(new PointerEvent('pointerup',{
-    bubbles:true,pointerId:17,pointerType:'touch',clientX:r.x+r.width/2,clientY:r.y+r.height/2
-   }));
-  });
+   'new player can move using the joystick with an actual captured pointer');
   assert.deepEqual(errors,[],'fresh player must not encounter JS exceptions');
   const critical=failedRequests.filter(v=>/\.js|\.css|\.html/.test(v));
   assert.deepEqual(critical,[],'necessary game assets must load');
