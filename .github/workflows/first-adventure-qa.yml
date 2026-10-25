@@ -19,6 +19,7 @@ jobs:
       - run: npx playwright install chromium
       - run: node tests/browser-adventure.cjs
       - run: node tests/browser-classic-framed.cjs
+      - run: node tests/browser-classic-mmorpg-ui.cjs
       - run: node tests/browser-classic-rebirth-v2.cjs
       - run: node tests/browser-classic-free-combat.cjs
       - run: node tests/browser-classic.cjs && node tests/browser-classic-save.cjs && node tests/browser-classic-hud.cjs && node tests/browser-classic-creator.cjs && node tests/browser-classic-camera.cjs
