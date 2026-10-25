@@ -30,7 +30,7 @@ let browser;
     return {world:box('#classic-game'),side:box('#classic-sidebar'),
      footer:box('.classic-action-footer'),map:box('.classic-sidebar-map'),
      nav:box('.classic-item-buttons'),dock:box('.classic-combat-dock'),
-     quick:box('.oakrest-quick-links'),buttons:[...document.querySelectorAll('.classic-item-buttons button')].map(b=>b.getBoundingClientRect().height),
+     quick:box('.field-shortcuts'),buttons:[...document.querySelectorAll('.classic-item-buttons button')].map(b=>b.getBoundingClientRect().height),
      canvas:box('#classic-game canvas'),
      css:getComputedStyle(document.querySelector('#classic-app')).gridTemplateColumns};
    });
