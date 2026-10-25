@@ -68,6 +68,19 @@ let browser;
  assert.ok(before.sceneMeshes>0);
  assert.equal(await page.locator('#oakrest-action-deck .classic-attack-row button').count(),8);
  assert.equal(await page.locator('#oakrest-action-deck .oakrest-action-icon use').count(),8);
+ // Utility slots are user-arrangeable without touching equipped ability
+ // loadouts, consumable authority or the game's combat logic.
+ await page.locator('#oakrest-hotbar-edit').click();
+ assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),true);
+ await page.locator('#oakrest-hotbar-select-5').selectOption('drink');
+ assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'5');
+ assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'6');
+ assert.deepEqual((await page.evaluate(()=>oakrestClassicQA.hotbarState().slots)).slice(4),
+  ['drink','eat','dodge','attack']);
+ const savedUi=await page.evaluate(()=>JSON.parse(localStorage.getItem('oakrest-ui-action-slots-v1')));
+ assert.deepEqual(savedUi,['drink','eat','dodge','attack']);
+ await page.locator('#oakrest-hotbar-edit').click();
+ assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),false);
  await page.locator('[data-style=magic]').click();
  assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
  const styleSVG=await page.locator('[data-style=magic] svg use').getAttribute('href');
