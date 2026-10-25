@@ -436,3 +436,16 @@
   transition:none!important;animation:none!important;scroll-behavior:auto!important;
  }
 }
+
+/* Real iPad accessibility gate: every permanent touch menu and style switch
+ * remains at least 44 CSS px high at all supported landscape sizes. */
+#classic-app.oakrest-framed .classic-item-buttons{grid-auto-rows:44px!important}
+#classic-app.oakrest-framed .classic-item-buttons button{
+ min-height:44px!important;height:44px!important;
+}
+#classic-app.oakrest-framed .classic-panel .styles button{
+ min-height:44px!important;height:44px!important;flex-shrink:0;
+}
+#classic-app.oakrest-framed .classic-action-footer .classic-panel{
+ justify-content:center;
+}
