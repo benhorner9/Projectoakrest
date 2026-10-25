@@ -3,14 +3,14 @@ const {spawn}=require('node:child_process'),{mkdirSync}=require('node:fs');
 const server=spawn('python3',['-m','http.server','5248','--bind','127.0.0.1'],{stdio:'ignore'});let browser;
 (async()=>{try{
  await new Promise(r=>setTimeout(r,900));browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const page=await browser.newPage({viewport:{width:1200,height:820}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width:1200,height:960}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5248/classic.html?qa=1');await page.waitForFunction(()=>window.oakrestClassicQA);
  const result=await page.evaluate(async()=>{
   oakrestClassicQA.pauseAutomaticLoop();
   const {makeClassicActor,classicSpriteCacheStats}=await import('./src/classic-sprites.js');
-  const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=800;canvas.style='position:fixed;inset:0;z-index:99999;width:1200px;height:800px';document.body.append(canvas);
-  const c=canvas.getContext('2d');c.fillStyle='#182d29';c.fillRect(0,0,1200,800);c.imageSmoothingEnabled=false;c.font='16px sans-serif';
-  const styles=[['melee','sword'],['melee','greatsword'],['melee','daggers'],['ranged','bow'],['ranged','crossbow'],['magic','frost']];
+  const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=940;canvas.style='position:fixed;inset:0;z-index:99999;width:1200px;height:940px';document.body.append(canvas);
+  const c=canvas.getContext('2d');c.fillStyle='#182d29';c.fillRect(0,0,1200,940);c.imageSmoothingEnabled=false;c.font='16px sans-serif';
+  const styles=[['melee','sword'],['melee','greatsword'],['melee','daggers'],['melee','axe'],['ranged','bow'],['ranged','crossbow'],['magic','frost']];
   const signatures=[],clipped=[];
   for(const [row,[style,weapon]] of styles.entries()){
    const actor=makeClassicActor({style,coat:'#667f78',hairstyle:'swept'});
@@ -32,5 +32,5 @@ const server=spawn('python3',['-m','http.server','5248','--bind','127.0.0.1'],{s
  assert.equal(result.distinct,result.count,'every weapon/pose has distinct presentation');
  assert.ok(result.cache.textures<=256,JSON.stringify(result));assert.deepEqual(errors,[]);
  mkdirSync('qa/rebirth',{recursive:true});await page.screenshot({path:'qa/rebirth/weapon-poses.png'});
- console.log('PASS: 18 weapon action poses, connected shared rig and bounded disposed creator texture cache',result);
+ console.log('PASS: 21 weapon action poses, connected shared rig and bounded disposed creator texture cache',result);
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});
