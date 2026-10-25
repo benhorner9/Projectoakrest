@@ -42,7 +42,7 @@ let browser;
    mapDiameter:r('.minimap-open').width,
    iconSizes:[...document.querySelectorAll('.classic-item-buttons svg')].map(b=>b.getBoundingClientRect().width),
   };
- })));
+ }));
  assert.equal(layout.gridDisplay,'grid');
  assert.equal(layout.columns,6,'reference uses six visually arranged columns, without changing slots');
  assert.ok(layout.mapDiameter>=142,'minimap is richly framed');
