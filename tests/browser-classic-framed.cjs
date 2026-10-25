@@ -39,7 +39,8 @@ let browser;
    assert.equal(intersects(view.world,view.side),0,'world must never be behind the sidebar');
    assert.equal(intersects(view.world,view.footer),0,'combat buttons must not cover the world');
    assert.equal(intersects(view.nav,view.map),0,'menu buttons must sit below the minimap');
-   assert.equal(intersects(view.dock,view.side),0,'combat dock stays outside side panel');
+   assert.equal(intersects(view.dock,view.world),0,'combat dock must not cover world');
+   assert.ok(intersects(view.dock,view.side)>100,'eight-slot combat dock is intentionally within the right sidebar');
    assert.ok(Math.abs(view.canvas.w-view.world.w)<=4&&Math.abs(view.canvas.h-view.world.h)<=4,
     'canvas fills world content rectangle (minus ornamental frame border): '+JSON.stringify({size,view}));
    assert.ok(view.rendererSize.w>0&&view.rendererSize.h>0,'WebGL framebuffer is valid');
