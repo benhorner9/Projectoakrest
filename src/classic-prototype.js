@@ -1,3 +1,5 @@
+import {createAudio} from './audio.js';
+import {createClassicCombatFeedback} from './classic-combat-feedback.js';
 import {bindClassicPress} from './classic-touch-press.js';
 import {setupClassicFieldNotes} from './classic-field-notes.js';
 import {citizenRoutine} from './classic-world-life.js';
@@ -38,6 +40,10 @@ const $=id=>document.getElementById(id);
 const root=$('classic-game'),keys=new Set();
 installClassicIntegratedLayout(document);
 const fieldNotes=setupClassicFieldNotes(document);
+const audio=createAudio(localStorage,storageKey('oakrest-audio',location.pathname));
+const damageFeedback=createClassicCombatFeedback(root);
+document.addEventListener('pointerdown',()=>audio.unlock(),{once:true});
+document.addEventListener('keydown',()=>audio.unlock(),{once:true});
 installGameZoomGuard(document);
 function readExistingCharacter(){
  const key=k=>storageKey(k,location.pathname);
@@ -404,6 +410,10 @@ $('classic-map-close').addEventListener('click',()=>windowUi.hide());
 $('classic-quests-close').addEventListener('click',()=>windowUi.hide());
 $('classic-quests-toggle').addEventListener('click',()=>adventureUi?.showJournal());
 $('classic-settings-close').addEventListener('click',()=>windowUi.hide());
+$('classic-audio-enabled').checked=audio.enabled;
+$('classic-audio-volume').value=audio.volume;
+$('classic-audio-enabled').addEventListener('change',e=>{audio.unlock();audio.setEnabled(e.target.checked);});
+$('classic-audio-volume').addEventListener('input',e=>audio.setVolume(e.target.value));
 $('classic-map-zoom-in').addEventListener('click',()=>minimap.setZoom(minimap.zoom()+.55));
 $('classic-map-zoom-out').addEventListener('click',()=>minimap.setZoom(minimap.zoom()-.55));
 function toggleAttack(){
@@ -434,13 +444,16 @@ for(const b of document.querySelectorAll('[data-ability]'))
  bindClassicPress(b,()=>useCombatAbility(Number(b.dataset.ability)));
 function combatEvents(events){
  for(const event of events){
+  damageFeedback.event(event,combat.getState(),player);
+  if(event.type==='release')audio.playAbility(event.style,event.kind,event.family);
+  if(['hurt','warning','pickup','dead','dash'].includes(event.type))audio.play(({pickup:'loot',dead:'death',dash:'dodge'})[event.type]||event.type);
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
   else if(event.type==='release')lastReleaseUntil=event.time+.18;
   else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated');
-  else if(event.type==='adventure'){markProgress();if(!event.reason.startsWith('Used '))feedback(event.reason);}
+  else if(event.type==='adventure'){markProgress();itemUi?.render();refreshHud();if(!event.reason.startsWith('Used '))feedback(event.reason);}
   else if(event.type==='adventure-notice')feedback(event.reason);
   else if(event.type==='xp'){
    refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
@@ -633,7 +646,10 @@ function draw(dt,render=true){
  // Smooth orbit comes from frame-rate-independent angular velocity, not a
  // following lag that could invert navigation while the view is catching up.
  camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
- camera.lookAt(player.x,0,player.z);if(render)renderer.render(scene,camera);
+ camera.lookAt(player.x,0,player.z);
+ camera.updateMatrixWorld();damageFeedback.update(state.time,camera);
+ audio.cityAmbience(state.time,player.z<80);
+ if(render)renderer.render(scene,camera);
 }
 let last=performance.now(),qaPaused=false;
 function tick(time){

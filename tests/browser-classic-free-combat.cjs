@@ -17,6 +17,15 @@ let browser;
   await page.locator('#classic-creator-name').fill('Combat Freedom');
   await page.locator('#classic-creator-form button[type=submit]').click();
   await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
+  // Fresh adventurers earn their visible training kit before combat.
+  await page.evaluate(async()=>{
+   const {findClassicInteractable}=await import('./src/classic-interactions.js');
+   const act=(kind,id)=>{const t=findClassicInteractable(id);oakrestClassicQA.teleport(t.x,t.z-1.6);return oakrestClassicQA.adventureAction(kind,id);};
+   if(!act('accept','citizen:guard').ok)throw Error('Cannot begin welcome');
+   for(const id of ['service:bank','service:store','service:forester']){const t=findClassicInteractable(id);oakrestClassicQA.teleport(t.x,t.z-1);oakrestClassicQA.selectTarget(id);}
+   if(!act('finish','citizen:guard').ok)throw Error('Cannot finish welcome');
+   if(!act('accept','adventure:rowan').ok)throw Error('Cannot receive training equipment');
+  });
   const state=()=>page.evaluate(()=>oakrestClassicQA.combatState());
   const step=seconds=>page.evaluate(seconds=>oakrestClassicQA.advance(seconds),seconds);
   await page.evaluate(()=>oakrestClassicQA.teleport(-1,71.3));
