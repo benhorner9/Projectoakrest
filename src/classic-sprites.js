@@ -1,10 +1,17 @@
+import {classicGrip,mirroredDirection} from './classic-sprite-rig.js';
 /** Lightweight directional sprite atlas created in-browser from a single art grammar.
  * Models are never skinned; all combat-style gear uses the same silhouette language.
  */
 import * as THREE from 'three';
 import {spriteDirection} from './classic-presentation.js';
 const W=96,H=128;
-const textureCache=new Map();
+const textureCache=new Map(),textureRefs=new Map();
+function releaseTexture(key){if(!key)return;textureRefs.set(key,Math.max(0,(textureRefs.get(key)||1)-1));}
+function trimTextures(){
+ if(textureCache.size<=256)return;
+ for(const [key,texture] of textureCache){if(!textureRefs.get(key)){texture.dispose();textureCache.delete(key);textureRefs.delete(key);if(textureCache.size<=192)break;}}
+}
+export const classicSpriteCacheStats=()=>({textures:textureCache.size,active:[...textureRefs.values()].filter(n=>n>0).length});
 function fill(ctx,color,x,y,w,h){
  ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
 }
@@ -15,9 +22,12 @@ function outline(ctx,x,y,w,h,c='#2c2b2a'){fill(ctx,c,x-2,y-2,w+4,h+4);}
 function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs,amulet,ring,outfit,hairstyle,sex,pose}){
  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
+ const direction=mirroredDirection(dir);dir=direction.dir;
+ if(direction.mirror){c.translate(W,0);c.scale(-1,1);}
+ const grip=classicGrip(style,pose,step);
  const front=[0,1,7].includes(dir),back=[3,4,5].includes(dir);
  const side=[1,2,3,5,6,7].includes(dir);
- const right=dir<4,shift=side?(right?4:-4):0;
+ const right=true,shift=side?4:0;
  const line='#292c2b';
  // Boots and alternating walk cycle, all actors share a consistent outline.
  const stride=step===1?6:step===2?-6:0;
@@ -50,13 +60,13 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  if(plate){fill(c,'#9baaaa',32,49,32,24);fill(c,'#d2d4be',35,53,26,4);fill(c,'#687977',46,55,4,18);}
  else if(leather){fill(c,'#8b6548',33,49,30,26);fill(c,'#c29b69',43,48,9,29);}
  else if(cloth){fill(c,'#c1b39a',32,52,32,4);fill(c,'#4b6679',38,57,20,16);}
- const handOffset=pose==='windup'?-10:pose==='strike'?7:step===1?4:step===2?-4:0;
- outline(c,61+shift,48+handOffset,14,34);fill(c,coat,61+shift,48+handOffset,14,34);
- fill(c,skin,62+shift,80+handOffset,12,9);
+ const handOffset=grip.hand.y-84;
+ polygon(c,line,[[61,47],[72,50],[grip.hand.x+6,grip.hand.y-4],[grip.hand.x-6,grip.hand.y+1],[60,61]]);
+ polygon(c,coat,[[63,49],[70,52],[grip.hand.x+4,grip.hand.y-5],[grip.hand.x-4,grip.hand.y-2],[62,60]]);
  // Head and neck; face/hair direction conveys facing.
  fill(c,skin,42,39,12,10);
- outline(c,32+shift/2,12,32,32);
- fill(c,skin,32+shift/2,12,32,32);
+ c.fillStyle=line;c.beginPath();c.ellipse(48+shift/2,28,16,18,0,0,Math.PI*2);c.fill();
+ c.fillStyle=skin;c.beginPath();c.ellipse(48+shift/2,28,14,16,0,0,Math.PI*2);c.fill();
  if(back){
   fill(c,hair,32+shift/2,12,32,hairstyle==='buzz'?7:23);
   if(['long','ponytail','curly'].includes(hairstyle))fill(c,hair,35+shift/2,32,26,hairstyle==='ponytail'?22:15);
@@ -86,10 +96,12 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
   fill(c,'#c8ac73',sx+6,71,5,12);
  }
  // Equipment drawn after hands ensures correctly attached 2D silhouette.
- const wx=right?79:14,wy=pose==='windup'?30:pose==='strike'?51:step===2?39:45;
+ const wx=grip.weapon.x,wy=grip.weapon.y;
+ c.save();
+ if(style==='melee'&&weapon!=='none'){c.translate(grip.hand.x,grip.hand.y);c.rotate(pose==='windup'?(/axe/i.test(weapon)?0:.2):pose==='strike'?-1.05:0);c.translate(-grip.hand.x,-grip.hand.y);}
  if(weapon!=='none'&&style==='melee'){
   if(/dagger/i.test(weapon)){
-   for(const shift of [-8,8]){fill(c,'#e3ded1',wx+shift-2,wy-13,4,26);fill(c,'#8a6b4a',wx+shift-2,wy+12,4,14);}
+   fill(c,'#e3ded1',wx-2,wy-3,4,25);fill(c,'#8a6b4a',wx-2,wy+20,4,12);
   }else if(/axe/i.test(weapon)){
    fill(c,'#8b6549',wx-3,wy-16,7,65);
    polygon(c,'#c1cbc9',[[wx-4,wy-16],[wx+19,wy-25],[wx+19,wy-2],[wx-4,wy-3]]);
@@ -111,20 +123,28 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
   }else{
   c.strokeStyle='#5a3a2a';c.lineWidth=5;
   c.beginPath();c.moveTo(wx-7,wy-23);c.quadraticCurveTo(wx+16,wy+4,wx-7,wy+39);c.stroke();
-  c.strokeStyle='#e9e1ce';c.lineWidth=2;c.beginPath();c.moveTo(wx-7,wy-23);c.lineTo(wx-7,wy+39);c.stroke();
+  c.strokeStyle='#e9e1ce';c.lineWidth=2;c.beginPath();c.moveTo(wx-7,wy-23);c.lineTo(wx-7-grip.bowDraw,wy+8);c.lineTo(wx-7,wy+39);c.stroke();
   fill(c,'#aa986b',wx-14,wy+4,23,3);
   polygon(c,'#d5ded7',[[wx+13,wy+5],[wx+3,wy-2],[wx+4,wy+11]]);
   }
  }
- // Directional attack cues are sprites, not extra skeletal meshes.
- // Different frames convey intentional preparation and contact.
- if(pose==='windup'){
-  c.strokeStyle=style==='magic'?'#a9d8e8':style==='ranged'?'#e2d6aa':'#c9c4ad';
-  c.lineWidth=3;c.beginPath();c.moveTo(wx-10,wy+5);c.lineTo(wx+7,wy-20);c.stroke();
- }else if(pose==='strike'){
-  c.strokeStyle=style==='magic'?'#97c7ed':style==='ranged'?'#e9c987':'#e5ded0';
-  c.lineWidth=5;c.beginPath();
-  c.arc(right?61:35,58,28,-Math.PI*.62,Math.PI*.46,!right);
+ c.restore();
+ // The grip sits on top of the weapon handle at the same anchor in every pose.
+ {
+  fill(c,line,grip.hand.x-6,grip.hand.y-4,12,10);
+  fill(c,skin,grip.hand.x-4,grip.hand.y-3,9,7);
+  if(weapon!=='none'&&(style==='ranged'||/greatsword|staff/i.test(weapon))){
+   c.strokeStyle=coat;c.lineWidth=9;c.beginPath();c.moveTo(30,57);c.lineTo(grip.hand.x-10,grip.hand.y+5);c.stroke();
+   fill(c,skin,grip.hand.x-13,grip.hand.y+1,8,7);
+  }
+ }
+ if(pose==='windup'&&style==='magic'&&weapon!=='none'){
+  c.strokeStyle='#8dd7c2';c.lineWidth=2;c.beginPath();c.arc(wx,wy-19,17,0,Math.PI*2);c.stroke();
+ }else if(pose==='strike'&&weapon!=='none'){
+  c.strokeStyle=style==='magic'?'#a7e4d5':style==='ranged'?'#eadcae':'#eee5ce';c.lineWidth=3;c.beginPath();
+  if(style==='melee')c.arc(57,64,27,-Math.PI*.65,Math.PI*.3);
+  else if(style==='ranged'){c.moveTo(wx+4,wy+8);c.lineTo(94,wy+8);}
+  else {for(let i=0;i<6;i++){const a=i*Math.PI/3;c.moveTo(wx+Math.cos(a)*12,wy-19+Math.sin(a)*12);c.lineTo(wx+Math.cos(a)*20,wy-19+Math.sin(a)*20);}}
   c.stroke();
  }
  // Jewellery/pouch finishing touches, drawn from the saved loadout's extra slots.
@@ -158,10 +178,11 @@ export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',ha
   const dir=spriteDirection(facing.x,facing.z,cameraOffset),frame=step%3,key=keyFor(config,dir,frame);
   if(key===lastKey)return;
   if(!textureCache.has(key))textureCache.set(key,renderActor({...config,dir,step:frame}));
-  sprite.material.map=textureCache.get(key);sprite.material.needsUpdate=true;lastKey=key;
+  releaseTexture(lastKey);textureRefs.set(key,(textureRefs.get(key)||0)+1);
+  sprite.material.map=textureCache.get(key);sprite.material.needsUpdate=true;lastKey=key;trimTextures();
  }
  update();
- return {sprite,update};
+ return {sprite,update,dispose(){releaseTexture(lastKey);lastKey='';material.dispose();sprite.removeFromParent();trimTextures();}};
 }
 export function makeGroundShadow(){
  const material=new THREE.MeshBasicMaterial({color:'#23372d',transparent:true,opacity:.22,depthWrite:false});
