@@ -41,7 +41,8 @@ let browser;
    assert.equal(overlap(l.world,l.side),0,'sidebar never covers world');
    assert.equal(overlap(l.world,l.footer),0,'action footer never covers the world');
    assert.equal(overlap(l.map,l.nav),0,'minimap stays above navigation');
-   assert.equal(overlap(l.dock,l.side),0,'attack buttons stay clear of sidebar');
+   assert.equal(overlap(l.dock,l.world),0,'attack buttons stay clear of world');
+   assert.ok(overlap(l.dock,l.side)>100,'eight-slot bar belongs inside right-hand sidebar');
    assert.ok(l.buttons.every(h=>h>=40),'touch menu target size '+JSON.stringify({size,l}));
    assert.ok(Math.abs(l.canvas.width-l.world.width)<3,'renderer tracks usable viewport');
   }
