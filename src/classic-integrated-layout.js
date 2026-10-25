@@ -38,6 +38,26 @@ export function installClassicIntegratedLayout(doc=document){
  footer.append(doc.querySelector('.classic-panel'),doc.querySelector('.classic-combat-dock'));
  const feed=node('div','classic-footer-events',footer);
  feed.append(get('classic-combat-target'),doc.querySelector('.classic-interaction-bar'),get('classic-toasts'));
- // A joystick is the one intentional touch control above the rendered ground.
+ // Stable MMORPG shell: render the chat UNDER the world and the action deck
+ // UNDER the sidebar book, rather than overlaying any part of the game.
+ const chat=node('section','oakrest-chat',app);
+ chat.id='oakrest-chat';chat.setAttribute('aria-label','Oakrest chat and game messages');
+ const action=node('section','oakrest-action-deck',sidebar);
+ action.id='oakrest-action-deck';action.setAttribute('aria-label','Equipped combat style and eight action slots');
+ action.append(footer);
+ footer.prepend(get('classic-styles'));
+ // Preserve the original attack / dodge / four ability buttons and listeners.
+ // The two new slots will be wired to authoritative consumable transactions.
+ const row=doc.querySelector('.classic-attack-row');
+ const dodge=get('classic-dodge');
+ for(const [id,text] of [['oakrest-food-slot','♨'],['oakrest-potion-slot','✚']]){
+  const b=doc.createElement('button');
+  b.type='button';b.id=id;b.className='oakrest-supply-slot';
+  b.append(doc.createTextNode(text));
+  const small=doc.createElement('small');small.textContent=id==='oakrest-food-slot'?'FOOD':'TONIC';
+  b.append(small);row.insertBefore(b,dodge);
+ }
+ // A permanent world viewport ensures pointer raycasting and game rendering
+ // remain independent from the chat, inventory and action controls.
  get('classic-game').append(get('classic-joystick'));
 }
