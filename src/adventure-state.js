@@ -193,7 +193,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }
   if(kind==='drink'){
    if(time<drinkUntil)return no('The tonic is still settling.');
-   if((mats['woodland-tonic']||0)<1)return no('Blend a woodland tonic from reeds and moss fibre in your backpack.');
+   if((mats['woodland-tonic']||0)<1)return no('Blend woodland tonic from moss fibre in your backpack.');
    if(!heal(20))return no('You are already at full Health.');
    mats['woodland-tonic']--;drinkUntil=time+12;
    emit('adventure',{reason:'Drank woodland tonic · recovered Health'});
