@@ -25,11 +25,34 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
  const kinds=[...buttons.map((_,index)=>'ability'+index),'eat','drink','dodge','attack'];
  const utilityBtns=[$('oakrest-food-slot'),$('oakrest-potion-slot'),$('classic-dodge'),$('classic-attack')];
  const all=[...buttons,...utilityBtns];
- const setTitle=(element,main,sub,description)=>{
+ // Appearance only: input handling, combat authority and persisted
+ // equipped abilities remain unchanged. Each icon is a reusable SVG sprite.
+ const iconByKind={hit:'slash',sweep:'sweep',shield:'shield',dash:'dash',
+  dashback:'retreat',bolt:'bolt',burst:'burst',root:'root',nova:'nova',
+  heal:'heal',execute:'execute',retreat:'retreat',basic:'melee',other:'strike'};
+ const spriteBase='./src/oakrest-ui-icons.svg#';
+ const setTitle=(element,main,sub,description,iconName='empty')=>{
   if(!element)return;
-  // DOM text nodes are preserved: old click handlers and referential QA stay valid.
-  if(element.firstChild?.nodeType===3)element.firstChild.textContent=main;
-  const s=element.querySelector('small');if(s)s.textContent=sub;
+  let icon=element.querySelector(':scope > svg.oakrest-action-icon');
+  if(!icon){
+   // Remove only the old decorative Unicode icon; the existing button,
+   // listeners, small label and gameplay activation remain intact.
+   for(const child of element.childNodes)if(child.nodeType===3)child.textContent='';
+   icon=doc.createElementNS('http://www.w3.org/2000/svg','svg');
+   icon.setAttribute('viewBox','0 0 32 32');
+   icon.setAttribute('fill','none');
+   icon.setAttribute('stroke','currentColor');
+   icon.setAttribute('stroke-width','1.9');
+   icon.setAttribute('stroke-linecap','round');
+   icon.setAttribute('stroke-linejoin','round');
+   icon.setAttribute('aria-hidden','true');
+   icon.classList.add('oakrest-action-icon');
+   const ref=doc.createElementNS('http://www.w3.org/2000/svg','use');
+   icon.append(ref);element.prepend(icon);
+  }
+  const target=spriteBase+iconName,ref=icon.firstElementChild;
+  if(ref.getAttribute('href')!==target)ref.setAttribute('href',target);
+  const small=element.querySelector('small');if(small)small.textContent=sub;
   element.title=description;
   element.setAttribute('aria-label',description);
  };
@@ -63,7 +86,8 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
    const seconds=ability?Math.max(0,(ability.cooldownEnd||0)-snapshot.time):0;
    setTitle(btn,ability?MARK[ability.kind]||'✧':'◇',seconds>0?seconds.toFixed(1)+'s':' '+(i+1),
     ability?style.toUpperCase()+' · '+ability.name+(seconds>0?' · '+seconds.toFixed(1)+' seconds cooldown':''):
-     'Empty '+style+' ability slot '+(i+1)+' · set in Abilities');
+     'Empty '+style+' ability slot '+(i+1)+' · set in Abilities',
+    ability?iconByKind[ability.kind]||style:'empty');
    btn.dataset.abilityKind=ability?.kind||'empty';
    btn.dataset.combatStyle=style;
    btn.classList.toggle('is-empty',!ability);
@@ -73,11 +97,11 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
   const food=Math.max(0,Math.floor(mats.ration||0)),tonic=Math.max(0,Math.floor(mats['woodland-tonic']||0));
   const available=snapshot.hp>0&&snapshot.hp<snapshot.maxHp;
   const meal=utilityBtns[0],drink=utilityBtns[1];
-  setTitle(meal,'♨',food?'×'+food:'FOOD','Field ration · heals 35 Health · '+food+' available');
-  setTitle(drink,'✚',tonic?'×'+tonic:'TONIC','Woodland tonic · heals 20 Health · '+tonic+' available');
+  setTitle(meal,'♨',food?'×'+food:'FOOD','Field ration · heals 35 Health · '+food+' available','ration');
+  setTitle(drink,'✚',tonic?'×'+tonic:'TONIC','Woodland tonic · heals 20 Health · '+tonic+' available','tonic');
   meal.disabled=!available||food===0;drink.disabled=!available||tonic===0;
-  setTitle(utilityBtns[2],'↶','DODGE','Dodge · avoid incoming attack');
-  setTitle(utilityBtns[3],'⚔','ATTACK','Attack selected or nearest enemy');
+  setTitle(utilityBtns[2],'↶','DODGE','Dodge · avoid incoming attack','dodge');
+  setTitle(utilityBtns[3],'⚔','ATTACK','Attack selected or nearest enemy','strike');
  }
  const styleHead=doc.createElement('div');styleHead.className='oakrest-combat-stance';
  deck.insertBefore(styleHead,deck.querySelector('.classic-action-footer'));
