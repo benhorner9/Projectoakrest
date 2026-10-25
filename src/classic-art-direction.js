@@ -25,10 +25,13 @@ export function organicRoadPolygons(paths,width=4.1){
  }
  return quads;
 }
+/** Natural packed-earth gathering spaces. Shape is shared by the live
+ * 3D mesh and world map so neither displays old octagonal floor blocks. */
 export function plazaOutline(p){
- const cut=1.6;
- return [[p.x-p.w/2+cut,p.z-p.d/2],[p.x+p.w/2-cut,p.z-p.d/2],
- [p.x+p.w/2,p.z-p.d/2+cut],[p.x+p.w/2,p.z+p.d/2-cut],
- [p.x+p.w/2-cut,p.z+p.d/2],[p.x-p.w/2+cut,p.z+p.d/2],
- [p.x-p.w/2,p.z+p.d/2-cut],[p.x-p.w/2,p.z-p.d/2+cut]];
+ const count=28,rx=p.w*.56,rz=p.d*.56;
+ return Array.from({length:count},(_,i)=>{
+  const angle=i*Math.PI*2/count;
+  const taper=1+.065*Math.sin(angle*3+p.x*.04)+.038*Math.cos(angle*7+p.z*.05);
+  return [p.x+Math.cos(angle)*rx*taper,p.z+Math.sin(angle)*rz*taper];
+ });
 }
