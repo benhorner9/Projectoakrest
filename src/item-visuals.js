@@ -43,6 +43,8 @@ export function makeWorldItemModel(drop){
   }
   prism(0,.55,0,.035,.92,.035,light);
   prism(.18,.52,-.05,.34,.045,.06,main);
+ }else if(item.shape==='orb'){
+  shape(root,new THREE.OctahedronGeometry(.4),main,0,.6,0);prism(0,.2,0,.5,.12,.5,light);
  }else if(item.shape==='scroll'){
   prism(0,.28,0,.77,.11,.54,light);
   const end=shape(root,new THREE.CylinderGeometry(.09,.09,.82,9),dark,-.4,.28,0);end.rotation.z=Math.PI/2;

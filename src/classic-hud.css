@@ -1,0 +1,92 @@
+/* Oakrest Block 7: one compact UI identity across gameplay and menus.
+   Rules here intentionally supersede earlier prototype layouts. */
+:root{--oak-bg:#20382f;--oak-panel:#263d33f2;--oak-panel-solid:#263d33;--oak-bronze:#ae9164;--oak-gold:#f1d7a2;--oak-ink:#f4ecd9;--oak-subtle:#bcc5b0;--oak-edge:#7a826b}
+#classic-app{color:var(--oak-ink)}
+#classic-app button{transition:background-color .15s,border-color .15s,transform .12s}
+#classic-app button:active:not(:disabled){transform:scale(.96)}
+#classic-app button:focus-visible,#classic-app a:focus-visible{outline:3px solid #f3d48b;outline-offset:2px}
+#classic-app button[hidden],#classic-app section[hidden],#classic-app aside[hidden],#classic-app div[hidden]{display:none!important}
+.classic-top{position:absolute;left:50%;right:auto;top:9px;transform:translateX(-50%);pointer-events:none;z-index:2;min-height:0;padding:4px 11px;border:1px solid #a18b6585;border-radius:5px;background:#23392eb9}
+.classic-top .brand{gap:5px}.classic-top .brand-rune{font-size:18px}.classic-top .brand strong{font:700 12px Georgia,serif;letter-spacing:.18em}.classic-top .brand small{display:none}
+.classic-panel{position:absolute;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:auto;width:clamp(185px,22vw,225px);padding:11px 12px 9px;z-index:4;border:1px solid var(--oak-bronze);background:var(--oak-panel);border-radius:9px;box-shadow:0 6px 18px #081a1590}
+.character-heading{display:flex;gap:8px;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.classic-panel h1{font-size:17px;margin:0;white-space:nowrap;max-width:75%;overflow:hidden;text-overflow:ellipsis}
+.character-heading>span{font:700 10px system-ui;color:var(--oak-gold);white-space:nowrap}
+.character-heading>span strong{font-size:14px}
+.player-hp{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.player-hp .classic-hp-track{flex:1;margin:0;height:10px;border-radius:4px}
+.player-hp .classic-hp-track>div{background:linear-gradient(90deg,#6d9c6a,#9cbf75)}
+.player-hp strong{font:700 10px system-ui;color:#e5e9d7;white-space:nowrap}
+.classic-panel .styles{display:flex;gap:5px}
+.classic-panel .styles button{flex:1;min-width:0;font-size:16px;padding:4px 3px;min-height:38px;border:1px solid #7a846e;background:#344b3e}
+.classic-panel .styles button span{font:700 9px system-ui;margin:1px 0 0}
+.classic-panel .styles button.active{background:#806748;border-color:#ebcf92;color:#fff0c6}
+.character-subline{display:flex;justify-content:space-between;gap:3px;margin:8px 0 5px;font:10px system-ui;color:#f0dcb6}
+.character-subline>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.character-subline>span:last-child{font-size:9px;color:var(--oak-subtle)}
+.save-indicator{padding:3px 0!important;border:0!important;background:transparent!important;color:#b2c6ab;font:700 9px system-ui!important;text-align:left}
+.save-indicator.is-saved{color:#a9d5ac}.save-indicator.is-blocked{color:#f1a58b}
+.classic-minimap-frame{position:absolute;z-index:4;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));width:162px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.minimap-open{display:block;position:relative;width:160px;height:160px;padding:0!important;border:0!important;border-radius:50%;background:#506f52!important;box-shadow:0 0 0 3px #af9569,0 5px 24px #0d271da0;overflow:hidden}
+.minimap-open canvas{width:160px;height:160px;display:block}
+.minimap-expand-symbol{position:absolute;right:9px;bottom:10px;border:1px solid #c6b07e;background:#264132;color:#f4dfb1;font:700 12px system-ui;border-radius:4px;padding:1px 4px}
+.classic-minimap-frame .location{display:flex;align-items:center;justify-content:center;margin:0;padding:5px 9px;background:#263e33ed;border:1px solid #928362;border-radius:5px;font:10px system-ui;color:#f1e4c5;max-width:100%;text-align:center}
+.classic-minimap-frame .location-dot{width:6px;height:6px;flex:none;margin-right:5px}
+.classic-combat-target{position:absolute;left:50%;top:62px;transform:translateX(-50%);width:min(250px,27vw);padding:7px 9px;z-index:3;background:#2a4036e8;box-shadow:0 2px 12px #17282060}
+.classic-combat-dock{left:auto;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));transform:none;z-index:4;padding:8px;background:#243a31e8;border:1px solid var(--oak-bronze);border-radius:9px;box-shadow:0 6px 20px #0b23196b;min-width:0;width:auto}
+.classic-combat-dock .classic-health-line,.classic-combat-dock .player-health{display:none}
+.classic-attack-row{display:flex;align-items:stretch;gap:6px}
+.classic-attack-row button{min-width:53px;min-height:59px;height:59px;padding:6px 8px;color:#f4e7c9;border:1px solid #9d8a61;background:#405844;border-radius:6px;font:700 19px Georgia,serif}
+.classic-attack-row button small{display:block;color:#e9dbb9;font:700 9px system-ui;max-width:60px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.classic-attack-row button#classic-attack{min-width:72px;background:#785c45}
+.classic-attack-row button#classic-dodge{min-width:66px;background:#456774}
+.classic-ability-buttons{display:flex;gap:5px}
+.classic-ability-buttons button{min-width:52px;max-width:66px}
+.classic-item-buttons{position:absolute;z-index:4;top:219px;right:max(11px,env(safe-area-inset-right));bottom:auto;display:flex;flex-direction:column;align-items:stretch;gap:5px;width:58px;max-width:none}
+.classic-item-buttons button{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:46px;min-width:46px;width:56px;padding:5px 3px;color:#efe2c7;background:#2d4438ed;border:1px solid #ab966e;border-radius:7px;font:700 20px Georgia,serif}
+.classic-item-buttons button small{display:block;margin:2px 0 0;font:700 9px system-ui;color:#e5d2a6}
+.classic-item-buttons button[aria-pressed="true"]{background:#7c6545;border-color:#eed09e}
+.classic-interaction-bar{position:absolute;z-index:4;left:auto;right:max(14px,env(safe-area-inset-right));bottom:93px;top:auto;max-width:none;display:flex;gap:6px;box-shadow:none;padding:0;border:0;background:transparent}
+.classic-interaction-bar button{min-height:43px;padding:9px 12px!important;background:#3f644ce8!important;color:#ffeec7!important;border:1px solid #c1a276!important;border-radius:6px!important;font:700 11px system-ui!important;box-shadow:0 3px 9px #12291e79}
+.classic-interaction-bar button small{display:inline;font:9px system-ui;margin:0 0 0 4px}
+.classic-toast{position:absolute;z-index:6;bottom:100px;left:50%;transform:translateX(-50%);pointer-events:none;max-width:min(370px,38vw);background:#263d32e8;border:1px solid #b49a6c;border-radius:6px;padding:8px 12px;color:#f5ebcf;font:11px/1.35 system-ui;text-align:center;box-shadow:0 4px 14px #13251e80;opacity:1;transition:opacity .45s}
+.classic-toast.is-faded{opacity:0}
+.classic-toast.is-critical{background:#593d31f5;border-color:#ef9b77;opacity:1}
+.classic-item-window{top:14px;bottom:14px;right:83px;width:min(370px,37vw);border:1px solid #bda476;background:#263d33f9;border-radius:9px;box-shadow:0 9px 28px #0c1c17a6;z-index:7}
+.classic-item-window .classic-item-header{padding:10px 12px}
+.classic-item-header strong{font-size:19px}
+.classic-item-header small{font-size:9px}
+.classic-item-tabs{gap:3px}.classic-item-tabs button{border-radius:4px;padding:10px 2px}
+.classic-item-scroll{padding:10px 12px}
+.classic-modal{position:absolute;z-index:7;right:83px;top:14px;bottom:14px;width:min(380px,40vw);padding:12px 14px;display:flex;flex-direction:column;gap:9px;overflow:auto;touch-action:pan-y;background:#263d33fa;color:#f4e9cf;border:1px solid var(--oak-bronze);border-radius:9px;box-shadow:0 9px 28px #0c1c17a6}
+.classic-modal-header{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #827753;padding-bottom:8px}
+.classic-modal-header strong{font:19px Georgia,serif;letter-spacing:.06em}
+.classic-modal-header button,#classic-item-close{width:40px;height:40px;min-width:40px;border-radius:5px;background:#6d543e;color:#f5e0b3;border:1px solid #ac9065;font:24px system-ui}
+.classic-modal-intro{color:#cfceb7;font:11px/1.5 system-ui;margin:0}
+#classic-map-canvas{width:100%;height:auto;max-height:calc(100% - 142px);object-fit:contain;border-radius:6px;border:1px solid #7c805f;background:#6b8664;touch-action:manipulation;cursor:crosshair}
+.classic-map-legend{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;font:10px system-ui;color:#e6d7b4}
+.classic-map-zoom,.classic-settings .zoom-group{position:static;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;color:#ddcb9d;font:10px system-ui}
+.classic-map-zoom button,.classic-settings .zoom-group button{width:38px;height:38px;min-width:38px;min-height:38px;border:1px solid #b5a078;border-radius:4px;color:#ecd5a6;background:#405848;font:22px system-ui}
+.classic-settings h3{font:700 11px system-ui;letter-spacing:.1em;color:#e6d0a2;margin:9px 0 0}
+.classic-settings .classic-save-box{position:static;margin:0;background:#334d3f;border:1px solid #85775d;padding:10px}
+.classic-settings .save-note{margin-top:8px}
+.classic-settings .hint{display:block!important;font:11px system-ui;color:#cdd6c3}
+.classic-settings .return-link{display:inline-flex;align-self:start;font-size:11px}
+.classic-settings .zoom-group button{padding:0}
+.dialogue{bottom:95px;left:50%;transform:translateX(-50%);width:min(450px,50vw);padding:13px 16px;border:1px solid #d2b080;border-radius:8px;background:#263d33f7;z-index:8}
+.dialogue button{min-height:40px}
+.joystick{left:max(13px,env(safe-area-inset-left));bottom:max(17px,env(safe-area-inset-bottom));width:113px;height:113px;z-index:4}
+.joystick-ring{border-color:#d0b17c93;background:#2c513982}
+#classic-stick{background:#bba575c7}
+.bottom-guide,.classic-panel .eyebrow,.classic-panel hr,.classic-panel .level-row,.classic-panel .weapon-box,.classic-panel .hint,.classic-panel .save-note{display:none}
+@media(max-width:1000px){.classic-panel{width:197px;padding:8px}.classic-panel h1{font-size:15px}.classic-minimap-frame{width:139px}.minimap-open,.minimap-open canvas{width:138px;height:138px}.classic-item-buttons{top:191px;width:49px}.classic-item-buttons button{width:49px;min-height:44px;font-size:18px}.classic-item-window,.classic-modal{right:68px;width:min(340px,41vw)}.classic-combat-dock{width:auto;min-width:0;bottom:max(9px,env(safe-area-inset-bottom))}.classic-attack-row button{min-height:53px;height:53px;min-width:45px;padding:4px;font-size:17px}.classic-ability-buttons button{min-width:45px}.classic-attack-row button#classic-attack{min-width:61px}.classic-attack-row button#classic-dodge{min-width:59px}.classic-interaction-bar{bottom:77px}.classic-toast{bottom:76px}.classic-top{display:none}.joystick{width:98px;height:98px}}
+@media(max-height:620px){.classic-item-buttons{top:171px;gap:3px}.classic-item-buttons button{min-height:40px}.classic-minimap-frame{width:131px}.minimap-open,.minimap-open canvas{width:128px;height:128px}.classic-item-window,.classic-modal{bottom:6px;top:6px}.classic-combat-target{top:8px}.classic-panel{top:7px}.classic-minimap-frame{top:7px}.classic-interaction-bar{bottom:71px}}
+@media(max-width:760px){.classic-panel{width:168px;max-width:none}.character-subline{font-size:9px}.classic-item-buttons{right:5px}.classic-item-window,.classic-modal{right:59px;width:min(330px,calc(100vw - 238px))}.classic-combat-dock{right:6px}.classic-attack-row{gap:3px}.classic-ability-buttons{gap:3px}.classic-ability-buttons button{min-width:39px}.classic-attack-row button#classic-attack{min-width:50px}.classic-attack-row button#classic-dodge{min-width:48px}.classic-toast{max-width:170px}.classic-combat-target{max-width:170px}}
+@media(pointer:fine){.joystick{display:none}}
+
+/* Camera buttons in Settings, secondary input for iPad without a keyboard. */
+.classic-camera-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.classic-camera-actions button{min-height:44px;padding:8px 10px;color:#f0e0bd;background:#405749;border:1px solid #ae956c;border-radius:5px;font:700 11px system-ui,sans-serif;letter-spacing:.02em}
+.classic-camera-actions button:active{background:#775f40}
+.classic-camera-actions #classic-camera-reset{grid-column:1/-1;background:#6f5941}
+.classic-camera-actions button:focus-visible{outline:3px solid #f4d494;outline-offset:2px}

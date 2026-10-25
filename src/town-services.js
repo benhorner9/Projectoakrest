@@ -1,3 +1,4 @@
+import {ADVENTURE_MATERIAL_IDS} from './adventure-content.js';
 import {STARTER_SETS,SLOT_ITEMS,EXTRA_SLOTS} from './equipment-slots.js';
 import {WOODCUTTING_MATERIALS,WOODCUTTING_AXES} from './woodcutting.js';
 /** Oakrest is a starter hub, not a universal skilling destination.
@@ -22,7 +23,7 @@ export const OAKREST_GROVES=Object.freeze([
   Object.freeze({id:'pine-east',x:-8,z:56,reach:2.6}),
   Object.freeze({id:'pine-north',x:-13,z:65,reach:2.6})
 ]);
-export const TOWN_MATERIALS=Object.freeze(['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS]);
+export const TOWN_MATERIALS=Object.freeze(['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS,...ADVENTURE_MATERIAL_IDS]);
 export const SHOP_STOCK=Object.freeze([
   ...Object.values(STARTER_SETS).map(set=>Object.freeze({id:set.id,label:set.title,kind:'bundle',style:set.style,price:set.price})),
   Object.freeze({id:'starter-sword',label:'Iron Longsword',kind:'weapon',style:'melee',itemId:'sword',price:45}),

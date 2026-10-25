@@ -1,3 +1,4 @@
+import {ADVENTURE_MATERIAL_IDS,sanitizeAdventure} from './adventure-content.js';
 import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 import {sanitizeSlotOrder,inventoryKeyList,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from './item-slot-layout.js';
 import {WOODCUTTING_AXES,WOODCUTTING_MATERIALS,WOODCUTTING_MAX_XP} from './woodcutting.js';
@@ -204,9 +205,9 @@ export function validGroundLoot(list){
  if(!Array.isArray(list))return [];
  const out=[],seen=new Set();
  for(const d of list.slice(-36)){
-  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>120||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
+  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>340||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
   if(d.kind==='coins'&&d.itemId!=='coins')continue;
-  if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token'].includes(d.itemId))continue;
+  if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token',...ADVENTURE_MATERIAL_IDS].includes(d.itemId))continue;
   if(d.kind==='armour'&&(!Object.hasOwn(ARMOUR,d.itemId)||d.amount!==1))continue;
   if(d.kind==='weapon'&&(!STYLE_ORDER.includes(d.style)||!Object.hasOwn(LOADOUTS[d.style],d.itemId)||d.amount!==1))continue;
   if(!['coins','material','armour','weapon'].includes(d.kind))continue;
@@ -281,13 +282,13 @@ export function validSave(raw){
   }
   if(Array.isArray(raw.inventory?.armour))d.inventory.armour=[...new Set(raw.inventory.armour.filter(id=>typeof id==='string'&&Object.hasOwn(ARMOUR,id)))];
   if(Array.isArray(raw.inventory?.slotted))d.inventory.slotted=[...new Set(raw.inventory.slotted.filter(id=>Object.hasOwn(SLOT_ITEMS,id)))];
-  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS]){
+  if(raw.inventory?.materials&&typeof raw.inventory.materials==='object')for(const id of ['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS,...ADVENTURE_MATERIAL_IDS]){
     const n=raw.inventory.materials[id];if(Number.isSafeInteger(n)&&n>0)d.inventory.materials[id]=Math.min(9999,n);
   }
   // Bank and profession data live in each character save and must survive reloads.
   if(raw.bank&&typeof raw.bank==='object'){
     d.bank.coins=Number.isSafeInteger(raw.bank.coins)?clamp(raw.bank.coins,0,10000000):0;
-    for(const id of ['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS]){
+    for(const id of ['moss-fibre','boar-hide','bandit-token',...WOODCUTTING_MATERIALS,...ADVENTURE_MATERIAL_IDS]){
       const value=raw.bank.materials?.[id];if(Number.isSafeInteger(value)&&value>0)d.bank.materials[id]=clamp(value,0,9999);
     }
     for(const style of STYLE_ORDER){
@@ -322,6 +323,7 @@ export function validSave(raw){
   }else if(d.characterFresh){
    d.onboarding={area:'world',tutorial:{hitStyles:[],skillsRead:false},teleportScrolls:0,activatedPortals:['oakrest']};
   }
+  if(raw.adventure)d.adventure=sanitizeAdventure(raw.adventure);
   d.inventorySlots=sanitizeSlotOrder(raw.inventorySlots,inventoryKeyList(d,'bag'),BAG_MAX_SLOTS);
   d.bankSlots=sanitizeSlotOrder(raw.bankSlots,inventoryKeyList(d,'vault'),VAULT_MAX_SLOTS);
   for(const style of STYLE_ORDER){
