@@ -20,6 +20,7 @@ jobs:
       - run: node tests/browser-adventure.cjs
       - run: node tests/browser-classic-framed.cjs
       - run: node tests/browser-classic-mmorpg-ui.cjs
+      - run: node tests/browser-classic-dev-launch.cjs
       - run: node tests/browser-classic-rebirth-v2.cjs
       - run: node tests/browser-classic-free-combat.cjs
       - run: node tests/browser-classic.cjs && node tests/browser-classic-save.cjs && node tests/browser-classic-hud.cjs && node tests/browser-classic-creator.cjs && node tests/browser-classic-camera.cjs
@@ -27,4 +28,24 @@ jobs:
         if: always()
         with:
           name: first-adventure-playtest
+          path: qa/
+
+  webkit-ipad-entry:
+    name: WebKit iPad-style first launch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check && npm run build
+      - run: npx playwright install --with-deps webkit
+      - run: OAKREST_BROWSER=webkit node tests/browser-classic-dev-launch.cjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: classic-webkit-launch-debug
           path: qa/
