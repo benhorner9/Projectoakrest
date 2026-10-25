@@ -2,11 +2,12 @@ import {ADVENTURE_PATHS,ADVENTURE_WALLS,ADVENTURE_TREES,ADVENTURE_TARGETS,ADVENT
 /** Oakrest Classic minimap: one canonical village model, no secondary scene.
  * Roads, footprints and service anchors come from the gameplay modules.
  */
-import {OAKREST_BUILDINGS,OAKREST_WELL,roadQuads} from './town-layout.js';
+import {OAKREST_BUILDINGS,OAKREST_WELL} from './town-layout.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_PLAZAS,CLASSIC_STALLS,classicRoofColour} from './classic-town-plan.js';
 import {OAKREST_SERVICES,OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 import {CLASSIC_LIMITS,CLASSIC_TREES,classicScreenBasis} from './classic-presentation.js';
 import {QUEST_GIVER_IDS} from './classic-quest-indicators.js';
+import {paintTownTrails} from './classic-terrain-paint.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const CLASSIC_MAP_FEATURES=Object.freeze({
  bounds:CLASSIC_LIMITS,buildings:OAKREST_BUILDINGS,roads:CLASSIC_ROADS,
@@ -60,8 +61,9 @@ function terrain(ctx,project,width,height,scale){
   rect(ctx,project,{x:0,z:(room.minZ+room.maxZ)/2,w:33,d:room.maxZ-room.minZ},
    scale,ADVENTURE_SCENERY.roomColours[i]);
  }
- // The village uses mitred 4.1m road polygons; outer tracks are 3.6m wide.
- for(const quad of roadQuads(CLASSIC_ROADS,4.1))polygon(ctx,project,quad,'#b6a07e');
+ // Roads and irregular commons are drawn from the same organic surface
+ // painter as the actual 3D terrain: no misleading square plaza stamps.
+ paintTownTrails(ctx,project,scale);
  ctx.lineCap='butt';ctx.lineJoin='miter';ctx.strokeStyle='#a08e6b';
  ctx.lineWidth=Math.max(1,3.6*scale);
  for(const path of ADVENTURE_PATHS){
@@ -69,7 +71,7 @@ function terrain(ctx,project,width,height,scale){
    const p=project({x,z});i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
   });ctx.stroke();
  }
- for(const plaza of CLASSIC_PLAZAS)rect(ctx,project,plaza,scale,'#c9af83');
+
  for(const creek of ADVENTURE_SCENERY.creek)rect(ctx,project,creek,scale,creek.color);
  // Stone defensive walls and separate dungeon corridors have real openings.
  ctx.strokeStyle='#879083';ctx.lineCap='butt';ctx.lineWidth=Math.max(1,.9*scale);
