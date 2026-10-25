@@ -18,5 +18,9 @@ test('organic roads preserve endpoints and shared map geometry without mutating 
  const simple=organicRoadPolygons([[[0,0],[0,10]]]);
  assert.equal(simple[0][0][1],0);assert.equal(simple.at(-1)[1][1],10);
  assert.ok(simple.every(q=>q[0][0]<-1.8&&q[3][0]>1.8));
- for(const p of CLASSIC_PLAZAS)assert.equal(plazaOutline(p).length,8);
+ for(const p of CLASSIC_PLAZAS){
+  const outline=plazaOutline(p);
+  assert.ok(outline.length>=24,'organic village commons must not be an eight-sided plate');
+  assert.ok(outline.every(pair=>pair.length===2&&pair.every(Number.isFinite)));
+ }
 });
