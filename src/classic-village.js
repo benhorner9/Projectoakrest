@@ -1,7 +1,8 @@
 /** Block 2 scene builder. Only the renderer changes: coordinates come from town-layout. */
 import * as THREE from 'three';
-import {OAKREST_BUILDINGS,OAKREST_WELL,FACING,roadQuads} from './town-layout.js';
-import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_PLAZAS,CLASSIC_STALLS,classicRoofColour} from './classic-town-plan.js';
+import {OAKREST_BUILDINGS,OAKREST_WELL,FACING} from './town-layout.js';
+import {CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_STALLS,classicRoofColour} from './classic-town-plan.js';
+import {CLASSIC_TERRAIN_BOUNDS,paintTownGrass,paintTownTrails,townTerrainPointToTexture} from './classic-terrain-paint.js';
 import {CLASSIC_TREES,CLASSIC_NPCS} from './classic-presentation.js';
 import {OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 const MAT={
@@ -160,21 +161,33 @@ function tree(root,x,z,index,scale=1){
  }
  return group;
 }
-function pathGeometry(quads){
- const verts=[],uv=[];
- for(const poly of quads){
-  const pts=[poly[0],poly[1],poly[2],poly[0],poly[2],poly[3]];
-  for(const [x,z] of pts){verts.push(x,.032,z);uv.push(x*.1,z*.1);}
- }
- const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
- geom.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geom.computeVertexNormals();return geom;
+/** One textured plane replaces hard-edged road quads and the visible
+ * square plaza slabs. All paintwork is rendered once, not every frame. */
+export function createClassicTownGround(parent,doc=document){
+ const b=CLASSIC_TERRAIN_BOUNDS,width=1024,height=1152;
+ const canvas=doc.createElement('canvas');canvas.width=width;canvas.height=height;
+ const ctx=canvas.getContext('2d');
+ if(!ctx)throw Error('Canvas ground painting unavailable');
+ const project=p=>townTerrainPointToTexture(p,width,height);
+ paintTownGrass(ctx,project,width/(b.maxX-b.minX),true);
+ paintTownTrails(ctx,project,width/(b.maxX-b.minX),{detail:true});
+ const texture=new THREE.CanvasTexture(canvas);
+ texture.colorSpace=THREE.SRGBColorSpace;
+ texture.anisotropy=2;
+ const geometry=new THREE.PlaneGeometry(b.maxX-b.minX,b.maxZ-b.minZ);
+ const material=new THREE.MeshLambertMaterial({map:texture,side:THREE.DoubleSide,depthWrite:true});
+ const ground=new THREE.Mesh(geometry,material);
+ ground.name='OakrestOrganicTerrain';
+ ground.userData.townSurface='organic';
+ ground.rotation.x=-Math.PI/2;
+ ground.position.set(0,.013,(b.minZ+b.maxZ)/2);
+ parent.add(ground);
+ return ground;
 }
 export function createClassicVillage(scene){
  const root=new THREE.Group();scene.add(root);
  cube(root,MAT.grass,0,-.18,34,115,.3,130);
- const roads=new THREE.Mesh(pathGeometry(roadQuads(CLASSIC_ROADS,4.1)),new THREE.MeshBasicMaterial({color:'#b6a07e',side:THREE.DoubleSide}));
- root.add(roads);
- for(const p of CLASSIC_PLAZAS)cube(root,MAT.sand,p.x,.01,p.z,p.w,.07,p.d);
+ createClassicTownGround(root);
  drawPerimeter(root);
  // District marker posts make the town legible as multiple neighbourhoods.
  for(const district of CLASSIC_DISTRICTS){
@@ -231,7 +244,7 @@ export function createClassicVillage(scene){
   },
   dispose(){
    scene.remove(root);
-   root.traverse(obj=>{if(obj.geometry)obj.geometry.dispose();});
+   root.traverse(obj=>{if(obj.geometry)obj.geometry.dispose();if(obj.userData.townSurface==='organic'){obj.material.map.dispose();obj.material.dispose();}});
   }
  };
 }
