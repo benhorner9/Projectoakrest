@@ -72,6 +72,9 @@ let browser;
  assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
  const styleSVG=await page.locator('[data-style=magic] svg use').getAttribute('href');
  assert.ok(styleSVG.endsWith('#magic'));
+ // Style switching obeys the existing combat recovery clock; exercising a
+ // second switch without advancing gameplay tests cooldown, not the HUD.
+ await page.evaluate(()=>oakrestClassicQA.advance(.4));
  await page.locator('[data-style=ranged]').click();
  assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'ranged');
  await page.locator('#classic-quests-toggle').click();
