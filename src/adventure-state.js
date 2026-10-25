@@ -7,7 +7,7 @@ const ok=reason=>({ok:true,reason}),no=reason=>({ok:false,reason});
 export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGuardian,sight=()=>true,random=Math.random}){
  data.adventure=sanitizeAdventure(data.adventure);
  const a=data.adventure,mats=data.inventory.materials;
- const trees=new Map(),respawns=new Map();let work=null,eatUntil=0;
+ const trees=new Map(),respawns=new Map();let work=null,eatUntil=0,drinkUntil=0;
  const progress=id=>a.quests[id];
  const completed=id=>progress(id)?.status==='completed';
  const unlocked=q=>(QUEST_PREREQUISITES[q.id]||[]).every(completed);
@@ -190,6 +190,14 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    if((mats.ration||0)<1)return no('Make field rations from reeds in your backpack.');
    if(!heal(35))return no('You are already at full Health.');
    mats.ration--;eatUntil=time+8;emit('adventure',{reason:'Ate a ration · restored Health'});return ok('Restored up to 35 Health.');
+  }
+  if(kind==='drink'){
+   if(time<drinkUntil)return no('The tonic is still settling.');
+   if((mats['woodland-tonic']||0)<1)return no('Blend woodland tonic from moss fibre in your backpack.');
+   if(!heal(20))return no('You are already at full Health.');
+   mats['woodland-tonic']--;drinkUntil=time+12;
+   emit('adventure',{reason:'Drank woodland tonic · recovered Health'});
+   return ok('Restored up to 20 Health.');
   }
   if(!target||distance(player,target)>target.reach||!sight(player,target))return no('Move within reach first.');
   if(kind==='accept')return accept(target.id,choice);

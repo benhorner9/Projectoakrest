@@ -32,12 +32,32 @@ export function installClassicIntegratedLayout(doc=document){
  node('p','',idle).textContent='Choose BAG, GEAR, LEVELS or QUESTS to open your adventurer’s book.';
  node('p','',idle).textContent='The world stays fully visible while you browse.';
  for(const id of ['classic-item-window','classic-skills-window','classic-quests-window',
-  'classic-map-window','classic-settings-window','classic-dialogue'])body.append(get(id));
+  'classic-map-window','classic-social-window','classic-settings-window','classic-dialogue'])body.append(get(id));
  const footer=node('footer','classic-action-footer',app);
  footer.setAttribute('aria-label','Character and combat controls');
  footer.append(doc.querySelector('.classic-panel'),doc.querySelector('.classic-combat-dock'));
  const feed=node('div','classic-footer-events',footer);
  feed.append(get('classic-combat-target'),doc.querySelector('.classic-interaction-bar'),get('classic-toasts'));
- // A joystick is the one intentional touch control above the rendered ground.
+ // Stable MMORPG shell: render the chat UNDER the world and the action deck
+ // UNDER the sidebar book, rather than overlaying any part of the game.
+ const chat=node('section','oakrest-chat',app);
+ chat.id='oakrest-chat';chat.setAttribute('aria-label','Oakrest chat and game messages');
+ const action=node('section','oakrest-action-deck',sidebar);
+ action.id='oakrest-action-deck';action.setAttribute('aria-label','Equipped combat style and eight action slots');
+ action.append(footer);
+ footer.prepend(get('classic-styles'));
+ // Preserve the original attack / dodge / four ability buttons and listeners.
+ // The two new slots will be wired to authoritative consumable transactions.
+ const row=doc.querySelector('.classic-attack-row');
+ const dodge=get('classic-dodge');
+ for(const [id,text] of [['oakrest-food-slot','♨'],['oakrest-potion-slot','✚']]){
+  const b=doc.createElement('button');
+  b.type='button';b.id=id;b.className='oakrest-supply-slot';
+  b.append(doc.createTextNode(text));
+  const small=doc.createElement('small');small.textContent=id==='oakrest-food-slot'?'FOOD':'TONIC';
+  b.append(small);row.insertBefore(b,dodge);
+ }
+ // A permanent world viewport ensures pointer raycasting and game rendering
+ // remain independent from the chat, inventory and action controls.
  get('classic-game').append(get('classic-joystick'));
 }

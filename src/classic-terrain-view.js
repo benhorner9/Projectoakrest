@@ -21,15 +21,9 @@ export function createClassicTerrain(root){
  root.add(groundPolygons(organicRoadPolygons(CLASSIC_ROADS,5.5),.005,P.verge));
  root.add(groundPolygons(organicRoadPolygons(CLASSIC_ROADS),.012,P.path));
  root.add(groundPolygons(CLASSIC_PLAZAS.map(plazaOutline),.025,P.earth));
- // Small inset stones form broken paths across the square, leaving moss seams.
- // A single instance batch keeps the decoration cheap on tablet GPUs.
- const stones=[];
- for(const p of CLASSIC_PLAZAS)for(let x=-p.w/2+2;x<p.w/2-1;x+=1.5)
-  for(let z=-p.d/2+2;z<p.d/2-1;z+=1.5)
-   if(terrainVariation(x+p.x,z+p.z)>.35)stones.push([x+p.x,z+p.z]);
- const slabs=new THREE.InstancedMesh(new THREE.BoxGeometry(1,.035,1),new THREE.MeshLambertMaterial({color:P.path}),stones.length);
- const matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(1.34,1,1.34);
- stones.forEach(([x,z],i)=>{rotation.setFromAxisAngle(new THREE.Vector3(0,1,0),Math.sin(x+z)*.035);matrix.compose(new THREE.Vector3(x,.052,z),rotation,scale);slabs.setMatrixAt(i,matrix);});
- slabs.computeBoundingSphere();root.add(slabs);
- return {ground:geometry,stones:stones.length};
+ // No square paving stones or regularly spaced ground tiles. Oakrest's
+ // town centre remains a grassy commons with gently irregular, worn-earth
+ // gathering spaces drawn by plazaOutline. This keeps the terrain uncluttered
+ // and the town model distinct from RuneScape's tiled paving.
+ return {ground:geometry,stones:0};
 }

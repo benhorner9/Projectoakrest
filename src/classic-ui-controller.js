@@ -1,9 +1,9 @@
 /** Block 7: one window at a time, with NPC dialogue taking priority. */
-export function createClassicWindowController({items,map,settings,dialogue,minimap,quests,skills}){
+export function createClassicWindowController({items,map,settings,dialogue,minimap,quests,skills,social}){
  let current=null;
  const body=document.getElementById('classic-sidebar-body');
  const close=()=>{
-  items.hide();map.hidden=true;settings.hidden=true;dialogue.hidden=true;quests.hidden=true;skills.hidden=true;
+  items.hide();map.hidden=true;settings.hidden=true;dialogue.hidden=true;quests.hidden=true;skills.hidden=true;social.hidden=true;
   minimap.setExpanded(false);current=null;if(body)body.dataset.active='none';
   for(const b of document.querySelectorAll('.classic-item-buttons button'))
    b.setAttribute('aria-pressed','false');
@@ -19,6 +19,8 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
    quests.hidden=false;current=name;
   }else if(name==='map'){
    map.hidden=false;minimap.setExpanded(true);current=name;
+  }else if(name==='social'){
+   social.hidden=false;current=name;
   }else if(name==='settings'){
    settings.hidden=false;current=name;
   }else if(name==='dialogue'){
@@ -27,7 +29,7 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
   if(body)body.dataset.active=current||'none';
   const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',
    abilities:'classic-abilities-toggle',map:'classic-map-toggle',quests:'classic-quests-toggle',skills:'classic-skills-toggle',
-   settings:'classic-settings-toggle'}[name];
+   settings:'classic-settings-toggle',social:'classic-social-toggle'}[name];
   if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
  };
  const hide=()=>close();

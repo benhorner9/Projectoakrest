@@ -13,6 +13,14 @@ export function setupClassicFieldNotes(doc=document){
   return {style,name,value};
  });
  const save=add('p','');save.className='field-save';
+ // The field book is always available without covering the actual world.
+ // Buttons delegate to the existing authoritative Classic window controller.
+ const actions=add('div','');actions.className='field-shortcuts';
+ for(const [label,target] of [['▦ Bag','classic-inventory-toggle'],
+  ['☷ Quests','classic-quests-toggle'],['✦ Levels','classic-skills-toggle']]){
+  const button=add('button',label,actions);button.type='button';
+  button.addEventListener('click',()=>doc.getElementById(target)?.click());
+ }
  add('h3','Recent discoveries');
  const log=add('ol','');log.className='field-log';log.setAttribute('aria-label','Recent adventure events');
  const empty=add('li','Speak to Elowen at the north gate to begin.',log);

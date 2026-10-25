@@ -2,6 +2,8 @@ import {createAudio} from './audio.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
 import {bindClassicPress} from './classic-touch-press.js';
 import {setupClassicFieldNotes} from './classic-field-notes.js';
+import {setupClassicChat} from './classic-chat.js';
+import {setupClassicActionBar} from './classic-actionbar.js';
 import {citizenRoutine} from './classic-world-life.js';
 import {OAKREST_PALETTE,classicPixelRatio} from './classic-art-direction.js';
 import {createAdventureWorld} from './adventure-world.js';
@@ -40,6 +42,7 @@ const $=id=>document.getElementById(id);
 const root=$('classic-game'),keys=new Set();
 installClassicIntegratedLayout(document);
 const fieldNotes=setupClassicFieldNotes(document);
+const chat=setupClassicChat(document);
 const audio=createAudio(localStorage,storageKey('oakrest-audio',location.pathname));
 const damageFeedback=createClassicCombatFeedback(root);
 document.addEventListener('pointerdown',()=>audio.unlock(),{once:true});
@@ -98,6 +101,13 @@ let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const groundView=createClassicGroundLoot(scene);
 let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
+const actionbar=setupClassicActionBar({doc:document,combat,
+ consume:kind=>{
+  const result=combat.adventureAction(kind,{},player);
+  feedback(result?.reason||'Consumable unavailable');
+  if(result?.ok){markProgress();itemUi?.render();updateCombatUi(combat.getState());}
+  return !!result?.ok;
+ },feedback});
 const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
  onDestination:point=>{windowUi?.hide();queueDestination(point);}});
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#f0ceaa',
@@ -127,6 +137,10 @@ const dialogue=$('classic-dialogue'),statusText=$('classic-action-hint'),interac
 let toastUntil=0;
 function feedback(text){
  lastStatus=text;statusText.textContent=text;fieldNotes.record(text);
+ if(text&&!/^(Tap to move|Walking|Destination reached|Approaching |Attacking )/i.test(text)){
+  const type=/hit ·|damage|Miss|attac|Dodged|incoming|defeated/i.test(text)?'Combat':'Game';
+  chat.record(text,type==='Combat'?'Game':type);
+ }
  const toast=$('classic-toasts');
  const critical=/save failed|save locked|changed by another|could not save|storage failed|save conflict/i.test(text);
  toast.classList.remove('is-faded');toast.classList.toggle('is-critical',critical);
@@ -209,6 +223,9 @@ function refreshHud(){
   b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));
  }
  hero.update({facing:look,style,worn:view.worn,cameraOffset:orbitCamera.offset()});
+ // Switching combat style changes equipped hotkeys immediately, even while
+ // the render loop is paused for menus or a backgrounded browser tab.
+ actionbar.update(combat.getState());
 }
 function switchStyle(which){
  if(!combat.styleSwitch(which))return;
@@ -405,6 +422,8 @@ $('classic-skills-close').addEventListener('click',()=>windowUi.hide());
 $('classic-map-toggle').addEventListener('click',()=>windowUi.open('map'));
 $('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
 $('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
+$('classic-social-toggle').addEventListener('click',()=>windowUi.open('social'));
+$('classic-social-close').addEventListener('click',()=>windowUi.hide());
 $('classic-save-indicator').addEventListener('click',()=>windowUi.open('settings'));
 $('classic-map-close').addEventListener('click',()=>windowUi.hide());
 $('classic-quests-close').addEventListener('click',()=>windowUi.hide());
@@ -493,6 +512,7 @@ function updateCombatUi(snapshot){
   b.title=ability?.name||'Locked ability';
  }
  $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
+ actionbar.update(snapshot);
 }
 function updateContextActions(){
  const interaction=nearbyClassicInteraction(player),drop=combat.nearestLoot(player);
@@ -517,7 +537,8 @@ document.addEventListener('keydown',e=>{
  if(e.repeat)return;
  if(e.key==='Home')orbitCamera.reset();
  if(e.key==='Tab')switchStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(style)+1)%3]);
- if(['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
+ if(e.shiftKey&&['1','2','3'].includes(e.key))switchStyle(STYLE_ORDER[Number(e.key)-1]);
+ else if(/^[1-8]$/.test(e.key))actionbar.activate(Number(e.key)-1);
  if(e.key.toLowerCase()==='t')interactNearby();
  if(e.key.toLowerCase()==='i')windowUi.open('inventory');
  if(e.key.toLowerCase()==='k')windowUi.open('equipment');
@@ -527,7 +548,8 @@ document.addEventListener('keydown',e=>{
  if(e.key.toLowerCase()==='u')adventureUi.showJournal();
  if(e.key.toLowerCase()==='h'){const r=combat.adventureAction('eat',{},player);feedback(r.reason);if(r.ok)markProgress();}
  if(e.key.toLowerCase()==='g')pickUp();
- if(e.key.toLowerCase()==='j'||e.key==='Enter')toggleAttack();
+ if(e.key.toLowerCase()==='j')toggleAttack();
+ if(e.key==='Enter'){e.preventDefault();chat.focus();}
  if(e.code==='Space')triggerDodge();
  const bindings=['q','e','r','f'];
  if(bindings.includes(e.key.toLowerCase()))useCombatAbility(bindings.indexOf(e.key.toLowerCase()));
@@ -668,11 +690,15 @@ itemUi=setupClassicItems({
  onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
- settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window')});
+ settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window'),social:$('classic-social-window')});
 skillsUi=setupClassicSkills({combat,windowUi});
 adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
  changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
  teleport:p=>{disengageFromCombat();player.x=p.x;player.z=p.z;navigation.stop();dodgeTravel=null;selectedTarget=null;}});
+// The old standalone ration button is superseded by slot 5, but remains
+// wired for compatibility with the adventure test hooks.
+$('classic-settings-window').append($('adventure-eat'));
+$('adventure-eat').hidden=true;
 if(existing.profile&&existing.save.adventure?.autoSave){saveManager.enable();showSaveState();}
 characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.pathname,
  onOpen:()=>{windowUi.hide();releaseAll();combat.reset();},
@@ -683,6 +709,8 @@ characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.path
  }
 });
 $('classic-characters-open').addEventListener('click',()=>characterUI.show());
+// Inventory is the default right-hand book, as in the approved MMORPG layout.
+windowUi.open('inventory');
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
 showSaveState();updateContextActions();
 minimap.update({player,facing:look,cameraOffset:orbitCamera.offset(),
@@ -740,6 +768,9 @@ if(isQa)window.oakrestClassicQA={
  saveNow,persistentSnapshot:()=>combat.persistentSave(),
   characterCreatorState:()=>({open:characterUI.isOpen(),appearance:existing.profile||null}),
   openCharacterCreator:()=>characterUI.show(),
+  chatState:()=>({channel:chat.active(),entries:chat.entries()}),
+  hotbarState:()=>({slots:actionbar.slots(),style:combat.getState().style}),
+  hotbarUse:index=>actionbar.activate(index),
   wornVisual:()=>savedWorn(),
   adventureState:()=>combat.adventureState(),
   questBeacons:()=>[...npcActors.map(n=>({id:n.targetId,visible:n.beacon.sprite.visible})),
