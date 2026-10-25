@@ -7,7 +7,12 @@ const makeTexture=(kind)=>{
  const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
  const rect=(color,x,y,w,h)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
  const poly=(color,points)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fill();};
- if(kind==='mossling'){
+ if(kind==='keeper'||kind==='guardian'){
+  poly('#243d35',[[10,91],[23,60],[17,36],[35,28],[48,9],[62,28],[80,36],[73,64],[89,92]]);
+  poly('#6b8061',[[19,88],[31,57],[29,38],[47,24],[66,38],[64,59],[78,88]]);
+  for(const side of [-1,1])poly('#b09a68',[[48+side*17,39],[48+side*31,18],[48+side*25,5],[48+side*17,25]]);
+  poly('#b1e2cd',[[48,43],[57,58],[48,74],[39,58]]);rect('#def2d7',37,34,6,5);rect('#def2d7',55,34,6,5);
+ }else if(kind==='mossling'){
   poly('#293c2e',[[20,79],[12,67],[26,29],[42,18],[68,26],[82,68],[74,82]]);
   poly('#6c9760',[[22,78],[17,63],[29,32],[43,22],[65,30],[77,64],[70,78]]);
   rect('#a2c98e',33,38,27,16);rect('#243f2e',34,43,7,8);rect('#243f2e',54,43,7,8);
@@ -35,7 +40,7 @@ function labelTexture(name,level){
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
  return t;
 }
-const assets={mossling:makeTexture('mossling'),boar:makeTexture('boar')};
+const assets={mossling:makeTexture('mossling'),boar:makeTexture('boar'),keeper:makeTexture('keeper'),guardian:makeTexture('guardian')};
 export function createClassicCombatView(scene,spawns){
  const actors=new Map(),warningMeshes=new Map(),projectileNodes=[];
  // A subtle ground circle replaces hard "target lock" visuals.
@@ -51,9 +56,9 @@ export function createClassicCombatView(scene,spawns){
     skin:'#c99a76',hair:'#4a3328',npc:true,armed:e.type==='bandit'});
   }else{
    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-    map:assets[e.type],transparent:true,alphaTest:.06,depthWrite:false
+    map:assets[e.boss?'keeper':e.id==='guardian'?'guardian':e.type],transparent:true,alphaTest:.06,depthWrite:false
    }));
-   sprite.scale.set(e.type==='boar'?3.2:2.35,e.type==='boar'?2.6:2.5,1);
+   sprite.scale.set(e.boss?4.6:e.id==='guardian'?3.7:e.type==='boar'?3.2:2.35,e.boss?4.8:e.id==='guardian'?3.9:e.type==='boar'?2.6:2.5,1);
    sprite.center.set(.5,0);model={sprite,update:()=>{}};
   }
   const shadow=makeGroundShadow();
@@ -103,7 +108,7 @@ export function createClassicCombatView(scene,spawns){
   }
  }
  const projectileGeometry=new THREE.SphereGeometry(.16,8,6);
- function update(snapshot){
+ function update(snapshot,cameraOffset,player){
   const t=snapshot.time;
   const selected=snapshot.target;
   selectedRing.visible=!!selected&&!selected.dead&&!selected.hidden;
@@ -115,6 +120,11 @@ export function createClassicCombatView(scene,spawns){
    const actor=actors.get(enemy.id);
    if(!actor)continue;
    const show=!enemy.dead&&!enemy.hidden,hit=enemy.hitFlashUntil>t;
+   const dx=enemy.x-(actor.lastX??enemy.x),dz=enemy.z-(actor.lastZ??enemy.z);
+   if(Math.hypot(dx,dz)>.001)actor.facing={x:dx,z:dz};
+   else if(enemy.aggro&&player)actor.facing={x:player.x-enemy.x,z:player.z-enemy.z};
+   if(actor.hadWarning&&!enemy.warning)actor.releaseUntil=t+.22;
+   actor.hadWarning=!!enemy.warning;actor.lastX=enemy.x;actor.lastZ=enemy.z;
    actor.sprite.visible=show;actor.shadow.visible=show;
    actor.label.visible=show;
    // Avoid floating health bars on every peaceful creature.
@@ -122,13 +132,13 @@ export function createClassicCombatView(scene,spawns){
    actor.hpBackground.visible=displayHealth;actor.hpFill.visible=displayHealth;
    actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro ? .06 : 0),enemy.z);
    actor.shadow.position.set(enemy.x,.035,enemy.z);
-   actor.label.position.set(enemy.x,enemy.type==='boar'?3.5:3.65,enemy.z);
+   actor.label.position.set(enemy.x,enemy.boss?5.6:enemy.id==='guardian'?4.6:enemy.type==='boar'?3.5:3.65,enemy.z);
    actor.hpBackground.position.set(enemy.x,2.72,enemy.z);
    const fraction=Math.max(.005,enemy.hp/enemy.maxHp);
    actor.hpFill.scale.set(fraction,1,1);
    actor.hpFill.position.set(enemy.x-(1-fraction)*1.125,2.735,enemy.z);
    actor.sprite.material.color.set(hit?'#f9ad89':enemy.weak==='magic'?'#bad6cf':enemy.weak==='ranged'?'#cabce0':'#ffffff');
-   actor.update({facing:{x:0,z:1},step:enemy.aggro?1+Math.floor(t*5)%2:0});
+   actor.update({facing:actor.facing||{x:0,z:1},cameraOffset,pose:enemy.warning?'windup':t<(actor.releaseUntil||0)?'strike':'idle',step:Math.hypot(dx,dz)>.001?1+Math.floor(t*5)%2:0});
   }
   updateWarnings(snapshot.monsters,t);
   while(projectileNodes.length<snapshot.projectiles.length){

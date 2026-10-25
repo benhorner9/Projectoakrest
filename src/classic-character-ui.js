@@ -40,7 +40,7 @@ export function setupClassicCharacterUI({storage,pathname,onOpen=()=>{},beforeSw
   context.imageSmoothingEnabled=false;context.clearRect(0,0,canvas.width,canvas.height);
   const image=actor.sprite.material.map?.image;
   if(image)context.drawImage(image,0,0,canvas.width,canvas.height);
-  actor.sprite.material.dispose();
+  actor.dispose();
  }
  function button(label,detail,callback,active=false){
   const b=document.createElement('button');b.type='button';b.className='classic-creator-profile'+(active?' is-current':'');
