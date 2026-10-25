@@ -368,3 +368,16 @@
  color:#f0d4a2;font:700 15px Georgia,serif;margin:6px 0;
 }
 #classic-app.oakrest-framed .classic-chat-not-connected{opacity:.7}
+
+/* Interactive tracked quest remains directly accessible next to the minimap. */
+#classic-app.oakrest-framed .classic-sidebar-map #adventure-journal{
+ position:absolute!important;left:8px!important;bottom:8px!important;
+ right:auto!important;top:auto!important;transform:none!important;
+ z-index:8;display:block;
+ width:auto!important;max-width:30%!important;
+ height:auto;min-height:36px!important;margin:0!important;
+ padding:5px!important;overflow:hidden;text-overflow:ellipsis;
+ border:1px solid #947b53!important;border-radius:4px!important;
+ background:#26342cdd!important;color:#f9dba2!important;
+ font:700 9px/1.2 system-ui,sans-serif!important;text-align:left;
+}
