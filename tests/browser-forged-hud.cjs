@@ -81,6 +81,16 @@ let browser;
  assert.deepEqual(savedUi,['drink','eat','dodge','attack']);
  await page.locator('#oakrest-hotbar-edit').click();
  assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),false);
+ // UI preferences survive a full browser reload and do not alter the
+ // character save or four equipped combat ability positions.
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
+ await page.evaluate(()=>oakrestClassicQA.pauseAutomaticLoop());
+ assert.deepEqual((await page.evaluate(()=>oakrestClassicQA.hotbarState().slots)),
+  ['ability0','ability1','ability2','ability3','drink','eat','dodge','attack']);
+ assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'5');
+ assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'6');
+ assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),false);
  await page.locator('[data-style=magic]').click();
  assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
  const styleSVG=await page.locator('[data-style=magic] svg use').getAttribute('href');
