@@ -8,6 +8,7 @@ export const ADVENTURE_MATERIALS = Object.freeze({
  'ember-scroll':['Ember scroll','One is consumed by every Ember spell, including abilities.','scroll'],
  'field-arrows':['Field ammunition','One per ranged attack; Rapid Shot uses three.','arrows'],
  'ration':['Field ration','Restore 35 Health. Eight-second eating recovery.','hide'],
+ 'woodland-tonic':['Woodland tonic','Restore 20 Health. Twelve-second tonic recovery.','orb'],
  'ward-seal':['Restoration seal','Repair the old ward at the Hollow entrance.','amulet'],
  'hollow-shard':['Hollow shard','Dropped by the Hollow guardians. Used in improved equipment.','token'],
  'warden-heart':['Warden heart','One per Hollow clear. Forge a lasting equipment improvement.','orb']
@@ -110,6 +111,7 @@ export const RECIPES=[
  recipe('ember','Inscribe 30 ember scrolls','inventory','inscription',1,{'reed':2,'moss-fibre':1},{material:'ember-scroll',amount:30}),
  recipe('seal','Inscribe restoration seal','inventory','inscription',1,{'reed':2,'bronze-bar':1},{material:'ward-seal',amount:1},25),
  recipe('rations','Bundle 3 field rations','inventory','cooking',1,{'reed':2},{material:'ration',amount:3},12),
+ recipe('tonic','Blend woodland tonic','inventory','cooking',2,{'reed':1,'moss-fibre':1},{material:'woodland-tonic',amount:1},22),
  recipe('forged','Forge strengthened longsword','forge','blacksmithing',4,{'bronze-bar':6,'hollow-shard':4,'warden-heart':1},{weapon:'forged_sword',style:'melee'},60),
  recipe('reinforced','Reinforce longbow','inventory','fletching',4,{'softwood-logs':6,'hollow-shard':4,'warden-heart':1},{weapon:'reinforced_bow',style:'ranged'},60),
  recipe('runic','Bind runic frost staff','inventory','inscription',4,{'reed':6,'hollow-shard':4,'warden-heart':1},{weapon:'runic_frost',style:'magic'},60)
