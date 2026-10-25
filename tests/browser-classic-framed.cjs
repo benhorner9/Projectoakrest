@@ -46,7 +46,7 @@ let browser;
    assert.equal(view.joystick.x>=view.world.x&&view.joystick.right<=view.world.right,true,'only joystick floats inside viewport');
   }
   await page.setViewportSize({width:1180,height:600});
-  await page.locator('#classic-inventory-toggle').click();
+  if(!await page.locator('#classic-item-window').isVisible())await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('#classic-item-window').isVisible(),true);
   const itemInside=await page.evaluate(()=>{
    const a=document.querySelector('#classic-item-window').getBoundingClientRect();
