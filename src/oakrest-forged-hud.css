@@ -359,7 +359,7 @@
 }
 @media(max-height:680px){
  #classic-app.oakrest-framed .classic-sidebar-map{height:clamp(142px,27vh,188px)!important}
- #classic-app.oakrest-framed .minimap-open{width:clamp(130px,26vh,176px)!important;height:clamp(130px,26vh,176px)!important}
+ #classic-app.oakrest-framed .minimap-open{width:clamp(124px,25vh,169px)!important;height:clamp(124px,25vh,169px)!important}
  #classic-app.oakrest-framed .classic-item-buttons{height:60px!important;grid-template-rows:60px!important}
  #classic-app.oakrest-framed .classic-item-buttons button{height:50px!important;min-height:50px!important;max-height:50px!important}
  #classic-app.oakrest-framed #oakrest-action-deck{min-height:148px;max-height:148px}
