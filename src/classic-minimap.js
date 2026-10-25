@@ -89,9 +89,9 @@ function terrain(ctx,project,width,height,scale){
  // The courtyard and well physically occupy these same coordinates.
  const well=project(OAKREST_WELL);
  ctx.fillStyle='#abb1a0';ctx.beginPath();ctx.arc(well.x,well.y,OAKREST_WELL.courtyardRadius*scale,0,Math.PI*2);ctx.fill();
- const townTrees=[...CLASSIC_TREES.map((t,i)=>({...t,canopy:1.7*(.85+.09*(i%4))})),
-  ...OAKREST_GROVES.map(t=>({...t,canopy:1.7*1.02}))];
- for(const t of [...townTrees,...ADVENTURE_TREES.map(t=>({...t,canopy:2}))]){
+ const townTrees=[...CLASSIC_TREES.map((t,i)=>({...t,canopy:2.7*(.85+.09*(i%4))})),
+  ...OAKREST_GROVES.map(t=>({...t,canopy:2.7*1.02}))];
+ for(const t of [...townTrees,...ADVENTURE_TREES.map(t=>({...t,canopy:2.7*.9}))]){
   const p=project(t),radius=Math.max(.65,t.canopy*scale);
   ctx.fillStyle=t.z>125?'#385743':'#527755';
   ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();

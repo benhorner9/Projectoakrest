@@ -1,3 +1,4 @@
+import {batchClassicStatics} from './classic-static-batch.js';
 import {createClassicTerrain} from './classic-terrain-view.js';
 /** Block 2 scene builder. Only the renderer changes: coordinates come from town-layout. */
 import * as THREE from 'three';
@@ -85,7 +86,22 @@ function building(parent,b,i){
   cube(g,MAT.darkwood,-w*.25,.75,-d*.2,2,.8,1.4);
   cube(g,MAT.trim,w*.23,1.1,-d*.2,.8,1.5,.85);
  }
- const roofs=new THREE.Group();g.add(roofs);
+ // Fitted rear-wall furniture, kept clear of the canonical doorway and service approach.
+ for(const shelfY of [1.0,1.8,2.6]){
+  cube(g,MAT.darkwood,0,shelfY,-d/2+.65,w*.65,.13,.65);
+  for(let book=0;book<5;book++)cube(g,book%2?MAT.roofGreen:MAT.trim,-w*.24+book*w*.12,shelfY+.22,-d/2+.65,.22,.35,.38);
+ }
+ if(!special){
+  cube(g,MAT.darkwood,w/2-1.25,.55,-d/2+2.1,1.6,.65,2.3);
+  cube(g,MAT.roofGreen,w/2-1.25,.94,-d/2+2.1,1.48,.14,2.15);
+  cube(g,MAT.light,w/2-1.25,1.07,-d/2+1.5,1.2,.22,.5);
+ }
+ // Carved fork braces and an acorn lintel are the village's repeated motif.
+ for(const side of [-1,1]){
+  const brace=cube(g,MAT.trim,side*(doorWidth/2+.28),2.8,d/2+.3,.16,1.05,.22);brace.rotation.z=side*.55;
+ }
+ mesh(g,new THREE.IcosahedronGeometry(.3,0),MAT.trim,0,h-.1,d/2+.35,1,1.3,.45);
+ const roofs=new THREE.Group();roofs.userData.dynamic=true;g.add(roofs);
  // Closed triangular gable ends hide the former roof-to-wall daylight gaps.
  // These stay in the cutaway group so entering a building still reveals its interior.
  for(const side of [-1,1]){
@@ -104,6 +120,8 @@ function building(parent,b,i){
   cube(roofs,MAT.wood,0,h+1.28,sign*(d/4+.25),w+1.5,.12,slope+.42).rotation.x=sign*angle;
  }
  cube(roofs,MAT.trim,0,h+2.66,0,w+1.6,.28,.34);
+ for(const end of [-1,1]){const tip=cube(roofs,MAT.darkwood,end*(w/2+.75),h+2.95,0,.23,1.05,.3);tip.rotation.z=-end*.45;}
+ for(const sign of [-1,1])for(let seam=-w/2;seam<=w/2;seam+=1.4){const rib=cube(roofs,MAT.darkwood,seam,h+1.47,sign*(d/4+.25),.065,.07,slope+.4);rib.rotation.x=sign*angle;}
  // Chimney stacks and ridge caps share the same house-specific roof group.
  if(i%3!==1){cube(roofs,MAT.stone,-w*.26,h+2.8,-d*.16,.8,2.1,.75);
   cube(roofs,MAT.trim,-w*.26,h+3.88,-d*.16,1.1,.22,1.02);}
@@ -152,13 +170,18 @@ function drawPerimeter(root){
   mesh(root,new THREE.ConeGeometry(3.1,2.05,8),MAT.roofBlue,x,6.2,z);
  }
 }
-function tree(root,x,z,index,scale=1){
+export function createOakrestTree(root,x,z,index,scale=1){
  const group=new THREE.Group();group.position.set(x,0,z);root.add(group);
  mesh(group,new THREE.CylinderGeometry(.23,.34,3.1,6),MAT.wood,0,1.5,0,scale,scale,scale);
- for(let k=0;k<3;k++){
-  const r=(1.7-k*.24)*scale,y=(3.1+k*.88)*scale;
-  mesh(group,new THREE.ConeGeometry(r,2.65*scale,6),k%2?MAT.leafLight:MAT.leaf,0,y,0);
+ // Broad, asymmetrical alder crowns replace the uniform conifer stacks.
+ for(let k=0;k<4;k++){
+  const angle=k*2.4+index,spread=k?1.05:0;
+  const crown=mesh(group,new THREE.IcosahedronGeometry(1,1),k%2?MAT.leafLight:MAT.leaf,
+   Math.cos(angle)*spread*scale,(3.8+(k%2)*.65)*scale,Math.sin(angle)*spread*scale,1.65*scale,1.35*scale,1.5*scale);
+  crown.rotation.y=angle;
  }
+ const shadow=mesh(group,new THREE.CircleGeometry(2.1*scale,16),new THREE.MeshBasicMaterial({color:'#243e31',transparent:true,opacity:.16,depthWrite:false}),0,.008,0);
+ shadow.rotation.x=-Math.PI/2;
  return group;
 }
 function pathGeometry(quads){
@@ -184,10 +207,10 @@ export function createClassicVillage(scene){
   plaque.position.set(0,2.32,.25);sign.add(plaque);
  }
  const roofs=OAKREST_BUILDINGS.map((b,i)=>building(root,b,i));
- for(const [i,t] of CLASSIC_TREES.entries())tree(root,t.x,t.z,i,.85+(i%4)*.09);
+ for(const [i,t] of CLASSIC_TREES.entries())createOakrestTree(root,t.x,t.z,i,.85+(i%4)*.09);
  // Training groves and noticeboards now occupy canonical interaction anchors.
  for(const [i,grove] of OAKREST_GROVES.entries()){
-  const treeGroup=tree(root,grove.x,grove.z,i,1.02);
+  const treeGroup=createOakrestTree(root,grove.x,grove.z,i,1.02);
   treeGroup.userData.interactId='grove:'+grove.id;
  }
  for(const notice of OAKREST_NOTICES){
@@ -201,7 +224,7 @@ export function createClassicVillage(scene){
  }
 
  // Decorated greenbelt trees do not sit on the navigable village paths.
- for(const [i,[x,z]] of [[-50,27],[-49,51],[50,24],[49,53],[-51,72],[51,70],[-50,-8],[50,-8]].entries())tree(root,x,z,i,.89);
+ for(const [i,[x,z]] of [[-50,27],[-49,51],[50,24],[49,53],[-51,72],[51,70],[-50,-8],[50,-8]].entries())createOakrestTree(root,x,z,i,.89);
  // Well and its roof.
  const wx=OAKREST_WELL.x,wz=OAKREST_WELL.z;
  mesh(root,ring,MAT.stone,wx,.56,wz,1.65,1.13,1.65);
@@ -221,9 +244,21 @@ export function createClassicVillage(scene){
   cube(root,MAT.trim,x,2.88,z,.55,.2,.55);
   mesh(root,new THREE.OctahedronGeometry(.22),new THREE.MeshBasicMaterial({color:'#ffd99b'}),x,2.65,z);
  }
+ for(const item of roofs)batchClassicStatics(item.roofs);
+ const batching=batchClassicStatics(root);
+ const ribbons=[];
+ for(const gate of CLASSIC_PERIMETER.gates){
+  const ribbon=new THREE.Mesh(new THREE.PlaneGeometry(.65,2.4,1,4),MAT.banner);
+  ribbon.position.set(gate.x+2.5,3.2,gate.z+.8);ribbon.userData.dynamic=true;root.add(ribbon);ribbons.push(ribbon);
+ }
+ // Distant banks frame the valley beyond the walkable boundary.
+ for(const side of [-1,1])for(let i=0;i<6;i++){
+  mesh(root,new THREE.IcosahedronGeometry(1,1),i%2?MAT.leaf:MAT.grass2,side*(65+i%2*5),-.5,-14+i*23,12,4+i%3,16);
+ }
  const npcMarkers=CLASSIC_NPCS.map(n=>({id:n.id,x:n.x,z:n.z}));
  return {
-  root,roofs,npcMarkers,perimeter:CLASSIC_PERIMETER,
+  root,roofs,npcMarkers,batching,perimeter:CLASSIC_PERIMETER,
+  update(time){ribbons.forEach((r,i)=>{r.rotation.z=Math.sin(time*1.4+i)*.07;r.rotation.y=Math.sin(time*.9+i)*.15;});},
   updateCutaway(insideId){
    for(const item of roofs)item.roofs.visible=item.id!==insideId;
   },

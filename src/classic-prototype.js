@@ -1,3 +1,4 @@
+import {citizenRoutine} from './classic-world-life.js';
 import {OAKREST_PALETTE,classicPixelRatio} from './classic-art-direction.js';
 import {createAdventureWorld} from './adventure-world.js';
 import {setupAdventureUI} from './adventure-ui.js';
@@ -590,6 +591,7 @@ function draw(dt,render=true){
  const state=combat.getState();
  const adventureState=combat.adventureState();
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
+ village.update(state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
  adventureUi?.tick();skillsUi?.tick();
  if(state.style!==style){style=state.style;refreshHud();}
@@ -608,8 +610,11 @@ function draw(dt,render=true){
   step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
   pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
   worn:savedWorn(),cameraOffset});
- for(const [i,n] of npcActors.entries())
-  n.actor.update({facing:{x:Math.cos(i*1.3),z:Math.sin(i*1.3)},step:0,style:'melee',cameraOffset});
+ for(const n of npcActors){
+  const life=citizenRoutine(n,state.time,player);
+  n.actor.sprite.position.set(life.x,.08,life.z);n.shadow.position.set(life.x,.04,life.z);
+  n.actor.update({facing:life.facing,step:life.moving?1+Math.floor(state.time/.25)%2:0,style:'melee',cameraOffset});
+ }
  if(pointerMark.visible){
   markerTime+=dt;pointerMark.material.opacity=.55+.25*Math.sin(markerTime*4);
   pointerMark.scale.setScalar(1+.1*Math.sin(markerTime*4));
@@ -670,7 +675,8 @@ requestAnimationFrame(tick);
 const isQa=new URLSearchParams(location.search).has('qa')&&
  (['localhost','127.0.0.1'].includes(location.hostname)||/^\/oakrest-dev(?:\/|$)/.test(location.pathname));
 if(isQa)window.oakrestClassicQA={
- renderStats:()=>({calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),width:renderer.domElement.width,height:renderer.domElement.height}),
+ worldLife:()=>npcActors.map(n=>({id:n.id,x:n.actor.sprite.position.x,z:n.actor.sprite.position.z})),
+ renderStats:()=>({batching:village.batching,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),width:renderer.domElement.width,height:renderer.domElement.height}),
  state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
   pathLength:navigation.state().waypoints.length,hasSavedProfile:existing.existing,
   npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&
