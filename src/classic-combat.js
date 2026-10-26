@@ -431,6 +431,13 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  }
  function actionCancel(){action=null;queuedAbility=null;}
  function itemAction(action,player){
+  if(action?.type==='drop'&&Object.entries(loaned).some(([s,id])=>action.id==='weapon.'+s+'.'+id))return {ok:false,reason:'Practice weapons cannot be dropped.'};
+  if(action?.type==='use'){
+   const kind={'material.ration':'eat','material.woodland-tonic':'drink'}[action.id];
+   if(!kind)return {ok:false,reason:'Choose an item with a usable action.'};
+   if(!canFight())return {ok:false,reason:'Wait until you recover.'};
+   return adventureSystem?.action(kind,{time,player})||{ok:false,reason:'Consumables are unavailable.'};
+  }
   const atBank=canCompleteInteraction(player,findClassicInteractable('service:bank'));
   const atStore=canCompleteInteraction(player,findClassicInteractable('service:store'));
   if(action?.type==='bank'&&action.kind==='weapon'&&
@@ -448,7 +455,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   }
   let result;
   try{
-   result=classicItemAction(data,action,{atBank,atStore});
+   result=classicItemAction(data,action,{atBank,atStore,player,dropId:()=>'player-'+dropSession+'-'+(++nextDrop)});
   }finally{
    for(const [s,id] of unloaned){
     if(data.inventory.weapons[s].includes(id))delete loaned[s];
@@ -463,6 +470,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  }
  function pickup(player,id){
   const drop=data.groundLoot.find(d=>d.id===id);
+  if(drop&&!interactionSight(player,drop))return {ok:false,reason:'Walk around the obstacle to collect that item.'};
   const loan=drop?.kind==='weapon'&&loaned[drop.style]===drop.itemId;
   if(loan)data.inventory.weapons[drop.style]=data.inventory.weapons[drop.style].filter(w=>w!==drop.itemId);
   let result;
@@ -498,6 +506,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   return {time,combatTick:Math.floor((time+1e-9)/COMBAT_TICK_SECONDS),tickSeconds:COMBAT_TICK_SECONDS,
    attackInterval:weapon?classicWeaponInterval(weapon):0,maxHit:snapshot()?.maxHit||0,lastFailure,
    style,hp,maxHp,attackUntil,switchUntil,dodgeUntil,deadUntil,
+   consumableCooldowns:adventureSystem?.consumableCooldowns()||{eat:0,drink:0},
    targetId,target:getTarget()?{...getTarget()}:null,weapon:weapon?.title||'No equipped weapon',
    reach:weapon?.reach||0,
    abilities:skills().map((a,index)=>a?{index,id:a.id,name:a.name,kind:a.kind,

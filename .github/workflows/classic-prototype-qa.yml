@@ -20,6 +20,8 @@ on:
       - 'tests/classic-combat-overhaul.test.js'
       - 'tests/browser-classic-combat-overhaul.cjs'
       - 'tests/classic-items.test.js'
+      - 'tests/classic-equipment-ui.test.js'
+      - 'src/quick-slots.js'
       - 'tests/classic-save-manager.test.js'
       - 'tests/classic-minimap.test.js'
       - 'tests/browser-classic-hud.cjs'
@@ -46,7 +48,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
-      - run: node --test tests/classic-navigation-regression.test.js tests/classic-canvas-input.test.js tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js tests/classic-combat-overhaul.test.js tests/classic-items.test.js tests/classic-save-manager.test.js tests/classic-minimap.test.js
+      - run: node --test tests/classic-navigation-regression.test.js tests/classic-canvas-input.test.js tests/classic-presentation.test.js tests/classic-interactions.test.js tests/classic-combat.test.js tests/classic-combat-overhaul.test.js tests/classic-items.test.js tests/classic-equipment-ui.test.js tests/classic-save-manager.test.js tests/classic-minimap.test.js
       - run: npm run build
       - name: Verify prototype copied and fingerprinted
         run: |

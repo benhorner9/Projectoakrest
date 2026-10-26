@@ -4,7 +4,7 @@ import {adventureSolidAt,ADVENTURE_TARGETS,ADVENTURE_WALLS,ADVENTURE_TREES} from
  */
 import {OAKREST_BUILDINGS,OAKREST_WELL,OAKREST_PATHS,localBuildingPosition} from './town-layout.js';
 import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './rules.js';
-import {EQUIPMENT_SLOTS} from './equipment-slots.js';
+import {EQUIPMENT_SLOTS,allowsOffhand} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.js';
 
@@ -237,7 +237,7 @@ export function presentationSnapshot(save,style,position){
  const chosen=STYLE_ORDER.includes(style)?style:'melee';
  const itemSlots=s.equipment?.[chosen]||{};
  const worn=Object.fromEntries(EQUIPMENT_SLOTS.map(slot=>[slot.id,
-  slot.id==='weapon'?s.gear?.[chosen]||'none':slot.id==='chest'?s.armour?.[chosen]||'none':itemSlots[slot.id]||null]));
+  slot.id==='weapon'?s.gear?.[chosen]||'none':slot.id==='chest'?s.armour?.[chosen]||'none':slot.id==='offhand'&&!allowsOffhand(s,chosen)?null:itemSlots[slot.id]||null]));
  return {style:chosen,styleLevel:levelFromXp(s.xp?.[chosen]||0).level,
   combatLevel:combatLevelFromXp(s.xp||{}),vitality:levelFromXp(s.xp?.vitality||0).level,
   weaponName:LOADOUTS[chosen]?.[s.gear?.[chosen]]?.title||'Unarmed',

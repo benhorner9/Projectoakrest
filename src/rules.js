@@ -1,5 +1,6 @@
+import {normalizeQuickSlots} from './quick-slots.js';
 import {ADVENTURE_MATERIAL_IDS,sanitizeAdventure} from './adventure-content.js';
-import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
+import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem,allowsOffhand} from './equipment-slots.js';
 import {sanitizeSlotOrder,inventoryKeyList,BAG_MAX_SLOTS,VAULT_MAX_SLOTS} from './item-slot-layout.js';
 import {WOODCUTTING_AXES,WOODCUTTING_MATERIALS,WOODCUTTING_MAX_XP} from './woodcutting.js';
 /** Combat and progression rules stay independent from Three.js so they can be tested. */
@@ -85,6 +86,8 @@ for(const axe of WOODCUTTING_AXES)LOADOUTS.melee[axe.id]={
  ...LOADOUTS.melee.sword,title:axe.name,icon:'🪓',family:'sword',requiredLevel:1,
  basic:12,interval:1.25,windup:.35
 };
+for(const weapons of Object.values(LOADOUTS))for(const weapon of Object.values(weapons))
+ weapon.hands=['greatsword','daggers','bow','shortbow','crossbow'].includes(weapon.family)?2:1;
 export const ARMOUR={
   'starter-mail':{title:'Recruit Mail',requiredVitality:1,physical:.12,magical:.04,mobility:.98,bonusStyle:'melee',bonusPower:.02,description:'Beginner melee chest armour: improved physical protection and a small melee bonus.'},
   'starter-leather':{title:'Scout Leather',requiredVitality:1,physical:.09,magical:.07,mobility:1.02,bonusStyle:'ranged',bonusPower:.02,description:'Beginner ranged chest armour: lightweight protection and a small ranged bonus.'},
@@ -126,7 +129,9 @@ export function equipPrimaryItem(data,kind,style,id){
    (!canEquipArmour(id,data.xp)||!ownsArmour(data,id))))return false;
  // Tutorial weapons are loaned and must stay available to finish the three styles.
  if(data.onboarding?.area==='tutorial'&&kind==='weapon'&&id===null)return false;
- data[kind==='weapon'?'gear':'armour'][style]=id??'none';return true;
+ data[kind==='weapon'?'gear':'armour'][style]=id??'none';
+ if(kind==='weapon'&&!allowsOffhand(data,style)&&data.equipment?.[style])data.equipment[style].offhand=null;
+ return true;
 }
 export const UNARMOURED={title:'Starter clothing',physical:0,magical:0,mobility:1,bonusStyle:null,bonusPower:0,description:'Ordinary clothes, with no armour protection.'};
 export function defenceFor(id){return id==='none'?UNARMOURED:ARMOUR[id]||ARMOUR.traveller;}
@@ -205,12 +210,14 @@ export function validGroundLoot(list){
  if(!Array.isArray(list))return [];
  const out=[],seen=new Set();
  for(const d of list.slice(-36)){
-  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>340||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)continue;
+  if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||d.id.length>64||seen.has(d.id)||!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>340||!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>(d.playerDrop===true?9999:99))continue;
   if(d.kind==='coins'&&d.itemId!=='coins')continue;
-  if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token',...ADVENTURE_MATERIAL_IDS].includes(d.itemId))continue;
+  if(d.kind==='material'&&!['moss-fibre','boar-hide','bandit-token',...ADVENTURE_MATERIAL_IDS,...(d.playerDrop===true?WOODCUTTING_MATERIALS:[])].includes(d.itemId))continue;
+  if(d.playerDrop===true&&['ward-seal','warden-heart'].includes(d.itemId))continue;
+  if(d.kind==='slot'&&(d.playerDrop!==true||!Object.hasOwn(SLOT_ITEMS,d.itemId)||d.amount!==1))continue;
   if(d.kind==='armour'&&(!Object.hasOwn(ARMOUR,d.itemId)||d.amount!==1))continue;
   if(d.kind==='weapon'&&(!STYLE_ORDER.includes(d.style)||!Object.hasOwn(LOADOUTS[d.style],d.itemId)||d.amount!==1))continue;
-  if(!['coins','material','armour','weapon'].includes(d.kind))continue;
+  if(!['coins','material','armour','weapon','slot'].includes(d.kind))continue;
   seen.add(d.id);out.push({...d});
  }
  return out;
@@ -253,7 +260,7 @@ export function defaultSave(){
     slots[style]={};
     for(const w of Object.values(LOADOUTS[style]))slots[style][w.family]=['w0',null,null,null];
   }
-  return {xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),inventorySlots:[],bankSlots:[],equipment:blankEquipment(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[],slotted:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
+  return {quickSlots:null,xp:{melee:0,magic:0,ranged:0,vitality:0},coins:0,defeated:0,gear,armour,slots,inventory:starterInventory(),inventorySlots:[],bankSlots:[],equipment:blankEquipment(),groundLoot:[],lootVersion:1,bank:{coins:0,materials:{},weapons:{melee:[],magic:[],ranged:[]},armour:[],slotted:[]},professions:{woodcuttingLearned:false,woodcuttingXp:0}};
 }
 export function freshCharacterSave(){
  const d=defaultSave();
@@ -335,6 +342,7 @@ export function validSave(raw){
     if(raw.armour?.[style]==='none'||!ownsArmour(d,d.armour[style]))d.armour[style]='none';
     if(canEquipWeapon(style,raw.gear?.[style],d.xp)&&ownsWeapon(d,style,raw.gear[style]))d.gear[style]=raw.gear[style];
     if(canEquipArmour(raw.armour?.[style],d.xp)&&ownsArmour(d,raw.armour[style]))d.armour[style]=raw.armour[style];
+    if(!allowsOffhand(d,style))d.equipment[style].offhand=null;
     const level=levelFromXp(d.xp[style]).level;
     for(const [family,slots] of Object.entries(d.slots[style])){
       const incoming=raw.slots?.[style]?.[family];
@@ -347,5 +355,11 @@ export function validSave(raw){
       });
     }
   }
+  d.quickSlots=normalizeQuickSlots(raw.quickSlots,id=>{
+   const [kind,a,b,...extra]=id.split('.');
+   if(extra.length||kind!=='weapon'&&b!==undefined)return false;
+   return kind==='weapon'?Object.hasOwn(LOADOUTS[a]||{},b):kind==='armour'?Object.hasOwn(ARMOUR,a):
+    kind==='slot'?Object.hasOwn(SLOT_ITEMS,a):['material.ration','material.woodland-tonic'].includes(id);
+  });
   return d;
 }

@@ -6,7 +6,7 @@ import {woodcuttingLevel} from './woodcutting.js';
  */
 import {getItem,itemIconUrl,itemFromDrop} from './items.js';
 import {STYLE_ORDER,LOADOUTS} from './rules.js';
-import {classicItemDetails,classicAbilityCatalogue} from './classic-item-state.js';
+import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries} from './town-ui.js';
 import {positionedEntries,BAG_MIN_SLOTS,VAULT_MIN_SLOTS} from './item-slot-layout.js';
@@ -54,6 +54,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
      transact({type:'reorder',scope,from:moveStart.index,to:index});moveStart=null;
     }
    });
+   empty.dataset.scope=scope;empty.dataset.slotIndex=String(index);
    empty.title='Empty slot '+(index+1);empty.setAttribute('aria-label','Empty item slot '+(index+1));
    return;
   }
@@ -74,6 +75,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     detailId=entry.canonical;render();
    }else showDetails(entry.canonical);
   });
+  cell.dataset.scope=scope;cell.dataset.slotIndex=String(index);cell.dataset.canonical=entry.canonical;
   cell.setAttribute('aria-label','Examine '+(item?.title||entry.id));
   if(moveStart?.scope===scope&&moveStart.index===index)cell.classList.add('move-start');
   icon(cell,entry.canonical);
@@ -105,6 +107,25 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     combineSource=details.item.legacy.itemId;detailId=null;render();
    });
   }
+  if(mode==='inventory'&&usableItem(id)){
+   const state=combat.getState(),kind=id==='material.ration'?'eat':'drink',remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
+   const use=button(ex,'classic-item-action',remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK',()=>transact({type:'use',id}),remaining>0||state.hp<=0||state.hp>=state.maxHp);use.dataset.consumable=kind;
+  }
+  if(mode==='inventory'&&quickBindable(id)){
+   const line=element(ex,'div','classic-item-actions'),select=element(line,'select','classic-quick-choice');
+   select.setAttribute('aria-label','Assign '+details.title+' to quick slot');
+   for(let i=0;i<8;i++){const option=element(select,'option',null,'Slot '+(i+1));option.value=String(i);}
+   button(line,'classic-item-action','ASSIGN QUICK SLOT',()=>transact({type:'quick-slot',index:Number(select.value),id}));
+  }
+  if(mode==='inventory'&&canDropItem(details.item)){
+   const entry=inventoryEntries(data).find(e=>e.canonical===id);
+   if(entry){
+    const line=element(ex,'div','classic-item-actions'),amount=element(line,'input','classic-item-quantity');
+    amount.type='number';amount.min='1';amount.max=String(entry.qty);amount.step='1';amount.value='1';amount.inputMode='numeric';
+    amount.setAttribute('aria-label','Drop quantity');
+    button(line,'classic-item-action','DROP',()=>transact({type:'drop',id,quantity:Number(amount.value)}),details.equipped);
+   }
+  }
   if(details.action)button(ex,'classic-item-action',
    details.equipped?'UNEQUIP':'EQUIP',
    ()=>transact(details.action),!details.allowed);
@@ -121,6 +142,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     'Using '+(item?.title||combineSource)+' with… Tap a second material in your bag.');
    button(prompt,'classic-item-action','CANCEL',()=>{combineSource=null;render();});
   }
+  const capacity=element(content,'span','classic-bag-capacity',s.capacity.bag+' / '+s.capacity.limit+' slots');
+  capacity.title='Equipped gear remains owned in your backpack. Existing over-capacity saves are preserved.';
   grid(content,inventoryEntries(data),'bag','',BAG_MIN_SLOTS);
   if(detailId)examine(content,detailId);
   const tools=element(content,'details','classic-bag-tools');
@@ -165,19 +188,27 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    // Previewing other styles must use the existing style switch controls.
    changed(key);render();
   });
+  if(!s.equipment.find(e=>e.id==='weapon').itemId)element(content,'p','classic-item-warning','This loadout has no owned weapon equipped. Choose one from your backpack.');
+  const bonuses=element(content,'div','classic-equipment-bonuses');
+  for(const [label,value] of [['Maximum hit',s.bonuses.maxHit],['Attack interval',s.bonuses.interval.toFixed(1)+' s'],['Range',s.bonuses.reach+' m'],['Physical armour',Math.round(s.bonuses.physical*100)+'%'],['Magic armour',Math.round(s.bonuses.magical*100)+'%'],['Equipment power','+'+Math.round((s.bonuses.power-1)*100)+'%'],['Equipment guard',Math.round(s.bonuses.guard*100)+'%']]){
+   const row=element(bonuses,'div','classic-item-fact');element(row,'span',null,label);element(row,'strong',null,value);
+  }
   const doll=element(content,'div','classic-paperdoll');
   for(const slot of s.equipment){
    const tile=button(doll,'classic-paper-slot classic-paper-'+slot.id,
-    slot.label,()=>slot.itemId&&showDetails(slot.itemId),!slot.itemId);
+    slot.label,()=>{if(slot.itemId)showDetails(slot.itemId);else notify('Choose an owned item for '+slot.label+'.');});
+   tile.dataset.scope='equipment';tile.dataset.slotIndex=String(s.equipment.indexOf(slot));tile.dataset.equipmentSlot=slot.id;
    if(slot.itemId)icon(tile,slot.itemId);
    else element(tile,'span','classic-plus','+');
   }
+  doll.after(bonuses);
   element(content,'h3','classic-section-title','EQUIPMENT IN BACKPACK');
   const items=inventoryEntries(save()).filter(e=>e.kind==='armour'||
    (e.kind==='weapon'||e.kind==='slot')&&e.style===style());
   const list=element(content,'div','classic-equip-choices');
   for(const e of items){const name=getItem(e.canonical)?.title||e.id;
    const tile=button(list,'classic-equip-choice',name,()=>showDetails(e.canonical));
+   tile.dataset.scope='bag';tile.dataset.slotIndex=String(s.bag.findIndex(x=>x?.canonical===e.canonical));tile.dataset.canonical=e.canonical;
    icon(tile,e.canonical);
   }
   if(detailId)examine(content,detailId);
@@ -210,6 +241,9 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
      type:'bank',direction,kind,id:selectedBank.id,style:selectedBank.style,quantity:amount
     }));
    }
+   const custom=element(box,'div','classic-item-actions'),quantity=element(custom,'input','classic-item-quantity');
+   quantity.type='number';quantity.min='1';quantity.step='1';quantity.value='1';quantity.inputMode='numeric';quantity.setAttribute('aria-label','Bank transfer quantity');
+   button(custom,'classic-item-action',direction.toUpperCase()+' QUANTITY',()=>transact({type:'bank',direction,kind,id:selectedBank.id,style:selectedBank.style,quantity:Number(quantity.value)}));
    if(detailId)examine(content,detailId);
   }
  }
@@ -239,7 +273,9 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
  }
  function renderAbilities(){
-  const data=save(),current=style(),weapon=data.gear[current];
+  const data=save(),current=style(),weapon=data.gear[current],state=combat.getState();
+  element(content,'strong','classic-section-title',current.toUpperCase()+' · '+state.weapon);
+  element(content,'p','classic-muted',state.target?'Target: '+state.target.name:'Select a creature to use offensive abilities.');
   element(content,'p','classic-muted','Only unlocked skills can be slotted. Four abilities are saved separately per weapon family.');
   if(!LOADOUTS[current]?.[weapon]){element(content,'p',null,'Equip a weapon first.');return;}
   const list=classicAbilityCatalogue(data,current);
@@ -247,6 +283,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   for(let i=0;i<4;i++){
    const row=element(content,'div','classic-ability-row');
    element(row,'strong',null,'SLOT '+(i+1)+' · '+(list.find(x=>x.id===slots[i])?.name||'Empty'));
+   const status=state.abilities[i];
+   element(row,'small','classic-ability-status',status?(status.available?'Ready':status.unavailableReason):'Empty or locked');
    const select=element(row,'select','classic-ability-select');
    const empty=element(select,'option',null,'— Empty —');empty.value='';
    for(const skill of list){const opt=element(select,'option',null,skill.name+' · Lv '+skill.requiredLevel);
@@ -264,20 +302,44 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
   title.textContent={inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store',abilities:'Abilities'}[mode];
   subtitle.textContent='OAKREST · CHARACTER INVENTORY';
+  const scroll=content.scrollTop;
   content.replaceChildren();
   if(mode==='inventory')renderInventory();
   else if(mode==='equipment')renderEquip();
   else if(mode==='bank')renderBank();
   else if(mode==='shop')renderShop();
   else renderAbilities();
+  content.scrollTop=scroll;
  }
  function open(next='inventory'){
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
   mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;combineSource=null;toolsExpanded=false;
-  host.hidden=false;render();onOpen(next);
+  host.hidden=false;content.scrollTop=0;render();onOpen(next);
  }
  function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;combineSource=null;toolsExpanded=false;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
- return {open,hide,render,isOpen:()=>!host.hidden};
+ return {open,hide,render,isOpen:()=>!host.hidden,
+  drop:payload=>{
+   if(payload.toScope==='equipment'){
+    if(payload.fromScope!=='bag'){notify('Withdraw this item before equipping it.');return false;}
+    const details=classicItemDetails(save(),payload.canonical,style()),item=details?.item;
+    const slot=item?.kind==='weapon'?'weapon':item?.kind==='armour'?'chest':details?.action?.slot;
+    if(!details?.action||slot!==payload.slot||details.action.style!==style()){notify('That item does not fit this equipment slot.');return false;}
+    return transact({...details.action,id:item.legacy.itemId});
+   }
+   return transact({type:'drag',...payload});
+  },
+  tick:()=>{if(!host.hidden&&mode==='inventory'){
+   const state=combat.getState();
+   for(const node of content.querySelectorAll('[data-consumable]')){
+    const kind=node.dataset.consumable,remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
+    node.disabled=remaining>0||state.hp<=0||state.hp>=state.maxHp;
+    node.textContent=remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK';
+   }
+  }else if(!host.hidden&&mode==='abilities'){
+   const state=combat.getState(),nodes=content.querySelectorAll('.classic-ability-status');
+   nodes.forEach((node,i)=>{const a=state.abilities[i],remaining=Math.max(0,(a?.cooldownEnd||0)-state.time);node.textContent=!a?'Empty or locked':remaining>0?'Ready in '+remaining.toFixed(1)+'s':a.available?'Ready':a.unavailableReason;});
+  }}
+ };
 }
