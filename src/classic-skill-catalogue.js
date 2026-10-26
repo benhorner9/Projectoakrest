@@ -11,12 +11,14 @@ export const CLASSIC_SKILLS=Object.freeze([
  {id:'vitality',name:'Health',icon:'♥',group:'Combat',description:'Survive harder battles and wear stronger armour.'},
  {id:'woodcutting',name:'Woodcutting',icon:'♧',group:'Gathering',description:'Choose axes, harvest different trees and supply makers.'},
  {id:'mining',name:'Mining',icon:'⛏',group:'Gathering',description:'Collect ores from seams to feed the forge.'},
+ {id:'foraging',name:'Foraging',icon:'❀',group:'Gathering',description:'Harvest reeds and other woodland materials for practical crafting.'},
  {id:'blacksmithing',name:'Blacksmithing',icon:'⚒',group:'Making',description:'Smelt and shape metal at a dedicated forge.'},
  {id:'fletching',name:'Fletching',icon:'➳',group:'Making',description:'Combine timber and reeds in your backpack for ammunition and bows.'},
  {id:'inscription',name:'Inscription',icon:'✧',group:'Making',description:'Make scrolls and ward seals directly from backpack materials.'},
  {id:'cooking',name:'Fieldcraft',icon:'❧',group:'Making',description:'Prepare travel provisions by hand, without a workstation.'}
 ]);
 const unlocked=id=>{
+ if(id==='foraging')return [{level:1,type:'Gather',name:'Creek reeds',detail:'Collect reeds from the lower and upper creeks for fieldcraft and inscription'}];
  if(id==='mining')return [
   {level:1,type:'Gather',name:'Copper seams',detail:'Mine copper ore from Oakrest’s quarry'},
   {level:1,type:'Gather',name:'Tin seams',detail:'Mine tin ore from Oakrest’s quarry'}

@@ -155,9 +155,9 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
    'gather:tin-ore':'tin','gather:softwood-logs':'softwood','craft:useful':'smith',
    'inspect:cart':'cart','inspect:tracks':'tracks','inspect:stump':'stump',
    'resolve:guardian':'stump','inspect:journal':'journal','inspect:memorial':'memorial',
-   'solve:watch':'scout','prepare:supplies':'smith','inspect:entrance':'entrance',
+   'solve:watch':'scout','prepare:supplies':'citizen:guard','inspect:entrance':'entrance',
    'dungeon:clear':'entrance'};
-  return findTarget('adventure:'+ids[key]);
+  return ids[key]?findTarget(ids[key].includes(':')?ids[key]:'adventure:'+ids[key]):null;
  }
  tracker.addEventListener('click',showJournal);eatButton.addEventListener('click',()=>act('eat'));work.addEventListener('click',()=>act('cancel'));
  return {talk,showJournal,objective,hideContent:()=>{content.hidden=true;},tick(){

@@ -34,7 +34,11 @@ jobs:
   webkit-ipad-entry:
     name: WebKit iPad-style first launch
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Official image includes the native WebKit shared libraries that the
+    # hosted runner lacks; its version must match package.json exactly.
+    container:
+      image: mcr.microsoft.com/playwright:v1.51.1-noble
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +47,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check && npm run build
-      - run: npx playwright install --with-deps webkit
+      - run: npx playwright install webkit
       - run: OAKREST_BROWSER=webkit node tests/browser-classic-dev-launch.cjs
       - name: Verify Classic combat in desktop WebKit touch emulation
         run: BROWSER=webkit node tests/browser-classic-combat-overhaul.cjs

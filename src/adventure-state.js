@@ -41,8 +41,30 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  const ready=()=>!!quest()&&readyFor(quest());
  const enough=cost=>Object.entries(cost).every(([id,n])=>(mats[id]||0)>=n);
  const spend=cost=>{for(const [id,n] of Object.entries(cost))mats[id]-=n;};
- const roomFor=(id,amount=1)=>((mats[id]||0)+amount<=9999)&&((mats[id]||0)>0||inventoryKeyList(data).length<28);
- function add(id,n){mats[id]=Math.min(9999,(mats[id]||0)+n);}
+ // Validate a multi-item grant against the *post-transaction* bag, not each
+ // stack independently. This prevents two new reward stacks both claiming the
+ // final free slot and permits crafting when consumed materials free a slot.
+ function canCarry(rewards={},cost={},equipment=[]){
+  const candidate=structuredClone(data),bag=candidate.inventory.materials;
+  for(const [id,n] of Object.entries(cost)){
+   if(!Number.isSafeInteger(n)||n<0||(bag[id]||0)<n)return false;
+   bag[id]-=n;if(bag[id]===0)delete bag[id];
+  }
+  for(const [id,n] of Object.entries(rewards)){
+   if(!Number.isSafeInteger(n)||n<0||!Number.isSafeInteger(bag[id]||0)||(bag[id]||0)+n>9999)return false;
+   bag[id]=(bag[id]||0)+n;
+  }
+  for(const entry of equipment){
+   const list=entry.kind==='weapon'?candidate.inventory.weapons[entry.style]:
+    entry.kind==='armour'?candidate.inventory.armour:candidate.inventory.slotted;
+   const stored=entry.kind==='weapon'?candidate.bank.weapons[entry.style]:
+    entry.kind==='armour'?candidate.bank.armour:candidate.bank.slotted;
+   if(!list.includes(entry.id)&&!stored.includes(entry.id))list.push(entry.id);
+  }
+  return inventoryKeyList(candidate).length<=Math.max(28,inventoryKeyList(data).length);
+ }
+ const roomFor=(id,amount=1)=>canCarry({[id]:amount});
+ function add(id,n){mats[id]=(mats[id]||0)+n;}
  function event(e){
   if(e.type==='hit'&&e.id==='practice')flag('hit:'+e.style);
   if(e.type==='defeated'){
@@ -56,9 +78,15 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(e.type==='dead'){a.deaths++;emit('adventure',{reason:'Recovered belongings; cleared Hollow chambers remain cleared.'});}
  }
  function visit(id){flag('visit:'+id);}
+ const starterAxe=()=>!data.inventory.weapons.melee.includes('bronze-axe')&&!data.bank.weapons.melee.includes('bronze-axe');
  function accept(id,choice){
   const q=QUESTS.find(q=>q.npc===id&&(!choice||q.id===choice)&&questStatus(q)==='available');
   if(!q)return no('No new quest available here.');
+  if(q.id==='training'&&!canCarry({'frost-scroll':40,'field-arrows':40,ration:3},{},
+   [['melee','sword'],['magic','frost'],['ranged','bow']].map(([style,id])=>({kind:'weapon',style,id}))))
+   return no('Make room in your backpack for Rowan’s three weapons and supplies.');
+  if(q.id==='provisions'&&starterAxe()&&!canCarry({}, {},[{kind:'weapon',style:'melee',id:'bronze-axe'}]))
+   return no('Make room in your backpack for the Forester’s axe.');
   progress(q.id).status='active';progress(q.id).flags=[];a.tracked=q.id;a.autoSave=true;
   syncLegacy();
   if(q.id==='training'){
@@ -71,7 +99,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  function finish(id,choice){
   const q=QUESTS.find(q=>q.npc===id&&(!choice||q.id===choice)&&readyFor(q));
   if(!q)return no('There is still work to do.');
-  data.coins=Math.min(10000000,data.coins+q.coins);
+  if(data.coins>10000000-q.coins)return no('Bank some coins before claiming your full quest reward.');
+  data.coins+=q.coins;
   progress(q.id).status='completed';progress(q.id).flags=[];
   a.tracked=QUESTS.find(x=>questStatus(x)==='ready')?.id||
    QUESTS.find(x=>questStatus(x)==='active')?.id||
@@ -80,12 +109,16 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   emit('adventure',{reason:'Completed: '+q.title+' · '+q.coins+' coins'});return ok(q.end);
  }
  function teach(){
+  if(starterAxe()&&!canCarry({}, {},[{kind:'weapon',style:'melee',id:'bronze-axe'}]))
+   return no('Make room for your training axe before visiting Alden.');
   data.professions.woodcuttingLearned=true;
-  if(!data.inventory.weapons.melee.includes('bronze-axe')&&!data.bank.weapons.melee.includes('bronze-axe'))data.inventory.weapons.melee.push('bronze-axe');
+  if(starterAxe())data.inventory.weapons.melee.push('bronze-axe');
   emit('adventure',{reason:'Woodcutting learned · keep your axe in your bag'});return ok('Your axe is ready. Select a softwood tree to begin cutting.');
  }
  function inspect(id){
   const t=ADVENTURE_TARGETS.find(t=>t.id===id);if(!t)return no('Unknown place');
+  if(t.optional&&!a.discoveries.includes(t.flag)&&t.flag==='bells'&&!canCarry({'frost-scroll':10,'field-arrows':10}))
+   return no('Make room for the bellstones’ scrolls and ammunition, then inspect them again.');
   if(t.flag)flag('inspect:'+t.flag);
   if(t.optional&&!a.discoveries.includes(t.flag)){
    a.discoveries.push(t.flag);
@@ -99,11 +132,13 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(r.profession&&woodcuttingLevel(a.skills[r.profession]).level<r.level)return no(r.profession+' level '+r.level+' required.');
   if(!enough(r.cost))return no('You need all the listed materials in your backpack.');
   const o=r.result;
-  if(o.material&&!roomFor(o.material,o.amount))return no('Make room in your backpack or bank this stack.');
   if(o.weapon&&(data.inventory.weapons[o.style].includes(o.weapon)||data.bank.weapons[o.style].includes(o.weapon)))return no('You already own this weapon.');
   if(o.armour&&(data.inventory.armour.includes(o.armour)||data.bank.armour.includes(o.armour)))return no('You already own this armour.');
   if(o.slot&&(data.inventory.slotted.includes(o.slot)||data.bank.slotted.includes(o.slot)))return no('You already own this equipment.');
-  if(!o.material&&inventoryKeyList(data).length>=28)return no('Make room in your backpack.');
+  const equipment=o.weapon?[{kind:'weapon',style:o.style,id:o.weapon}]:
+   o.armour?[{kind:'armour',id:o.armour}]:o.slot?[{kind:'slot',id:o.slot}]:[];
+  if(!canCarry(o.material?{[o.material]:o.amount}:{},r.cost,equipment))
+   return no('Make room in your backpack or bank a stack before crafting.');
   return {...ok('Ready'),recipe:r};
  }
  function finishCraft(r){
@@ -171,7 +206,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    if(result.ok&&!result.depleted){work={...w,start:time,end:time+1.18};}
    else emit('adventure-notice',{reason:result.depleted?'Tree depleted; try another grove.':result.reason});
   }else if(roomFor(w.material)){
-   add(w.material,1);if(w.target.profession)a.skills[w.target.profession]+=18;
+   add(w.material,1);
+   if(w.target.profession)a.skills[w.target.profession]=Math.min(200000000,(a.skills[w.target.profession]||0)+18);
    respawns.set(w.target.id,time+3);flag('gather:'+w.material);emit('adventure',{reason:'Gathered '+w.material});
   }
  }
@@ -247,7 +283,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(kind==='heart'&&target.kind==='heart'){
    if(!a.run||a.run.complete)return no('The heart is already restored. Begin another expedition at the entrance.');
    if(!a.run.kills.includes('hollow-keeper')||a.run.wards.length<3)return no('Restore all three wards and defeat the keeper first.');
-   if(!roomFor('warden-heart')||!roomFor('hollow-shard',4))return no('Make space for the heart and shards before restoring it.');
+   if(!canCarry({'warden-heart':1,'hollow-shard':4}))return no('Make space for both the heart and shards before restoring it.');
    add('warden-heart',1);add('hollow-shard',4);a.run.complete=true;a.clears++;flag('dungeon:clear');emit('adventure',{reason:'Warden’s Hollow cleared · heart and 4 shards received'});
    return ok('The heart beats steadily. Return to Elowen, or ring a refuge bell to leave.');
   }
@@ -259,7 +295,9 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(kind==='contract'&&target.id==='citizen:guard'){
    if(!completed('hollow')||a.contracts>=a.clears)return no('Complete another Hollow expedition to supply the watch.');
    if(!enough({'hollow-shard':2}))return no('Bring two Hollow shards.');
-   spend({'hollow-shard':2});a.contracts++;data.coins=Math.min(10000000,data.coins+35);add('ration',3);
+   if(data.coins>10000000-35)return no('Bank coins before supplying the watch so none of the reward is lost.');
+   if(!canCarry({ration:3},{'hollow-shard':2}))return no('Make room for the three rations before supplying the watch.');
+   spend({'hollow-shard':2});a.contracts++;data.coins+=35;add('ration',3);
    emit('adventure',{reason:'Watch supplied · 35 coins and 3 rations'});return ok('These will hold the ward until your next expedition.');
   }
   return no('That action is unavailable here.');

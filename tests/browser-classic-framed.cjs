@@ -18,12 +18,20 @@ let browser;
   await page.locator('#classic-creator-name').fill('Framed Tester');
   await page.locator('#classic-creator-form button[type=submit]').click();
   await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
+  // The WebGL canvas and reparented shell are real application elements.
+  // Wait for their readiness before measuring instead of racing initialization.
+  const shellSelectors=['#classic-game canvas','#classic-sidebar','.classic-item-buttons',
+   '.classic-minimap-frame','.classic-action-footer','.classic-combat-dock','#classic-joystick','#classic-app'];
+  await page.waitForFunction(selectors=>selectors.every(selector=>document.querySelector(selector)),shellSelectors,{timeout:20000});
   for(const size of [{width:1194,height:834},{width:1180,height:600},{width:1024,height:768},{width:820,height:630}]){
    await page.setViewportSize(size);
    await page.waitForTimeout(80);
    const view=await page.evaluate(()=>{
+    const assertNode=(node,selector)=>{if(!node)throw Error('Missing live Classic shell element: '+selector);};
     const box=selector=>{
-     const r=document.querySelector(selector).getBoundingClientRect();
+     const element=document.querySelector(selector);
+     assertNode(element,selector);
+     const r=element.getBoundingClientRect();
      return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom};
     };
     const world=box('#classic-game'),canvas=box('#classic-game canvas');
@@ -58,7 +66,7 @@ let browser;
   await page.locator('#classic-skills-toggle').click();
   assert.equal(await page.locator('#classic-skills-window').isVisible(),true);
   assert.equal(await page.locator('#classic-item-window').isVisible(),false);
-  assert.equal(await page.locator('.classic-skill-card').count(),10);
+  assert.equal(await page.locator('.classic-skill-card').count(),11,'gathering includes the active Foraging skill');
   await page.locator('#classic-quests-toggle').click();
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
   assert.equal(await page.locator('#classic-skills-window').isVisible(),false);

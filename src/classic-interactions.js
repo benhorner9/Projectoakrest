@@ -88,26 +88,26 @@ export function classicInteractionCopy(target,save){
   const lv=woodcuttingLevel(save?.professions?.woodcuttingXp||0).level;
   return {title:target.name,body:'Training softwood grove · Woodcutting level '+lv+
    '. '+(learned?'You have learnt Woodcutting.':'Speak to the Forester to learn Woodcutting.')+
-   '\nThis is a read-only interaction preview; chopping is connected in a later block.'};
+   '\nCarry an axe and select this grove to chop timber.'};
  }
  if(target.service==='bank'){
   const bank=save?.bank||{};
   const materials=Object.values(bank.materials||{}).reduce((sum,count)=>sum+(Number.isFinite(count)?Math.max(0,count):0),0);
   return {title:target.name+' · Oakrest Bank',
    body:'Coins in bank: '+num(bank.coins)+'\nStored materials: '+num(materials)+
-   '\nYour existing vault is unchanged. Deposits and withdrawals will use the original banking rules in Block 5.'};
+   '\nYour existing vault is unchanged. Speak to Mara to deposit or withdraw items from your existing vault.'};
  }
  if(target.service==='store'){
   const samples=SHOP_STOCK.filter(item=>item.kind==='bundle').map(item=>item.label+' · '+num(item.price)+' coins');
   return {title:target.name+' · General Store',
    body:'Your coins: '+num(save?.coins)+'\n'+samples.join('\n')+
-   '\nAll prices come from the existing store. Purchases are not enabled in this preview.'};
+   '\nAll prices come from the existing store. Speak to Darrin to buy registered equipment with your coins.'};
  }
  if(target.service==='skill'){
   const lvl=woodcuttingLevel(save?.professions?.woodcuttingXp||0).level;
   return {title:target.name+' · Forester',body:'Woodcutting level: '+lvl+
    '\n'+(save?.professions?.woodcuttingLearned?'Training already learnt.':'Training available from the existing Forester.')+
-   '\nNo XP or items are granted in this presentation test.'};
+   '\nSpeak to Alden to learn Woodcutting and collect a training axe.'};
  }
  return {title:target.name+' · Trade House',
   body:'The existing Oakrest trading hall awaits future player trading. No trade is started in this preview.'};
