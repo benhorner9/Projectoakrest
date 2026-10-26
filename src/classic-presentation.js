@@ -1,4 +1,4 @@
-import {adventureSolidAt} from './adventure-content.js';
+import {adventureSolidAt,ADVENTURE_TARGETS,ADVENTURE_WALLS,ADVENTURE_TREES} from './adventure-content.js';
 /** Oakrest Block 2: renderer-free 2.5D camera, navigation and presentation data.
  * Reuses canonical world coordinates and never mutates character saves.
  */
@@ -88,59 +88,138 @@ export function slideMove(pos,dx,dz,radius=.38){
  }
  return {x,z};
 }
-function clearLine(a,b){
- const d=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.ceil(d/.18);
- for(let i=1;i<=steps;i++)if(solidAt(a.x+(b.x-a.x)*i/steps,a.z+(b.z-a.z)*i/steps))return false;
+function segmentCircle(a,b,x,z,r){
+ const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz;
+ const t=length?clamp(((x-a.x)*dx+(z-a.z)*dz)/length,0,1):0;
+ return (a.x+dx*t-x)**2+(a.z+dz*t-z)**2<=r*r;
+}
+function segmentRect(a,b,minX,maxX,minZ,maxZ){
+ if(Math.max(a.x,b.x)<minX||Math.min(a.x,b.x)>maxX||
+  Math.max(a.z,b.z)<minZ||Math.min(a.z,b.z)>maxZ)return false;
+ let enter=0,leave=1;
+ for(const [origin,delta,low,high] of [[a.x,b.x-a.x,minX,maxX],[a.z,b.z-a.z,minZ,maxZ]]){
+  if(Math.abs(delta)<1e-12){if(origin<low||origin>high)return false;continue;}
+  const near=(low-origin)/delta,far=(high-origin)/delta;
+  enter=Math.max(enter,Math.min(near,far));leave=Math.min(leave,Math.max(near,far));
+  if(enter>leave)return false;
+ }
+ return true;
+}
+const routeCircles=[
+ {x:OAKREST_WELL.x,z:OAKREST_WELL.z,r:OAKREST_WELL.r},
+ ...CLASSIC_TREES,...OAKREST_GROVES.map(t=>({x:t.x,z:t.z,r:.85})),
+ ...ADVENTURE_TREES,...ADVENTURE_TARGETS
+  .filter(t=>['station','resource','ward','heart','discovery'].includes(t.kind))
+  .map(t=>({x:t.x,z:t.z,r:t.kind==='station'?.8:.45}))
+];
+/** Exact swept player footprint against the same canonical shapes as solidAt.
+ * No distance samples: grazing a corner cannot slip between samples, and long
+ * routes do not repeatedly scan the entire scene every few centimetres. */
+export function clearClassicLine(a,b,radius=.38){
+ if(!a||!b||![a.x,a.z,b.x,b.z].every(Number.isFinite)||
+  !inBounds(a.x,a.z,radius)||!inBounds(b.x,b.z,radius))return false;
+ for(const c of routeCircles)if(segmentCircle(a,b,c.x,c.z,c.r+radius))return false;
+ for(const wall of ADVENTURE_WALLS)if(segmentRect(a,b,wall.x-wall.w/2-radius,
+  wall.x+wall.w/2+radius,wall.z-wall.d/2-radius,wall.z+wall.d/2+radius))return false;
+ for(const wall of CLASSIC_PERIMETER.walls){
+  const [x1,z1]=wall.a,[x2,z2]=wall.b,r=radius+.45;
+  if(segmentCircle(a,b,x1,z1,r)||segmentCircle(a,b,x2,z2,r)||
+   (x1===x2?segmentRect(a,b,x1-r,x1+r,Math.min(z1,z2),Math.max(z1,z2)):
+    segmentRect(a,b,Math.min(x1,x2),Math.max(x1,x2),z1-r,z1+r)))return false;
+ }
+ for(const building of OAKREST_BUILDINGS){
+  const p=localBuildingPosition(building,a.x,a.z),q=localBuildingPosition(building,b.x,b.z);
+  const hx=building.w/2,hz=building.d/2,t=.22+radius,door=1.4-radius;
+  if(segmentRect(p,q,-hx-t,hx+t,-hz-t,-hz+t)||
+   segmentRect(p,q,-hx-t,-hx+t,-hz-t,hz+t)||
+   segmentRect(p,q,hx-t,hx+t,-hz-t,hz+t)||
+   segmentRect(p,q,-hx-t,-door,hz-t,hz+t)||
+   segmentRect(p,q,door,hx+t,hz-t,hz+t))return false;
+ }
  return true;
 }
 const CELL=1.25, MOVES=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const snap=n=>Math.round(n/CELL);
 const nodeAt=(ix,iz)=>({x:ix*CELL,z:iz*CELL});
 const code=(ix,iz)=>ix+','+iz;
-/** Bounded 8-way A*. Diagonals may not cut across collidable corners. */
+// A binary heap avoids scanning the entire frontier on every expansion.
+function pathFrontier(){
+ const heap=[];
+ return {get size(){return heap.length;},push(node){
+  let i=heap.length;heap.push(node);
+  while(i>0){const parent=(i-1)>>1;if(heap[parent].f<=node.f)break;
+   heap[i]=heap[parent];i=parent;}heap[i]=node;
+ },pop(){
+  const first=heap[0],last=heap.pop();
+  if(heap.length){let i=0;
+   while(i*2+1<heap.length){let child=i*2+1;
+    if(child+1<heap.length&&heap[child+1].f<heap[child].f)child++;
+    if(last.f<=heap[child].f)break;heap[i]=heap[child];i=child;
+   }heap[i]=last;
+  }return first;
+ }};
+}
+/** Bounded 8-way A*. Both endpoints connect through verified clear segments.
+ * Collision caches belong to this query, so changed world obstacles cannot
+ * leave stale routes in future calls. No partial paths are reported as success. */
 export function findClassicPath(start,end){
- if(!start||!end||![start.x,start.z,end.x,end.z].every(Number.isFinite))return [];
+ if(!start||!end||![start.x,start.z,end.x,end.z].every(Number.isFinite)||solidAt(start.x,start.z))return [];
  let goal={x:clamp(end.x,CLASSIC_LIMITS.minX+1,CLASSIC_LIMITS.maxX-1),z:clamp(end.z,CLASSIC_LIMITS.minZ+1,CLASSIC_LIMITS.maxZ-1)};
  if(solidAt(goal.x,goal.z)){
   let near=null;
-  for(let radius=CELL;radius<=5*CELL;radius+=CELL)for(let a=0;a<24;a++){
+  for(let radius=CELL;radius<=5*CELL&&!near;radius+=CELL)for(let a=0;a<24;a++){
    const p={x:goal.x+Math.cos(a*Math.PI/12)*radius,z:goal.z+Math.sin(a*Math.PI/12)*radius};
-   if(!solidAt(p.x,p.z)&&(!near||radius<near.distance))near={...p,distance:radius};
+   if(!solidAt(p.x,p.z)){near=p;break;}
   }
   if(!near)return [];
-  goal={x:near.x,z:near.z};
+  goal=near;
  }
- if(clearLine(start,goal))return [goal];
- const sx=snap(start.x),sz=snap(start.z),gx=snap(goal.x),gz=snap(goal.z);
- const h=(x,z)=>Math.hypot(x-gx,z-gz);
- const startKey=code(sx,sz);
- const records=new Map([[startKey,{x:sx,z:sz,g:0,f:h(sx,sz),parent:null}]]);
- const open=new Set([startKey]),closed=new Set();
+ if(clearClassicLine(start,goal))return [goal];
+ const sx=snap(start.x),sz=snap(start.z);
+ const h=(x,z)=>Math.hypot(x*CELL-goal.x,z*CELL-goal.z)/CELL;
+ const records=new Map(),closed=new Set(),occupancy=new Map(),edges=new Map(),open=pathFrontier();
+ const blocked=(x,z)=>{
+  const key=code(x,z);if(!occupancy.has(key))occupancy.set(key,solidAt(x*CELL,z*CELL));
+  return occupancy.get(key);
+ };
+ const clearEdge=(from,to)=>{
+  const a=code(from.x,from.z),b=code(to.x,to.z),key=a<b?a+'|'+b:b+'|'+a;
+  if(!edges.has(key))edges.set(key,clearClassicLine(nodeAt(from.x,from.z),nodeAt(to.x,to.z)));
+  return edges.get(key);
+ };
+ // Rounding to one grid cell can place a valid player on the other side of a
+ // facade. Seed only neighbours that are reachable from the REAL position.
+ for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+  const x=sx+dx,z=sz+dz,point=nodeAt(x,z);
+  if(blocked(x,z)||!clearClassicLine(start,point))continue;
+  const g=Math.hypot(point.x-start.x,point.z-start.z)/CELL;
+  const node={x,z,g,f:g+h(x,z),parent:null};records.set(code(x,z),node);open.push(node);
+ }
  let found=null,iterations=0;
- while(open.size&&iterations++<4200){
-  let best=null,rank=Infinity;
-  for(const key of open){const n=records.get(key);if(n.f<rank){rank=n.f;best=key;}}
-  const current=records.get(best);open.delete(best);closed.add(best);
-  if(h(current.x,current.z)<=1.3){found=current;break;}
+ while(open.size&&iterations++<8000){
+  const current=open.pop(),currentKey=code(current.x,current.z);
+  if(closed.has(currentKey)||records.get(currentKey)!==current)continue;
+  closed.add(currentKey);
+  // Being near the goal is insufficient: a wall may lie in the final metre.
+  if(h(current.x,current.z)<=2&&clearClassicLine(nodeAt(current.x,current.z),goal)){found=current;break;}
   for(const [dx,dz] of MOVES){
-   const x=current.x+dx,z=current.z+dz,key=code(x,z),point=nodeAt(x,z);
-   if(closed.has(key)||solidAt(point.x,point.z)||!clearLine(nodeAt(current.x,current.z),point))continue;
-   if(dx&&dz&&(solidAt((current.x+dx)*CELL,current.z*CELL)||solidAt(current.x*CELL,(current.z+dz)*CELL)))continue;
+   const x=current.x+dx,z=current.z+dz,key=code(x,z);
+   if(closed.has(key)||blocked(x,z))continue;
+   if(dx&&dz&&(blocked(current.x+dx,current.z)||blocked(current.x,current.z+dz)))continue;
+   if(!clearEdge(current,{x,z}))continue;
    const g=current.g+Math.hypot(dx,dz),old=records.get(key);
-   if(!old||g<old.g){records.set(key,{x,z,g,f:g+h(x,z),parent:best});open.add(key);}
+   if(!old||g<old.g){const node={x,z,g,f:g+h(x,z),parent:current};records.set(key,node);open.push(node);}
   }
  }
  if(!found)return [];
  const path=[];
- let node=found;
- while(node?.parent){path.push(nodeAt(node.x,node.z));node=records.get(node.parent);}
- path.reverse();
- if(path.length&&clearLine(path[path.length-1],goal))path.push(goal);
- // Remove intermediate waypoints when direct movement is collision-free.
+ for(let node=found;node;node=node.parent)path.push(nodeAt(node.x,node.z));
+ path.reverse();path.push(goal);
  const compact=[];let cursor=start;
  for(let i=0;i<path.length;){
   let next=i;
-  for(let j=path.length-1;j>i;j--)if(clearLine(cursor,path[j])){next=j;break;}
+  for(let j=path.length-1;j>i;j--)if(clearClassicLine(cursor,path[j])){next=j;break;}
+  if(!clearClassicLine(cursor,path[next]))return [];
   compact.push(path[next]);cursor=path[next];i=next+1;
  }
  return compact;

@@ -1,3 +1,4 @@
+import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
 import {bindClassicPress} from './classic-touch-press.js';
@@ -193,6 +194,8 @@ $('classic-enable-save').addEventListener('click',()=>{
 });
 $('classic-save-now').addEventListener('click',saveNow);
 function showInteraction(target){
+ const distance=Math.hypot(target.x-player.x,target.z-player.z);
+ if(distance>.001)look={x:(target.x-player.x)/distance,z:(target.z-player.z)/distance};
  combat.stopTarget();
  lastInteraction=target.id;
  if(adventureUi?.talk(target))return;
@@ -303,7 +306,7 @@ function placeMark(x,z){
 function chooseInteraction(target){
  if(!target)return false;
  disengageFromCombat();
- dialogue.hidden=true;selectedTarget=target;
+ dialogue.hidden=true;pendingDrop=null;selectedTarget=target;
  placeMark(target.x,target.z);
  const result=navigation.interactWith(player,target);
  if(result.interaction){showInteraction(result.interaction);selectedTarget=null;return true;}
@@ -347,7 +350,7 @@ function chooseEnemy(id){
 function queueDestination(point){
  if(!point)return;
  // Any ground tap is a movement order, never an implicit monster lock.
- disengageFromCombat();navigation.stop();
+ disengageFromCombat();navigation.stop();pendingDrop=null;
  const target=closestClickedInteractable(point);
  if(target){chooseInteraction(target);return;}
  selectedTarget=null;windowUi?.hide();
@@ -355,16 +358,10 @@ function queueDestination(point){
  if(result.ok){placeMark(point.x,point.z);feedback(result.arrived?'You are here.':'Walking to destination…');}
  else{pointerMark.visible=false;feedback(result.reason);}
 }
-let canvasDown=null;
-renderer.domElement.addEventListener('pointerdown',e=>{
- if(e.button!==0)return;
- canvasDown={id:e.pointerId,x:e.clientX,y:e.clientY};
-},{passive:true});
-renderer.domElement.addEventListener('pointerup',e=>{
- if(!canvasDown||e.pointerId!==canvasDown.id)return;
- const down=canvasDown;canvasDown=null;
- if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>13)return;
- screenRay(e.clientX,e.clientY);
+const canvasInput=installClassicCanvasInput(renderer.domElement,{
+ orbit:(yaw,pitch)=>orbitCamera.turn(yaw,pitch),zoom:setZoom,currentZoom:()=>zoom,
+ tap:(clientX,clientY)=>{
+ screenRay(clientX,clientY);
  const lootObjects=groundView.hitObjects();
  const lootHits=raycaster.intersectObjects(lootObjects.map(o=>o.object),false);
  const drop=lootHits[0]&&lootObjects.find(x=>x.object===lootHits[0].object);
@@ -372,11 +369,11 @@ renderer.domElement.addEventListener('pointerup',e=>{
  const hit=raycaster.intersectObjects(combatView.hitObjects().map(o=>o.object),false)[0];
  const monster=hit&&combatView.hitObjects().find(o=>o.object===hit.object);
  if(monster){chooseEnemy(monster.id);return;}
- const target=selectedFromRay(e.clientX,e.clientY);
+ const target=selectedFromRay(clientX,clientY);
  if(target)chooseInteraction(target);
- else queueDestination(destinationAt(e.clientX,e.clientY));
+ else queueDestination(destinationAt(clientX,clientY));
+ }
 });
-renderer.domElement.addEventListener('pointercancel',()=>{canvasDown=null;});
 const joy=$('classic-joystick'),stick=$('classic-stick');
 let joystickId=null;
 function updateStick(clientX,clientY){
@@ -410,7 +407,7 @@ function pickUp(id){
  return result.ok;
 }
 function chooseLoot(id){
- disengageFromCombat();navigation.stop();
+ disengageFromCombat();navigation.stop();pendingDrop=null;selectedTarget=null;pointerMark.visible=false;
  const drop=combat.getState().groundLoot.find(item=>item.id===id);
  if(!drop)return;
  if(Math.hypot(player.x-drop.x,player.z-drop.z)<=3.2){pickUp(id);return;}
@@ -563,7 +560,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 function releaseAll(){
- keys.clear();joystickId=null;canvasDown=null;input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
+ keys.clear();joystickId=null;canvasInput.reset();pendingDrop=null;input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
  stick.style.transform='';
 }
 addEventListener('blur',releaseAll);
@@ -580,6 +577,7 @@ function moveGame(dt){
  const previous={...player};
  const update=navigation.step(player,axesFromKeys(),dt);
  if(breaksPlayerAttackIntent(update)){
+  pendingDrop=null;
   const wasFighting=disengageFromCombat();
   if(wasFighting)feedback('You disengage and move freely.');
  }
@@ -773,7 +771,7 @@ if(isQa)window.oakrestClassicQA={
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
- cameraState:()=>orbitCamera.state(),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
+ cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
  openWindow:name=>name==='skills'?skillsUi.open():windowUi.open(name),windowState:()=>windowUi.current(),
  itemState:()=>combat.itemSnapshot(style),itemAction:action=>{
