@@ -43,7 +43,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check && npm run build
-      - run: npx playwright install --with-deps webkit
+      - run: npx playwright install webkit
       - run: OAKREST_BROWSER=webkit node tests/browser-classic-dev-launch.cjs
       - name: Verify Classic combat in desktop WebKit touch emulation
         run: BROWSER=webkit node tests/browser-classic-combat-overhaul.cjs
