@@ -58,7 +58,7 @@ let browser;
   await page.locator('#classic-skills-toggle').click();
   assert.equal(await page.locator('#classic-skills-window').isVisible(),true);
   assert.equal(await page.locator('#classic-item-window').isVisible(),false);
-  assert.equal(await page.locator('.classic-skill-card').count(),10);
+  assert.equal(await page.locator('.classic-skill-card').count(),11,'gathering includes the active Foraging skill');
   await page.locator('#classic-quests-toggle').click();
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
   assert.equal(await page.locator('#classic-skills-window').isVisible(),false);
