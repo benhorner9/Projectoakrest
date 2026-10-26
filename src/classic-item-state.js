@@ -1,3 +1,4 @@
+import {classicWeaponInterval} from './classic-combat-clock.js';
 /**
  * Oakrest Classic Block 5: authoritative gameplay item transactions on a
  * short-lived cloned session save. Never writes browser storage.
@@ -99,7 +100,7 @@ export function classicItemDetails(data,id,style){
  if(kind==='weapon'){
   const w=LOADOUTS[legacy.style]?.[legacy.itemId];
   facts.push(['Style',legacy.style],['Requires',legacy.style+' '+w.requiredLevel],
-   ['Basic damage',w.basic],['Interval',w.interval+'s'],['Reach',w.reach+'m']);
+   ['Weapon power',w.basic],['Interval',classicWeaponInterval(w).toFixed(1)+'s'],['Reach',w.reach+'m']);
   allowed=owned(data,item)&&canEquipWeapon(legacy.style,legacy.itemId,data.xp);
   equipped=data.gear[legacy.style]===legacy.itemId;
   action={type:'equip',kind,style:legacy.style,id:equipped?null:legacy.itemId};

@@ -127,7 +127,7 @@ export function createClassicCombatView(scene,spawns){
    const dx=enemy.x-(actor.lastX??enemy.x),dz=enemy.z-(actor.lastZ??enemy.z);
    if(Math.hypot(dx,dz)>.001)actor.facing={x:dx,z:dz};
    else if(enemy.aggro&&player)actor.facing={x:player.x-enemy.x,z:player.z-enemy.z};
-   if(actor.hadWarning&&!enemy.warning)actor.releaseUntil=t+.22;
+   actor.releaseUntil=enemy.releaseUntil||0;
    actor.hadWarning=!!enemy.warning;actor.lastX=enemy.x;actor.lastZ=enemy.z;
    actor.sprite.visible=show;actor.shadow.visible=show;
    actor.label.visible=show;

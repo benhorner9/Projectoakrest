@@ -3,7 +3,7 @@
  * Presenter owns rendering and dialogue; controller never touches saves.
  */
 import {CLASSIC_LIMITS,clamp,findClassicPath,slideMove,solidAt,clearClassicLine} from './classic-presentation.js';
-import {canCompleteInteraction,interactionSight} from './classic-interactions.js';
+import {canCompleteInteraction} from './classic-interactions.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.z);
@@ -17,18 +17,19 @@ const groundGoal=point=>({
  x:clamp(point.x,CLASSIC_LIMITS.minX+1,CLASSIC_LIMITS.maxX-1),
  z:clamp(point.z,CLASSIC_LIMITS.minZ+1,CLASSIC_LIMITS.maxZ-1)
 });
+const completes=(player,target)=>typeof target.canComplete==='function'?target.canComplete(player):canCompleteInteraction(player,target);
 function interactionApproach(start,target){
- const within=canCompleteInteraction(start,target);
+ const within=completes(start,target);
  if(within)return [];
  const candidates=[];
  // Prefer nearest reachable position within the authoritative target's reach.
  // Do not path blindly through a bank facade to an NPC's centre.
- const radius=Math.max(.95,Math.min(target.reach-0.45,2.0));
+ const radius=Math.max(.95,Math.min(target.reach-0.45,target.kind==='combat'?target.reach:2.0));
  for(const r of [radius,radius*.65]){
   for(let i=0;i<12;i++){
    const a=i*Math.PI/6;
    const p={x:target.x+Math.cos(a)*r,z:target.z+Math.sin(a)*r};
-   if(solidAt(p.x,p.z)||!interactionSight(p,target))continue;
+   if(solidAt(p.x,p.z)||!completes(p,target))continue;
    candidates.push({p,d:distance(start,p)});
   }
  }
@@ -63,7 +64,7 @@ export function createClassicNavigation({speed=5.3}={}){
  const interactWith=(player,target)=>{
   reset();
   if(!valid(player)||!target||!valid(target))return {ok:false,reason:'Unknown interaction'};
-  if(canCompleteInteraction(player,target))return {ok:true,interaction:target,arrived:true};
+  if(completes(player,target))return {ok:true,interaction:target,arrived:true};
   const path=interactionApproach(player,target);
   if(path===null||!path.length){lastStatus='unreachable';return {ok:false,reason:'Cannot reach '+target.name+'.'};}
   waypoints=path;pending=target;lastGoal=path.at(-1);lastStatus='approaching';
@@ -103,14 +104,14 @@ export function createClassicNavigation({speed=5.3}={}){
    moved=distance(newPosition,player)>.0001;
   }
   let interaction=null,failed=null;
-  if(pending&&canCompleteInteraction(newPosition,pending)){
+  if(pending&&completes(newPosition,pending)){
    interaction=pending;reset();
   }else if(kind==='path'||kind==='approach'){
    if(waypoints.length&&distance(newPosition,waypoints[0])<.01)waypoints.shift();
    if(moved)stalled=0;
    else if(delta>0)stalled+=delta;
    if(!waypoints.length&&pending){
-    if(canCompleteInteraction(newPosition,pending)){
+    if(completes(newPosition,pending)){
      interaction=pending;reset();
     }else{
      failed='Could not reach '+pending.name+'.';reset();

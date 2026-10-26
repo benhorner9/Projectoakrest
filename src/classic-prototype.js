@@ -1,3 +1,4 @@
+import {createClassicSimulationClock} from './classic-combat-clock.js';
 import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
@@ -24,7 +25,7 @@ import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
-import {combatApproachPoint,breaksPlayerAttackIntent} from './classic-combat-intent.js';
+import {breaksPlayerAttackIntent} from './classic-combat-intent.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicQuestBeacon} from './classic-quest-beacon.js';
 import {availableQuestGivers} from './classic-quest-indicators.js';
@@ -234,7 +235,7 @@ function switchStyle(which){
  if(!combat.styleSwitch(which))return;
  const current=combat.getState().style;
  if(current!==style){style=current;refreshHud();}
- else feedback('Style switch queued until your attack finishes.');
+ updateCombatUi(combat.getState());
 }
 for(const b of document.querySelectorAll('[data-style]'))
  bindClassicPress(b,()=>switchStyle(b.dataset.style));
@@ -320,22 +321,24 @@ function disengageFromCombat(){
  combat.stopTarget('player-movement');
  return wasFighting;
 }
+let pursuitRouteAt=0,pursuitPosition=null;
 function chaseSelectedEnemy(){
  const state=combat.getState();
  if(!combatPursuitId||state.targetId!==combatPursuitId){combatPursuitId=null;return;}
  const enemy=state.target;
  if(!enemy){combatPursuitId=null;return;}
- const destination=combatApproachPoint(player,enemy,state.reach);
- if(!destination){if(navigation.state().waypoints.length)navigation.stop();return;}
- // Path only while the original click-to-attack order is still active.
- // Manual movement or any new destination cancels this order instantly.
- if(navigation.state().waypoints.length)return;
- const path=navigation.moveTo(player,destination);
+ if(combat.canAttackFrom(player,enemy.id)){navigation.stop();return;}
+ if(navigation.state().waypoints.length&&(state.time<pursuitRouteAt||
+  pursuitPosition&&Math.hypot(enemy.x-pursuitPosition.x,enemy.z-pursuitPosition.z)<.75))return;
+ pursuitRouteAt=state.time+.6;pursuitPosition={x:enemy.x,z:enemy.z};
+ const path=navigation.interactWith(player,{...enemy,kind:'combat',reach:state.reach,
+  canComplete:position=>combat.canAttackFrom(position,enemy.id)});
  if(!path.ok){
   combatPursuitId=null;combat.stopTarget('unreachable');
   feedback('Cannot reach that creature. Choose another approach.');
  }
 }
+
 function chooseEnemy(id){
  const result=combat.chooseTarget(id,player);
  if(result){
@@ -450,7 +453,7 @@ function toggleAttack(){
 function useCombatAbility(index){
  const ability=combat.getState().abilities[index];
  if(!ability){feedback('Ability slot locked or empty.');return;}
- if(!combat.queueAbility(index))feedback('Ability unavailable or cooling down.');
+ if(!combat.queueAbility(index,player))feedback(combat.getState().lastFailure);
  else feedback(ability.name+' activated.');
 }
 function triggerDodge(){
@@ -476,7 +479,7 @@ function combatEvents(events){
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated');
   else if(event.type==='adventure'){markProgress();itemUi?.render();refreshHud();if(!event.reason.startsWith('Used '))feedback(event.reason);}
-  else if(event.type==='adventure-notice')feedback(event.reason);
+  else if(event.type==='adventure-notice'||event.type==='action-cancelled')feedback(event.reason);
   else if(event.type==='xp'){
    refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
   }else if(event.type==='warning')feedback('Enemy attack incoming — MOVE or DODGE!');
@@ -507,7 +510,7 @@ function updateCombatUi(snapshot){
  for(const b of document.querySelectorAll('[data-ability]')){
   const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
   const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
-  b.disabled=!ability||snapshot.hp<=0||seconds>0;
+  b.disabled=!ability||!ability.available||snapshot.hp<=0||seconds>0;
   b.classList.toggle('on-cooldown',seconds>0);
   b.firstChild.textContent='QERF'[index];
   const hint=b.querySelector('small');
@@ -560,6 +563,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 function releaseAll(){
+ simulationClock.resetRemainder();combat.pause();
  keys.clear();joystickId=null;canvasInput.reset();pendingDrop=null;input.x=0;input.z=0;navigation.stop();disengageFromCombat();selectedTarget=null;pointerMark.visible=false;
  stick.style.transform='';
 }
@@ -586,7 +590,7 @@ function moveGame(dt){
  if(update.heading){look=update.heading;walkClock+=dt;}
  else walkClock=0;
  if(update.interaction){
-  showInteraction(update.interaction);selectedTarget=null;pointerMark.visible=false;
+  if(update.interaction.kind!=='combat')showInteraction(update.interaction);selectedTarget=null;pointerMark.visible=false;
  }else if(update.failed){
   feedback(update.failed);selectedTarget=null;pointerMark.visible=false;
  }else if(update.kind==='manual'&&selectedTarget){
@@ -607,17 +611,24 @@ function moveGame(dt){
  updateLocation();
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
+const simulationClock=createClassicSimulationClock();
+let lastMovement={kind:'idle',movedDistance:0};
 function draw(dt,render=true){
+ if(characterUI?.isOpen())return;
+ simulationClock.advance(dt,step=>drawStep(step,false));
+ if(render)drawStep(0,true);
+}
+function drawStep(dt,render=true){
  if(characterUI?.isOpen())return; // Do not move or fight behind character selection.
+ if(dt>0){
  orbitCamera.step(keys,dt);
- const cameraOffset=orbitCamera.offset();
- const movement=moveGame(dt);
+ lastMovement=moveGame(dt);
  // Stop approaching as soon as the monster is actually in weapon range:
  // don't walk through its sprite or past it to an old path waypoint.
  if(combatPursuitId){
   const engaging=combat.getState(),enemy=engaging.target;
   if(enemy&&engaging.targetId===combatPursuitId&&
-   Math.hypot(player.x-enemy.x,player.z-enemy.z)<=Math.max(.75,engaging.reach-.26))
+   combat.canAttackFrom(player,enemy.id))
    navigation.stop();
  }
  if(dodgeTravel&&dt>0){
@@ -628,16 +639,24 @@ function draw(dt,render=true){
  }
  // Follow only a deliberate click-to-attack. Never recreate pursuit after
  // a ground click, WASD, joystick, Escape, dodge or non-combat interaction.
- if(movement.kind==='idle'&&!navigation.state().waypoints.length)chaseSelectedEnemy();
+ chaseSelectedEnemy();
  const events=combat.tick(dt,player);
  combatEvents(events);
  if(needsSave&&saveManager.status().enabled&&combat.getState().time-lastSavedAt>=2)saveNow();
+ }
+ if(dt===0)combatEvents(combat.tick(0,player));
+ const movement=lastMovement,cameraOffset=orbitCamera.offset();
  const state=combat.getState();
+ if(state.action&&state.target&&!movement.moved){
+  const dx=state.target.x-player.x,dz=state.target.z-player.z,d=Math.hypot(dx,dz);
+  if(d>.001)look={x:dx/d,z:dz/d};
+ }
  const adventureState=combat.adventureState();
  // Accelerated QA executes all movement, combat, rewards and guarded saves,
  // then presents its final frame. Do not flood Canvas/WebGL with intermediate
  // minimap and sprite uploads that cannot be displayed.
  if(!render)return;
+ updateLocation();
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
  village.update(state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
@@ -652,7 +671,7 @@ function draw(dt,render=true){
  if(!$('classic-toasts').classList.contains('is-critical')&&state.time>=toastUntil)
   $('classic-toasts').classList.add('is-faded');
  updateContextActions();
- if(dt>0&&state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
+ if(state.time>=nextTargetUi){updateCombatUi(state);nextTargetUi=state.time+.13;}
  hero.sprite.position.set(player.x,.08,player.z);
  heroShadow.position.set(player.x,.04,player.z);
  hero.update({facing:look,style,
@@ -681,7 +700,7 @@ let last=performance.now(),qaPaused=false;
 function tick(time){
  requestAnimationFrame(tick);
  if(document.hidden||qaPaused){last=time;return;}
- const dt=clamp((time-last)/1000,0,.06);last=time;draw(dt);
+ const dt=Math.max(0,(time-last)/1000);last=time;draw(dt);
 }
 itemUi=setupClassicItems({
  combat,player:()=>player,style:()=>style,notify:feedback,
@@ -753,7 +772,7 @@ if(isQa)window.oakrestClassicQA={
    village.roofs.find(x=>x.id===occupantBuilding(player.x,player.z)?.id)?.roofs.visible===false,
   combatLevel:presentationSnapshot(combat.sandboxSave(),style,player).combatLevel,
   selected:selectedTarget?.id||null,lastInteraction,status:lastStatus}),
- step:dt=>draw(clamp(dt,0,.1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
+ step:dt=>draw(clamp(dt,0,1)),moveTo:(x,z)=>queueDestination({x,z}),switchStyle,
  // Accelerated transaction checks still run every gameplay/UI tick, but submit
  // only their final frame to WebGL instead of flooding a software GPU queue.
  advance:seconds=>{let remaining=clamp(Number(seconds)||0,0,120);while(remaining>0){const dt=Math.min(.1,remaining);draw(dt,false);remaining-=dt;}draw(0);},

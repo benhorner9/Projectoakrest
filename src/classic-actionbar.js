@@ -121,6 +121,8 @@ export function setupClassicActionBar({doc=document,combat,consume,feedback=()=>
     ability?style.toUpperCase()+' · '+ability.name+(seconds>0?' · '+seconds.toFixed(1)+' seconds cooldown':''):
      'Empty '+style+' ability slot '+(i+1)+' · set in Abilities',
     ability?iconByKind[ability.kind]||style:'empty');
+   btn.disabled=!ability||ability.available===false||snapshot.hp<=0||seconds>0;
+   if(ability?.unavailableReason){btn.title+=' · '+ability.unavailableReason;btn.setAttribute('aria-label',btn.title);}
    btn.dataset.abilityKind=ability?.kind||'empty';
    btn.dataset.combatStyle=style;
    btn.classList.toggle('is-empty',!ability);

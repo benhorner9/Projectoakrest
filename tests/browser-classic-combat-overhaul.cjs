@@ -1,0 +1,61 @@
+// Actual Classic renderer/input integration. Touch emulation is not physical Safari.
+const assert=require('node:assert/strict');
+const {chromium,webkit}=require('playwright');
+const {spawn}=require('node:child_process');
+const {resolve}=require('node:path');
+const fs=require('node:fs');
+const server=spawn('python3',['-m','http.server','5264','--bind','127.0.0.1'],{cwd:resolve(__dirname,'..'),stdio:'ignore'});
+let browser;
+(async()=>{try{
+ await new Promise(r=>setTimeout(r,850));
+ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
+ browser=await engine.launch({headless:true,...(engine===chromium?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{})});
+ const context=await browser.newContext({viewport:{width:1366,height:1024},hasTouch:true});
+ const {defaultSave,LOADOUTS}=await import('../src/rules.js');
+ const save=defaultSave();
+ for(const style of ['melee','ranged','magic']){
+  save.xp[style]=100000;save.inventory.weapons[style]=Object.keys(LOADOUTS[style]);
+  for(const f of Object.keys(save.slots[style]))save.slots[style][f]=['w0','w1','w2','w3'];
+ }
+ save.inventory.materials={'field-arrows':100,'frost-scroll':100,'ember-scroll':100};
+ await context.addInitScript(save=>{
+  localStorage.setItem('oakrest-v1',JSON.stringify(save));
+  let qa;Object.defineProperty(window,'oakrestClassicQA',{configurable:true,get:()=>qa,set:v=>{qa=v;v?.pauseAutomaticLoop?.();}});
+ },save);
+ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:5264/classic.html?qa=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.oakrestClassicQA);
+ const state=()=>page.evaluate(()=>oakrestClassicQA.combatState());
+ const step=seconds=>page.evaluate(s=>oakrestClassicQA.advance(s),seconds);
+ assert.equal(await page.locator('[data-ability="0"]').isDisabled(),true,'no-target offense is visibly unavailable');
+ await page.evaluate(()=>{oakrestClassicQA.teleport(-1,71.3);oakrestClassicQA.lockMonster('practice');});
+ await step(.05);const committed=(await state()).attackUntil;
+ assert.ok((await state()).action);
+ await page.locator('[data-style="ranged"]').tap();
+ assert.equal((await state()).style,'ranged','touch style updates before another simulation frame');
+ assert.equal((await state()).action,null);assert.equal((await state()).attackUntil,committed);
+ assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'ranged');
+ await step(1.8);
+ let mats=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory.materials);
+ assert.equal(mats['field-arrows'],99,'one real bow release costs one arrow');
+ assert.equal(await page.locator('[data-ability="1"]').isDisabled(),false);
+ await page.locator('[data-ability="1"]').tap();await step(.7);
+ mats=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory.materials);
+ assert.equal(mats['field-arrows'],96,'Rapid Shot costs three arrows');
+ assert.equal(await page.locator('[data-ability="1"]').isDisabled(),true);
+ const end=(await state()).attackUntil;
+ await page.locator('[data-style="magic"]').tap();
+ assert.equal((await state()).style,'magic');assert.equal((await state()).attackUntil,end);
+ await step(.2);await page.locator('[data-ability="0"]').tap();await step(.4);
+ mats=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().inventory.materials);
+ assert.equal(mats['frost-scroll'],99,'a real spell release costs one scroll');
+ assert.equal((await state()).abilities[0].available,false);
+ await page.evaluate(()=>oakrestClassicQA.moveTo(-12,65));await step(.1);
+ assert.equal((await state()).targetId,null,'ground retreat cancels pursuit');
+ await step(2);assert.equal((await state()).targetId,null);
+ const stopped=await page.evaluate(()=>oakrestClassicQA.state());
+ assert.ok(stopped.x<-1,'retreat moved the player');
+ fs.mkdirSync('qa',{recursive:true});await page.screenshot({path:'qa/classic-combat-block2.png'});
+ assert.deepEqual(errors,[]);
+ console.log('PASS: actual touch style switching, four ability slots, 600ms recovery, ammo/scroll release costs, cooldown UI and retreat.');
+}finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

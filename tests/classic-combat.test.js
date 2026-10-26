@@ -38,14 +38,13 @@ test('ranged and Magic keep separate loadouts and release travelling projectiles
  assert.equal(game.chooseTarget('practice',pos),true);
  assert.equal(game.styleSwitch('ranged'),true);
  assert.equal(game.getState().style,'ranged');
- const first=time(game,pos,1.1);
+ const first=time(game,pos,1.5);
  assert.ok(first.some(e=>e.type==='projectile'&&e.style==='ranged'));
  assert.ok(first.some(e=>e.type==='hit'),'arrow travels and contacts dummy');
  time(game,pos,1.3);
  assert.equal(game.styleSwitch('magic'),true);
- time(game,pos,1.3);
  assert.equal(game.getState().style,'magic');
- const events=time(game,pos,1.3);
+ const events=time(game,pos,2.5);
  assert.ok(events.some(e=>e.type==='projectile'&&e.style==='magic'));
 });
 
