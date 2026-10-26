@@ -48,11 +48,18 @@ test('quest acceptance and forester axe cannot overflow the backpack',()=>{
  assert.equal(h.act('accept','adventure:rowan').ok,false);
  assert.deepEqual(save,before,'failed training grants no scrolls, weapons or quest progress');
  save.adventure=sanitizeAdventure({index:2});
+ // A full backpack that already owns an axe legitimately needs no free slot.
+ // Remove the tool and replace its slot to cover the no-tool full-bag case.
+ if(save.inventory.weapons.melee.includes('bronze-axe')){
+  save.inventory.weapons.melee=save.inventory.weapons.melee.filter(id=>id!=='bronze-axe');
+  save.inventory.materials['copper-ore']=1;
+ }
+ assert.ok(inventoryKeyList(save).length>=28);
  const q=create(save),prior=structuredClone(save);
  assert.equal(q.act('accept','adventure:smith').ok,false);
  assert.deepEqual(save,prior);
  assert.equal(q.act('teach','service:forester').ok,false);
- assert.equal(save.professions.woodcuttingLearned,true===false);
+ assert.equal(save.professions.woodcuttingLearned,false);
 });
 test('crafting uses freed input slots at bag capacity without losing materials',()=>{
  const save=defaultSave();
@@ -120,5 +127,5 @@ test('creek foraging awards independent XP, unlocks a skill card and persists',(
  assert.equal(result.adventure.skills.foraging,18);
  const skill=skillBookSnapshot(result).find(s=>s.id==='foraging');
  assert.ok(skill);assert.equal(skill.milestones[0].name,'Creek reeds');
- assert.ok(skill.xp>=18);
+ assert.ok(skill.totalXp>=18);
 });
