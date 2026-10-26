@@ -39,7 +39,13 @@ const url='http://127.0.0.1:5278/';
   assert.equal(await launcher.getAttribute('href'),'./classic.html');
   const hit=await launcher.boundingBox();
   assert.ok(hit?.height>=44,'Classic launch button is easy to tap on iPad');
-  await launcher.tap();
+  const tapX=hit.x+hit.width/2,tapY=hit.y+hit.height/2;
+  // Measure the visible link and send a real touch at its screen coordinates.
+  // WebKit's locator.tap actionability wait can stall on the animated home
+  // page, despite the anchor itself remaining visible and hittable.
+  const uncovered=await page.evaluate(({x,y})=>!!document.elementFromPoint(x,y)?.closest('#oakrest-classic-launch'),{x:tapX,y:tapY});
+  assert.equal(uncovered,true,'Classic launch touch target must be unobstructed');
+  await page.touchscreen.tap(tapX,tapY);
   await page.waitForURL(/\/oakrest-dev\/classic\.html/);
   await page.waitForFunction(()=>!!document.querySelector('#classic-game canvas'),{timeout:30000}).catch(async err=>{
    const state=await page.evaluate(()=>({
