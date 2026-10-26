@@ -137,11 +137,17 @@ let browser;
   const before=JSON.stringify((await snapshot()).inventorySlots),tile=await bag('material.ration').boundingBox();
   const cdp=await context.newCDPSession(page),x=tile.x+tile.width/2,y=tile.y+tile.height/2;
   assert.equal(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('[data-canonical]')?.dataset.canonical,{x,y}),'material.ration');
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-20}]});
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-40}]});
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
-  await page.waitForFunction(()=>document.getElementById('classic-item-content').scrollTop>0); // CDP delivery finishes asynchronously.
+  await page.evaluate(()=>{window.touchTrace=[];for(const name of ['pointerdown','pointermove','pointerup','pointercancel'])document.addEventListener(name,e=>touchTrace.push([name,e.timeStamp,e.clientY,e.target.className]));});
+  // Supply the actual gesture timestamps: software-GPU/CDP acknowledgement
+  // latency must not turn a 40 ms swipe into a deliberate 260 ms hold.
+  const stamp=Date.now()/1000;
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',timestamp:stamp,touchPoints:[{x,y}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',timestamp:stamp+.02,touchPoints:[{x,y:y-20}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',timestamp:stamp+.04,touchPoints:[{x,y:y-40}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',timestamp:stamp+.05,touchPoints:[]});await cdp.detach();
+  await page.waitForFunction(()=>document.getElementById('classic-item-content').scrollTop>0).catch(async error=>{
+   console.error('Touch-scroll diagnostic',await page.evaluate(()=>({events:touchTrace,scroll:document.getElementById('classic-item-content').scrollTop})));throw error;
+  });
   assert.equal(JSON.stringify((await snapshot()).inventorySlots),before,'scrolling does not rearrange items');
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
