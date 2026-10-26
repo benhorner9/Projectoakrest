@@ -15,8 +15,15 @@ let browser;
   await page.goto('http://127.0.0.1:5219/classic.html?qa=1',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.oakrestClassicQA);
   await page.locator('#classic-creator-name').fill('Combat Freedom');
-  await page.locator('#classic-creator-form button[type=submit]').click();
-  await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
+  // Creation reloads the document. A hidden overlay alone can be observed
+  // before module startup completes in the new page. Wait for that exact profile.
+  await Promise.all([
+   page.waitForNavigation({waitUntil:'domcontentloaded'}),
+   page.locator('#classic-creator-form button[type=submit]').click()
+  ]);
+  await page.waitForFunction(()=>window.oakrestClassicQA?.characterCreatorState().appearance?.name==='Combat Freedom');
+  assert.equal(await page.locator('#classic-creator').isHidden(),true);
+  await page.evaluate(()=>oakrestClassicQA.pauseAutomaticLoop());
   // Fresh adventurers earn their visible training kit before combat.
   await page.evaluate(async()=>{
    const {findClassicInteractable}=await import('./src/classic-interactions.js');

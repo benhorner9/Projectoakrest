@@ -2,16 +2,16 @@
  * All positions use Oakrest world X/Z and the Block 2 collision footprint.
  * Presenter owns rendering and dialogue; controller never touches saves.
  */
-import {CLASSIC_LIMITS,clamp,findClassicPath,slideMove,solidAt} from './classic-presentation.js';
+import {CLASSIC_LIMITS,clamp,findClassicPath,slideMove,solidAt,clearClassicLine} from './classic-presentation.js';
 import {canCompleteInteraction,interactionSight} from './classic-interactions.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.z);
 const accessiblePath=(start,dest)=>{
  if(!valid(start)||!valid(dest)||solidAt(dest.x,dest.z))return null;
- if(distance(start,dest)<.18)return [];
+ if(distance(start,dest)<.01)return [];
  const path=findClassicPath(start,dest);
- return path.length&&distance(path.at(-1),dest)<.95?path:null;
+ return path.length&&distance(path.at(-1),dest)<.01?path:null;
 };
 const groundGoal=point=>({
  x:clamp(point.x,CLASSIC_LIMITS.minX+1,CLASSIC_LIMITS.maxX-1),
@@ -79,7 +79,7 @@ export function createClassicNavigation({speed=5.3}={}){
   }else{
    // Discard already-reached waypoints in the same update; never pause
    // for a frame at every A* grid node.
-   while(waypoints.length&&distance(player,waypoints[0])<.28)waypoints.shift();
+   while(waypoints.length&&distance(player,waypoints[0])<.01)waypoints.shift();
    const next=waypoints[0];
    if(next){
     const d=distance(player,next);
@@ -94,14 +94,19 @@ export function createClassicNavigation({speed=5.3}={}){
    const limit=kind==='path'||kind==='approach'
     ?Math.min(speed*delta,distance(player,waypoints[0]))
     :speed*delta*Math.min(1,magnitude);
-   newPosition=slideMove(player,unitX*limit,unitZ*limit);
+   if(kind==='path'||kind==='approach'){
+    // Follow validated segments directly. Axis-by-axis sliding can drift into
+    // a corner even though the diagonal route itself is clear.
+    const point={x:player.x+unitX*limit,z:player.z+unitZ*limit};
+    if(clearClassicLine(player,point,.38))newPosition=point;
+   }else newPosition=slideMove(player,unitX*limit,unitZ*limit);
    moved=distance(newPosition,player)>.0001;
   }
   let interaction=null,failed=null;
   if(pending&&canCompleteInteraction(newPosition,pending)){
    interaction=pending;reset();
   }else if(kind==='path'||kind==='approach'){
-   if(waypoints.length&&distance(newPosition,waypoints[0])<.28)waypoints.shift();
+   if(waypoints.length&&distance(newPosition,waypoints[0])<.01)waypoints.shift();
    if(moved)stalled=0;
    else if(delta>0)stalled+=delta;
    if(!waypoints.length&&pending){
