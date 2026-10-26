@@ -253,7 +253,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }
   if(kind==='timber'&&target.id==='service:store'){
    if(!enough({'softwood-logs':5}))return no('Darrin needs five softwood logs for 8 coins.');
-   spend({'softwood-logs':5});data.coins=Math.min(10000000,data.coins+8);emit('adventure',{reason:'Sold 5 logs for 8 coins'});return ok('Good timber. Oakrest always needs repairs.');
+   if(data.coins>10000000-8||!data.coins&&inventoryKeyList(data).length>=28&&(mats['softwood-logs']||0)>5)return no('Make room for the coins before selling.');
+   spend({'softwood-logs':5});data.coins+=8;emit('adventure',{reason:'Sold 5 logs for 8 coins'});return ok('Good timber. Oakrest always needs repairs.');
   }
   if(kind==='contract'&&target.id==='citizen:guard'){
    if(!completed('hollow')||a.contracts>=a.clears)return no('Complete another Hollow expedition to supply the watch.');
@@ -264,6 +265,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   return no('That action is unavailable here.');
  }
  return {action,event,visit,tick,flag,ready,craftCheck,
+  consumableCooldowns:()=>({eat:eatUntil,drink:drinkUntil}),
   state:()=>({...structuredClone(a),quest:quest(),ready:ready(),
    catalogue:QUESTS.map(q=>({...q,status:questStatus(q),flags:[...progress(q.id).flags],
     prerequisites:QUEST_PREREQUISITES[q.id]||[]})),

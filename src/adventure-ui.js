@@ -87,6 +87,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   if(!selectedQuest||!selected||selected.status==='locked'&&selectedQuest===a.tracked)
    selectedQuest=a.tracked||a.catalogue.find(q=>q.status==='active'||q.status==='available')?.id||a.catalogue[0]?.id;
   const entry=a.catalogue.find(q=>q.id===selectedQuest);
+  const scroll=questBook.querySelector(".classic-quest-detail")?.scrollTop||0;
   questBook.replaceChildren();
   const layout=el('div','',questBook);layout.className='classic-quest-layout';
   const left=el('nav','',layout);left.className='classic-quest-list';left.setAttribute('aria-label','Quest list');
@@ -131,6 +132,8 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
     });
    }
   }
+  if(['active','ready'].includes(entry.status))el('p','Quest contact: '+(findTarget(entry.npc)?.name||findTarget(entry.npc)?.label||entry.npc.split(':')[1]),detail);
+  detail.scrollTop=scroll;
   el('p','Reward: '+entry.coins+' coins',detail).className='quest-reward';
   if(entry.status==='completed')el('p','You have finished this quest.',detail);
   el('h3','Your adventure',detail);
@@ -138,7 +141,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   if(a.run)el('p','Expedition: '+a.run.kills.length+'/6 guardians · '+a.run.wards.length+'/3 wards',detail);
   const total=a.catalogue.filter(q=>q.status==='completed').length;
   el('p','Quests completed: '+total+' / '+a.catalogue.length,detail);
-  lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags])]);
+  lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
  }
  function objective(){
   const a=combat.adventureState(),q=a.quest;
@@ -164,7 +167,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   const tracking=a.catalogue.find(q=>q.id===a.tracked);
   tracker.textContent=tracking?(tracking.status==='completed'?'✓ ':tracking.status==='ready'?'◆ ':tracking.status==='active'?'✦ ':'! ')+tracking.title:'✓ All quests complete';
   if(windowUi.current()==='quests'){
-   const key=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags])]);
+   const key=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
    if(key!==lastJournalKey)renderJournal();
   }
   eatButton.disabled=state.hp<=0;tracker.hidden=!document.getElementById('classic-creator').hidden;

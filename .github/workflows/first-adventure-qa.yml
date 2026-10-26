@@ -47,6 +47,8 @@ jobs:
       - run: OAKREST_BROWSER=webkit node tests/browser-classic-dev-launch.cjs
       - name: Verify Classic combat in desktop WebKit touch emulation
         run: BROWSER=webkit node tests/browser-classic-combat-overhaul.cjs
+      - name: Verify equipment and eight quick slots in desktop WebKit touch emulation
+        run: BROWSER=webkit node tests/browser-classic-equipment-ui.cjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

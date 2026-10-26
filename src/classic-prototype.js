@@ -1,3 +1,5 @@
+import {bindClassicItemDrag} from './classic-item-drag.js';
+import {classicItemDetails} from './classic-item-state.js';
 import {createClassicSimulationClock} from './classic-combat-clock.js';
 import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
@@ -103,13 +105,20 @@ let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
 const groundView=createClassicGroundLoot(scene);
 let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
-const actionbar=setupClassicActionBar({doc:document,combat,
- consume:kind=>{
-  const result=combat.adventureAction(kind,{},player);
-  feedback(result?.reason||'Consumable unavailable');
-  if(result?.ok){markProgress();itemUi?.render();updateCombatUi(combat.getState());}
-  return !!result?.ok;
- },feedback});
+const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!existing.profile,
+ activateBinding:binding=>{
+  if(/^ability[0-3]$/.test(binding))return useCombatAbility(Number(binding.at(-1)));
+  if(binding==='dodge'){triggerDodge();return true;}
+  if(binding==='attack'){toggleAttack();return true;}
+  if(binding==='skills'){skillsUi?.open();return true;}
+  if(binding==='quests'){adventureUi?.showJournal();return true;}
+  if(['inventory','equipment','map'].includes(binding)){windowUi?.open(binding);return true;}
+  const id=binding==='eat'?'material.ration':binding==='drink'?'material.woodland-tonic':binding;
+  const details=classicItemDetails(combat.sandboxSave(),id,style);
+  if(details?.action&&details.action.style!==style)switchStyle(details.action.style);
+  const result=combat.itemAction(details?.action?{...details.action,id:details.item.legacy.itemId}:{type:'use',id},player);
+  feedback(result.reason);if(result.ok){markProgress();itemUi?.render();refreshHud();}return result.ok;
+ },changed:()=>{markProgress();itemUi?.render();},feedback});
 const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
  onDestination:point=>{windowUi?.hide();queueDestination(point);}});
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#f0ceaa',
@@ -234,7 +243,7 @@ function refreshHud(){
 function switchStyle(which){
  if(!combat.styleSwitch(which))return;
  const current=combat.getState().style;
- if(current!==style){style=current;refreshHud();}
+ if(current!==style){style=current;refreshHud();itemUi?.render();}
  updateCombatUi(combat.getState());
 }
 for(const b of document.querySelectorAll('[data-style]'))
@@ -452,9 +461,9 @@ function toggleAttack(){
 }
 function useCombatAbility(index){
  const ability=combat.getState().abilities[index];
- if(!ability){feedback('Ability slot locked or empty.');return;}
- if(!combat.queueAbility(index,player))feedback(combat.getState().lastFailure);
- else feedback(ability.name+' activated.');
+ if(!ability){feedback('Ability slot locked or empty.');return false;}
+ if(!combat.queueAbility(index,player)){feedback(combat.getState().lastFailure);return false;}
+ feedback(ability.name+' activated.');return true;
 }
 function triggerDodge(){
  if(!combat.dodge())return;
@@ -463,10 +472,6 @@ function triggerDodge(){
  dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
  navigation.stop();feedback('Dodged!');
 }
-bindClassicPress($('classic-attack'),toggleAttack);
-bindClassicPress($('classic-dodge'),triggerDodge);
-for(const b of document.querySelectorAll('[data-ability]'))
- bindClassicPress(b,()=>useCombatAbility(Number(b.dataset.ability)));
 function combatEvents(events){
  for(const event of events){
   damageFeedback.event(event,combat.getState(),player);
@@ -504,21 +509,7 @@ function updateCombatUi(snapshot){
  $('classic-target-name').textContent=target?target.name+(target.weak?' · weak to '+target.weak:''):'No monster selected';
  $('classic-target-level').textContent=target?'Lv '+target.level:'';
  $('classic-target-health').style.width=target?(100*target.hp/target.maxHp)+'%':'0%';
- const attack=$('classic-attack');attack.classList.toggle('attacking',!!target);
- attack.firstChild.textContent='⚔';
- attack.querySelector('small').textContent='ATTACK';
- for(const b of document.querySelectorAll('[data-ability]')){
-  const index=Number(b.dataset.ability),ability=snapshot.abilities[index];
-  const seconds=ability?Math.max(0,ability.cooldownEnd-snapshot.time):0;
-  b.disabled=!ability||!ability.available||snapshot.hp<=0||seconds>0;
-  b.classList.toggle('on-cooldown',seconds>0);
-  b.firstChild.textContent='QERF'[index];
-  const hint=b.querySelector('small');
-  hint.textContent=seconds>0?seconds.toFixed(1)+'s':ability?.name||'Locked';
-  b.title=ability?.name||'Locked ability';
- }
- $('classic-dodge').disabled=snapshot.hp<=0||snapshot.time<snapshot.dodgeUntil;
- actionbar.update(snapshot);
+ actionbar.update(snapshot,false);
 }
 function updateContextActions(){
  const interaction=nearbyClassicInteraction(player),drop=combat.nearestLoot(player);
@@ -660,7 +651,7 @@ function drawStep(dt,render=true){
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
  village.update(state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
- adventureUi?.tick();skillsUi?.tick();
+ adventureUi?.tick();skillsUi?.tick();itemUi?.tick();
  fieldNotes.update({name:existing.profile?.name,xp:state.progression,saved:saveManager.status().enabled});
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state,cameraOffset,player);
@@ -711,6 +702,11 @@ itemUi=setupClassicItems({
  },
  onOpen:tab=>windowUi?.adopt(tab),
  onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
+});
+bindClassicItemDrag($('classic-app'),payload=>{
+ if(payload.toScope==='quick'){actionbar.assign(payload.toIndex,payload.fromScope==='quick'?payload.binding:payload.canonical);return;}
+ if(payload.fromScope==='quick'){feedback('Drag quick actions to another quick slot, or clear them with Arrange.');return;}
+ itemUi.drop(payload);
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
  settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window'),social:$('classic-social-window')});

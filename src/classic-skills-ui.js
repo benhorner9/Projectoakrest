@@ -2,11 +2,12 @@ import {skillBookSnapshot,CLASSIC_SKILLS} from './classic-skill-catalogue.js';
 const make=(parent,tag,name,text)=>{const e=document.createElement(tag);if(name)e.className=name;if(text!==undefined)e.textContent=String(text);parent.append(e);return e;};
 export function setupClassicSkills({combat,windowUi}){
  const host=document.getElementById('classic-skill-book');
- let selected='melee',lastKey='',lastPoll=-Infinity;
+ let selected='melee',rendered=null,lastKey='',lastPoll=-Infinity;
  function render(){
   if(windowUi.current()!=='skills')return;
   const skills=skillBookSnapshot(combat.sandboxSave());
   const current=skills.find(s=>s.id===selected)||skills[0];
+  const scroll=rendered===selected?host.querySelector(".classic-skill-detail")?.scrollTop||0:0;
   host.replaceChildren();
   const root=make(host,'div','classic-skill-layout');
   const sidebar=make(root,'nav','classic-skill-list');
@@ -51,6 +52,7 @@ export function setupClassicSkills({combat,windowUi}){
    make(detail,'p','skill-hint','The forge is required for smelting and metalworking.');
   if(current.id==='woodcutting')
    make(detail,'p','skill-hint','Learn Woodcutting from Alden in the Forester’s Lodge; take an axe to the trees.');
+  detail.scrollTop=scroll;rendered=selected;
   lastKey=JSON.stringify(skills.map(s=>[s.id,s.totalXp]));
  }
  return {open(){selected=CLASSIC_SKILLS.some(s=>s.id===selected)?selected:'melee';lastKey='';windowUi.open('skills');render();},

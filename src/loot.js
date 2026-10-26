@@ -5,8 +5,9 @@ export const MAX_GROUND_LOOT=36;
 export function isValidDrop(d){
  if(!d||typeof d!=='object'||typeof d.id!=='string'||d.id.length>64||d.id.length<1)return false;
  if(!Number.isFinite(d.x)||!Number.isFinite(d.z)||Math.abs(d.x)>120||Math.abs(d.z)>340)return false;
- if(!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>99)return false;
+ if(!Number.isSafeInteger(d.amount)||d.amount<1||d.amount>(d.playerDrop===true?9999:99))return false;
  const item=itemFromDrop(d);
+ if(d.playerDrop===true)return !!item&&item.kind!=='scroll'&&!['material.ward-seal','material.warden-heart'].includes(item.id)&&(['coins','material'].includes(d.kind)||d.amount===1);
  return !!item?.dropAllowed&&(d.kind==='coins'||d.amount===1);
 }
 export function lootName(d){
@@ -34,9 +35,10 @@ export function collectDrop(data,d){
   const mat=data.inventory.materials||(data.inventory.materials={});
   mat[d.itemId]=Math.min(9999,(mat[d.itemId]||0)+d.amount);return true;
  }
- const list=d.kind==='armour'?data.inventory.armour:data.inventory.weapons?.[d.style];
+ const list=d.kind==='armour'?data.inventory.armour:d.kind==='slot'?data.inventory.slotted:data.inventory.weapons?.[d.style];
  if(!Array.isArray(list))return false;
- if(!list.includes(d.itemId))list.push(d.itemId);
+ const banked=d.kind==='armour'?data.bank?.armour:d.kind==='slot'?data.bank?.slotted:data.bank?.weapons?.[d.style];
+ if(!list.includes(d.itemId)&&!banked?.includes(d.itemId))list.push(d.itemId);
  else data.coins=Math.min(10000000,(data.coins||0)+8); // duplicate starter gear salvaged for coins
  return true;
 }

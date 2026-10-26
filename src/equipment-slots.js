@@ -1,4 +1,4 @@
-import {levelFromXp} from './rules.js';
+import {levelFromXp,LOADOUTS} from './rules.js';
 /** Equipment beyond weapons and chest armour. All three combat styles have independent saved slots. */
 export const EQUIPMENT_SLOTS=Object.freeze([
   {id:'helm',label:'Helm'}, {id:'amulet',label:'Ammy'}, {id:'arrows',label:'Arrows'},
@@ -15,7 +15,7 @@ const catalogue=[
   ['recruit-ring','Soldier Ring','ring','melee','A plain fighting ring.','ring',1,0],
   ['scout-hood','Scout Hood','helm','ranged','Leather hood for quiet travellers.','helm',0,2],
   ['scout-chaps','Scout Chaps','legs','ranged','Light protection while keeping range.','legs',0,2],
-  ['bronze-arrows','Bronze Arrows','arrows','ranged','A beginner quiver; boosts ranged attacks. Ammo is reusable in this prototype.','arrows',2,0],
+  ['bronze-arrows','Bronze Arrows','arrows','ranged','A beginner quiver; boosts ranged attacks. Field ammunition is consumed separately in Classic combat.','arrows',2,0],
   ['scout-boots','Scout Boots','boots','ranged','Soft boots for quick scouting.','boots',0,1],
   ['scout-amulet','Archer Amulet','amulet','ranged','A charm that improves ranged attacks.','amulet',2,0],
   ['scout-ring','Archer Ring','ring','ranged','A simple shooting ring.','ring',1,0],
@@ -35,10 +35,11 @@ export const STARTER_SETS=Object.freeze({
 });
 export function blankExtraSlots(){return Object.fromEntries(EXTRA_SLOTS.map(slot=>[slot,null]));}
 export function blankEquipment(){return {melee:blankExtraSlots(),magic:blankExtraSlots(),ranged:blankExtraSlots()};}
+export const allowsOffhand=(data,style)=>LOADOUTS[style]?.[data.gear?.[style]]?.hands!==2;
 export function canEquipSlotItem(data,style,id){
  const item=SLOT_ITEMS[id];
  return !!item&&item.style===style&&levelFromXp(data?.xp?.[style]||0).level>=item.requiredLevel&&
-  (data.inventory?.slotted||[]).includes(id);
+  (data.inventory?.slotted||[]).includes(id)&&(item.slot!=='offhand'||allowsOffhand(data,style));
 }
 export function equipSlotItem(data,style,slot,id){
  if(!EXTRA_SLOTS.includes(slot)||!data.equipment?.[style])return false;
@@ -50,7 +51,7 @@ export function equipmentModifiers(data,style){
  let power=0,guard=0;
  for(const slot of EXTRA_SLOTS){
   const id=data.equipment?.[style]?.[slot],item=SLOT_ITEMS[id];
-  if(item&&item.style===style&&item.slot===slot&&(data.inventory?.slotted||[]).includes(id)){
+  if((slot!=='offhand'||allowsOffhand(data,style))&&item&&item.style===style&&item.slot===slot&&(data.inventory?.slotted||[]).includes(id)){
     power+=item.power;guard+=item.guard;
   }
  }
