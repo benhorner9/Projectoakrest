@@ -34,7 +34,11 @@ jobs:
   webkit-ipad-entry:
     name: WebKit iPad-style first launch
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Official image includes the native WebKit shared libraries that the
+    # hosted runner lacks; its version must match package.json exactly.
+    container:
+      image: mcr.microsoft.com/playwright:v1.51.1-noble
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
