@@ -13,6 +13,8 @@ export function createClassicCombatFeedback(root){
  }
  return {event(event,state,player){
   if(event.type==='hit')add(String(event.damage),state.monsters.find(m=>m.id===event.id),event.time,'hit');
+  if(event.type==='miss')add('0',state.monsters.find(m=>m.id===event.id),event.time,'miss');
+  if(event.type==='enemy-miss')add('0',player,event.time,'miss');
   if(event.type==='hurt')add('−'+event.damage,player,event.time,'hurt');
   if(event.type==='heal')add('+'+event.amount,player,event.time,'heal');
  },update(time,camera){
