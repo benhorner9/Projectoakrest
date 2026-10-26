@@ -48,10 +48,11 @@ let browser;
   }
   // Make supplies through the actual Classic inventory, no world fletching table.
   if(!await page.locator('#classic-item-window').isVisible())await page.locator('#classic-inventory-toggle').click();
+  await page.locator('.classic-bag-tools > summary').click();
   await page.getByRole('button',{name:'MAKE FROM BAG'}).click();
   const arrows=page.locator('.craft-option').filter({hasText:'Fletch 30 field ammunition'});
   await arrows.getByRole('button',{name:'MAKE',exact:true}).click();
-  await page.locator('#classic-item-close').click();
+  await page.keyboard.press('Escape');
   await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());

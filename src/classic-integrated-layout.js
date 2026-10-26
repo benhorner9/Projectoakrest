@@ -19,10 +19,20 @@ export function installClassicIntegratedLayout(doc=document){
  sidebar.id='classic-sidebar';sidebar.setAttribute('aria-label','Oakrest character, map and menu');
  const mapHead=node('section','classic-sidebar-map',sidebar);
  const map=get('classic-minimap-expand').parentElement;
+ // Reuse the actual live location and settings elements. No second indicator,
+ // invented player count, or fake time-of-day state is introduced.
+ const place=node('section','oakrest-place-card',mapHead);
+ place.setAttribute('aria-label','Current location');
+ const top=node('div','oakrest-place-top',place);
+ node('strong','oakrest-place-brand',top).textContent='OAKREST';
+ top.append(get('classic-settings-toggle'));
+ node('small','oakrest-place-kicker',place).textContent='CURRENT LOCATION';
+ const liveLocation=map.querySelector('.location');
+ if(liveLocation)place.append(liveLocation);
+ const detail=node('p','oakrest-place-description',place);
+ detail.id='classic-area-description';
+ detail.textContent='Explore the Oakrest Valley.';
  mapHead.append(map);
- const notes=node('div','classic-side-notes',mapHead);
- node('strong','classic-side-label',notes).textContent='THE OAKREST VALLEY';
- node('p','classic-side-hint',notes).textContent='Open your journal, pack or levels without covering the world.';
  const tabs=doc.querySelector('.classic-item-buttons');
  sidebar.append(tabs);
  const body=node('div','classic-sidebar-body',sidebar);

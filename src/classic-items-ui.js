@@ -30,7 +30,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const content=q(host,'classic-item-content'),close=q(host,'classic-item-close');
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,arrange=false,moveStart=null,selectedBank=null,selectedShop=null;
- let combineSource=null,showMaking=false;
+ let combineSource=null,showMaking=false,toolsExpanded=false;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
@@ -112,24 +112,33 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  }
  function renderInventory(){
   const data=save(),s=view();
-  element(content,'p','classic-muted','Your backpack · '+s.coins+' coins · Tap an item to examine or use materials together.');
-  const actions=element(content,'div','classic-item-actions');
-  button(actions,arrange?'classic-item-action selected':'classic-item-action',
-   arrange?'FINISH ARRANGING':'ARRANGE SLOTS',()=>{
-    arrange=!arrange;moveStart=null;render();
-   });
-  const make=button(actions,'classic-item-action',showMaking?'HIDE RECIPES':'MAKE FROM BAG',()=>{
-   showMaking=!showMaking;combineSource=null;render();
-  });
-  make.setAttribute('aria-expanded',String(showMaking));
+  // The bag occupies the panel immediately beneath Oakrest's main game tabs.
+  // Inventory utilities remain available after the slots without a second
+  // navigation row, explanatory banner or always-visible toolbar.
   if(combineSource){
    const item=getItem('material.'+combineSource);
    const prompt=element(content,'div','classic-combine-prompt',
     'Using '+(item?.title||combineSource)+' with… Tap a second material in your bag.');
    button(prompt,'classic-item-action','CANCEL',()=>{combineSource=null;render();});
   }
+  grid(content,inventoryEntries(data),'bag','',BAG_MIN_SLOTS);
+  if(detailId)examine(content,detailId);
+  const tools=element(content,'details','classic-bag-tools');
+  tools.open=toolsExpanded;
+  tools.addEventListener('toggle',()=>{toolsExpanded=tools.open;});
+  const summary=element(tools,'summary',null,'Inventory tools');
+  summary.title='Arrange items or make supplies from your backpack';
+  const actions=element(tools,'div','classic-item-actions');
+  button(actions,arrange?'classic-item-action selected':'classic-item-action',
+   arrange?'FINISH ARRANGING':'ARRANGE SLOTS',()=>{
+    arrange=!arrange;moveStart=null;toolsExpanded=true;render();
+   });
+  const make=button(actions,'classic-item-action',showMaking?'HIDE RECIPES':'MAKE FROM BAG',()=>{
+   showMaking=!showMaking;combineSource=null;toolsExpanded=true;render();
+  });
+  make.setAttribute('aria-expanded',String(showMaking));
   if(showMaking){
-   const maker=element(content,'section','classic-handcraft');
+   const maker=element(tools,'section','classic-handcraft');
    element(maker,'h3',null,'MAKE FROM YOUR BACKPACK');
    element(maker,'p','classic-muted','Fletching, Inscription and Fieldcraft are made by hand. Metalwork still requires a forge.');
    const materials=data.inventory.materials,progress=data.adventure?.skills||{};
@@ -147,9 +156,6 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
      ()=>craftFromBag('craft',recipe.id),!ready||level<recipe.level);
    }
   }
-  grid(content,inventoryEntries(data),'bag','BACKPACK · FOUR COLUMNS',BAG_MIN_SLOTS);
-  if(detailId)examine(content,detailId);
-
  }
  function renderEquip(){
   const s=view();
@@ -267,10 +273,10 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  }
  function open(next='inventory'){
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
-  mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;combineSource=null;
+  mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;combineSource=null;toolsExpanded=false;
   host.hidden=false;render();onOpen(next);
  }
- function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;combineSource=null;onClose();}
+ function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;combineSource=null;toolsExpanded=false;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
  return {open,hide,render,isOpen:()=>!host.hidden};

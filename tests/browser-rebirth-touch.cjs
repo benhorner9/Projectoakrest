@@ -27,7 +27,7 @@ const server=spawn('python3',['-m','http.server','5250','--bind','127.0.0.1'],{s
  await touch('touchEnd',[]);const stopped=await page.evaluate(()=>oakrestClassicQA.state());
  await page.evaluate(()=>oakrestClassicQA.advance(.5));assert.equal((await page.evaluate(()=>oakrestClassicQA.state())).z,stopped.z);
  // Keyboard activation of a focused menu must not fire Enter's attack shortcut.
- await page.locator('#classic-item-close').click();
+ await page.keyboard.press('Escape');
  await page.locator('#classic-inventory-toggle').focus();await page.keyboard.press('Enter');
  assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'inventory');
  assert.equal(await page.evaluate(()=>oakrestClassicQA.combatState().targetId),null);

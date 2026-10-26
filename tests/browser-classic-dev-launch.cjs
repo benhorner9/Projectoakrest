@@ -90,6 +90,14 @@ const url='http://127.0.0.1:5278/';
   await page.locator('[data-style=magic]').tap();
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'magic');
   assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
+  // The utility editor must respond to real touch in iPad-size Chromium and
+  // WebKit emulation. This is not a substitute for physical Safari validation.
+  await page.locator('#oakrest-hotbar-edit').tap();
+  assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),true);
+  await page.locator('#oakrest-hotbar-select-5').selectOption('drink');
+  assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'5');
+  assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'6');
+  await page.locator('#oakrest-hotbar-edit').tap();
   // Playwright's mouse API creates an actual active pointer across both
   // browser engines. Dispatching a fabricated PointerEvent causes both
   // Chromium and WebKit to reject setPointerCapture (no active pointer).

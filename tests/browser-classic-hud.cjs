@@ -107,7 +107,7 @@ let browser;
   await page.locator('#classic-interact-button').click();
   assert.equal(await page.locator('#classic-item-title').textContent(),'Oakrest Bank');
   assert.equal(await page.locator('#classic-map-window').isVisible(),false);
-  await page.locator('#classic-item-close').click();
+  await page.keyboard.press('Escape');
   await page.locator('#classic-map-toggle').click();
   await page.locator('#classic-map-zoom-in').click();
   assert.ok(await page.evaluate(()=>oakrestClassicQA.minimapState().zoom)>3.45);
