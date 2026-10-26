@@ -149,6 +149,16 @@ let browser;
    console.error('Touch-scroll diagnostic',await page.evaluate(()=>({events:touchTrace,scroll:document.getElementById('classic-item-content').scrollTop})));throw error;
   });
   assert.equal(JSON.stringify((await snapshot()).inventorySlots),before,'scrolling does not rearrange items');
+  // Empty cells must also scroll instead of swallowing the user's touch.
+  const empty=page.locator('#classic-item-content .classic-item-cell.empty').first();await empty.scrollIntoViewIfNeeded();
+  const rect=await empty.boundingBox(),start=await page.locator('#classic-item-content').evaluate(e=>e.scrollTop);
+  const native=await context.newCDPSession(page),t=Date.now()/1000,ex=rect.x+rect.width/2,ey=rect.y+rect.height/2;
+  await native.send('Input.dispatchTouchEvent',{type:'touchStart',timestamp:t,touchPoints:[{x:ex,y:ey}]});
+  await native.send('Input.dispatchTouchEvent',{type:'touchMove',timestamp:t+.04,touchPoints:[{x:ex,y:ey-35}]});
+  await native.send('Input.dispatchTouchEvent',{type:'touchEnd',timestamp:t+.05,touchPoints:[]});await native.detach();
+  await page.waitForFunction(start=>document.getElementById('classic-item-content').scrollTop>start,start);
+  assert.equal(JSON.stringify((await snapshot()).inventorySlots),before);
+
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
  // A second named character must not inherit the first character's eight bindings.
