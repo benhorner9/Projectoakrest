@@ -19,7 +19,7 @@ export function bindClassicItemDrag(root,onDrop){
   if(!gesture||e.pointerId!==gesture.id)return;
   const g=gesture,dx=e.clientX-g.x,dy=e.clientY-g.y;
   if(!g.mode&&Math.hypot(dx,dy)<15)return;
-  if(!g.mode)g.mode=g.touch&&performance.now()-g.started<260&&Math.abs(dy)>Math.abs(dx)*1.15?'scroll':'drag';
+  if(!g.mode)g.mode=g.touch&&e.timeStamp-g.started<260&&Math.abs(dy)>Math.abs(dx)*1.15?'scroll':'drag';
   e.preventDefault();
   if(g.mode==='scroll'){
    if(g.scroller)g.scroller.scrollTop-=e.clientY-g.lastY;
@@ -52,7 +52,7 @@ export function bindClassicItemDrag(root,onDrop){
   suppressUntil=0; // A new deliberate press must not inherit the previous drag's click suppression.
   const source=tile(e.target);
   if(e.button!==0||!source||!root.contains(source)||!source.dataset.canonical&&!source.dataset.binding)return;
-  gesture={id:e.pointerId,source,x:e.clientX,y:e.clientY,lastY:e.clientY,started:performance.now(),touch:e.pointerType==='touch',scroller:scrollParent(source)};
+  gesture={id:e.pointerId,source,x:e.clientX,y:e.clientY,lastY:e.clientY,started:e.timeStamp,touch:e.pointerType==='touch',scroller:scrollParent(source)};
   document.addEventListener('pointermove',move,{passive:false});document.addEventListener('pointerup',end);document.addEventListener('pointercancel',cancel);
  });
  root.addEventListener('click',e=>{

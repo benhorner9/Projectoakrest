@@ -4,6 +4,9 @@ const {chromium,webkit}=require('playwright');
 const {spawn}=require('node:child_process');
 const {resolve}=require('node:path');
 const fs=require('node:fs');
+const url=process.env.OAKREST_CLASSIC_URL||'http://127.0.0.1:5266/classic.html';
+const prefix=new URL(url).pathname.split('/').includes('oakrest-dev')?'oakrest-dev-':'oakrest-';
+assert.ok(['127.0.0.1','localhost'].includes(new URL(url).hostname)||url==='https://playcellbound.com/oakrest-dev/classic.html','isolated QA may target localhost or the development Classic route only');
 const server=spawn('python3',['-m','http.server','5266','--bind','127.0.0.1'],{cwd:resolve(__dirname,'..'),stdio:'ignore'});
 let browser;
 (async()=>{try{
@@ -15,17 +18,17 @@ let browser;
  const save=defaultSave();save.coins=600;save.xp.melee=5000;save.inventory.weapons.melee.push('greatsword');save.inventory.slotted.push('recruit-shield');
  save.inventory.materials={ration:8,'woodland-tonic':4,'softwood-logs':20,'moss-fibre':10,reed:6};
  const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',other='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
- await context.addInitScript(({save,id,other})=>{
-  if(!localStorage.getItem('oakrest-characters-v1')){
-   localStorage.setItem('oakrest-characters-v1',JSON.stringify([{id,name:'Bag Tester'},{id:other,name:'Other Adventurer'}]));
-   localStorage.setItem('oakrest-active-character',id);
-   localStorage.setItem('oakrest-character-save-'+id,JSON.stringify(save));
-   localStorage.setItem('oakrest-character-save-'+other,JSON.stringify({...save,quickSlots:['map',null,null,null,null,null,null,null]}));
+ await context.addInitScript(({save,id,other,prefix})=>{
+  if(!localStorage.getItem(prefix+'characters-v1')){
+   localStorage.setItem(prefix+'characters-v1',JSON.stringify([{id,name:'Bag Tester'},{id:other,name:'Other Adventurer'}]));
+   localStorage.setItem(prefix+'active-character',id);
+   localStorage.setItem(prefix+'character-save-'+id,JSON.stringify(save));
+   localStorage.setItem(prefix+'character-save-'+other,JSON.stringify({...save,quickSlots:['map',null,null,null,null,null,null,null]}));
   }
   let qa;Object.defineProperty(window,'oakrestClassicQA',{configurable:true,get:()=>qa,set:v=>{qa=v;v?.pauseAutomaticLoop?.();}});
- },{save,id,other});
+ },{save,id,other,prefix});
  const page=await context.newPage(),errors=[];page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:5266/classic.html?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto(url+'?qa=1',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.oakrestClassicQA);
  await page.evaluate(()=>oakrestClassicQA.enableSaving());
  const snapshot=()=>page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
@@ -130,9 +133,12 @@ let browser;
  fs.mkdirSync('qa',{recursive:true});await page.screenshot({path:'qa/classic-block3-'+(process.env.BROWSER||'chromium')+'.png'});
  await page.setViewportSize({width:1194,height:834});await open('inventory');
  if(engine===chromium){
+  await bag('material.ration').scrollIntoViewIfNeeded(); // Wait for the resized viewport's stable layout before native input.
   const before=JSON.stringify((await snapshot()).inventorySlots),tile=await bag('material.ration').boundingBox();
   const cdp=await context.newCDPSession(page),x=tile.x+tile.width/2,y=tile.y+tile.height/2;
+  assert.equal(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('[data-canonical]')?.dataset.canonical,{x,y}),'material.ration');
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-20}]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-40}]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
   await page.waitForFunction(()=>document.getElementById('classic-item-content').scrollTop>0); // CDP delivery finishes asynchronously.
@@ -140,7 +146,7 @@ let browser;
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
  // A second named character must not inherit the first character's eight bindings.
- await page.evaluate(other=>localStorage.setItem('oakrest-active-character',other),other);
+ await page.evaluate(({other,prefix})=>localStorage.setItem(prefix+'active-character',other),{other,prefix});
  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
  assert.equal((await snapshot()).quickSlots[0],'map');assert.equal((await snapshot()).quickSlots[7],null);
  assert.deepEqual(errors,[]);console.log('PASS: eight saved bindings, touch/mouse drag, nine equipment slots, 2H loadouts, style panels, quantity banking, drops, crafting, skills, quests, map and separate character reload.');

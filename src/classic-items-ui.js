@@ -109,7 +109,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
   if(mode==='inventory'&&usableItem(id)){
    const state=combat.getState(),kind=id==='material.ration'?'eat':'drink',remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
-   const use=button(ex,'classic-item-action',remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK',()=>transact({type:'use',id}),remaining>0||state.hp<=0||state.hp>=state.maxHp);use.dataset.consumable=kind;
+   const use=button(ex,'classic-item-action',remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK',()=>transact({type:'use',id}),remaining>0||state.hp<=0||state.hp>=state.maxHp||!data.inventory.materials[details.item.legacy.itemId]);use.dataset.consumable=kind;use.dataset.quantity=String(data.inventory.materials[details.item.legacy.itemId]||0);
   }
   if(mode==='inventory'&&quickBindable(id)){
    const line=element(ex,'div','classic-item-actions'),select=element(line,'select','classic-quick-choice');
@@ -334,7 +334,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    const state=combat.getState();
    for(const node of content.querySelectorAll('[data-consumable]')){
     const kind=node.dataset.consumable,remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
-    node.disabled=remaining>0||state.hp<=0||state.hp>=state.maxHp;
+    node.disabled=remaining>0||state.hp<=0||state.hp>=state.maxHp||Number(node.dataset.quantity)<=0;
     node.textContent=remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK';
    }
   }else if(!host.hidden&&mode==='abilities'){
