@@ -201,7 +201,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    if(slot.itemId)icon(tile,slot.itemId);
    else element(tile,'span','classic-plus','+');
   }
-  const summary=element(main,'section','classic-gear-stats');
+  const summary=element(main,'section','classic-equipment-bonuses classic-gear-stats');
   summary.setAttribute('aria-label','Current equipment bonuses');
   element(summary,'strong','classic-gear-stat-title',style().toUpperCase()+' · GEAR STATS');
   for(const [label,value] of [
