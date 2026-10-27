@@ -55,3 +55,8 @@
 .classic-audio-control{display:flex;align-items:center;gap:12px;min-height:44px;color:#eee4cd}.classic-audio-control input[type=range]{flex:1;min-width:80px;accent-color:#a6bd89}.classic-damage-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}.classic-damage{position:absolute;left:0;top:0;font:700 22px Georgia,serif;color:#fff2d0;text-shadow:0 2px 3px #151b18,1px 0 #151b18,-1px 0 #151b18;will-change:transform}.classic-damage.hurt{color:#f5a594}.classic-damage.heal{color:#b8e1ae}
 
 @media(max-width:900px){#classic-app.oakrest-framed .classic-ability-buttons button{font-size:12px}#classic-app.oakrest-framed .classic-ability-buttons button small{font-size:9px;line-height:10px;margin-top:1px}}
+
+/* Classic fight-feel: readable event labels without extra permanent HUD panels. */
+.classic-damage.evade{color:#c7e8b5;font-size:17px;letter-spacing:.04em}
+.classic-damage.hit{color:#ffe9b6}
+.classic-damage.miss{color:#d4d9d0;font-size:17px}

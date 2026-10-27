@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import {ENEMY_COMBAT} from './combat-feel.js';
 import {makeClassicActor,makeGroundShadow} from './classic-sprites.js';
+import {hitRecoilStrength} from './classic-combat-impacts.js';
 const makeTexture=(kind)=>{
  const c=document.createElement('canvas');c.width=96;c.height=100;
  const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
@@ -78,7 +79,7 @@ export function createClassicCombatView(scene,spawns){
     side:THREE.DoubleSide,depthWrite:false}));
   hpBackground.rotation.x=-Math.PI/2;hpFill.rotation.x=-Math.PI/2;
   scene.add(model.sprite,shadow,label,hpBackground,hpFill);
-  actors.set(e.id,{...model,shadow,label,hpBackground,hpFill});
+  actors.set(e.id,{...model,shadow,label,hpBackground,hpFill,baseScale:model.sprite.scale.clone()});
  }
  function warningGeometry(w){
   if(w.kind==='pounce')return new THREE.CircleGeometry(w.radius,40);
@@ -134,7 +135,15 @@ export function createClassicCombatView(scene,spawns){
    // Avoid floating health bars on every peaceful creature.
    const displayHealth=show&&(enemy.hp<enemy.maxHp||enemy.aggro||selected?.id===enemy.id);
    actor.hpBackground.visible=displayHealth;actor.hpFill.visible=displayHealth;
-   actor.sprite.position.set(enemy.x,.12+(show&&enemy.aggro ? .06 : 0),enemy.z);
+   // Per-hit squash and knockback are visual only. AI coordinates and
+   // selection hitboxes retain their authoritative simulated positions.
+   const recoil=hitRecoilStrength(enemy.hitFlashUntil,t);
+   const awayX=player?enemy.x-player.x:0,awayZ=player?enemy.z-player.z:0,
+    awayLength=Math.hypot(awayX,awayZ)||1;
+   actor.sprite.position.set(enemy.x+awayX/awayLength*recoil*.19,
+    .12+(show&&enemy.aggro?.06:0)+recoil*.11,
+    enemy.z+awayZ/awayLength*recoil*.19);
+   actor.sprite.scale.copy(actor.baseScale).multiplyScalar(1-recoil*.055);
    actor.shadow.position.set(enemy.x,.035,enemy.z);
    actor.label.position.set(enemy.x,enemy.boss?5.6:enemy.id==='guardian'?4.6:enemy.type==='boar'?3.5:3.65,enemy.z);
    const healthHeight=actor.sprite.scale.y+.15;

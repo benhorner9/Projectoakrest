@@ -5,6 +5,7 @@ import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
 import {createClassicFrameBudget,classicAdaptiveRatio} from './classic-frame-budget.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
+import {createClassicCombatImpacts,hitRecoilStrength} from './classic-combat-impacts.js';
 import {bindClassicPress} from './classic-touch-press.js';
 import {setupClassicFieldNotes} from './classic-field-notes.js';
 import {setupClassicChat} from './classic-chat.js';
@@ -85,6 +86,7 @@ let combatPursuitId=null;
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
+let playerHurtUntil=0;
 let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(OAKREST_PALETTE.sky);
@@ -102,6 +104,8 @@ try{
 const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
 const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const village=createClassicVillage(scene);
+const reducedCombatMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+const impactEffects=createClassicCombatImpacts(scene,{reducedMotion:reducedCombatMotion});
 const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters);
@@ -487,14 +491,20 @@ function triggerDodge(){
  navigation.stop();feedback('Dodged!');
 }
 function combatEvents(events){
+ if(!events.length)return;
+ const visualState=combat.getState();
  for(const event of events){
-  damageFeedback.event(event,combat.getState(),player);
+  damageFeedback.event(event,visualState,player);
+  impactEffects.onEvent(event,visualState,player);
+  if(event.type==='hurt')playerHurtUntil=Math.max(playerHurtUntil,event.time+.23);
+  if(event.type==='hit')audio.play('hit',event.damage>=14);
+  if(event.type==='evade')audio.play('dodge');
   if(event.type==='release')audio.playAbility(event.style,event.kind,event.family);
   if(['hurt','warning','pickup','dead','dash'].includes(event.type))audio.play(({pickup:'loot',dead:'death',dash:'dodge'})[event.type]||event.type);
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
   else if(event.type==='release')lastReleaseUntil=event.time+.18;
-  else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
+  else if(event.type==='hit')chat.record(event.style.toUpperCase()+' hit · '+event.damage+' damage','Game');
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated');
   else if(event.type==='adventure'){markProgress();itemUi?.render();refreshHud();if(!event.reason.startsWith('Used '))feedback(event.reason);}
@@ -688,6 +698,10 @@ function drawStep(dt,render=true){
   step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
   pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
   worn:savedWorn(),cameraOffset});
+ // Local-only damage response; the character's actual position never moves.
+ const heroRecoil=hitRecoilStrength(playerHurtUntil,state.time,.23);
+ if(heroRecoil&&!reducedCombatMotion)hero.sprite.position.y+=heroRecoil*.16;
+ hero.sprite.material.color.set(playerHurtUntil>state.time?'#ffc4b7':'#ffffff');
  for(const n of npcActors){
   const life=citizenRoutine(n,state.time,player);
   n.actor.sprite.position.set(life.x,.08,life.z);n.shadow.position.set(life.x,.04,life.z);
@@ -703,6 +717,7 @@ function drawStep(dt,render=true){
  camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
  camera.lookAt(player.x,0,player.z);
  camera.updateMatrixWorld();damageFeedback.update(state.time,camera);
+ impactEffects.update(state.time,camera);
  audio.cityAmbience(state.time,player.z<80);
  if(render)renderer.render(scene,camera);
 }
@@ -811,7 +826,7 @@ if(isQa)window.oakrestClassicQA={
   return {x:p.x,y:-p.y};
  },
  navigationState:()=>navigation.state(),
- combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ combatState:()=>combat.getState(),impactState:()=>({active:impactEffects.active(),heroTint:hero.sprite.material.color.getHexString()}),lockMonster:id=>chooseEnemy(id),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
  cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
