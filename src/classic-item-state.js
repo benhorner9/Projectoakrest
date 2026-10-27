@@ -7,7 +7,7 @@ import {classicWeaponInterval} from './classic-combat-clock.js';
  * Reuses Oakrest item identity, level locks, shop costs and bank ownership.
  */
 import {STYLE_ORDER,LOADOUTS,ARMOUR,canEquipWeapon,canEquipArmour,equipPrimaryItem,equipSkill,skillCatalogue,levelFromXp,defenceFor} from './rules.js';
-import {EQUIPMENT_SLOTS,SLOT_ITEMS,equipSlotItem,allowsOffhand,equipmentModifiers} from './equipment-slots.js';
+import {EQUIPMENT_SLOTS,SLOT_ITEMS,canEquipSlotItem,equipSlotItem,allowsOffhand,equipmentModifiers} from './equipment-slots.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries,shopGridEntries} from './town-ui.js';
 import {bankCoins,bankMaterials,bankEquipment,buyStarterStock,TOWN_MATERIALS,SHOP_STOCK} from './town-services.js';
