@@ -1,3 +1,4 @@
+import {equippedItemKeys} from './equipment-ownership.js';
 /**
  * Persistent positions for inventory and bank item tiles.
  * Ownership remains in the existing inventory and bank fields; these arrays
@@ -20,7 +21,8 @@ export function inventoryKeyList(data,scope='bag'){
  const bag=scope==='vault'?data.bank:data.inventory;
  if(!bag||typeof bag!=='object')return [];
  const result=[];
- const add=id=>{if(!result.includes(id))result.push(id);};
+ const worn=scope==='vault'?new Set():equippedItemKeys(data);
+ const add=id=>{if(!worn.has(id)&&!result.includes(id))result.push(id);};
  const coins=scope==='vault'?data.bank?.coins:data.coins;
  if(Number(coins)>0)add('currency.coins');
  for(const style of ['melee','magic','ranged'])
