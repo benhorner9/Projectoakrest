@@ -276,13 +276,19 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(kind==='leave'&&target.kind==='exit')return {...ok('Returned to the forest. Your cleared chambers are remembered.'),teleport:{x:0,z:177}};
   if(kind==='ward'&&target.kind==='ward'){
    if(!a.run||a.run.complete)return no('Begin a new expedition at the entrance.');
+   // A ward can only be restored after the previous chamber is secured.
+   // This is enforced in gameplay state, not only through wall collision,
+   // and remains safe when an old saved run is resumed mid-dungeon.
+   if(target.room>0&&!a.run.wards.includes(target.room-1))
+    return no('Restore the previous chamber ward first.');
    if(ADVENTURE_SPAWNS.some(m=>m.room===target.room&&!a.run.kills.includes(m.id)))return no('The chamber guardians still bind this ward.');
    if(!a.run.wards.includes(target.room)){a.run.wards.push(target.room);heal(999);emit('adventure',{reason:target.name+' restored'});}
    return ok('The next chamber opens. The restored ward replenishes your Health.');
   }
   if(kind==='heart'&&target.kind==='heart'){
    if(!a.run||a.run.complete)return no('The heart is already restored. Begin another expedition at the entrance.');
-   if(!a.run.kills.includes('hollow-keeper')||a.run.wards.length<3)return no('Restore all three wards and defeat the keeper first.');
+   if(!a.run.kills.includes('hollow-keeper')||![0,1,2].every(i=>a.run.wards.includes(i)))
+    return no('Restore all three wards and defeat the keeper first.');
    if(!canCarry({'warden-heart':1,'hollow-shard':4}))return no('Make space for both the heart and shards before restoring it.');
    add('warden-heart',1);add('hollow-shard',4);a.run.complete=true;a.clears++;flag('dungeon:clear');emit('adventure',{reason:'Warden’s Hollow cleared · heart and 4 shards received'});
    return ok('The heart beats steadily. Return to Elowen, or ring a refuge bell to leave.');
