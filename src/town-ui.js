@@ -63,9 +63,9 @@ export function shopGridEntries(data){
   }
   const icon=canonical(stock.kind,stock.itemId,stock.style);
   const owned=stock.kind==='weapon'?data.inventory.weapons[stock.style].includes(stock.itemId):
-   data.inventory.armour.includes(stock.itemId);
+   stock.kind==='slot'?data.inventory.slotted.includes(stock.itemId):data.inventory.armour.includes(stock.itemId);
   const banked=stock.kind==='weapon'?bank.weapons[stock.style].includes(stock.itemId):
-   bank.armour.includes(stock.itemId);
+   stock.kind==='slot'?bank.slotted.includes(stock.itemId):bank.armour.includes(stock.itemId);
   return {...stock,icon,cost:stock.price,owned,banked,missing:0};
  });
 }
