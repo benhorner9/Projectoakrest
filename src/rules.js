@@ -331,7 +331,9 @@ export function validSave(raw){
    d.onboarding={area:'world',tutorial:{hitStyles:[],skillsRead:false},teleportScrolls:0,activatedPortals:['oakrest']};
   }
   if(raw.adventure)d.adventure=sanitizeAdventure(raw.adventure);
-  d.inventorySlots=sanitizeSlotOrder(raw.inventorySlots,inventoryKeyList(d,'bag'),BAG_MAX_SLOTS);
+  // Retain legal remembered positions for worn gear across reloads; the
+  // visible backpack still filters equipped pieces from its physical tiles.
+  d.inventorySlots=sanitizeSlotOrder(raw.inventorySlots,inventoryKeyList(d,'bag',true),BAG_MAX_SLOTS);
   d.bankSlots=sanitizeSlotOrder(raw.bankSlots,inventoryKeyList(d,'vault'),VAULT_MAX_SLOTS);
   for(const style of STYLE_ORDER){
     for(const slot of EXTRA_SLOTS){
