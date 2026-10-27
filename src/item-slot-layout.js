@@ -17,11 +17,13 @@ export function sanitizeSlotOrder(raw,owned,max=VAULT_MAX_SLOTS){
   seen.add(id);return id;
  });
 }
-export function inventoryKeyList(data,scope='bag'){
+export function inventoryKeyList(data,scope='bag',includeEquipped=false){
  const bag=scope==='vault'?data.bank:data.inventory;
  if(!bag||typeof bag!=='object')return [];
  const result=[];
- const worn=scope==='vault'?new Set():equippedItemKeys(data);
+ // Count only loose items by default. Save migration may additionally
+ // validate remembered positions for owned, currently equipped gear.
+ const worn=scope==='vault'||includeEquipped?new Set():equippedItemKeys(data);
  const add=id=>{if(!worn.has(id)&&!result.includes(id))result.push(id);};
  const coins=scope==='vault'?data.bank?.coins:data.coins;
  if(Number(coins)>0)add('currency.coins');
