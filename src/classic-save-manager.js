@@ -21,8 +21,9 @@ export function createClassicSaveManager({storage,pathname='/oakrest-dev/classic
  let enabled=false,blocked=null,expectedRaw=baselineRaw??null,writes=0;
  function status(){
   let canRestore=false;
-  try{canRestore=!!checkpointKey&&storage.getItem(checkpointKey)!==null&&
-   storage.getItem(saveKey)===expectedRaw&&identityStillSelected();}catch{}
+  try{const checkpoint=checkpointKey?storage.getItem(checkpointKey):null;
+   canRestore=!!checkpoint&&checkpoint!==expectedRaw&&
+    storage.getItem(saveKey)===expectedRaw&&identityStillSelected();}catch{}
   return {enabled,blocked,canEnable:!!saveKey&&!blocked,
    saveKey,backupKey,checkpointKey,canRestore,writes};
  }
