@@ -460,8 +460,8 @@ $('classic-quests-toggle').addEventListener('click',()=>adventureUi?.showJournal
 $('classic-settings-close').addEventListener('click',()=>windowUi.hide());
 $('classic-audio-enabled').checked=audio.enabled;
 $('classic-audio-volume').value=audio.volume;
-$('classic-audio-enabled').addEventListener('change',e=>{audio.unlock();audio.setEnabled(e.target.checked);});
-$('classic-audio-volume').addEventListener('input',e=>audio.setVolume(e.target.value));
+$('classic-audio-enabled').addEventListener('change',e=>{audio.setEnabled(e.target.checked);audio.unlock();});
+$('classic-audio-volume').addEventListener('input',e=>{audio.setVolume(e.target.value);audio.unlock();});
 $('classic-map-zoom-in').addEventListener('click',()=>minimap.setZoom(minimap.zoom()+.55));
 $('classic-map-zoom-out').addEventListener('click',()=>minimap.setZoom(minimap.zoom()-.55));
 function toggleAttack(){
