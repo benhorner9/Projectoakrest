@@ -1,4 +1,5 @@
 import {LOADOUTS,ARMOUR,STYLE_ORDER,levelFromXp} from './rules.js';
+import {equippedItemKeys} from './equipment-ownership.js';
 import {woodcuttingLevel,WOODCUTTING_LEVEL_XP} from './woodcutting.js';
 import {SLOT_ITEMS,STARTER_SETS} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
@@ -37,10 +38,10 @@ const groupFor=e=>e.kind==='material'||e.kind==='coins'?'supplies':'gear';
 /** Real item contents of either bank or backpack; no manufactured ownership. */
 export function bankGridEntries(data,scope){
  const bag=scope==='vault'?townBank(data):data.inventory;
- const entries=[];
+ const entries=[],worn=scope==='vault'?new Set():equippedItemKeys(data);
  const push=(kind,id,qty,style)=>{
   const key=canonical(kind,id,style),item=getItem(key);
-  if(!item||qty<=0)return;
+  if(!item||qty<=0||worn.has(key))return;
   entries.push({scope,kind,id,style,canonical:key,title:item.title,qty});
  };
  if(scope==='vault'){push('coins','coins',townBank(data).coins);}
