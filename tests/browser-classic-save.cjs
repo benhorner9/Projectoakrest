@@ -40,9 +40,12 @@ async function main(){
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const stored=await page.evaluate(id=>({
    current:localStorage.getItem('oakrest-character-save-'+id),
-   backup:localStorage.getItem('oakrest-classic-before-block6-'+id)
+   backup:localStorage.getItem('oakrest-classic-before-block6-'+id),
+   checkpoint:localStorage.getItem('oakrest-classic-checkpoint-'+id)
   }),id);
   assert.equal(stored.backup,raw,'original bytes retained as restore point');
+  assert.equal(stored.checkpoint,raw,'immediate previous save captured before applying transaction');
+  assert.equal(await page.locator('#classic-restore-save').isEnabled(),true,'manual recovery becomes available after saving');
   assert.equal(JSON.parse(stored.current).coins,857);
   assert.equal(JSON.parse(stored.current).bank.coins,43);
   await page.reload({waitUntil:'domcontentloaded'});
