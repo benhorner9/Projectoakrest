@@ -26,17 +26,10 @@ test('milestone roadmap reflects level requirements for all skills',()=>{
  const vitality=skillMilestones('vitality');
  for(const armour of Object.values(ARMOUR))assert.ok(vitality.some(a=>a.name===armour.title&&a.level===armour.requiredVitality));
 });
-test('one character menu contains non-combat features and combat controls stay accessible',()=>{
- const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- const footer=html.slice(html.indexOf('<footer class="combatbar">'),html.indexOf('</footer>'));
- assert.ok(!footer.includes('id="progression-panel"'),'menu is no longer nested inside the combat bar');
- assert.ok(html.includes('id="menu-backdrop"'));
- assert.ok(html.includes('id="loadout-button"'));
- for(const label of ['EQUIPMENT','INVENTORY','SKILLS','ABILITIES','QUESTS','WORLD MAP','SETTINGS'])
-  assert.ok(html.includes('>'+label+'</button>'),label);
- assert.ok(html.includes('id="skill-detail"'));
- for(const id of ['touch-attack','touch-swap','touch-dodge','skills','styles'])assert.ok(html.includes('id="'+id+'"'));
- const css=readFileSync(new URL('../src/minimal-hud.css',import.meta.url),'utf8');
- assert.ok(css.includes('.oak-menu-open'));
- assert.ok(css.includes('.oak-menu-backdrop'));
+
+test('Classic navigation exposes character, inventory, gear, quests and settings',()=>{
+ const html=readFileSync(new URL('../classic.html',import.meta.url),'utf8');
+ for(const id of ['classic-inventory-toggle','classic-equipment-toggle','classic-abilities-toggle','classic-skills-toggle','classic-quests-toggle','classic-map-toggle','classic-settings-toggle'])assert.ok(html.includes('id="'+id+'"'),id);
+ assert.ok(html.includes('id="classic-item-window"'));
+ assert.ok(html.includes('id="classic-game"'));
 });

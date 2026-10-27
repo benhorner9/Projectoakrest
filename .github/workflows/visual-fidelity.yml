@@ -47,7 +47,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  legacy-gameplay-browser:
+  classic-gameplay-browser:
     # Existing gameplay regression suite runs separately so failures do not
     # disguise whether the new visual rendering itself works.
     runs-on: ubuntu-latest
@@ -61,11 +61,12 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium
       - run: mkdir -p qa
+      - run: npm run build
       - run: node tests/browser-classic-dev-launch.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: oakrest-legacy-gameplay-evidence
+          name: oakrest-classic-gameplay-evidence
           path: qa/
           if-no-files-found: ignore
           retention-days: 7
