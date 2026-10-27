@@ -110,3 +110,19 @@ test('legacy saves with equipped starter items preserve ownership and hide worn 
  assert.equal(classicItemAction(d,{type:'equip',kind:'slot',style:'melee',slot:'helm',id:null}).ok,true);
  assert.equal(spare(d,'slot.recruit-helm'),true);
 });
+
+test('hidden equipped inventory positions remain stable through save roundtrips',()=>{
+ const d=defaultSave();
+ d.inventory.slotted.push(amulet);
+ d.inventorySlots=['weapon.melee.sword',null,'slot.'+amulet];
+ assert.equal(equip(d,'melee').ok,true);
+ const before=structuredClone(d.inventorySlots);
+ assert.ok(!inventoryKeyList(d).includes('weapon.melee.sword'));
+ assert.ok(!inventoryKeyList(d).includes('slot.'+amulet));
+ const restored=validSave(JSON.parse(JSON.stringify(d)));
+ assert.deepEqual(restored.inventorySlots,before,'saved coordinates for worn items are preserved');
+ assert.deepEqual(validSave(restored),restored,'repeated loading does not change hidden equipment positions');
+ assert.ok(!inventoryKeyList(restored).includes('slot.'+amulet),'positions do not make gear reappear in the bag');
+ assert.equal(equip(restored,'melee',null).ok,true);
+ assert.ok(inventoryKeyList(restored).includes('slot.'+amulet),'unequipped gear returns to real bag');
+});
