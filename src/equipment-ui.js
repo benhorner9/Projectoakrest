@@ -1,4 +1,5 @@
 import {STYLE_ORDER,LOADOUTS,ARMOUR,canEquipWeapon,canEquipArmour,ownsWeapon,ownsArmour} from './rules.js';
+import {equippedItemKeys} from './equipment-ownership.js';
 import {EQUIPMENT_SLOTS,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
 import {weaponDisplay} from './attack-rules.js';
@@ -21,7 +22,7 @@ const icon=(parent,id)=>{
 const canonical=(kind,id,style)=>kind==='weapon'?'weapon.'+style+'.'+id:kind==='armour'?'armour.'+id:
  kind==='slot'?'slot.'+id:kind==='material'?'material.'+id:kind==='coins'?'currency.coins':'scroll.teleport';
 export function inventoryEntries(data){
- const list=[];
+ const list=[],worn=equippedItemKeys(data);
  for(const style of STYLE_ORDER)
   for(const id of data.inventory?.weapons?.[style]||[])if(LOADOUTS[style]?.[id])list.push({canonical:canonical('weapon',id,style),kind:'weapon',id,style,qty:1});
  for(const id of data.inventory?.armour||[])if(ARMOUR[id])list.push({canonical:canonical('armour',id),kind:'armour',id,qty:1});
@@ -30,7 +31,9 @@ export function inventoryEntries(data){
   if(qty>0&&getItem(canonical('material',id)))list.push({canonical:canonical('material',id),kind:'material',id,qty});
  if(data.onboarding?.teleportScrolls>0)list.push({canonical:'scroll.teleport',kind:'scroll',id:'teleport',qty:data.onboarding.teleportScrolls});
  if(data.coins>0)list.push({canonical:'currency.coins',kind:'coins',id:'coins',qty:Math.floor(data.coins)});
- return list;
+ // Gear belongs to its loadouts, not the physical backpack. Ownership remains
+ // in the save's catalogue for unlocks, drops, shops and legacy migration.
+ return list.filter(entry=>!worn.has(entry.canonical));
 }
 export function renderInventoryGrid(host,data,examine,onReorder=()=>{}){
  const entries=inventoryEntries(data);
