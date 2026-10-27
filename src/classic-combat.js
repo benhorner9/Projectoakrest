@@ -1,5 +1,5 @@
 import {createClassicSimulationClock,classicWeaponInterval,nextCombatBeat,onCombatBeat,COMBAT_TICK_SECONDS} from './classic-combat-clock.js';
-import {ADVENTURE_SPAWNS} from './adventure-content.js';
+import {ADVENTURE_SPAWNS,ADVENTURE_XP_REWARDS} from './adventure-content.js';
 import {createAdventure} from './adventure-state.js';
 /**
  * Classic gameplay simulation. The presenter owns rendering and guarded saves.
@@ -196,8 +196,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    if(targetId===enemy.id){targetId=null;queuedAbility=null;}
    if(enemy.type==='dummy'){enemy.hp=enemy.maxHp;emit('dummy',{id:enemy.id});return;}
    enemy.dead=true;enemy.aiState='death';enemy.aggro=false;enemy.warning=null;enemy.respawnAt=enemy.room!==undefined?Infinity:time+(enemy.adventure?45:12);
-   const reward=awardMonsterVictory(data,enemy.type,source.style);
-   if(reward.awarded)emit('xp',{style:source.style,amount:XP_BY_MOB[enemy.type],reward});
+   const xp=enemy.adventure?ADVENTURE_XP_REWARDS[enemy.id]??XP_BY_MOB[enemy.type]:XP_BY_MOB[enemy.type];
+   const reward=awardMonsterVictory(data,enemy.type,source.style,xp);
+   if(reward.awarded)emit('xp',{style:source.style,amount:reward.amount,reward});
    const drops=createMonsterDrops(enemy.type,enemy.x,enemy.z,random,
     ()=> 'classic-'+dropSession+'-'+(++nextDrop)+'-'+Math.floor(time*100));
    if(enemy.room!==undefined)drops.push({kind:'material',itemId:'hollow-shard',amount:1,id:'hollow-'+dropSession+'-'+(++nextDrop),x:enemy.x,z:enemy.z});
