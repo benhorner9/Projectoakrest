@@ -170,6 +170,7 @@ function showSaveState(message=null){
  $('classic-enable-save').disabled=s.enabled||!s.canEnable;
  $('classic-enable-save').textContent=s.blocked?'LOCKED':'ENABLE SAVING';
  $('classic-save-now').disabled=!s.enabled;
+ $('classic-restore-save').disabled=!s.canRestore;
  if(message)$('classic-save-state').textContent=message;
  else if(s.blocked)$('classic-save-state').textContent=s.blocked;
  else if(s.enabled)$('classic-save-state').textContent=
@@ -205,6 +206,14 @@ $('classic-enable-save').addEventListener('click',()=>{
  showSaveState(result.reason);feedback(result.reason);
 });
 $('classic-save-now').addEventListener('click',saveNow);
+$('classic-restore-save').addEventListener('click',()=>{
+ const status=saveManager.status();
+ if(!status.canRestore)return;
+ if(!confirm('Restore the previous verified character save? Your latest saved changes will be replaced. The untouched original backup will remain.'))return;
+ const restored=saveManager.restorePrevious();
+ showSaveState(restored.reason);feedback(restored.reason);
+ if(restored.ok)location.reload();
+});
 function showInteraction(target){
  const distance=Math.hypot(target.x-player.x,target.z-player.z);
  if(distance>.001)look={x:(target.x-player.x)/distance,z:(target.z-player.z)/distance};
