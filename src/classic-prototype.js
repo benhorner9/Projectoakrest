@@ -382,13 +382,19 @@ function queueDestination(point){
  const target=closestClickedInteractable(point);
  if(target){chooseInteraction(target);return;}
  pendingDrop=null;selectedTarget=null;windowUi?.hide();
- const result=navigation.moveTo(player,point);
- if(!result.ok){pointerMark.visible=false;feedback(result.reason);return;}
  const engaged=!!combat.getState().targetId;
  const escape=breaksPlayerAttackIntent({kind:'path'},{
   player,target:combat.getState().target,destination:point});
+ // Even an unreachable manual destination must cancel autonomous pursuit.
+ // A clear escape order breaks attacks whether the suggested route is valid.
  combatPursuitId=null;combatMovementIntent.reset();
  if(escape)disengageFromCombat();
+ const result=navigation.moveTo(player,point);
+ if(!result.ok){
+  pointerMark.visible=false;
+  feedback(result.reason+(escape?' Find another escape route.':''));
+  return;
+ }
  placeMark(point.x,point.z);
  feedback(result.arrived?'You are here.':escape?'Escaping the fight — enemies may still chase.':
   engaged?'Repositioning — target retained.':'Walking to destination…');
