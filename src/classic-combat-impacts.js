@@ -10,7 +10,7 @@ export const combatImpactKind=event=>
  event?.type==='hit'?'hit':event?.type==='hurt'?'hurt':event?.type==='evade'?'evade':null;
 export function hitRecoilStrength(until,time,duration=.18){
  const portion=Math.max(0,Math.min(1,(until-time)/duration));
- return Math.sin(Math.PI*portion);
+ return portion<=0||portion>=1?0:Math.sin(Math.PI*portion);
 }
 export const combatImpactScale=damage=>
  Math.min(1.35,.75+Math.max(0,Number(damage)||0)/45);

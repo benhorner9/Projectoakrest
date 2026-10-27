@@ -46,7 +46,7 @@ function labelTexture(name,level){
  return t;
 }
 const assets={mossling:makeTexture('mossling'),boar:makeTexture('boar'),keeper:makeTexture('keeper'),guardian:makeTexture('guardian')};
-export function createClassicCombatView(scene,spawns){
+export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
  const actors=new Map(),warningMeshes=new Map(),projectileNodes=[];
  // A subtle ground circle replaces hard "target lock" visuals.
  const selectedRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.06,40),
@@ -137,7 +137,7 @@ export function createClassicCombatView(scene,spawns){
    actor.hpBackground.visible=displayHealth;actor.hpFill.visible=displayHealth;
    // Per-hit squash and knockback are visual only. AI coordinates and
    // selection hitboxes retain their authoritative simulated positions.
-   const recoil=hitRecoilStrength(enemy.hitFlashUntil,t);
+   const recoil=reducedMotion?0:hitRecoilStrength(enemy.hitFlashUntil,t);
    const awayX=player?enemy.x-player.x:0,awayZ=player?enemy.z-player.z:0,
     awayLength=Math.hypot(awayX,awayZ)||1;
    actor.sprite.position.set(enemy.x+awayX/awayLength*recoil*.19,

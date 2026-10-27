@@ -108,7 +108,7 @@ const reducedCombatMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce
 const impactEffects=createClassicCombatImpacts(scene,{reducedMotion:reducedCombatMotion});
 const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
-const combatView=createClassicCombatView(scene,combat.getState().monsters);
+const combatView=createClassicCombatView(scene,combat.getState().monsters,{reducedMotion:reducedCombatMotion});
 const groundView=createClassicGroundLoot(scene);
 let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
 const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!existing.profile,
