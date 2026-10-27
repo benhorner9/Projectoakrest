@@ -181,37 +181,68 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
  }
  function renderEquip(){
-  const s=view();
-  element(content,'p','classic-muted','Each style remembers a separate nine-slot loadout. Tap a slot to Examine.');
-  const styles=element(content,'div','classic-item-style-list');
+  const s=view(),panel=element(content,'section','classic-gear-panel');
+  panel.setAttribute('aria-label','Equipped gear and combat statistics');
+  // Style selector, nine equipment slots and all bonuses stay visible together.
+  // Long inventories never push the paper doll or the statistics off-screen.
+  const styles=element(panel,'div','classic-item-style-list classic-gear-styles');
   for(const key of STYLE_ORDER)button(styles,key===style()?'selected':'',key.toUpperCase(),()=>{
-   // Previewing other styles must use the existing style switch controls.
+   // Previewing other styles uses the existing authoritative style switch.
    changed(key);render();
   });
-  if(!s.equipment.find(e=>e.id==='weapon').itemId)element(content,'p','classic-item-warning','This loadout has no owned weapon equipped. Choose one from your backpack.');
-  const bonuses=element(content,'div','classic-equipment-bonuses');
-  for(const [label,value] of [['Maximum hit',s.bonuses.maxHit],['Attack interval',s.bonuses.interval.toFixed(1)+' s'],['Range',s.bonuses.reach+' m'],['Physical armour',Math.round(s.bonuses.physical*100)+'%'],['Magic armour',Math.round(s.bonuses.magical*100)+'%'],['Equipment power','+'+Math.round((s.bonuses.power-1)*100)+'%'],['Equipment guard',Math.round(s.bonuses.guard*100)+'%']]){
-   const row=element(bonuses,'div','classic-item-fact');element(row,'span',null,label);element(row,'strong',null,value);
-  }
-  const doll=element(content,'div','classic-paperdoll');
-  for(const slot of s.equipment){
+  const main=element(panel,'div','classic-gear-main');
+  const doll=element(main,'div','classic-paperdoll classic-gear-doll');
+  doll.setAttribute('aria-label','Nine equipment slots');
+  for(const [i,slot] of s.equipment.entries()){
    const tile=button(doll,'classic-paper-slot classic-paper-'+slot.id,
     slot.label,()=>{if(slot.itemId)showDetails(slot.itemId);else notify('Choose an owned item for '+slot.label+'.');});
-   tile.dataset.scope='equipment';tile.dataset.slotIndex=String(s.equipment.indexOf(slot));tile.dataset.equipmentSlot=slot.id;
+   tile.dataset.scope='equipment';tile.dataset.slotIndex=String(i);tile.dataset.equipmentSlot=slot.id;
+   tile.title=slot.label+(slot.itemId?' · '+(getItem(slot.itemId)?.title||'Equipped'):' · Empty');
    if(slot.itemId)icon(tile,slot.itemId);
    else element(tile,'span','classic-plus','+');
   }
-  doll.after(bonuses);
-  element(content,'h3','classic-section-title','EQUIPMENT IN BACKPACK');
+  const summary=element(main,'section','classic-equipment-bonuses classic-gear-stats');
+  summary.setAttribute('aria-label','Current equipment bonuses');
+  element(summary,'strong','classic-gear-stat-title',style().toUpperCase()+' · GEAR STATS');
+  for(const [label,value] of [
+   ['Maximum hit',s.bonuses.maxHit],
+   ['Attack interval',s.bonuses.interval.toFixed(1)+' s'],
+   ['Range',s.bonuses.reach+' m'],
+   ['Physical armour',Math.round(s.bonuses.physical*100)+'%'],
+   ['Magic armour',Math.round(s.bonuses.magical*100)+'%'],
+   ['Equipment power','+'+Math.round((s.bonuses.power-1)*100)+'%'],
+   ['Equipment guard',Math.round(s.bonuses.guard*100)+'%']
+  ]){
+   const row=element(summary,'div','classic-item-fact');
+   element(row,'span',null,label);element(row,'strong',null,value);
+  }
+  if(!s.equipment.find(e=>e.id==='weapon')?.itemId)
+   element(summary,'p','classic-gear-empty-warning','No weapon equipped');
+  const owned=element(panel,'section','classic-gear-owned');
+  const ownedTitle=element(owned,'strong','classic-gear-owned-title','EQUIPMENT IN BACKPACK');
   const items=inventoryEntries(save()).filter(e=>e.kind==='armour'||
    (e.kind==='weapon'||e.kind==='slot')&&e.style===style());
-  const list=element(content,'div','classic-equip-choices');
-  for(const e of items){const name=getItem(e.canonical)?.title||e.id;
-   const tile=button(list,'classic-equip-choice',name,()=>showDetails(e.canonical));
-   tile.dataset.scope='bag';tile.dataset.slotIndex=String(s.bag.findIndex(x=>x?.canonical===e.canonical));tile.dataset.canonical=e.canonical;
+  ownedTitle.textContent+=' · '+items.length;
+  const list=element(owned,'div','classic-equip-choices classic-gear-choices');
+  list.setAttribute('aria-label','Owned equipment available to equip');
+  for(const e of items){
+   const name=getItem(e.canonical)?.title||e.id;
+   const tile=button(list,'classic-equip-choice classic-gear-choice',name,()=>showDetails(e.canonical));
+   tile.dataset.scope='bag';tile.dataset.slotIndex=String(s.bag.findIndex(x=>x?.canonical===e.canonical));
+   tile.dataset.canonical=e.canonical;tile.title='Inspect or equip '+name;
    icon(tile,e.canonical);
   }
-  if(detailId)examine(content,detailId);
+  if(!items.length)element(list,'span','classic-gear-no-items','Find or buy gear to fill your equipment slots.');
+  if(detailId){
+   // Inspect/equip is a bounded overlay. The overview behind it never shifts,
+   // and closing the overlay restores all nine slots without a scroll jump.
+   const overlay=element(content,'section','classic-gear-detail');
+   overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','Equipment details');
+   const toolbar=element(overlay,'div','classic-gear-detail-toolbar');
+   element(toolbar,'strong',null,'EQUIPMENT DETAILS');
+   button(toolbar,'classic-gear-detail-close','BACK TO GEAR',()=>{detailId=null;render();});
+   examine(overlay,detailId);
+  }
  }
  function renderBank(){
   const data=save(),s=view();
@@ -303,6 +334,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   title.textContent={inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store',abilities:'Abilities'}[mode];
   subtitle.textContent='OAKREST · CHARACTER INVENTORY';
   const scroll=content.scrollTop;
+  content.dataset.view=mode;
   content.replaceChildren();
   if(mode==='inventory')renderInventory();
   else if(mode==='equipment')renderEquip();
