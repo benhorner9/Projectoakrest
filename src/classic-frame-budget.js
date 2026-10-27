@@ -3,25 +3,23 @@
  * Samples real presented frames, not time spent in accelerated QA simulation.
  */
 export function createClassicFrameBudget({minScale=.62,downStep=.12,upStep=.06}={}){
- let scale=1,elapsed=0,slow=0,fast=0,samples=0,changes=0;
- function reset(){elapsed=0;slow=0;fast=0;samples=0;}
+ let scale=1,slowPressure=0,fastPressure=0,changes=0;
+ function reset(){slowPressure=0;fastPressure=0;}
  return {
   sample(deltaMs){
-   // A hidden tab, navigation freeze or resume is not a GPU performance sample.
-   if(!Number.isFinite(deltaMs)||deltaMs<=0||deltaMs>200)return false;
-   elapsed+=deltaMs;samples++;
-   if(deltaMs>=23)slow++;
-   if(deltaMs<=17.5)fast++;
-   if(elapsed<2000)return false;
-   const down=samples>=30&&slow/samples>=.54;
-   const up=samples>=80&&fast/samples>=.90&&elapsed>=4000;
-   // Reducing density must be quick; restoration must be gradual. Never let
-   // a single high frame time toggle quality rapidly on a touch device.
+   // Hidden-tab pauses are not GPU load. Reset the moving pressure, but keep
+   // the last known quality until sufficient new foreground samples arrive.
+   if(!Number.isFinite(deltaMs)||deltaMs<=0||deltaMs>200){reset();return false;}
+   // Recent pressure decays exponentially. Earlier good frames must not
+   // mask a new 2-second stretch of truly slow rendering on mobile Safari.
+   slowPressure=deltaMs>=22?slowPressure+deltaMs:slowPressure*.82;
+   fastPressure=deltaMs<=17.5?fastPressure+deltaMs:fastPressure*.82;
+   const down=slowPressure>=2000;
+   const up=fastPressure>=4500&&!down;
    let next=scale;
    if(down)next=Math.max(minScale,scale-downStep);
    else if(up)next=Math.min(1,scale+upStep);
    if(down||up)reset();
-   else if(elapsed>=4000)reset();
    if(Math.abs(next-scale)<.00001)return false;
    scale=Math.round(next*1000)/1000;changes++;return true;
   },
