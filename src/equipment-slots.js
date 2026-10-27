@@ -24,7 +24,8 @@ const catalogue=[
   ['apprentice-orb','Apprentice Focus','offhand','magic','An off-hand focus for the Frostwood Staff.','orb',2,0],
   ['apprentice-boots','Apprentice Boots','boots','magic','Soft shoes lined with a ward.','boots',0,1],
   ['apprentice-amulet','Mage Amulet','amulet','magic','A starter spellcasting charm.','amulet',2,0],
-  ['apprentice-ring','Mage Ring','ring','magic','A simple enchanted ring.','ring',1,0]
+  ['apprentice-ring','Mage Ring','ring','magic','A simple enchanted ring.','ring',1,0],
+  ['wayfarer-amulet','Wayfarer Amulet','amulet','all','A versatile charm usable in Melee, Magic and Ranged loadouts. One amulet may serve all three.','amulet',1,1]
 ];
 export const SLOT_ITEMS=Object.freeze(Object.fromEntries(catalogue.map(([id,title,slot,style,description,shape,power,guard])=>
  [id,Object.freeze({id,title,slot,style,description,shape,power,guard,requiredLevel:1})])));
@@ -38,7 +39,7 @@ export function blankEquipment(){return {melee:blankExtraSlots(),magic:blankExtr
 export const allowsOffhand=(data,style)=>LOADOUTS[style]?.[data.gear?.[style]]?.hands!==2;
 export function canEquipSlotItem(data,style,id){
  const item=SLOT_ITEMS[id];
- return !!item&&item.style===style&&levelFromXp(data?.xp?.[style]||0).level>=item.requiredLevel&&
+ return !!item&&(item.style===style||item.style==='all')&&levelFromXp(data?.xp?.[style]||0).level>=item.requiredLevel&&
   (data.inventory?.slotted||[]).includes(id)&&(item.slot!=='offhand'||allowsOffhand(data,style));
 }
 export function equipSlotItem(data,style,slot,id){
@@ -51,7 +52,7 @@ export function equipmentModifiers(data,style){
  let power=0,guard=0;
  for(const slot of EXTRA_SLOTS){
   const id=data.equipment?.[style]?.[slot],item=SLOT_ITEMS[id];
-  if((slot!=='offhand'||allowsOffhand(data,style))&&item&&item.style===style&&item.slot===slot&&(data.inventory?.slotted||[]).includes(id)){
+  if((slot!=='offhand'||allowsOffhand(data,style))&&item&&(item.style===style||item.style==='all')&&item.slot===slot&&(data.inventory?.slotted||[]).includes(id)){
     power+=item.power;guard+=item.guard;
   }
  }
