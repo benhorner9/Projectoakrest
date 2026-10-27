@@ -86,6 +86,18 @@ export function adventureSolidAt(x,z,r=.38){
  return ADVENTURE_TARGETS.some(t=>['station','resource','ward','heart','discovery'].includes(t.kind)&&Math.hypot(x-t.x,z-t.z)<(t.kind==='station'?.8:.45)+r)||ADVENTURE_WALLS.some(b=>Math.abs(x-b.x)<b.w/2+r&&Math.abs(z-b.z)<b.d/2+r)||ADVENTURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<t.r+r);
 }
 const mob=(id,name,type,x,z,maxHp,level,weak,extra={})=>({id,name,type,x,z,maxHp,level,weak,adventure:true,...extra});
+/** Explicit rewards for named adventure encounters.
+ * Ordinary overworld creatures retain their base XP in the core rules.
+ * Stage bosses and chamber elites pay for extra HP, mechanics and supplies.
+ * Keys are stable spawn IDs, so saves/quests remain backward compatible.
+ */
+export const ADVENTURE_XP_REWARDS=Object.freeze({
+ 'sapling-a':42,'sapling-b':42,tusk:65,guardian:110,
+ poacher:94,acolyte:100,
+ 'hollow-root-0':80,'hollow-root-1':80,
+ 'hollow-sap-0':105,'hollow-sap-1':105,
+ 'hollow-elite':210,'hollow-keeper':350
+});
 export const ADVENTURE_SPAWNS=[
  mob('sapling-a','Brambleling','mossling',-12,119,90,3,'melee'),
  mob('sapling-b','Brambleling','mossling',9,108,90,3,'melee'),
