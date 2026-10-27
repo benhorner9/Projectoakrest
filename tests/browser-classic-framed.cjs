@@ -18,7 +18,10 @@ let browser;
   await page.locator('#classic-creator-name').fill('Framed Tester');
   await page.locator('#classic-creator-form button[type=submit]').click();
   await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
-  const performanceInfo=await page.evaluate(()=>oakrestClassicQA.renderStats());
+  // Creating a character may reload the game shell. Reacquire the QA bridge
+  // after the transition instead of racing its module initialization.
+  await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
+  const performanceInfo=await page.evaluate(()=>window.oakrestClassicQA.renderStats());
   assert.equal(performanceInfo.qualityScale,1,'normal first frame is full quality');
   assert.equal(performanceInfo.qualityChanges,0,'quality does not oscillate on startup');
   assert.ok(performanceInfo.pixelRatio>=.5&&performanceInfo.pixelRatio<=1.5);
