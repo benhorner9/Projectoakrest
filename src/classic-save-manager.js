@@ -15,9 +15,17 @@ export function createClassicSaveManager({storage,pathname='/oakrest-dev/classic
  const rosterKey=key('oakrest-characters-v1');
  const saveKey=isSavedCharacter(profile)?key('oakrest-character-save-'+profile.id):null;
  const backupKey=isSavedCharacter(profile)?key('oakrest-classic-before-block6-'+profile.id):null;
+ // One verified pre-write recovery point in addition to the untouched
+ // original Classic backup, isolated per character and dev/production path.
+ const checkpointKey=isSavedCharacter(profile)?key('oakrest-classic-checkpoint-'+profile.id):null;
  let enabled=false,blocked=null,expectedRaw=baselineRaw??null,writes=0;
- function status(){return {enabled,blocked,canEnable:!!saveKey&&!blocked,
-   saveKey,backupKey,writes};}
+ function status(){
+  let canRestore=false;
+  try{canRestore=!!checkpointKey&&storage.getItem(checkpointKey)!==null&&
+   storage.getItem(saveKey)===expectedRaw&&identityStillSelected();}catch{}
+  return {enabled,blocked,canEnable:!!saveKey&&!blocked,
+   saveKey,backupKey,checkpointKey,canRestore,writes};
+ }
  function report(value){onStatus(value,status());return value;}
  function identityStillSelected(){
   if(!saveKey||!profile)return false;
@@ -67,6 +75,10 @@ export function createClassicSaveManager({storage,pathname='/oakrest-dev/classic
    // and practice-weapon state are not persisted.
    const normalized=validSave(snapshot);
    const next=enc(normalized);
+   // Keep the last complete, verified save before replacing it. When storage
+   // is exhausted, fail closed instead of risking the only usable copy.
+   storage.setItem(checkpointKey,expectedRaw);
+   if(storage.getItem(checkpointKey)!==expectedRaw)throw Error('Could not verify checkpoint.');
    storage.setItem(saveKey,next);
    if(storage.getItem(saveKey)!==next)throw Error('Saved bytes could not be verified.');
    expectedRaw=next;writes++;
@@ -77,6 +89,25 @@ export function createClassicSaveManager({storage,pathname='/oakrest-dev/classic
    return report({ok:false,reason:blocked});
   }
  }
+ function restorePrevious(){
+  try{
+   if(!saveKey||!identityStillSelected())return report({ok:false,reason:'Select the same saved character before restoring.'});
+   const current=storage.getItem(saveKey);
+   if(current!==expectedRaw)return report({ok:false,reason:'Save changed in another tab; reload before restoring anything.'});
+   const prior=storage.getItem(checkpointKey);
+   if(!prior||prior===current)return report({ok:false,reason:'There is no earlier checkpoint to restore.'});
+   // Reject unreadable snapshots and never overwrite a save which has
+   // changed since this session's last verified write.
+   validSave(JSON.parse(prior));validSave(JSON.parse(current));
+   storage.setItem(saveKey,prior);
+   if(storage.getItem(saveKey)!==prior)throw Error('Restore read-back failed.');
+   expectedRaw=prior;enabled=false;blocked=null;
+   return report({ok:true,reason:'Previous verified save restored. Reload Classic before continuing.'});
+  }catch{
+   enabled=false;blocked='Restore was not completed. No further automatic saving is permitted.';
+   return report({ok:false,reason:blocked});
+  }
+ }
  function disable(){enabled=false;return report({ok:true,reason:'Persistent mode turned off. Session changes will not be saved.'});}
- return {status,enable,save,disable};
+ return {status,enable,save,restorePrevious,disable};
 }
