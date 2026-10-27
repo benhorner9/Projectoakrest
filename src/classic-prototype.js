@@ -3,6 +3,7 @@ import {classicItemDetails} from './classic-item-state.js';
 import {createClassicSimulationClock} from './classic-combat-clock.js';
 import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
+import {createClassicFrameBudget,classicAdaptiveRatio} from './classic-frame-budget.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
 import {bindClassicPress} from './classic-touch-press.js';
 import {setupClassicFieldNotes} from './classic-field-notes.js';
@@ -90,7 +91,8 @@ scene.background=new THREE.Color(OAKREST_PALETTE.sky);
 scene.fog=new THREE.Fog(OAKREST_PALETTE.sky,75,160);
 scene.add(new THREE.HemisphereLight(OAKREST_PALETTE.sun,OAKREST_PALETTE.shade,1.7));
 const sun=new THREE.DirectionalLight(OAKREST_PALETTE.sun,1.8);sun.position.set(-27,55,36);scene.add(sun);
-let renderer;
+const frameBudget=createClassicFrameBudget();
+let renderer,basePixelRatio=1,drawRatio=0;
 try{
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
@@ -271,7 +273,10 @@ function resize(){
  const width=Math.max(1,root.clientWidth),height=Math.max(1,root.clientHeight);
  const aspect=width/height,half=CLASSIC_CAMERA.viewHeight/2/zoom;
  camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;
- camera.updateProjectionMatrix();renderer.setPixelRatio(classicPixelRatio(width,height,devicePixelRatio));renderer.setSize(width,height,false);
+ camera.updateProjectionMatrix();
+ basePixelRatio=classicPixelRatio(width,height,devicePixelRatio);
+ drawRatio=classicAdaptiveRatio(basePixelRatio,frameBudget.scale);
+ renderer.setPixelRatio(drawRatio);renderer.setSize(width,height,false);
 }
 function setZoom(n){zoom=clamp(n,CLASSIC_CAMERA.minZoom,CLASSIC_CAMERA.maxZoom);resize();}
 $('classic-zoom-in').addEventListener('click',()=>setZoom(zoom+.12));
@@ -603,6 +608,7 @@ function moveGame(dt){
  return {...update,movedDistance:Math.hypot(player.x-previous.x,player.z-previous.z)};
 }
 const simulationClock=createClassicSimulationClock();
+let nextBookRefresh=0;
 let lastMovement={kind:'idle',movedDistance:0};
 function draw(dt,render=true){
  if(characterUI?.isOpen())return;
@@ -651,8 +657,12 @@ function drawStep(dt,render=true){
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
  village.update(state.time);
  for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
- adventureUi?.tick();skillsUi?.tick();itemUi?.tick();
- fieldNotes.update({name:existing.profile?.name,xp:state.progression,saved:saveManager.status().enabled});
+ // UI refresh is bounded; input, combat and world rendering remain at 60 Hz.
+ if(state.time>=nextBookRefresh){
+  adventureUi?.tick();skillsUi?.tick();itemUi?.tick();
+  fieldNotes.update({name:existing.profile?.name,xp:state.progression,saved:saveManager.status().enabled});
+  nextBookRefresh=state.time+.12;
+ }
  if(state.style!==style){style=state.style;refreshHud();}
  combatView.update(state,cameraOffset,player);
  groundView.update(state.groundLoot,state.time);
@@ -690,8 +700,16 @@ function drawStep(dt,render=true){
 let last=performance.now(),qaPaused=false;
 function tick(time){
  requestAnimationFrame(tick);
- if(document.hidden||qaPaused){last=time;return;}
- const dt=Math.max(0,(time-last)/1000);last=time;draw(dt);
+ if(document.hidden||qaPaused){last=time;frameBudget.reset();return;}
+ const frameMs=Math.max(0,time-last),dt=frameMs/1000;last=time;
+ if(frameBudget.sample(frameMs)){
+  const ratio=classicAdaptiveRatio(basePixelRatio,frameBudget.scale);
+  if(Math.abs(ratio-drawRatio)>.015){
+   drawRatio=ratio;renderer.setPixelRatio(ratio);
+   renderer.setSize(Math.max(1,root.clientWidth),Math.max(1,root.clientHeight),false);
+  }
+ }
+ draw(dt);
 }
 itemUi=setupClassicItems({
  combat,player:()=>player,style:()=>style,notify:feedback,
@@ -750,7 +768,7 @@ const cameFromDevLauncher=(()=>{
 if(!existing.profile&&(!existing.existing||cameFromDevLauncher))characterUI.show();
 addEventListener('pagehide',()=>{if(needsSave)saveNow();});
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden&&needsSave)saveNow();
+ if(document.hidden){frameBudget.reset();simulationClock.resetRemainder();if(needsSave)saveNow();}
 });
 const initialCameraOffset=orbitCamera.offset();
 camera.position.set(player.x+initialCameraOffset.x,initialCameraOffset.y,player.z+initialCameraOffset.z);
@@ -761,7 +779,7 @@ const isQa=new URLSearchParams(location.search).has('qa')&&
 if(isQa)window.oakrestClassicQA={
  pauseAutomaticLoop:(paused=true)=>{qaPaused=!!paused;last=performance.now();},
  worldLife:()=>npcActors.map(n=>({id:n.id,x:n.actor.sprite.position.x,z:n.actor.sprite.position.z})),
- renderStats:()=>({batching:village.batching,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),width:renderer.domElement.width,height:renderer.domElement.height}),
+ renderStats:()=>({batching:village.batching,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),qualityScale:frameBudget.scale,qualityChanges:frameBudget.changes,width:renderer.domElement.width,height:renderer.domElement.height}),
  state:()=>({x:player.x,z:player.z,style,interior:occupantBuilding(player.x,player.z)?.id||null,
   pathLength:navigation.state().waypoints.length,hasSavedProfile:existing.existing,
   npcCount:npcActors.length,roofHidden:!!occupantBuilding(player.x,player.z)&&
