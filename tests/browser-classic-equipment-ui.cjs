@@ -93,6 +93,38 @@ let browser;
  assert.ok((await snapshot()).inventory.slotted.includes('recruit-shield'));
  assert.match(await page.locator('.classic-equipment-bonuses').textContent(),/1\.8 s/);
  assert.equal(await page.locator('.classic-paper-slot').count(),9);
+ // The Gear tab is a one-screen overview at the main iPad landscape size.
+ // Slots, all seven live bonuses and the owned-gear tray remain in view
+ // without requiring any vertical swipe, and inspecting a slot is reversible.
+ await page.setViewportSize({width:1194,height:834});
+ const gearView=await page.evaluate(()=>{
+  const content=document.getElementById('classic-item-content');
+  const rect=content.getBoundingClientRect();
+  const within=el=>{
+   const r=el.getBoundingClientRect();
+   return r.width>0&&r.height>0&&r.top>=rect.top-2&&r.bottom<=rect.bottom+2&&
+    r.left>=rect.left-2&&r.right<=rect.right+2;
+  };
+  const slots=[...content.querySelectorAll('.classic-paper-slot')];
+  const stats=[...content.querySelectorAll('.classic-gear-stats .classic-item-fact')];
+  const tray=content.querySelector('.classic-gear-owned');
+  return {view:content.dataset.view,slots:slots.length,stats:stats.length,
+   allVisible:slots.every(within)&&stats.every(within)&&within(tray),
+   overflow:content.scrollHeight-content.clientHeight,
+   panel:!!content.querySelector('.classic-gear-panel')};
+ });
+ assert.equal(gearView.view,'equipment');
+ assert.equal(gearView.panel,true);
+ assert.equal(gearView.slots,9,'the entire nine-slot paper doll is visible');
+ assert.equal(gearView.stats,7,'all seven gear bonuses are visible');
+ assert.equal(gearView.allVisible,true,'no equipment slot, stat or owned-gear tray is off-screen');
+ assert.ok(gearView.overflow<=2,'the Gear overview never requires vertical scrolling: '+JSON.stringify(gearView));
+ await page.locator('[data-equipment-slot="weapon"]').tap();
+ assert.equal(await page.locator('.classic-gear-detail').isVisible(),true,'equipped item opens an overlay rather than extending the Gear page');
+ await page.locator('.classic-gear-detail-close').tap();
+ assert.equal(await page.locator('.classic-gear-detail').count(),0);
+ assert.equal(await page.locator('.classic-paper-slot').count(),9);
+ await page.setViewportSize({width:1366,height:1024});
  await page.locator('#classic-styles [data-style="ranged"]').tap();
  assert.match(await page.locator('.classic-item-style-list .selected').textContent(),/RANGED/);
  await open('abilities');assert.equal(await page.locator('.classic-ability-select').count(),4);
