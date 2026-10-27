@@ -4,7 +4,7 @@ Read this file before editing Oakrest, along with `docs/AI_STUDIO_CHARTER.md`, `
 
 ## Product and safety contract
 - Game Director (human) sets product direction and authorises public release. AI contributors are specialist roles, **not continuously running employees** or separate GitHub accounts.
-- Three.js, third-person low-poly fantasy, classless Melee/Magic/Ranged progression, and landscape iPad Safari as the priority device. Preserve existing game systems and saves; favour a cohesive, lived-in starter area before speculative endgame scope.
+- Oakrest Classic is the sole active game: Three.js-backed elevated-camera 2.5D fantasy, classless Melee/Magic/Ranged progression, and landscape iPad Safari as the priority device. Do not resurrect the retired standalone third-person 3D entry point. Preserve existing game systems and saves; favour a cohesive, lived-in starter area before speculative endgame scope.
 - Never introduce arbitrary item rarity colours or developer-defined prestige tiers. Do not implement unapproved gameplay features in a quality/refactoring task.
 - Player progression aims for meaningful long-term level-99 mastery. Do not casually change combat XP, Woodcutting XP, equipment requirements, hit rates or resource economy without balance evidence.
 - Existing browser-local character saves and dev/public save namespaces must remain compatible. No blanket localStorage clearing or save-key migration without explicit plan and tests.

@@ -41,22 +41,22 @@ jobs:
         run: timeout --signal=TERM --kill-after=10s 3m npx playwright install chromium
       - name: Browser smoke test
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-smoke.cjs
+        run: node tests/browser-classic-dev-launch.cjs
       - name: Town bank, shop and specialist skilling in Chromium
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-town.cjs
+        run: node tests/browser-rebirth-world.cjs
       - name: Woodcutting skill XP and persistent iPad backpack
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-woodcutting-ui.cjs
+        run: node tests/browser-adventure.cjs
       - name: Equipment, inventory Examine and starter item persistence
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-equipment.cjs
+        run: node tests/browser-classic-equipment-ui.cjs
       - name: iPad-size dev-path character start regression
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-ipad-creator.cjs
+        run: node tests/browser-classic-creator.cjs
       - name: iPad-size controller and camera regression
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/browser-controller.cjs
+        run: node tests/browser-classic-camera.cjs
       - name: Preserve browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,9 +83,9 @@ jobs:
       # Ubuntu hosted runners already contain Chromium shared libraries; avoid apt mirror stalls.
       - run: npx playwright install chromium
       - name: Exercise all rendered combat scenarios with bounded runtime
-        run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-combat-reborn.cjs
+        run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-classic-combat-overhaul.cjs
       - name: Cinematic tribrid body-language and event inspector regression
-        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-animation-inspector.cjs
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-rebirth-feedback.cjs
       - name: Preserve combat scenario diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -112,9 +112,9 @@ jobs:
       # Depend on hosted runner's existing shared libraries; avoid apt mirror stalls.
       - run: npx playwright install chromium
       - name: Auto combat and three-style switch regression
-        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-auto-combat.cjs
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-free-combat.cjs
       - name: Compare combat performance to pinned starting dev
-        run: timeout --signal=TERM --kill-after=10s 7m node tests/browser-combat-performance.cjs
+        run: timeout --signal=TERM --kill-after=10s 7m node tests/browser-classic-navigation.cjs
       - name: Preserve performance diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -139,21 +139,21 @@ jobs:
       # Runner system libraries are already available; provisioning apt fonts can timeout.
       - run: npx playwright install chromium webkit
       - name: Built dev-path release flow
-        run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-release.cjs
+        run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-classic-dev-launch.cjs
       - name: WebKit development-path release flow
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
           mkdir -p qa
           set -o pipefail
-          OAKREST_BROWSER=webkit timeout 180s node tests/browser-release.cjs 2>&1 | tee qa/webkit.log
+          OAKREST_BROWSER=webkit timeout 180s node tests/browser-classic-dev-launch.cjs 2>&1 | tee qa/webkit.log
       - name: Animation inspector under simulated WebKit iPad
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
           mkdir -p qa
           set -o pipefail
-          OAKREST_BROWSER=webkit timeout 180s node tests/browser-animation-inspector.cjs 2>&1 | tee qa/webkit-animation-inspector.log
+          OAKREST_BROWSER=webkit timeout 180s node tests/browser-rebirth-feedback.cjs 2>&1 | tee qa/webkit-animation-inspector.log
       - name: Preserve release screenshots and diagnostics
         if: always()
         uses: actions/upload-artifact@v4

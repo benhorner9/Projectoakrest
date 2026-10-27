@@ -1,151 +1,40 @@
-# Project Oakrest
+# Project Oakrest — Classic
 
-Oakrest is an independently developed low-poly third-person fantasy RPG made with Three.js, prioritising **iPad Safari in landscape**, then desktop and other mobile browsers. It combines direct-control combat with separate Melee, Ranged, Magic and Vitality progression. The game is currently an actively tested browser-local prototype, **not** a networked MMO.
+Oakrest now has **one active game**: Oakrest Classic, a lightweight elevated-camera 2.5D fantasy browser RPG. The separate third-person 3D prototype has been retired. The Classic world still uses Three.js/WebGL to render low-poly terrain and environments; removing the old game does **not** mean removing its renderer.
 
-**Play:** [Oakrest development](https://playcellbound.com/oakrest-dev/) · [Oakrest public](https://playcellbound.com/oakrest/) (a separate release, not automatically updated from dev).
+**Development:** https://playcellbound.com/oakrest-dev/  
+**Production (separate release, not updated by dev):** https://playcellbound.com/oakrest/
 
-## Current playable systems
+The development home URL redirects directly to `classic.html`. No mode switch or extra launcher is required.
 
-- Third-person exploration of a town with enterable buildings, independent interiors, bank, shops, forester and ambient citizens, leading to the forest frontier.
-- Character movement, free/follow camera, joystick/touch look, gamepad/keyboard controls, terrain and obstacle collision.
-- Melee, Magic and Ranged loadouts, weapon-specific timed auto-attacks, four slotted abilities, enemy telegraphs and physical projectile or melee contact.
-- Equipment, RuneScape-inspired four-column inventory and Examine, bank storage, ground drops, Woodcutting with distinct tree species/axes and a persistent quick backpack.
-- Independent skill XP and local character persistence, with a character creator and separate save namespaces for development and public.
-- Automated unit, browser, rendering and release checks; CI and browser emulation do **not** replace physical iPad Safari acceptance.
+## Core gameplay
 
-## Development and QA
+- Keyboard, mouse and touch movement; orbiting elevated camera and minimap.
+- Separate Melee, Magic and Ranged loadouts, skills, equipment and progression.
+- Single-panel gear, inventory and bank management with shared accessories and no duplicated equipped items.
+- Auto-combat, abilities and eight configurable quick slots, items, gathering, crafting, quests and the first adventure/dungeon.
+- Browser-local character saves with separate dev and production namespaces. There is no account-based server persistence or public multiplayer yet.
+
+## Local development
 
 ```sh
 npm ci --ignore-scripts
 npm run check
 npm test
 npm run build
-npx playwright install --with-deps chromium
-node tests/browser-smoke.cjs
+npx playwright install chromium
+node tests/browser-classic-dev-launch.cjs
+node tests/browser-classic.cjs
+node tests/browser-classic-equipment-ui.cjs
+node tests/browser-adventure-complete.cjs
 ```
 
-For local development: `npm run dev` and visit `http://localhost:5173/`. Three.js is a pinned package dependency; the built release is generated to `dist/`.
+Run `npm run dev` and open `http://localhost:5173/` (redirects to Classic). Never test save migrations by clearing real browser storage.
 
-## Deployment and studio workflow
+## Quality, review and deployment
 
-**Oakrest does not deploy with Vercel.** Developers work on task branches from `dev`, open a PR against `dev`, run the core and full Greenwood quality workflows, then coordinate a deliberate development-only release using the shared-host bridge in `benhorner9/Cellbound`.
+Changes start from `dev` in an issue-scoped branch, reviewed through a PR. CI should exercise the Classic game rather than historic third-person scenarios. Keep all mechanics, assets, save behaviour and iPad Safari compatibility that Classic uses. Real iPad landscape Safari validation is mandatory for final hardware signoff; desktop WebKit or Chromium emulation alone does not establish it.
 
-Read [the exact shared-host deployment workflow](docs/development-deployment.md), [AI studio charter](docs/AI_STUDIO_CHARTER.md), [first quality audit](docs/AI_STUDIO_AUDIT_2026-10-21.md) and [AI contributor rules](AGENTS.md). A successful GitHub merge is **not** evidence that the website was updated; release QA checks the pinned SHA and hosted assets. The development bridge must never publish to `/oakrest/`.
+The shared-host bridge documented in [docs/development-deployment.md](docs/development-deployment.md) deploys reviewed commits **only** to `/oakrest-dev/`. Changes to production require separate explicit approval. Three.js remains bundled locally, without a runtime CDN.
 
-Browser saves are stored locally on each device. Don't clear site data to troubleshoot unless you have a safe backup: it can delete character progress. No accounts, server-side character persistence or public multiplayer are currently offered.
-
-## Controls
-| Action | Desktop | Touch |
-|---|---|---|
-| Move | WASD | Left joystick |
-| Aim | Mouse | Swipe right half |
-| Attack | Left click | ATTACK |
-| Four skills | Q E R F | Skill buttons |
-| Combat style | Tab or 1 2 3 | Style buttons |
-| Dodge | Shift / Space | DODGE |
-| Weapon change | Button | Button |
-
-## Future direction
-Gear-progression dungeons, potentially style-restricted dungeons, are planned for later. First prove the single-village combat loop is fun. This is a prototype: no multiplayer, server-authoritative gameplay, account login or production asset pipeline yet. Test iPad performance and controls in a real browser before treating the client as ready.
-
-## Mouse-free / iPad controls (0.2)
-- Left joystick moves; drag the right side of the scene to look.
-- Hold ATTACK for repeated basic attacks at your equipped weapon's attack speed.
-- DODGE and SWAP have their own touch buttons; all four abilities and three combat-style buttons remain tappable.
-- ⚙ opens the camera sensitivity slider and full input instructions.
-- A keyboard without a mouse can use WASD to move, the left/right arrows to rotate the camera, J or Enter to attack, Tab to swap, Q/E/R/F for skills, and Space to dodge.
-
-These are early controls: check comfort on real iPad hardware before considering them final.
-
-## iPad / Safari zoom fix
-Safari pinch, double-tap and multi-thumb page zoom are suppressed on the fullscreen gameplay surface without disabling taps, attacks or single-finger camera drag. The camera sensitivity slider remains usable.
-
-## 0.3: MOBA-style mobile combat arc
-Touchscreen players have four weapon skills arranged in a right-thumb arc around the large hold-to-attack button. SWAP cycles to the labelled next combat style and DODGE remains beside it. The three-style selector and weapon picker are compacted beneath the health bar; the left movement joystick stays near the bottom-left. Desktop mouse and keyboard controls retain their conventional skill bar.
-
-## 0.4 — Ability progression, armour and equipment requirements
-- Each combat style initially has one weapon ability slotted. Weapon abilities unlock at style levels 1, 3, 5, 8; universal style choices at levels 2 and 6.
-- Tap **SKILLS** to choose from unlocked abilities and assign four positions per weapon family. Unassigned buttons are marked empty; the game saves builds locally.
-- Weapons have minimum combat-style levels (starter 1, alternate family 4, upgraded weapon 6, upgraded alternate 9).
-- Armour requires Vitality 1/3/6. Cloth favours mobility/magic, leather protects against physical attacks and benefits ranged combat, plate favours physical defence/melee at the cost of mobility. Each style remembers its armour separately.
-- The touch Swap button is now closer to Attack and reacts on the touch press, so the left thumb can keep steering.
-- These are test progression gates and starter gear. Loot drops, shops and a complete item economy come later; your existing XP and coins stay saved.
-
-## 0.5 — Skill levels and attack-to-look
-- SKILLS → LEVELS shows Melee, Ranged, Magic, Vitality with current level, XP this level, remaining XP to the next level, progress and total XP. Displays MAX LEVEL at 99.
-- Holding ATTACK auto-attacks. Sliding the same right thumb left/right turns the camera while Attack and the left joystick continue; pointer capture retains the drag even outside the attack circle. Releasing stops auto-attack.
-
-## 0.6 — In-world character dropdown
-The previous full-screen build overlay was replaced by a compact non-modal menu directly attached to the character combat controls. It does not pause rendering or combat. MENU opens four tabs: **Equip** (weapons/armour by current style), **Inventory** (items actually owned, with equip shortcuts), **Skills** (Melee/Ranged/Magic/Vitality levels and progress) and **Abilities** (select and slot unlocked combat skills).
-Tap a skill in Skills to open a small detail sheet inside the menu with a level-by-level milestone list showing the abilities that can be learned and weapons/armour that can be worn. Back returns to the menu without covering the game.
-Prototype ownership rule: three basic weapons and Traveller Wraps start in inventory; other prototype training weapons and armour are awarded automatically at relevant level milestones. Existing saved XP automatically receives its earned gear, without wiping existing progress. True monster loot, trading, shops and crafting remain future work.
-
-## Combat 2.0 starter-village refinement
-- Mosslings mark a small pounce area; boars mark a straight charge lane then rush; bandits warn before a directional cleave. Their warning shapes lock in place at windup, so sidestepping or dodging works. Stuns interrupt warnings.
-- Melee attacks have a short three-strike animation/damage rhythm and enemies briefly react to hits; ranged and magic get distinct launch effects. Touch projectile fire gets a small cone of aim forgiveness, never omnidirectional auto-targeting.
-- Enemy hits trigger a short red edge flash; dodge cooldown is shown on the button; 3 monster types have individual warning timings.
-- Existing enemy victories still give coins and XP and can also award Moss Fibre, Boar Hide or Bandit Tokens in the Inventory menu. Materials are saved with existing character progress but cannot yet be crafted into anything.
-- All changes stay in the existing starter village and do not change combat/armour level requirements.
-
-## 0.7 — Real weapon attack speed, wind-up, range and recoveries
-Basic attacks now have a weapon-defined start-to-start interval, visible wind-up (impact occurs after the wind-up), and a real recovery clock. Rapid taps cannot bypass the timer; holding ATTACK repeats only when ready. Dodging during wind-up cancels the unreleased hit without refunding its attack recovery. Swapping styles waits for the current wind-up to finish; overall recovery remains shared across styles.
-Starter comparison: Twin Daggers 9 dmg / 0.40s / 2.1 range; Iron Longsword 19 / 0.95s / 3.1; Heavy Greatsword 39 / 1.70s / 3.7 (level 7); Hunter Shortbow 13 / 0.68s / 16 (level 3); Oak Longbow 22 / 1.40s / 30; Heavy Crossbow 39 / 2.05s / 12. Frost and Ember magic retain their own rates.
-Ranged basic attacks and projectile abilities can no longer travel past their equipped weapon's defined range. The mobile Attack button now displays remaining recovery time and a circular progress ring. The Equip and Inventory views list basic damage, seconds per attack, and reach.
-
-## Visual polish pass 1 — world, lighting and character silhouettes
-Procedural low-poly environment upgrade using instanced grass, roadside pebbles, wildflowers, larger rocks, creek, market cart, crops, barrels, crates, directional lighting, sunset sky dome and ambient motes. Cabins have additional foundation, timber frames, roofs and warm windows. Player gains cloak, belt, armour plate, bracers and boots; mosslings, boars and bandits gain readable unique detailing. Materials stay entirely code-generated, with no external textures or large file downloads. The sky and ambient particles animate independently of the core simulation and don't block touch controls.
-
-## Visual polish pass 1 — combat and presentation
-Added transient slash-arc and impact-ring meshes, per-projectile glow and cleanup; target bars now have more contrast and colour-coded foes. UI uses a cohesive forest/brass visual theme across HP, XP, quest, skills, ability cluster, joystick, progression menu, notifications, introductory screen and camera controls. Fight effects are short-lived, cleanup meshes to avoid memory leaks, and respect iPad touch hit areas. Reduced motion users get simpler HUD animation.
-
-## 0.9 — Smoother controls and physical monster drops
-- Movement is damped at a frame-independent rate: softer starts/stops, eased visual facing, stride-driven walk animations, more natural camera follow and slight enemy idle sway. Joystick and attack direction stay responsive.
-- Mosslings, boars and bandits drop visible hovering coin pouches and occasionally materials or equipment on death. Coins/materials are only credited when picked up. XP and quest progression still happen on kill. Walk within 3.3 world units and use the **PICK UP** touch button or **G** on desktop.
-- Ground drops are saved in local character storage and restored on reload (up to 36 oldest-first). Equipment stays in inventory even if its level requirement is not met; duplicates convert to 8 coins.
-- Migrating an existing save preserves earned milestone equipment. After migration, new equipment is obtained from loot instead of appearing automatically at level-up.
-
-Inventory items discovered ahead of their gear requirements now visibly show their level lock and cannot be equipped until the appropriate skill is trained. On portrait phones, the pickup prompt sits above the action pad rather than colliding with the ability buttons.
-
-## Combat levels and bounded enemy aggression
-- Overall Combat Level is now derived (1–99) from strongest Melee/Ranged/Magic skill (65%), Vitality (25%) and the two other offensive skills (5% each). It isn't a separately trainable skill. Shown in the HP HUD and character menu; updates immediately when XP is gained.
-- Starter NPC levels: training dummy 1, mossling 2, field boar 5, forest bandit 8. Each gets a world-space level/name label close to the player and its level in the target HUD. Colours indicate relative danger.
-- Each enemy has its own detection range, chase/abandon range and absolute leash radius from spawn. When the player flees too far the mob cancels queued damage and charges, resets HP and returns quickly to its spawn before it can re-aggro. No more endless trains of mobs after you leave their area.
-
-## Character creation and browser-local character slots (development)
-- On the first visit with no existing save, the game opens character creation. Choose a name, Male/Female, six hairstyles, hair colour, skin tone, clothing design and clothing colour; inspect the avatar in a live 3D preview.
-- Up to three independently saved characters per browser and game environment. Choose **CHARACTERS** on the title screen to load another character or create an additional one. Names are unique within this browser's three slots.
-- Newly created characters begin at Level 1 with zero coins, an empty inventory, no weapons and no armour. Clothing choices are cosmetic and give no protection. Unarmed Melee is available for the current prototype; Magic and Ranged require equipment.
-- The original `oakrest-v1` save is preserved, and a **Continue Original Save** option remains available. New characters are stored separately as `oakrest-character-save-<id>`, with a small roster and active-character pointer. At `/oakrest-dev` all keys are namespaced to protect public progress.
-- Saves are browser-local only: different devices or browsers do not yet share characters, and clearing browser storage deletes local characters. Accounts and online persistence come later.
-- The dedicated tutorial and Portal Realm onboarding are **not part of this block**; the current starter village remains the temporary gameplay entry point.
-- QA: `npm test`, `npm run check`, `npm run build`, `node tests/browser-smoke.cjs`. Browser testing in CI is Chromium emulation, not physical iPad testing.
-- Deployment note: commit this code to the GitHub development branch and deploy it through the shared-hosting pipeline for `playcellbound.com/oakrest-dev`; no Vercel deployment is required or intended for this workflow.
-
-## Part 3 — Opening Journey: tutorial and Portal Realm
-- New characters only enter the safe standalone **The First Steps** training ground. Older characters and legacy `oakrest-v1` saves continue from their existing world and are not reset.
-- Practise on a real training dummy using all **three** direct-action styles. Hits must connect to complete each style; Tab, 1/2/3, touch style buttons and SWAP work. The practice sword, staff and bow are temporary visual loadouts and never enter the player's inventory.
-- The Skills Instructor section gives an explicit overview of Health, Melee, Magic, Ranged, gathering, crafting and Inscription. Gathering/crafting systems remain future features, but the introduction has a fully working acknowledgement step.
-- Claim a single **Teleportation Scroll**; the item count is stored in onboarding progression and shown in Inventory. Using it consumes one and transfers the character to a separate, navigable 3D **Portal Realm**.
-- The realm shows one active gateway to **Oakrest**, with additional locked gateways. Approach the active gateway and use the on-screen interaction button (or E on desktop) to travel to the existing Oakrest starter settlement. This existing village is the provisional first-city arrival point until the main-city overhaul.
-- Tutorial progress, scroll balance, current world (tutorial/realm/world) and activated city portal are saved per character. Reloading during onboarding resumes the appropriate stage without granting free repeat scrolls.
-- Independent scenes are built from bundled Three.js without outside images, video assets or new infrastructure. Gameplay is functional on touch and desktop; iPad Safari requires manual device validation.
-- Validate with `npm test`, `npm run check`, `npm run build` and `node tests/browser-smoke.cjs`. Browser smoke covers real attack connections, skills, receiving/consuming the scroll, city portal interaction and saved completion.
-- No Vercel deployment is needed or intended. Shared-host deployment of `/oakrest-dev` is a separate step and **not confirmed** by a GitHub commit or CI green check.
-
-## Part 4 — Item Catalogue, Item Art & Monster Drop Editor
-- Central stable IDs in `src/items.js` for existing currency, all current weapons, armour, materials and the tutorial travel scroll. Every registered item has a unique, bundled SVG inventory icon; the matching physical ground model is generated in `src/item-visuals.js`, with no external image hosting. Equipped variants that share a weapon family also have distinct colour/rune detail.
-- Existing save data keeps its original `kind`, `itemId`, `style` and `amount` fields; canonical IDs are a non-destructive view over the old format. Existing drops and inventories remain readable.
-- Monster drop rules are in `src/drop-tables.js`. Every row is rolled independently on every kill; chances are percentages from 0 to 100 (two decimals), **without pity guarantees, required total of 100, or forced drops**. Default tables retain existing coin/material/rare-gear odds. An empty table can drop nothing.
-- On `/oakrest-dev` or localhost only, open the in-game **Controls & Camera** menu, then **Edit Monster Drops (Dev)** to select a monster, add/remove item rows, edit probabilities, reset to defaults, save changes or view the full item catalogue. Invalid IDs, duplicate entries and invalid probabilities are rejected.
-- Editor changes are stored **only in the current browser's development localStorage** using the environment-specific key `oakrest-dev-drop-tables-v1`. Saving an editor change alters subsequent monster kills in that browser, not drops for other visitors, devices or a future multiplayer server. Public `/oakrest` deliberately has no editor and uses built-in default tables. Persisted developer overrides can be cleared using the editor reset/save controls; storage migration is not needed.
-- Run `npm run check`, `npm test`, `npm run build` and `node tests/browser-smoke.cjs`. New tests cover the full item catalogue, unique artwork, physical models, legacy save compatibility, edited tables, 1% independent odds with no pity, invalid entries and local UI save/reload.
-- Not yet covered: new metal/robe/leather tier catalogues, custom boss items, merchant/bank screens, server-authoritative drop editing and distribution across players. These are future content/online features.
-- **Hosting:** no Vercel delivery is requested. The shared-host `playcellbound.com/oakrest-dev` deployment must be independently verified; GitHub CI success is not proof it is live. Production branch stays untouched.
-
-## Equipment, inventory and Oakrest starter sets (development)
-- Equip now shows a nine-position layout: Helm, Ammy, Arrows, Chest, Legs, Weapon, Off hand, Boots and Ring. Each of Melee, Ranged and Magic has its own independently saved loadout. Weapon and chest armour continue to use the established combat systems.
-- Inventory has a four-column, 28-cell minimum grid. Every owned item can be tapped to **Examine** its function, requirements, combat stats and equip/use action; additional rows appear rather than silently hiding collected items.
-- The Oakrest General Store offers a Recruit Melee Set, Scout Ranged Set and Apprentice Magic Set at 110 coins each. Each set includes a level-one weapon, chest armour and six other slot items. Missing pieces are charged pro rata if part of a set is already owned or in the bank. Existing individual starter weapons remain for sale.
-- New slot equipment provides real modest attack/defence bonuses applied in combat, persists in character saves and can be stored in the Oakrest Bank once unequipped.
-- Beginner **Bronze Arrows** are a reusable quiver granting a small ranged damage bonus. Consumable ammunition and individual arrow expenditure are not yet implemented; the Examine screen says so.
-- This is a development branch stacked on the starter-town changes. It has not been merged or deployed to the public game.
+See [AGENTS.md](AGENTS.md) for the contributor contract and [docs/first-adventure.md](docs/first-adventure.md) for gameplay scope.

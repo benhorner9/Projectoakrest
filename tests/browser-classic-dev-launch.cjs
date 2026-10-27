@@ -1,5 +1,5 @@
 // Player entry route acceptance for the *actual* /oakrest-dev/ link:
-// ensures old 3D homepage offers a visible Classic button and a fresh
+// ensures the development home routes directly to Classic and a fresh
 // iPad-like browser can create an adventurer, tap game controls and move.
 const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
@@ -12,11 +12,9 @@ const url='http://127.0.0.1:5278/';
 (async()=>{
  try{
   fs.mkdirSync(stage,{recursive:true});
-  for(const game of ['oakrest-dev','oakrest']){
-   const target=path.join(stage,game);
-   fs.rmSync(target,{recursive:true,force:true});
-   fs.cpSync(path.join(root,'dist'),target,{recursive:true});
-  }
+  const target=path.join(stage,'oakrest-dev');
+  fs.rmSync(target,{recursive:true,force:true});
+  fs.cpSync(path.join(root,'dist'),target,{recursive:true});
   server=spawn('python3',['-m','http.server','5278','--bind','127.0.0.1'],{cwd:stage,stdio:'ignore'});
   await new Promise(resolve=>setTimeout(resolve,950));
   browser=await ({chromium,webkit}[engine]).launch({
@@ -30,30 +28,11 @@ const url='http://127.0.0.1:5278/';
   page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
   page.on('response',res=>{if(res.status()>=400)httpErrors.push([res.status(),res.url()]);});
   page.on('requestfailed',req=>failedRequests.push(req.url()+': '+req.failure()?.errorText));
-  // This acceptance case tests the real inline home link -> Classic startup.
-  // On CI's software-rendered WebKit container the *separate* legacy 3D
-  // homepage can monopolise the UI thread before link visibility can be
-  // queried. Cover legacy 3D in its own Core/Greenwood browser gates; avoid
-  // loading only that legacy module here, never Classic's actual engine.
-  if(engine==='webkit')await page.route('**/src/main.js*',route=>
-   route.fulfill({status:200,contentType:'text/javascript',body:'// Classic link QA: legacy 3D runtime covered separately'}));
-  await page.goto(url+'oakrest/',{waitUntil:'domcontentloaded'});
-  assert.equal(await page.locator('#oakrest-classic-launch').isVisible(),false,
-   'public production must not advertise an unshipped Classic game');
-  await page.goto(url+'oakrest-dev/',{waitUntil:'domcontentloaded'});
-  const launcher=page.locator('#oakrest-classic-launch');
-  assert.equal(await launcher.isVisible(),true,'dev homepage must link to playable Classic');
-  assert.equal(await launcher.getAttribute('href'),'./classic.html');
-  const hit=await launcher.boundingBox();
-  assert.ok(hit?.height>=44,'Classic launch button is easy to tap on iPad');
-  const tapX=hit.x+hit.width/2,tapY=hit.y+hit.height/2;
-  // Measure the visible link and send a real touch at its screen coordinates.
-  // WebKit's locator.tap actionability wait can stall on the animated home
-  // page, despite the anchor itself remaining visible and hittable.
-  const uncovered=await page.evaluate(({x,y})=>!!document.elementFromPoint(x,y)?.closest('#oakrest-classic-launch'),{x:tapX,y:tapY});
-  assert.equal(uncovered,true,'Classic launch touch target must be unobstructed');
-  await page.touchscreen.tap(tapX,tapY);
-  await page.waitForURL(/\/oakrest-dev\/classic\.html/);
+  // The default development URL now opens Classic directly, never the
+  // retired third-person game; QA params and save namespace are preserved.
+  await page.goto(url+'oakrest-dev/?qa=1',{waitUntil:'domcontentloaded'});
+  await page.waitForURL(/\/oakrest-dev\/classic\.html\?qa=1/);
+  assert.equal(await page.locator('#game').count(),0,'legacy 3D game is absent');
   await page.waitForFunction(()=>!!document.querySelector('#classic-game canvas'),{timeout:30000}).catch(async err=>{
    const state=await page.evaluate(()=>({
     url:location.href,title:document.title,stage:document.readyState,
@@ -129,6 +108,6 @@ const url='http://127.0.0.1:5278/';
   assert.deepEqual(errors,[],'fresh player must not encounter JS exceptions');
   const critical=failedRequests.filter(v=>/\.js|\.css|\.html/.test(v));
   assert.deepEqual(critical,[],'necessary game assets must load');
-  console.log('PASS '+engine+': dev homepage -> Classic -> create -> iPad touch style, chat, inventory, movement. Public entry unchanged.');
+  console.log('PASS '+engine+': dev home redirects to Classic -> create -> iPad touch style, chat, inventory, movement. Public release untouched.');
  }finally{await browser?.close();server?.kill();}
 })().catch(err=>{console.error(engine,err);process.exitCode=1;});

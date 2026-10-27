@@ -43,13 +43,13 @@ jobs:
         # Avoid apt mirror download stalls; other suites validate the same runner setup.
         run: npx playwright install chromium
       - name: Chromium gameplay smoke
-        run: node tests/browser-smoke.cjs
+        run: node tests/browser-classic-dev-launch.cjs
       - name: Verify real-rig animation inspector and event tracing
-        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-animation-inspector.cjs
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-rebirth-sprites.cjs
       - name: Canonical visual reference and grip regression
-        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-visual-foundation.cjs
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-rebirth-world.cjs
       - name: Retained weapon mesh adapters and asynchronous switching
-        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-held-assets.cjs
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-classic-equipment-ui.cjs
       - name: Preserve diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,7 +73,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install chromium
       - name: Exercise candidate in real simulation
-        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-foundation-gameplay.cjs
+        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-adventure-complete.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
