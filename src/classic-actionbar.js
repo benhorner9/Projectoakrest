@@ -31,7 +31,7 @@ export function setupClassicActionBar({doc=document,combat,activateBinding,chang
  edit.setAttribute('aria-controls','oakrest-hotbar-editor');edit.setAttribute('aria-expanded','false');edit.title='Assign items or actions to any of eight quick slots';heading.append(edit);
  const editor=doc.createElement('div');editor.id='oakrest-hotbar-editor';editor.className='oakrest-hotbar-editor';editor.hidden=true;
  editor.setAttribute('role','group');editor.setAttribute('aria-label','Assign eight quick slots');deck.append(editor);
- const selects=[];let editorKey='',lastRefresh=-Infinity,lastStyle='',lastHp=-1;
+ const selects=[];let editorKey='',lastRefresh=-Infinity,lastStyle='',lastHp=-1,lastButtonBindings='';
  const knownActions=[...DEFAULT_QUICK_SLOTS,'inventory','equipment','quests','skills','map'];
  function assign(index,binding){
   if(binding!==null&&!knownActions.includes(binding)&&!quickBindable(binding)){feedback("This item has no quick action.");return false;}
@@ -85,25 +85,49 @@ export function setupClassicActionBar({doc=document,combat,activateBinding,chang
   if(!force&&state.time-lastRefresh<.08&&state.style===lastStyle&&state.hp===lastHp)return;
   lastRefresh=state.time;lastStyle=state.style;lastHp=state.hp;
   const data=combat.sandboxSave(),bindings=slots();
-  deck.dataset.combatStyle=state.style;title.textContent=({melee:'⚔',ranged:'➶',magic:'✧'}[state.style])+' '+state.style.toUpperCase()+' · QUICK ACTIONS';
-  // IDs follow their actions so old keyboard/accessibility hooks remain valid.
-  buttons.forEach((button,i)=>{button.id='classic-quick-'+i;});
+  if(deck.dataset.combatStyle!==state.style)deck.dataset.combatStyle=state.style;
+  const titleText=({melee:'⚔',ranged:'➶',magic:'✧'}[state.style])+' '+state.style.toUpperCase()+' · QUICK ACTIONS';
+  if(title.textContent!==titleText)title.textContent=titleText;
+  // Stable button IDs are essential on Safari: resetting IDs every simulation
+  // update invalidates selectors and repaints the entire action row. Only
+  // reassign them when the saved quick-slot bindings actually change.
+  const bindingKey=JSON.stringify(bindings);
+  if(bindingKey!==lastButtonBindings){
+   buttons.forEach((button,i)=>{const id='classic-quick-'+i;if(button.id!==id)button.id=id;});
+   buttons.forEach((button,i)=>{const id=ACTION_ID[bindings[i]];if(id&&button.id!==id)button.id=id;});
+   lastButtonBindings=bindingKey;
+  }
   buttons.forEach((button,i)=>{
    const binding=bindings[i],info=describe(binding,state,data);
-   if(ACTION_ID[binding])button.id=ACTION_ID[binding];
-   button.dataset.binding=binding||'';button.dataset.canonical=info.item||'';
-   button.dataset.combatStyle=state.style;button.disabled=!info.ready;
-   button.classList.toggle('attacking',binding==='attack'&&!!state.target);
-   button.classList.toggle('is-empty',!binding);button.classList.toggle('on-cooldown',info.remaining>0);
-   for(const child of button.childNodes)if(child.nodeType===3)child.textContent='';
+   const setData=(key,value)=>{if(button.dataset[key]!==value)button.dataset[key]=value;};
+   setData('binding',binding||'');setData('canonical',info.item||'');
+   setData('combatStyle',state.style);
+   if(button.disabled===!!info.ready)button.disabled=!info.ready;
+   const toggle=(name,value)=>{if(button.classList.contains(name)!==value)button.classList.toggle(name,value);};
+   toggle('attacking',binding==='attack'&&!!state.target);
+   toggle('is-empty',!binding);toggle('on-cooldown',info.remaining>0);
+   for(const child of button.childNodes)if(child.nodeType===3&&child.textContent)child.textContent='';
    let svg=button.querySelector('svg.oakrest-action-icon');
    if(!svg){svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('oakrest-action-icon');svg.setAttribute('viewBox','0 0 32 32');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.9');svg.setAttribute('aria-hidden','true');button.prepend(svg);}
    let use=svg.querySelector('use');if(!use){use=doc.createElementNS('http://www.w3.org/2000/svg','use');svg.append(use);}
-   use.setAttribute('href','./src/oakrest-ui-icons.svg#'+info.icon);svg.style.display=info.item?'none':'';
+   const iconHref='./src/oakrest-ui-icons.svg#'+info.icon;
+   // Reassigning an external SVG <use> href on every frame causes iPad
+   // WebKit to unload/repaint the glyph, visibly flashing the quick bar.
+   if(use.getAttribute('href')!==iconHref)use.setAttribute('href',iconHref);
+   const iconDisplay=info.item?'none':'';
+   if(svg.style.display!==iconDisplay)svg.style.display=iconDisplay;
    let image=button.querySelector('img.classic-quick-item');
-   if(info.item){if(!image){image=doc.createElement('img');image.className='classic-quick-item';image.alt='';button.prepend(image);}image.src=itemIconUrl(info.item)||'';}else image?.remove();
-   const small=button.querySelector('small');if(small)small.textContent=info.remaining>0?info.remaining.toFixed(1)+'s':info.quantity!==undefined?'×'+info.quantity:binding?.startsWith('ability')?String(i+1):LABEL[binding]?.toUpperCase()||' ';
-   button.title=info.name+(info.quantity!==undefined?' · '+info.quantity+' available':'')+(!info.ready?' · '+info.reason:'');button.setAttribute('aria-label',button.title);
+   if(info.item){
+    if(!image){image=doc.createElement('img');image.className='classic-quick-item';image.alt='';button.prepend(image);}
+    const src=itemIconUrl(info.item)||'';
+    if(image.getAttribute('src')!==src)image.setAttribute('src',src);
+   }else image?.remove();
+   const small=button.querySelector('small');
+   const smallText=info.remaining>0?info.remaining.toFixed(1)+'s':info.quantity!==undefined?'×'+info.quantity:binding?.startsWith('ability')?String(i+1):LABEL[binding]?.toUpperCase()||' ';
+   if(small&&small.textContent!==smallText)small.textContent=smallText;
+   const caption=info.name+(info.quantity!==undefined?' · '+info.quantity+' available':'')+(!info.ready?' · '+info.reason:'');
+   if(button.title!==caption)button.title=caption;
+   if(button.getAttribute('aria-label')!==caption)button.setAttribute('aria-label',caption);
   });
   if(!editor.hidden){
    const items=inventoryEntries(data).filter(e=>quickBindable(e.canonical));

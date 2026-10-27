@@ -57,6 +57,27 @@ let browser;
  assert.notEqual(rationIndex,'0');
  await drag(bag('material.ration'),page.locator('[data-hotbar-slot="1"]'));
  assert.equal((await snapshot()).quickSlots[0],'material.ration','any of eight slots can hold food');
+ // The bar re-renders frequently during idle/combat ticks. Rewriting external
+ // SVG <use> references, image srcs or every button ID on each update makes
+ // the actual iPad Safari toolbar visibly flash. Only changed bindings may
+ // replace these paint-sensitive attributes.
+ const idleBar=await page.evaluate(()=>{
+  const deck=document.getElementById('oakrest-action-deck');
+  const buttons=[...deck.querySelectorAll('[data-hotbar-slot]')];
+  const view=()=>buttons.map(button=>({
+   id:button.id,slot:button.dataset.hotbarSlot,
+   href:button.querySelector('svg.oakrest-action-icon use')?.getAttribute('href'),
+   src:button.querySelector('img.classic-quick-item')?.getAttribute('src')||null
+  }));
+  const before=view(),observer=new MutationObserver(()=>{});
+  observer.observe(deck,{attributes:true,subtree:true,attributeFilter:['id','href','src']});
+  for(let i=0;i<10;i++)oakrestClassicQA.advance(.23);
+  const mutated=observer.takeRecords().map(record=>({attribute:record.attributeName,target:record.target.tagName}));
+  observer.disconnect();return {before,after:view(),mutated};
+ });
+ assert.equal(idleBar.before.length,8);
+ assert.deepEqual(idleBar.after,idleBar.before,'quick slots retain their icon and button identity through idle ticks');
+ assert.deepEqual(idleBar.mutated,[],'stable Safari quick bar must not reload icons or re-ID buttons every tick');
  await page.locator('#oakrest-hotbar-edit').tap();
  assert.equal(await page.locator('#oakrest-hotbar-editor select').count(),8);
  await page.locator('#oakrest-hotbar-select-8').selectOption('equipment');
