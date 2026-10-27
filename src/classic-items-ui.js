@@ -6,6 +6,7 @@ import {woodcuttingLevel} from './woodcutting.js';
  */
 import {getItem,itemIconUrl,itemFromDrop} from './items.js';
 import {STYLE_ORDER,LOADOUTS} from './rules.js';
+import {SLOT_ITEMS} from './equipment-slots.js';
 import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries} from './town-ui.js';
@@ -219,17 +220,31 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   if(!s.equipment.find(e=>e.id==='weapon')?.itemId)
    element(summary,'p','classic-gear-empty-warning','No weapon equipped');
   const owned=element(panel,'section','classic-gear-owned');
-  const ownedTitle=element(owned,'strong','classic-gear-owned-title','EQUIPMENT IN BACKPACK');
-  const items=inventoryEntries(save()).filter(e=>e.kind==='armour'||
-   (e.kind==='weapon'||e.kind==='slot')&&e.style===style());
+  const ownedTitle=element(owned,'strong','classic-gear-owned-title','AVAILABLE GEAR');
+  const data=save();
+  const items=inventoryEntries(data).filter(e=>e.kind==='armour'||
+   (e.kind==='weapon'||e.kind==='slot')&&(e.style===style()||e.style==='all'));
+  // A style-neutral amulet can already be equipped in Melee, but must remain
+  // assignable in Magic/Ranged. Offer its shared reference here without
+  // putting a second physical copy back into the backpack.
+  for(const id of data.inventory?.slotted||[]){
+   if(SLOT_ITEMS[id]?.style!=='all')continue;
+   const canonical='slot.'+id;
+   if(!items.some(entry=>entry.canonical===canonical))
+    items.push({canonical,kind:'slot',id,style:'all',qty:1,sharedEquipped:true});
+  }
   ownedTitle.textContent+=' · '+items.length;
   const list=element(owned,'div','classic-equip-choices classic-gear-choices');
   list.setAttribute('aria-label','Owned equipment available to equip');
   for(const e of items){
    const name=getItem(e.canonical)?.title||e.id;
    const tile=button(list,'classic-equip-choice classic-gear-choice',name,()=>showDetails(e.canonical));
-   tile.dataset.scope='bag';tile.dataset.slotIndex=String(s.bag.findIndex(x=>x?.canonical===e.canonical));
-   tile.dataset.canonical=e.canonical;tile.title='Inspect or equip '+name;
+   const bagIndex=s.bag.findIndex(x=>x?.canonical===e.canonical);
+   // Only genuine backpack items are draggable; a shared equipped item is
+   // an assignment shortcut, not a second bag instance.
+   if(bagIndex>=0){tile.dataset.scope='bag';tile.dataset.slotIndex=String(bagIndex);}
+   tile.dataset.canonical=e.canonical;
+   tile.title=e.sharedEquipped?'Assign shared '+name+' to '+style().toUpperCase():'Inspect or equip '+name;
    icon(tile,e.canonical);
   }
   if(!items.length)element(list,'span','classic-gear-no-items','Find or buy gear to fill your equipment slots.');
