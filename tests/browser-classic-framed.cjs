@@ -18,6 +18,11 @@ let browser;
   await page.locator('#classic-creator-name').fill('Framed Tester');
   await page.locator('#classic-creator-form button[type=submit]').click();
   await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
+  const performanceInfo=await page.evaluate(()=>oakrestClassicQA.renderStats());
+  assert.equal(performanceInfo.qualityScale,1,'normal first frame is full quality');
+  assert.equal(performanceInfo.qualityChanges,0,'quality does not oscillate on startup');
+  assert.ok(performanceInfo.pixelRatio>=.5&&performanceInfo.pixelRatio<=1.5);
+  assert.equal(await page.locator('#classic-restore-save').isDisabled(),true,'new characters have no previous recovery checkpoint');
   // The WebGL canvas and reparented shell are real application elements.
   // Wait for their readiness before measuring instead of racing initialization.
   const shellSelectors=['#classic-game canvas','#classic-sidebar','.classic-item-buttons',
