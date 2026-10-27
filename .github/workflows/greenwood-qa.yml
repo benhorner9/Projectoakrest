@@ -33,7 +33,7 @@ jobs:
         run: npm run check
       - name: Regression tests
         run: npm test
-      - name: Production asset build
+      - name: Classic development release build
         run: npm run build
       - name: Install Chromium using runner system libraries
         id: browsers
@@ -42,19 +42,19 @@ jobs:
       - name: Browser smoke test
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-dev-launch.cjs
-      - name: Town bank, shop and specialist skilling in Chromium
+      - name: Classic town, cutaway and woodland rendering
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-rebirth-world.cjs
-      - name: Woodcutting skill XP and persistent iPad backpack
+      - name: Classic adventure walkthrough
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-adventure.cjs
-      - name: Equipment, inventory Examine and starter item persistence
+      - name: Classic equipment, inventory drag and quick slots
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-equipment-ui.cjs
-      - name: iPad-size dev-path character start regression
+      - name: Classic iPad-size character creation
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-creator.cjs
-      - name: iPad-size controller and camera regression
+      - name: Classic elevated camera and direction controls
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-camera.cjs
       - name: Preserve browser diagnostics
@@ -66,7 +66,7 @@ jobs:
           if-no-files-found: ignore
 
   combat-browser:
-    name: Combat Reborn full scenario audit
+    name: Classic combat scenario audit
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -84,7 +84,7 @@ jobs:
       - run: npx playwright install chromium
       - name: Exercise all rendered combat scenarios with bounded runtime
         run: timeout --signal=TERM --kill-after=10s 12m node tests/browser-classic-combat-overhaul.cjs
-      - name: Cinematic tribrid body-language and event inspector regression
+      - name: Classic character motion and combat feedback
         run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-rebirth-feedback.cjs
       - name: Preserve combat scenario diagnostics
         if: always()
@@ -95,7 +95,7 @@ jobs:
           if-no-files-found: ignore
 
   auto-combat-and-performance:
-    name: Auto combat and historical performance
+    name: Classic combat and navigation integration
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -113,7 +113,7 @@ jobs:
       - run: npx playwright install chromium
       - name: Auto combat and three-style switch regression
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-free-combat.cjs
-      - name: Compare combat performance to pinned starting dev
+      - name: Classic movement/navigation regression
         run: timeout --signal=TERM --kill-after=10s 7m node tests/browser-classic-navigation.cjs
       - name: Preserve performance diagnostics
         if: always()
@@ -138,16 +138,16 @@ jobs:
       - run: npm run build
       # Runner system libraries are already available; provisioning apt fonts can timeout.
       - run: npx playwright install chromium webkit
-      - name: Built dev-path release flow
+      - name: Built Classic direct-launch flow
         run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-classic-dev-launch.cjs
-      - name: WebKit development-path release flow
+      - name: WebKit Classic direct-launch diagnostic
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
           mkdir -p qa
           set -o pipefail
           OAKREST_BROWSER=webkit timeout 180s node tests/browser-classic-dev-launch.cjs 2>&1 | tee qa/webkit.log
-      - name: Animation inspector under simulated WebKit iPad
+      - name: Classic launch under simulated WebKit iPad
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: |

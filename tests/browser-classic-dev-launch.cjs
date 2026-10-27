@@ -1,4 +1,4 @@
-// Player entry route acceptance for the *actual* /oakrest-dev/ link:
+// Canonical Classic entry regression for the *actual* /oakrest-dev/ link:
 // ensures the development home routes directly to Classic and a fresh
 // iPad-like browser can create an adventurer, tap game controls and move.
 const assert=require('node:assert/strict');
