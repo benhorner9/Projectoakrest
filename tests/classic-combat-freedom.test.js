@@ -81,4 +81,18 @@ test('combat movement intent tracks actual outward travel, not taps or strafing'
   player:{x:0,z:0},target,destination:{x:0,z:-9}}),true);
  assert.equal(breaksPlayerAttackIntent({kind:'path'},{
   player:{x:0,z:0},target,destination:{x:0,z:-2}}),false);
+ assert.equal(breaksPlayerAttackIntent({kind:'path'},{
+  player:{x:0,z:0},target:{x:0,z:12},destination:{x:0,z:7}}),false,
+  'long move directly towards enemy is a tactical approach, not an escape');
+ assert.equal(breaksPlayerAttackIntent({kind:'path'},{
+  player:{x:0,z:0},target:{x:0,z:5},destination:{x:5,z:5}}),false,
+  'long movement around the target at equal range keeps engagement');
+ const lateral=createClassicCombatMovementIntent();
+ let previous={x:0,z:0};
+ for(let x=.25;x<=3.01;x+=.25){
+  const next={x,z:0};
+  assert.equal(lateral.step({movement:{kind:'manual'},start:previous,end:next,target}),false,
+   'extended sideways movement should not be mistaken for running away');
+  previous=next;
+ }
 });

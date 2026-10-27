@@ -75,6 +75,12 @@ let browser;
   assert.equal((await state()).targetId,null,'a ground destination cancels the attack immediately');
   await step(.3);
   assert.equal((await state()).targetId,null,'auto-pursuit cannot steal back the movement');
+  // Long steps toward an enemy close distance without cancelling combat.
+  await page.evaluate(()=>{oakrestClassicQA.teleport(-1,66);
+   oakrestClassicQA.lockMonster('practice');oakrestClassicQA.moveTo(-1,69.8);});
+  assert.equal((await state()).targetId,'practice','closing the gap via a ground click keeps fighting');
+  await step(.15);
+  assert.equal((await state()).targetId,'practice');
   // A nearby ground click is a reposition, not an accidental escape.
   await page.evaluate(()=>{oakrestClassicQA.teleport(-1,71.3);
    oakrestClassicQA.lockMonster('practice');oakrestClassicQA.moveTo(-2,70.4);});

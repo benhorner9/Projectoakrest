@@ -23,7 +23,11 @@ export function combatApproachPoint(player,enemy,reach){
 export function breaksPlayerAttackIntent(movement,{player,target,destination}={}){
  if(!target||movement?.kind!=='path')return false;
  if(!validPoint(player)||!validPoint(destination))return false;
- return distance(player,destination)>COMBAT_GROUND_REPOSITION_DISTANCE;
+ const travel=distance(player,destination);
+ // A long move *towards* the enemy is closing distance, not fleeing.
+ // Equivalent-distance lateral repositioning also keeps the fight engaged.
+ return travel>COMBAT_GROUND_REPOSITION_DISTANCE&&
+  distance(destination,target)>distance(player,target)+.75;
 }
 /** Continuous away travel—not a single joystick touch—signals retreat.
  * Accumulates outward travel against the target from real movement samples.
@@ -42,6 +46,12 @@ export function createClassicCombatMovementIntent({retreatDistance=COMBAT_MANUAL
   const ex=start.x-target.x,ez=start.z-target.z,radius=Math.hypot(ex,ez);
   if(radius<.15){outwardTravel=0;return false;}
   const outward=(dx*ex+dz*ez)/radius;
+  // Small sideways corrections are intentional footwork, not retreat.
+  // Only movement substantially pointing away builds escape commitment.
+  if(outward/travel<.55){
+   outwardTravel=Math.max(0,outwardTravel-travel*.6);
+   return false;
+  }
   outwardTravel=Math.max(0,outwardTravel+outward);
   if(outwardTravel>=retreatDistance){reset();return true;}
   return false;
