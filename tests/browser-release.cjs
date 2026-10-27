@@ -32,7 +32,10 @@ let server,browser;const mount=path.join(root,'qa','host'),errors=[];
  await page.screenshot({path:path.join(root,'qa',engine+'-inventory.png')});
  await examine(LOADOUTS.melee[lockedId].title);assert.ok(await page.locator('.oak-examine-action').isDisabled());await page.locator('#skill-detail-back').click();
  await examine('Recruit Helm');await action('EQUIP');assert.equal((await state()).equipment.melee.helm,'recruit-helm');await action('UNEQUIP');assert.equal((await state()).equipment.melee.helm,null);await page.locator('#skill-detail-back').click();
- await examine('Iron Longsword');await action('UNEQUIP');assert.equal((await state()).gear.melee,'none');await closeBook();
+ // Equipped weapons are examined from GEAR, never duplicated in the bag.
+ assert.equal(await page.locator('.oak-inventory-grid').getByRole('button',{name:'Examine Iron Longsword',exact:true}).count(),0);
+ await page.locator('#progression-equipment').click();
+ await page.locator('#progression-content .oak-gear-weapon').click();await action('UNEQUIP');assert.equal((await state()).gear.melee,'none');await closeBook();
  await town(-30);await page.getByRole('button',{name:'Select Iron Longsword in backpack',exact:true}).click();await page.getByRole('button',{name:'STORE',exact:true}).click();assert.deepEqual((await state()).bank.weapons.melee,['sword']);await page.locator('#town-close').click();
  await town(30);
  for(const name of ['Recruit Melee Set','Scout Ranged Set','Apprentice Magic Set']){

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {defaultSave,validSave} from '../src/rules.js';
 import {bankGridEntries,shopGridEntries} from '../src/town-ui.js';
-import {bankCoins,bankMaterials,bankEquipment,townBank} from '../src/town-services.js';
+import {bankCoins,bankMaterials,bankEquipment,townBank,SHOP_STOCK} from '../src/town-services.js';
 
 test('bank and bag grids show the actual item registry, not a duplicate inventory',()=>{
  const data=defaultSave();data.coins=60;
@@ -38,7 +38,8 @@ test('bank quantity choices transfer exact amounts and preserve saves',()=>{
 });
 test('icon shop grid reflects missing pieces, owned items and banked inventory',()=>{
  const data=defaultSave(),entries=shopGridEntries(data);
- assert.equal(entries.length,14);
+ assert.equal(entries.length,SHOP_STOCK.length);
+ assert.ok(entries.some(e=>e.id==='wayfarer-amulet'&&e.kind==='slot'),'unrestricted amulet can be purchased');
  assert.ok(entries.every(e=>e.icon&&e.cost>=0&&e.label));
  assert.ok(entries.some(e=>e.kind==='bundle'));
  data.inventory.weapons.melee.push('daggers');

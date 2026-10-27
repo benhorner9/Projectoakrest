@@ -25,7 +25,7 @@ for(const style of STYLE_ORDER){
 // Starter-town slot equipment has unique icons and is purchased rather than randomly dropped.
 for(const item of Object.values(SLOT_ITEMS)){
  add('slot.'+item.id,'slot',item.title,{kind:'slot',itemId:item.id},
-  {melee:'#dfb07a',magic:'#a0b6ef',ranged:'#b4cf9b'}[item.style],
+  {melee:'#dfb07a',magic:'#a0b6ef',ranged:'#b4cf9b',all:'#d5c39b'}[item.style],
   item.shape,{description:item.description,dropAllowed:false});
 }
 // All seven logs come only from Woodcutting, never monster drops.

@@ -7,7 +7,7 @@ import {classicWeaponInterval} from './classic-combat-clock.js';
  * Reuses Oakrest item identity, level locks, shop costs and bank ownership.
  */
 import {STYLE_ORDER,LOADOUTS,ARMOUR,canEquipWeapon,canEquipArmour,equipPrimaryItem,equipSkill,skillCatalogue,levelFromXp,defenceFor} from './rules.js';
-import {EQUIPMENT_SLOTS,SLOT_ITEMS,equipSlotItem,allowsOffhand,equipmentModifiers} from './equipment-slots.js';
+import {EQUIPMENT_SLOTS,SLOT_ITEMS,canEquipSlotItem,equipSlotItem,allowsOffhand,equipmentModifiers} from './equipment-slots.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries,shopGridEntries} from './town-ui.js';
 import {bankCoins,bankMaterials,bankEquipment,buyStarterStock,TOWN_MATERIALS,SHOP_STOCK} from './town-services.js';
@@ -211,11 +211,16 @@ export function classicItemDetails(data,id,style){
  }else if(kind==='slot'){
   const def=SLOT_ITEMS[legacy.itemId];
   facts.push(['Slot',EQUIPMENT_SLOTS.find(s=>s.id===def.slot)?.label||def.slot],
-   ['Style',def.style],['Requires',def.style+' '+def.requiredLevel],
+   ['Style',def.style==='all'?'All three styles':def.style],['Requires',(def.style==='all'?'Any style':def.style)+' '+def.requiredLevel],
    ['Power',def.power+'%'],['Guard',def.guard+'%']);
-  allowed=owned(data,item)&&levelFromXp(data.xp[def.style]).level>=def.requiredLevel&&(def.slot!=='offhand'||allowsOffhand(data,def.style));
-  equipped=data.equipment?.[def.style]?.[def.slot]===legacy.itemId;
-  action={type:'equip',kind,style:def.style,slot:def.slot,id:equipped?null:legacy.itemId};
+  const targetStyle=def.style==='all'?style:def.style;
+  allowed=canEquipSlotItem(data,targetStyle,legacy.itemId);
+  equipped=data.equipment?.[targetStyle]?.[def.slot]===legacy.itemId;
+  if(def.style==='all'){
+   const equippedStyles=STYLE_ORDER.filter(s=>data.equipment?.[s]?.[def.slot]===legacy.itemId);
+   facts.push(['Used by',equippedStyles.length?equippedStyles.map(s=>s.toUpperCase()).join(', '):'Not equipped']);
+  }
+  action={type:'equip',kind,style:targetStyle,slot:def.slot,id:equipped?null:legacy.itemId};
  }else if(kind==='material')facts.push(['Owned',data.inventory?.materials?.[legacy.itemId]||0]);
  else if(kind==='coins')facts.push(['Owned',data.coins||0]);
  else if(kind==='scroll')facts.push(['Owned',data.onboarding?.teleportScrolls||0]);

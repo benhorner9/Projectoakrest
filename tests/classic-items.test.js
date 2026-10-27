@@ -98,11 +98,14 @@ test('classic combat item actions modify only the session clone, never the origi
  assert.notEqual(sim.sandboxSave().coins,99999);
 });
 test('inventory arrange moves positions only; no duplication',()=>{
- const data=defaultSave();
- const from=classicItemSnapshot(data,'melee').bag.findIndex(e=>e?.canonical==='weapon.melee.sword');
+ const data=defaultSave();data.inventory.weapons.melee.push('daggers');
+ // The equipped sword has left the physical bag, but a spare dagger set
+ // can still be rearranged without changing ownership or gear.
+ assert.equal(classicItemSnapshot(data,'melee').bag.some(e=>e?.canonical==='weapon.melee.sword'),false);
+ const from=classicItemSnapshot(data,'melee').bag.findIndex(e=>e?.canonical==='weapon.melee.daggers');
  assert.ok(from>=0);
  const before=JSON.stringify(data.inventory);
  const x=classicItemAction(data,{type:'reorder',scope:'bag',from,to:27});
- assert.equal(x.ok,true);assert.equal(data.inventorySlots[27],'weapon.melee.sword');
+ assert.equal(x.ok,true);assert.equal(data.inventorySlots[27],'weapon.melee.daggers');
  assert.equal(JSON.stringify(data.inventory),before);
 });

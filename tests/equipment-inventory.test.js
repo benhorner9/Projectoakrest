@@ -31,8 +31,8 @@ test('fresh character can buy, equip, examine and persist an entire starter set'
  assert.ok(equipmentModifiers(data,'melee').power>1);
  assert.ok(equipmentModifiers(data,'melee').guard>0);
  const inventory=inventoryEntries(data);
- assert.ok(inventory.some(x=>x.canonical==='slot.recruit-helm'));
- assert.ok(inventory.some(x=>x.canonical==='armour.starter-mail'));
+ assert.ok(!inventory.some(x=>x.canonical==='slot.recruit-helm'),'equipped helm is no longer a backpack item');
+ assert.ok(inventory.some(x=>x.canonical==='armour.starter-mail'),'unequipped chest gear stays in the backpack');
  const loaded=validSave(JSON.parse(JSON.stringify(data)));
  assert.deepEqual(loaded.inventory,data.inventory);
  assert.deepEqual(loaded.equipment,data.equipment);

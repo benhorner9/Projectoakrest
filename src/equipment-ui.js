@@ -1,4 +1,5 @@
 import {STYLE_ORDER,LOADOUTS,ARMOUR,canEquipWeapon,canEquipArmour,ownsWeapon,ownsArmour} from './rules.js';
+import {equippedItemKeys} from './equipment-ownership.js';
 import {EQUIPMENT_SLOTS,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem} from './equipment-slots.js';
 import {getItem,itemIconUrl} from './items.js';
 import {weaponDisplay} from './attack-rules.js';
@@ -21,7 +22,7 @@ const icon=(parent,id)=>{
 const canonical=(kind,id,style)=>kind==='weapon'?'weapon.'+style+'.'+id:kind==='armour'?'armour.'+id:
  kind==='slot'?'slot.'+id:kind==='material'?'material.'+id:kind==='coins'?'currency.coins':'scroll.teleport';
 export function inventoryEntries(data){
- const list=[];
+ const list=[],worn=equippedItemKeys(data);
  for(const style of STYLE_ORDER)
   for(const id of data.inventory?.weapons?.[style]||[])if(LOADOUTS[style]?.[id])list.push({canonical:canonical('weapon',id,style),kind:'weapon',id,style,qty:1});
  for(const id of data.inventory?.armour||[])if(ARMOUR[id])list.push({canonical:canonical('armour',id),kind:'armour',id,qty:1});
@@ -30,7 +31,9 @@ export function inventoryEntries(data){
   if(qty>0&&getItem(canonical('material',id)))list.push({canonical:canonical('material',id),kind:'material',id,qty});
  if(data.onboarding?.teleportScrolls>0)list.push({canonical:'scroll.teleport',kind:'scroll',id:'teleport',qty:data.onboarding.teleportScrolls});
  if(data.coins>0)list.push({canonical:'currency.coins',kind:'coins',id:'coins',qty:Math.floor(data.coins)});
- return list;
+ // Gear belongs to its loadouts, not the physical backpack. Ownership remains
+ // in the save's catalogue for unlocks, drops, shops and legacy migration.
+ return list.filter(entry=>!worn.has(entry.canonical));
 }
 export function renderInventoryGrid(host,data,examine,onReorder=()=>{}){
  const entries=inventoryEntries(data);
@@ -67,7 +70,7 @@ const activeSlot=(data,style,slot)=>{
  if(slot==='weapon'){const id=data.gear?.[style];return ownsWeapon(data,style,id)?canonical('weapon',id,style):null;}
  if(slot==='chest'){const id=data.armour?.[style];return ownsArmour(data,id)?canonical('armour',id):null;}
  const id=data.equipment?.[style]?.[slot];
- return id&&SLOT_ITEMS[id]?.slot===slot&&SLOT_ITEMS[id]?.style===style&&(data.inventory?.slotted||[]).includes(id)?canonical('slot',id):null;
+ return id&&SLOT_ITEMS[id]?.slot===slot&&(SLOT_ITEMS[id]?.style===style||SLOT_ITEMS[id]?.style==='all')&&(data.inventory?.slotted||[]).includes(id)?canonical('slot',id):null;
 };
 export function renderEquipmentPaperDoll(host,data,style,examine){
  node('h3','Equipped · '+style.toUpperCase(),host);
@@ -85,7 +88,12 @@ export function renderEquipmentPaperDoll(host,data,style,examine){
  node('p','Choose an owned item below to examine and equip it. Empty slots remain empty until you acquire equipment.',host);
  const list=node('div',null,host,'oak-gear-choices');
  const candidates=inventoryEntries(data).filter(x=>x.kind==='weapon'&&x.style===style||
-  x.kind==='armour'||x.kind==='slot'&&x.style===style);
+  x.kind==='armour'||x.kind==='slot'&&(x.style===style||x.style==='all'));
+ for(const id of data.inventory?.slotted||[]){
+  if(SLOT_ITEMS[id]?.style!=='all')continue;
+  const key='slot.'+id;
+  if(!candidates.some(x=>x.canonical===key))candidates.push({kind:'slot',id,canonical:key,style:'all'});
+ }
  if(!candidates.length)node('p','No equipment in your bag yet. Visit the general store in Oakrest.',host);
  for(const entry of candidates){
   const item=getItem(entry.canonical);if(!item)continue;
@@ -131,14 +139,15 @@ export function renderExamine(host,data,currentStyle,itemId,{onGear,onSlot,onTra
   const act=button(host,active?'Unequip':'Equip chest armour',()=>onGear('armour',active?null:id,currentStyle),'oak-examine-action',!ready||!ownsArmour(data,id));
   act.textContent=active?'UNEQUIP':!ready?'VITALITY '+a.requiredVitality+' REQUIRED':'EQUIP';
  }else if(item.kind==='slot'){
-  const id=item.legacy.itemId,def=SLOT_ITEMS[id],active=data.equipment?.[def.style]?.[def.slot]===id;
+  const id=item.legacy.itemId,def=SLOT_ITEMS[id],targetStyle=def.style==='all'?currentStyle:def.style;
+  const active=data.equipment?.[targetStyle]?.[def.slot]===id;
   fact('Slot',EQUIPMENT_SLOTS.find(s=>s.id===def.slot)?.label||def.slot);
-  fact('Style',def.style.toUpperCase());
-  fact('Requires',def.style.toUpperCase()+' level '+def.requiredLevel);
+  fact('Style',def.style==='all'?'ALL STYLES':def.style.toUpperCase());
+  fact('Requires',targetStyle.toUpperCase()+' level '+def.requiredLevel);
   if(def.power)fact('Attack damage','+'+def.power+'%');
   if(def.guard)fact('Incoming damage','-'+def.guard+'%');
   if(def.slot==='arrows')fact('Ammunition','Reusable starter quiver');
-  const act=button(host,active?'Unequip':'Equip',()=>onSlot(def.style,def.slot,active?null:id),'oak-examine-action',!canEquipSlotItem(data,def.style,id));
+  const act=button(host,active?'Unequip':'Equip',()=>onSlot(targetStyle,def.slot,active?null:id),'oak-examine-action',!canEquipSlotItem(data,targetStyle,id));
   act.textContent=active?'UNEQUIP':'EQUIP';
  }else if(item.kind==='scroll'){
   const canTravel=data.onboarding?.teleportScrolls>0&&data.onboarding?.area!=='realm'&&

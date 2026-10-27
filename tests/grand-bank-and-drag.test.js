@@ -82,18 +82,20 @@ test('bank dragging uses existing validated ownership transfers and keeps target
  assert.equal(saved.coins,90);
 });
 test('corrupted item positions cannot inject unavailable items or duplicate slot contents',()=>{
- const d=defaultSave();d.inventorySlots=['weapon.melee.sword','weapon.melee.sword','weapon.magic.unknown',
+ const d=defaultSave();d.inventory.weapons.melee.push('daggers');
+ d.inventorySlots=['weapon.melee.daggers','weapon.melee.daggers','weapon.magic.unknown',
   '<script>','currency.coins',null,'material.softwood-logs'];
  d.bankSlots=['weapon.melee.sword','currency.coins','slot.fake'];
  const clean=validSave(d);
- assert.equal(clean.inventorySlots[0],'weapon.melee.sword');
+ assert.equal(clean.inventorySlots[0],'weapon.melee.daggers');
  assert.equal(clean.inventorySlots[1],null);
  assert.equal(clean.inventorySlots[2],null);
  assert.equal(clean.inventorySlots[3],null);
  assert.equal(clean.inventorySlots[4],null,'no coins owned');
  assert.deepEqual(clean.bankSlots,[null,null,null]);
  assert.deepEqual(sanitizeSlotOrder(['x','x'],['x','y']),['x',null]);
- assert.ok(inventoryKeyList(clean,'bag').includes('weapon.melee.sword'));
+ assert.ok(inventoryKeyList(clean,'bag').includes('weapon.melee.daggers'));
+ assert.ok(!inventoryKeyList(clean,'bag').includes('weapon.melee.sword'),'worn sword is not spare bag inventory');
 });
 
 

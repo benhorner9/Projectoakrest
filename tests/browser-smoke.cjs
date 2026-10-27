@@ -38,7 +38,9 @@ let browser;
     assert.ok(after.hero.z<before.hero.z,'player movement should update');
     await page.locator('#loadout-button').click({timeout:10000});
     await page.locator('#progression-inventory').click({timeout:10000});
-    assert.ok(await page.locator('#progression-content').getByRole('button',{name:'Examine Iron Longsword',exact:true}).isVisible(),'inventory must open');
+    assert.ok(await page.locator('#progression-content .oak-inventory-grid').isVisible(),'backpack inventory must open');
+    assert.equal(await page.locator('#progression-content').getByRole('button',{name:'Examine Iron Longsword',exact:true}).count(),0,
+     'equipped sword belongs in a gear loadout, not the spare inventory');
      assert.equal(await page.locator('#progression-panel').getAttribute('aria-modal'),'true','character panel opens as one modal menu');
      await page.locator('#progression-quests').click();
      assert.match(await page.locator('#progression-content').textContent(),/Quest Journal/);

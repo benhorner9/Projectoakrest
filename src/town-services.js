@@ -30,6 +30,7 @@ export const SHOP_STOCK=Object.freeze([
   Object.freeze({id:'starter-staff',label:'Frostwood Staff',kind:'weapon',style:'magic',itemId:'frost',price:45}),
   Object.freeze({id:'starter-bow',label:'Oak Longbow',kind:'weapon',style:'ranged',itemId:'bow',price:45}),
   Object.freeze({id:'starter-robe',label:'Traveller Clothing',kind:'armour',itemId:'traveller',price:35}),
+  Object.freeze({id:'wayfarer-amulet',label:'Wayfarer Amulet · All Styles',kind:'slot',itemId:'wayfarer-amulet',price:35}),
   ...WOODCUTTING_AXES.map(axe=>Object.freeze({id:'stock-'+axe.id,label:axe.name,kind:'weapon',style:'melee',itemId:axe.id,price:axe.price}))
 ]);
 export const STARTER_GROVE_XP_CAP=710; // The level 5 ceiling sends advanced learners elsewhere.
@@ -128,10 +129,9 @@ export function buyStarterStock(data,stockId){
   return {ok:true,item,price,pieces:missing.length};
  }
  if(!Number.isFinite(data.coins)||data.coins<item.price)return {ok:false,reason:'Not enough coins'};
- const bag=item.kind==='weapon'?data.inventory.weapons[item.style]:data.inventory.armour;
+ const bag=item.kind==='weapon'?data.inventory.weapons[item.style]:item.kind==='slot'?data.inventory.slotted:data.inventory.armour;
  if(bag.includes(item.itemId))return {ok:false,reason:'Already owned'};
- if(townBank(data)[item.kind==='weapon'?'weapons':'armour'] &&
-    (item.kind==='weapon'?data.bank.weapons[item.style]:data.bank.armour).includes(item.itemId))
+ if((item.kind==='weapon'?data.bank.weapons[item.style]:item.kind==='slot'?data.bank.slotted:data.bank.armour).includes(item.itemId))
    return {ok:false,reason:'Already stored in bank'};
  data.coins-=item.price;bag.push(item.itemId);
  return {ok:true,item,price:item.price};

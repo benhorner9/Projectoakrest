@@ -15,7 +15,7 @@ let browser;
  browser=await engine.launch({headless:true,...(engine===chromium?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{})});
  const context=await browser.newContext({viewport:{width:1366,height:1024},hasTouch:true});
  const {defaultSave}=await import('../src/rules.js');
- const save=defaultSave();save.coins=600;save.xp.melee=5000;save.inventory.weapons.melee.push('greatsword');save.inventory.slotted.push('recruit-shield');
+ const save=defaultSave();save.coins=600;save.xp.melee=5000;save.inventory.weapons.melee.push('greatsword');save.inventory.slotted.push('recruit-shield','wayfarer-amulet');
  save.inventory.materials={ration:8,'woodland-tonic':4,'softwood-logs':20,'moss-fibre':10,reed:6};
  const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',other='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
  await context.addInitScript(({save,id,other,prefix})=>{
@@ -125,6 +125,27 @@ let browser;
  assert.equal(await page.locator('.classic-gear-detail').count(),0);
  assert.equal(await page.locator('.classic-paper-slot').count(),9);
  await page.setViewportSize({width:1366,height:1024});
+ // Shared amulet can be assigned separately to all three combat styles
+ // without ever reappearing as a spare backpack item or duplicating the save.
+ await page.locator('.classic-gear-choices [data-canonical="slot.wayfarer-amulet"]').tap();
+ assert.equal(await page.locator('.classic-gear-detail').isVisible(),true);
+ await page.locator('.classic-gear-detail .classic-item-action').filter({hasText:'EQUIP'}).tap();
+ assert.equal((await snapshot()).equipment.melee.amulet,'wayfarer-amulet');
+ await open('inventory');
+ assert.equal(await bag('slot.wayfarer-amulet').count(),0,'equipped amulet is no longer in the backpack');
+ await open('equipment');
+ for(const styleName of ['magic','ranged']){
+  await page.locator('#classic-styles [data-style="'+styleName+'"]').tap();
+  await page.locator('.classic-gear-choices [data-canonical="slot.wayfarer-amulet"]').tap();
+  await page.locator('.classic-gear-detail .classic-item-action').filter({hasText:'EQUIP'}).tap();
+  assert.equal((await snapshot()).equipment[styleName].amulet,'wayfarer-amulet');
+  await page.locator('.classic-gear-detail-close').tap();
+ }
+ assert.equal((await snapshot()).inventory.slotted.filter(x=>x==='wayfarer-amulet').length,1,
+  'one owned amulet serves three gear loadouts');
+ await open('inventory');
+ assert.equal(await bag('slot.wayfarer-amulet').count(),0);
+ await open('equipment');
  await page.locator('#classic-styles [data-style="ranged"]').tap();
  assert.match(await page.locator('.classic-item-style-list .selected').textContent(),/RANGED/);
  await open('abilities');assert.equal(await page.locator('.classic-ability-select').count(),4);
