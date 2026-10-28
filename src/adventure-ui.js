@@ -1,11 +1,12 @@
 import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_MATERIALS} from './adventure-content.js';
 import {woodcuttingLevel} from './woodcutting.js';
+import {renderClassicQuestJournal} from './classic-quest-journal.js';
 const el=(tag,text,parent)=>{const e=document.createElement(tag);e.textContent=text;parent?.append(e);return e;};
 export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport,findTarget}){
  const dialog=document.getElementById('classic-dialogue'),title=document.getElementById('classic-dialogue-name'),body=document.getElementById('classic-dialogue-text');
  const content=el('div','',dialog);content.id='adventure-content';
  dialog.insertBefore(content,document.getElementById('classic-dialogue-close'));
- let current=null,lastWork='',selectedQuest=null,lastJournalKey='';
+ let current=null,lastWork='',selectedQuest=null,lastJournalKey='',journalView='list';
  const questBook=document.getElementById('classic-quest-book');
  const eatButton=el('button','Eat',document.querySelector('.classic-item-buttons'));eatButton.type='button';eatButton.id='adventure-eat';eatButton.title='Eat field ration (35 Health)';el('small','RATION',eatButton);
  const work=el('button','',document.querySelector('.classic-footer-events'));work.id='adventure-work';work.hidden=true;work.type='button';work.title='Cancel gathering or crafting';
@@ -77,71 +78,26 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   btn('View quest journal',showJournal);
  }
  function showJournal(){
-  current=null;windowUi.open('quests');
-  if(windowUi.current()==='quests'){lastJournalKey='';renderJournal();}
- }
- function renderJournal(){
+  current=null;journalView function renderJournal(){
   if(windowUi.current()!=='quests')return;
   const a=combat.adventureState();
-  const selected=a.catalogue.find(q=>q.id===selectedQuest);
-  if(!selectedQuest||!selected||selected.status==='locked'&&selectedQuest===a.tracked)
+  if(!a.catalogue.some(q=>q.id===selectedQuest))
    selectedQuest=a.tracked||a.catalogue.find(q=>q.status==='active'||q.status==='available')?.id||a.catalogue[0]?.id;
-  const entry=a.catalogue.find(q=>q.id===selectedQuest);
-  const scroll=questBook.querySelector(".classic-quest-detail")?.scrollTop||0;
-  questBook.replaceChildren();
-  const layout=el('div','',questBook);layout.className='classic-quest-layout';
-  const left=el('nav','',layout);left.className='classic-quest-list';left.setAttribute('aria-label','Quest list');
-  const detail=el('section','',layout);detail.className='classic-quest-detail';
-  const groups=[['In progress',['active','ready']],['Available',['available']],['Completed',['completed']],['Locked',['locked']]];
-  for(const [heading,statuses] of groups){
-   const entries=a.catalogue.filter(q=>statuses.includes(q.status));
-   if(!entries.length)continue;
-   el('h3',heading+' ('+entries.length+')',left);
-   for(const q of entries){
-    const b=el('button',(q.status==='completed'?'✓ ':q.status==='ready'?'◆ ':q.status==='locked'?'◌ ':'✦ ')+q.title,left);
-    b.type='button';b.className='classic-quest-entry status-'+q.status;
-    if(q.id===selectedQuest)b.classList.add('selected');
-    b.setAttribute('aria-current',q.id===selectedQuest?'true':'false');
-    b.addEventListener('click',()=>{selectedQuest=q.id;renderJournal();});
+  renderClassicQuestJournal(questBook,a,{
+   view:journalView,
+   selectedQuest,
+   findTarget,
+   onSelect:id=>{selectedQuest=id;journalView='detail';renderJournal();},
+   onBack:()=>{journalView='list';renderJournal();},
+   onTrack:id=>{
+    const result=combat.adventureAction('track',{choice:id},player());
+    notify(result.reason);
+    if(result.ok){changed();renderJournal();}
    }
-  }
-  if(!entry)return;
-  el('h2',entry.title,detail);
-  el('p',({available:'Available to start',active:'Quest in progress',
-   ready:'Ready to complete',completed:'Quest completed',locked:'Not yet unlocked'})[entry.status],detail).className='quest-state status-'+entry.status;
-  if(entry.status==='locked'){
-   el('h3','Requirements',detail);
-   for(const dep of entry.prerequisites){
-    const prerequisite=a.catalogue.find(q=>q.id===dep);
-    el('p',(prerequisite?.status==='completed'?'✓ ':'○ ')+(prerequisite?.title||dep),detail);
-   }
-  }else{
-   el('p',entry.status==='completed'?entry.end:entry.intro,detail);
-   if(entry.status==='active'||entry.status==='ready'){
-    el('h3','Objectives',detail);
-    for(const [flag,description] of entry.objectives)
-     el('p',(entry.flags.includes(flag)?'✓ ':'○ ')+description,detail).className=entry.flags.includes(flag)?'quest-done':'';
-   }
-   if(entry.status==='available')el('p','Speak to '+(entry.npc==='citizen:guard'?'Elowen':entry.npc==='service:forester'?'Alden':entry.npc.split(':')[1])+' to begin.',detail);
-   if(entry.status!=='completed'){
-    const b=el('button',a.tracked===entry.id?'✓ Currently tracked':'Track this quest',detail);
-    b.disabled=a.tracked===entry.id;b.type='button';
-    b.addEventListener('click',()=>{
-     const result=combat.adventureAction('track',{choice:entry.id},player());
-     notify(result.reason);if(result.ok){changed();renderJournal();}
-    });
-   }
-  }
-  if(['active','ready'].includes(entry.status))el('p','Quest contact: '+(findTarget(entry.npc)?.name||findTarget(entry.npc)?.label||entry.npc.split(':')[1]),detail);
-  detail.scrollTop=scroll;
-  el('p','Reward: '+entry.coins+' coins',detail).className='quest-reward';
-  if(entry.status==='completed')el('p','You have finished this quest.',detail);
-  el('h3','Your adventure',detail);
-  el('p','Hollow clears: '+a.clears+' · Discoveries: '+a.discoveries.length+'/2',detail);
-  if(a.run)el('p','Expedition: '+a.run.kills.length+'/6 guardians · '+a.run.wards.length+'/3 wards',detail);
-  const total=a.catalogue.filter(q=>q.status==='completed').length;
-  el('p','Quests completed: '+total+' / '+a.catalogue.length,detail);
+  });
   lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
+ }
+.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
  }
  function objective(){
   const a=combat.adventureState(),q=a.quest;
