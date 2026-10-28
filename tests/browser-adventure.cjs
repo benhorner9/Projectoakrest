@@ -96,7 +96,8 @@ let browser;
   await popup.getByRole('button',{name:'Back to quests'}).click();
   assert.equal(await popup.isVisible(),false,'Back closes popup and preserves list');
   await page.screenshot({path:'qa/first-adventure/quest-list.png'});
-  await page.locator('#classic-quests-close').click();
+  await page.locator('#classic-inventory-toggle').click();
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'BAG replaces QUESTS without empty sidebar');
   await page.locator('#classic-skills-toggle').click();
   assert.equal(await page.locator('.classic-skill-card').count(),11,'all active gathering and making skills are available from LEVELS');
   await page.locator('.classic-skill-card').filter({hasText:'Fletching'}).click();
@@ -122,7 +123,7 @@ let browser;
    assert.ok(popupBounds&&popupBounds.x>=0&&popupBounds.y>=0&&popupBounds.x+popupBounds.width<=size.width&&popupBounds.y+popupBounds.height<=size.height,JSON.stringify({size,popupBounds}));
    await page.locator('#classic-quest-popup').getByRole('button',{name:'Close quest details'}).click();
    assert.ok(layout.menu.bottom<=layout.dock.y,JSON.stringify(layout));
-   await page.locator('#classic-quests-close').click();
+   await page.locator('#classic-inventory-toggle').click();
   }
   assert.deepEqual(errors,[]);console.log('PASS: new Classic creator, saving, three combat styles, real crafting, quest journal, reload, wilderness/dungeon rendering, three touch-sized viewports.');
  }finally{await browser?.close();server?.kill();}
