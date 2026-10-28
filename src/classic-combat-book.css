@@ -1,0 +1,140 @@
+/* Oakrest combat book: icon-grid interaction inspired by classic spellbooks, original UI. */
+#classic-app.oakrest-framed #classic-item-content[data-view="abilities"]{
+ padding:7px!important;overscroll-behavior:contain;touch-action:pan-y;
+}
+#classic-app.oakrest-framed .oakrest-combat-book{
+ --book-accent:#d9ad7c;
+ --book-dark:#493729;
+ display:flex;flex-direction:column;gap:7px;min-width:0;
+ color:#e5d9be;font-family:system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book[data-combat-style="magic"]{
+ --book-accent:#aebbf4;--book-dark:#303c63;
+}
+#classic-app.oakrest-framed .oakrest-combat-book[data-combat-style="ranged"]{
+ --book-accent:#a8d5a3;--book-dark:#324e3a;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-header{
+ display:flex;flex-direction:column;gap:3px;
+ padding:9px 10px 7px;
+ border:1px solid #806f50;border-bottom:2px solid var(--book-accent);
+ background:linear-gradient(135deg,var(--book-dark),#232d26);
+}
+#classic-app.oakrest-framed .oakrest-combat-book-title{
+ color:var(--book-accent);font:700 17px/1.2 Georgia,serif;letter-spacing:.045em;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-weapon{
+ color:#e8dec7;font:11px/1.3 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-hint{
+ margin:1px 2px 2px;color:#c7bdaa;font:10px/1.4 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-label{
+ margin:3px 2px 0;color:#e7d2ab;font:700 10px/1.3 system-ui,sans-serif;letter-spacing:.06em;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slots{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slot{
+ display:grid;grid-template-columns:23px minmax(0,1fr);column-gap:5px;
+ align-items:center;min-width:0;min-height:48px;padding:5px 7px;
+ border:1px solid #6d624f;border-radius:3px;background:#27332b;
+ color:#e3d7be;cursor:pointer;text-align:left;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slot.selected{
+ border-color:var(--book-accent);background:linear-gradient(120deg,var(--book-dark),#27342c);
+ box-shadow:inset 0 0 0 1px var(--book-accent),0 0 8px #040b0966;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slot-number{
+ grid-row:span 2;display:grid;place-items:center;
+ width:22px;height:28px;border:1px solid #7c6c4e;border-radius:3px;
+ font:700 13px Georgia,serif;color:var(--book-accent);
+ background:#1c261f;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slot-name{
+ font:700 10px/1.25 system-ui,sans-serif;overflow-wrap:anywhere;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slot .classic-ability-status{
+ font:9px/1.2 system-ui,sans-serif;color:#c3b7a4;
+ overflow-wrap:anywhere;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-section{
+ display:flex;justify-content:space-between;align-items:baseline;gap:7px;
+ margin-top:4px;border-bottom:1px solid #776749;padding-bottom:5px;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-count{
+ flex:none;color:#c5bca7;font:10px system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-grid{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:6px;min-width:0;
+ padding:8px 7px 10px;
+ border:1px solid #736449;
+ background:linear-gradient(155deg,#1c2620,#252920);
+}
+#classic-app.oakrest-framed .oakrest-combat-book-spell{
+ display:flex;align-items:center;justify-content:center;position:relative;
+ width:100%;min-width:0;min-height:55px;padding:6px 2px;
+ border:1px solid #826d52;border-radius:3px;
+ background:radial-gradient(ellipse at 38% 30%,var(--book-dark),#18241f 78%);
+ box-shadow:inset 0 1px #ffffff1f,0 2px 5px #06110b80;
+ color:var(--book-accent);cursor:pointer;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-spell:hover,
+#classic-app.oakrest-framed .oakrest-combat-book-spell.inspecting{
+ border-color:var(--book-accent);box-shadow:inset 0 0 0 1px var(--book-accent),0 0 10px #d3c28d44;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-spell.equipped{
+ background:radial-gradient(ellipse at 38% 25%,#67573c,#27352c 78%);
+}
+#classic-app.oakrest-framed .oakrest-combat-book-spell.locked{
+ filter:saturate(.32);opacity:.68;color:#8f988c;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-glyph{
+ font:700 26px/1 Georgia,serif;text-shadow:0 1px 3px #06100acc;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-lock,
+#classic-app.oakrest-framed .oakrest-combat-book-assigned{
+ position:absolute;right:2px;bottom:2px;padding:1px 3px;
+ border-radius:2px;background:#101c17e6;
+ color:#f3dfbb;font:700 8px/1.2 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-assigned{
+ right:auto;left:2px;top:2px;bottom:auto;color:var(--book-accent);
+}
+#classic-app.oakrest-framed .oakrest-combat-book-inspect{
+ padding:10px;border:1px solid #7b6a4d;
+ background:linear-gradient(140deg,#36382a,#232b24);
+}
+#classic-app.oakrest-framed .oakrest-combat-book-inspect-title{
+ color:var(--book-accent);font:700 15px/1.2 Georgia,serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-description{
+ margin:5px 0;color:#e7dec8;font:11px/1.45 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-facts{
+ display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-facts span{
+ padding:3px 6px;border:1px solid #706143;border-radius:2px;
+ font:700 9px/1.3 system-ui,sans-serif;color:#e0d1b2;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-locked,
+#classic-app.oakrest-framed .oakrest-combat-book-instruction{
+ margin:5px 0;color:#d2c5a7;font:10px/1.4 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-locked{color:#ebb596}
+#classic-app.oakrest-framed .oakrest-combat-book-clear{
+ min-height:37px;padding:5px 10px;margin-top:6px;border:1px solid #82694b;
+ border-radius:3px;background:#3c4132;color:#e6d5ad;
+ font:700 10px system-ui,sans-serif;cursor:pointer;
+}
+#classic-app.oakrest-framed .oakrest-combat-book button:focus-visible{
+ outline:2px solid var(--book-accent);outline-offset:2px;
+}
+@media(max-height:650px){
+ #classic-app.oakrest-framed .oakrest-combat-book{gap:4px}
+ #classic-app.oakrest-framed .oakrest-combat-book-spell{min-height:44px}
+ #classic-app.oakrest-framed .oakrest-combat-book-glyph{font-size:22px}
+ #classic-app.oakrest-framed .oakrest-combat-book-slot{min-height:44px}
+}
