@@ -7,6 +7,7 @@ import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './
 import {EQUIPMENT_SLOTS,allowsOffhand} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.js';
+import {interiorFixtures,insideFixture} from './classic-interior-fixtures.js';
 
 // Canonical +Z is NORTH on the map. These values describe the INITIAL
 // south-of-player oblique view. The player may orbit/tilt freely afterward;
@@ -69,6 +70,7 @@ export function solidAt(x,z,radius=.38){
   if(Math.abs(p.z)<=hz+thick&&Math.abs(Math.abs(p.x)-hx)<thick)return true;
   // Centre gap 2.8 world units: a traversable front doorway.
   if(Math.abs(p.z-hz)<thick&&Math.abs(p.x)>1.4-radius)return true;
+  if(interiorFixtures(b).some(f=>insideFixture(p,f,radius)))return true;
  }
  return false;
 }
@@ -134,7 +136,9 @@ export function clearClassicLine(a,b,radius=.38){
    segmentRect(p,q,-hx-t,-hx+t,-hz-t,hz+t)||
    segmentRect(p,q,hx-t,hx+t,-hz-t,hz+t)||
    segmentRect(p,q,-hx-t,-door,hz-t,hz+t)||
-   segmentRect(p,q,door,hx+t,hz-t,hz+t))return false;
+   segmentRect(p,q,door,hx+t,hz-t,hz+t)||
+   interiorFixtures(building).some(f=>segmentRect(p,q,f.x-f.w/2-radius,f.x+f.w/2+radius,
+    f.z-f.d/2-radius,f.z+f.d/2+radius)))return false;
  }
  return true;
 }
