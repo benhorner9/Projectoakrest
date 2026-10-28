@@ -209,12 +209,12 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    emit('defeated',{id:enemy.id,name:enemy.name});
   }
  }
- function addProjectile(enemy,damage,source,ability,speed,kind){
+ function addProjectile(enemy,damage,source,ability,speed,kind,delay=0){
   if(!enemy||!source)return;
   const dir=toward(playerForAction,enemy),range=source.weapon?.reach||20;
   projectiles.push({x:playerForAction.x,z:playerForAction.z,direction:dir,speed,
    remaining:ability?.reach||range,targetId:enemy.id,targetLife:enemy.life,damage,source,
-   ability,kind,travelled:0});
+   ability,kind,delay,travelled:0});
   emit('projectile',{style:source.style,kind,x:playerForAction.x,z:playerForAction.z});
  }
  let playerForAction={x:0,z:73};
@@ -254,13 +254,15 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    emit(a.kind==='nova'?'area':'swing',{x:player.x,z:player.z,radius:a.reach,reach:a.reach,style,kind:a.kind});
   }else{
    for(const target of targets)for(let n=0;n<(a.kind==='burst'?(a.count||3):1);n++)
-    addProjectile(target,a.damage,source,a,a.speed||(current.style==='magic'?21:36),a.kind);
+    addProjectile(target,a.damage,source,a,a.speed||(current.style==='magic'?21:36),a.kind,n*.09);
    if(a.kind==='retreat')emit('dash',{distance:-4});
   }
  }
  function moveProjectiles(dt){
   for(let i=projectiles.length-1;i>=0;i--){
-   const p=projectiles[i],target=monsters.find(e=>e.id===p.targetId);
+   const p=projectiles[i];
+   if(p.delay>0){p.delay=Math.max(0,p.delay-dt);continue;}
+   const target=monsters.find(e=>e.id===p.targetId);
    if(!isAlive(target)||target.life!==p.targetLife){projectiles.splice(i,1);continue;}
    p.direction=toward(p,target);
    const next=projectileTravel(p.travelled,p.speed,dt,p.remaining);
@@ -547,7 +549,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
     cooldownEnd:cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),a))||0,
     cooldown:a.cooldown||0,...abilityAvailability(a)}:null),
    monsters:monsters.map(e=>({...e,warning:e.warning?{...e.warning}:null})),
-   projectiles:projectiles.map(p=>({x:p.x,z:p.z,direction:{...p.direction},kind:p.kind,style:p.source.style,family:p.source.weapon?.family,abilityId:p.ability?.id||null,effect:abilityEffect(p.source.style,p.source.weapon,p.ability?.id?p.ability:null),travelled:p.travelled})),
+   projectiles:projectiles.filter(p=>p.delay<=0).map(p=>({x:p.x,z:p.z,direction:{...p.direction},kind:p.kind,name:p.ability?.name||null,style:p.source.style,family:p.source.weapon?.family,abilityId:p.ability?.id||null,effect:abilityEffect(p.source.style,p.source.weapon,p.ability?.id?p.ability:null),travelled:p.travelled})),
    progression:{...data.xp},defeated:data.defeated||0,
    groundLoot:data.groundLoot.map(drop=>({...drop})),coins:data.coins,
    combatLevel:combatLevelFromXp(data.xp),

@@ -1,3 +1,4 @@
+import {classicAbilityProfile} from './classic-ability-profiles.js';
 import * as THREE from 'three';
 /** Shared geometry and a reusable bounded pool: no per-shot geometry uploads.
  * Arrow/bolt position and direction come directly from fixed-step simulation. */
@@ -27,11 +28,13 @@ export function createClassicProjectileView(scene){
   for(let i=0;i<pool.length;i++){
    const n=pool[i],p=projectiles[i];n.root.visible=i<count;
    if(i>=count)continue;
+   const profile=classicAbilityProfile(p.name);
    const magic=p.style==='magic',piercing=p.effect==='piercing-arrow';
    n.root.userData.effect=p.effect||'basic';n.root.scale.set(piercing?1.3:1,piercing?1.7:1,piercing?1.3:1);
+   if(profile?.length)n.root.scale.y=profile.length;
    n.tip.material=piercing?materials.gold:materials.steel;
    n.shaft.visible=n.tip.visible=!magic;n.tail.visible=magic;
-   n.shard.visible=magic&&p.effect==='ice-shard';n.orb.visible=magic&&!n.shard.visible;
+   n.shard.visible=magic&&(p.effect==='ice-shard'||profile?.shape==='binding');n.orb.visible=magic&&!n.shard.visible;
    n.orb.material=n.tail.material=p.family==='ember'?materials.ember:materials.frost;
    direction.set(p.direction?.x||0,0,p.direction?.z||0);
    if(direction.lengthSq()<.001)direction.set(0,0,1);

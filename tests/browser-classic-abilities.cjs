@@ -6,10 +6,10 @@ let browser;
 (async()=>{try{
  await new Promise(r=>setTimeout(r,800));
  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const {defaultSave}=await import('../src/rules.js');mkdirSync('qa/abilities',{recursive:true});const results=[];
+ const {defaultSave,LOADOUTS}=await import('../src/rules.js');mkdirSync('qa/abilities',{recursive:true});const results=[];
  for(const touch of [false,true]){
   const save=defaultSave();for(const style of ['melee','magic','ranged','vitality'])save.xp[style]=100000;
-  save.inventory.weapons.magic=['frost','ember'];
+  for(const style of ['melee','magic','ranged'])save.inventory.weapons[style]=Object.keys(LOADOUTS[style]);
   save.inventory.materials={'field-arrows':1000,'frost-scroll':1000,'ember-scroll':1000};
   for(const style of ['melee','magic','ranged'])for(const family of Object.keys(save.slots[style]))save.slots[style][family]=['w0','w1','w2','w3'];
   const ctx=await browser.newContext({viewport:touch?{width:1194,height:834}:{width:1366,height:1024},hasTouch:touch});
@@ -68,8 +68,41 @@ let browser;
   await page.screenshot({path:`qa/abilities/${label}-warmth.png`});
   await press('#classic-abilities-toggle');
   assert.ok(await page.getByText(/ember scroll at release/).count(),'ability panel explains actual supplies');
+  await page.keyboard.press('Escape');
+  const remaining=await page.evaluate(async()=>{
+   const {CLASSIC_ABILITY_PROFILES}=await import('./src/classic-ability-profiles.js');
+   const {skillCatalogue}=await import('./src/rules.js');const seen=new Set(),list=[];
+   for(const [style,weapons] of Object.entries({melee:['sword','daggers'],ranged:['bow','crossbow'],magic:['frost','ember']}))
+    for(const weapon of weapons)for(const a of skillCatalogue(style,weapon))
+     if(CLASSIC_ABILITY_PROFILES[a.name]&&!seen.has(a.name)){seen.add(a.name);list.push({style,weapon,...a});}
+   return list;
+  });
+  for(const a of remaining){
+   await page.keyboard.press('Escape');await advance(22);await press('[data-style='+a.style+']');await advance(.2);
+   await page.evaluate(a=>{
+    const q=oakrestClassicQA;
+    if(!q.itemAction({type:'equip',kind:'weapon',style:a.style,id:a.weapon}).ok)throw Error('Equip '+a.name);
+    if(!q.itemAction({type:'ability',style:a.style,weapon:a.weapon,index:0,id:a.id}).ok)throw Error('Slot '+a.name);
+    if(a.kind==='heal'){
+     q.teleport(26,87);q.lockMonster('bandit-a');q.advance(.6);q.teleport(26,87);
+     for(let i=0;i<120&&q.combatState().hp===q.combatState().maxHp;i++)q.advance(.5);
+    }
+    q.teleport(-1,71.3);q.advance(.2);
+    q.advance((.2-q.combatState().time%.6+.6)%.6);
+    if(a.kind!=='heal')q.lockMonster('practice');q.advance(.15);
+   },a);
+   await press('[data-ability="0"]');
+   const released=await page.evaluate(name=>{
+    const q=oakrestClassicQA;for(let i=0;i<180&&q.combatState().lastRelease?.name!==name;i++)q.advance(1/60);
+    return {release:q.combatState().lastRelease,presentation:q.combatPresentation()};
+   },a.name);
+   assert.equal(released.release.name,a.name,a.name+' must release');assert.equal(released.presentation.ability.visible,true,a.name);
+   results.push({viewport:label,name:a.name,release:released.release});
+  }
+  assert.equal(remaining.length,24);
+  await page.screenshot({path:`qa/abilities/${label}-remaining.png`});
   assert.deepEqual(errors,[]);await ctx.close();
  }
  writeFileSync('qa/abilities/results.json',JSON.stringify(results,null,2));
- console.log('PASS: three signature abilities via desktop/touch buttons, named windup/release, real projectiles, visible feedback, style cancellation, Counterguard, Ice Barrier, Warmth and supply descriptions.');
+ console.log('PASS: all 30 named abilities via desktop/touch buttons, individual release cues, real projectiles, utility feedback and supply descriptions.');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});
