@@ -226,6 +226,8 @@ export function validGroundLoot(list){
 export const XP_BY_MOB = {dummy:0,mossling:30,boar:46,bandit:75};
 export function nextStyle(style) { const i=STYLE_ORDER.indexOf(style); return STYLE_ORDER[(i+1)%STYLE_ORDER.length]; }
 export function xpToLevel(level) { return 65 + level*45; }
+/** Maximum new combat-style or Health XP earned during the level-60 chapter. */
+export const COMBAT_SKILL_XP_CAP=Array.from({length:CURRENT_SKILL_CAP-1},(_,i)=>xpToLevel(i+1)).reduce((sum,x)=>sum+x,0);
 export function levelFromXp(xp) { let level=1; while(level<CURRENT_SKILL_CAP && xp>=xpToLevel(level)){xp-=xpToLevel(level);level++;} return {level,progress:level===CURRENT_SKILL_CAP?1:xp/xpToLevel(level),remaining:xp}; }
 /** Per-skill current XP, remaining XP and percentage, consistent with existing level rules. */
 export function xpProgress(totalXp){
