@@ -761,7 +761,7 @@
 }
 @media(max-height:680px){
  #classic-app.oakrest-framed{
-  grid-template-rows:minmax(0,1fr) 124px clamp(112px,21vh,143px)!important;
+  grid-template-rows:minmax(0,1fr) 124px clamp(112px,20vh,143px)!important;
  }
  #classic-app.oakrest-framed #oakrest-action-deck{
   min-height:0!important;max-height:none!important;height:100%!important;
