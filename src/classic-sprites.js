@@ -24,7 +24,7 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
  const direction=mirroredDirection(dir);dir=direction.dir;
  if(direction.mirror){c.translate(W,0);c.scale(-1,1);}
- const grip=classicGrip(style,pose,step);
+ const grip=classicGrip(style,pose,step,weapon);
  const front=[0,1,7].includes(dir),back=[3,4,5].includes(dir);
  const side=[1,2,3,5,6,7].includes(dir);
  const right=true,shift=side?4:0;
@@ -98,7 +98,7 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  // Equipment drawn after hands ensures correctly attached 2D silhouette.
  const wx=grip.weapon.x,wy=grip.weapon.y;
  c.save();
- if(style==='melee'&&weapon!=='none'){c.translate(grip.hand.x,grip.hand.y);c.rotate(pose==='windup'?(/axe/i.test(weapon)?0:.2):pose==='strike'?-1.05:0);c.translate(-grip.hand.x,-grip.hand.y);}
+ if(style==='melee'&&weapon!=='none'){c.translate(grip.hand.x,grip.hand.y);c.rotate(grip.angle);c.translate(-grip.hand.x,-grip.hand.y);}
  if(weapon!=='none'&&style==='melee'){
   if(/dagger/i.test(weapon)){
    fill(c,'#e3ded1',wx-2,wy-3,4,25);fill(c,'#8a6b4a',wx-2,wy+20,4,12);
@@ -124,8 +124,10 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
   c.strokeStyle='#5a3a2a';c.lineWidth=5;
   c.beginPath();c.moveTo(wx-7,wy-23);c.quadraticCurveTo(wx+16,wy+4,wx-7,wy+39);c.stroke();
   c.strokeStyle='#e9e1ce';c.lineWidth=2;c.beginPath();c.moveTo(wx-7,wy-23);c.lineTo(wx-7-grip.bowDraw,wy+8);c.lineTo(wx-7,wy+39);c.stroke();
-  fill(c,'#aa986b',wx-14,wy+4,23,3);
-  polygon(c,'#d5ded7',[[wx+13,wy+5],[wx+3,wy-2],[wx+4,wy+11]]);
+  if(!['strike','follow','recover'].includes(pose)){
+   fill(c,'#aa986b',wx-14-grip.bowDraw,wy+4,23,3);
+   polygon(c,'#d5ded7',[[wx+13-grip.bowDraw,wy+5],[wx+3-grip.bowDraw,wy-2],[wx+4-grip.bowDraw,wy+11]]);
+  }
   }
  }
  c.restore();
@@ -138,8 +140,8 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
    fill(c,skin,grip.hand.x-13,grip.hand.y+1,8,7);
   }
  }
- if(pose==='windup'&&style==='magic'&&weapon!=='none'){
-  c.strokeStyle='#8dd7c2';c.lineWidth=2;c.beginPath();c.arc(wx,wy-19,17,0,Math.PI*2);c.stroke();
+ if(['prepare','windup','swing'].includes(pose)&&style==='magic'&&weapon!=='none'){
+  c.strokeStyle=/ember|inferno/.test(weapon)?'#edb27f':'#8dd7c2';c.lineWidth=2;c.beginPath();c.arc(wx,wy-19,pose==='prepare'?10:17,0,Math.PI*2);c.stroke();
  }else if(pose==='strike'&&weapon!=='none'){
   c.strokeStyle=style==='magic'?'#a7e4d5':style==='ranged'?'#eadcae':'#eee5ce';c.lineWidth=3;c.beginPath();
   if(style==='melee')c.arc(57,64,27,-Math.PI*.65,Math.PI*.3);
@@ -163,18 +165,19 @@ function keyFor(config,dir,step){
   config.weapon,config.chest,config.legs,config.style,config.pose,dir,step].join('|');
 }
 export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',
- outfit='tunic',hairstyle='short',sex='male',worn={},npc=false,armed=false}={}){
+ outfit='tunic',hairstyle='short',sex='male',worn={},npc=false,armed=false,npcWeapon='sword'}={}){
  const material=new THREE.SpriteMaterial({transparent:true,depthWrite:false,alphaTest:.07});
  const sprite=new THREE.Sprite(material);sprite.scale.set(2.65,3.55,1);
  sprite.center.set(.5,0);
  let lastKey='';
  function update({facing={x:0,z:1},cameraOffset,step=0,pose='idle',style:nextStyle=style,worn:nextWorn=worn}={}){
+  sprite.userData.pose=pose;
   const config={style:nextStyle,coat,skin,hair,outfit,hairstyle,sex,
    helm:nextWorn.helm||null,shield:!!(nextStyle==='melee'&&nextWorn.offhand),
    offhand:nextWorn.offhand||null,boots:nextWorn.boots||null,arrows:!!nextWorn.arrows,
    amulet:!!nextWorn.amulet,ring:!!nextWorn.ring,
    chest:nextWorn.chest||null,legs:nextWorn.legs||null,pose,
-   weapon:npc?(armed?'sword':'none'):(nextWorn.weapon||'none')};
+   weapon:npc?(armed?npcWeapon:'none'):(nextWorn.weapon||'none')};
   const dir=spriteDirection(facing.x,facing.z,cameraOffset),frame=step%3,key=keyFor(config,dir,frame);
   if(key===lastKey)return;
   if(!textureCache.has(key))textureCache.set(key,renderActor({...config,dir,step:frame}));

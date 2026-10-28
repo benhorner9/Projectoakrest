@@ -49,7 +49,7 @@ export function createAudio(storage=null,key='oakrest-audio'){
   if(!enabled||!volume||!ctx||ctx.state!=='running'||voices>=10)return;
   if(!gate.admit(kind,ctx.currentTime))return;
   voices++;const osc=ctx.createOscillator(),gain=ctx.createGain(),t=ctx.currentTime;
-  const tones={loot:740,dodge:240,magic:520,bow:330,warning:160,hurt:75,death:65,chop:210,treefall:82};
+  const tones={loot:740,dodge:240,magic:520,bow:330,'spell-impact':460,'arrow-impact':125,guard:620,warning:160,hurt:75,death:65,chop:210,treefall:82};
   const hz=tones[kind]||(heavy?90:180),duration=kind==='treefall'?.56:kind==='warning'?.26:.18;
   osc.type=['hurt','bow','warning'].includes(kind)?'triangle':['hit','chop','treefall'].includes(kind)?'triangle':'sine';
   osc.frequency.setValueAtTime(hz,t);osc.frequency.exponentialRampToValueAtTime(kind==='loot'?1100:hz*.38,t+duration);

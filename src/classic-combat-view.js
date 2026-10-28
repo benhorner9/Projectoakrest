@@ -1,8 +1,10 @@
 /** Block 4 2.5D combat presenter. All hit resolution lives in classic-combat.js. */
 import * as THREE from 'three';
-import {ENEMY_COMBAT} from './combat-feel.js';
+import {ENEMY_COMBAT,ENEMY_PATTERNS} from './combat-feel.js';
 import {makeClassicActor,makeGroundShadow} from './classic-sprites.js';
 import {hitRecoilStrength} from './classic-combat-impacts.js';
+import {classicAttackPose,classicEnemyProfile,classicDeathProgress} from './classic-combat-motion.js';
+import {createClassicProjectileView} from './classic-projectile-view.js';
 const makeTexture=(kind)=>{
  const c=document.createElement('canvas');c.width=96;c.height=100;
  const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
@@ -47,7 +49,8 @@ function labelTexture(name,level){
 }
 const assets={mossling:makeTexture('mossling'),boar:makeTexture('boar'),keeper:makeTexture('keeper'),guardian:makeTexture('guardian')};
 export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
- const actors=new Map(),warningMeshes=new Map(),projectileNodes=[];
+ const actors=new Map(),warningMeshes=new Map();
+ const projectileView=createClassicProjectileView(scene);
  // A subtle ground circle replaces hard "target lock" visuals.
  const selectedRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.06,40),
   new THREE.MeshBasicMaterial({color:'#f5d58e',transparent:true,opacity:.76,
@@ -57,8 +60,9 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
  for(const e of spawns){
   let model;
   if(e.type==='bandit'||e.type==='dummy'){
-   model=makeClassicActor({style:'melee',coat:e.type==='bandit'?'#785d50':'#9c8769',
-    skin:'#c99a76',hair:'#4a3328',npc:true,armed:e.type==='bandit'});
+   const caster=e.type==='bandit'&&classicEnemyProfile(e,e.pattern||ENEMY_PATTERNS[e.type]).caster;
+   model=makeClassicActor({style:caster?'magic':'melee',coat:caster?'#657c79':e.type==='bandit'?'#785d50':'#9c8769',
+    skin:'#c99a76',hair:'#4a3328',npc:true,armed:e.type==='bandit',npcWeapon:caster?'frost':'sword'});
   }else{
    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
     map:assets[e.boss?'keeper':e.id==='guardian'?'guardian':e.type],transparent:true,alphaTest:.06,depthWrite:false
@@ -92,6 +96,10 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
   for(const e of monsters){
    if(!e.warning||e.dead)continue;
    const w=e.warning;activeIds.add(e.id);
+   const previous=warningMeshes.get(e.id);
+   if(previous&&previous.userData.startedAt!==w.startedAt){
+    scene.remove(previous);previous.geometry.dispose();previous.material.dispose();warningMeshes.delete(e.id);
+   }
    if(!warningMeshes.has(e.id)){
     const mat=new THREE.MeshBasicMaterial({color:'#d34b49',transparent:true,opacity:.27,
      depthWrite:false,side:THREE.DoubleSide});
@@ -103,16 +111,16 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
      plane.position.set(w.x,.075,w.z);
      if(w.kind==='cleave')plane.rotation.z=Math.atan2(w.direction.x,-w.direction.z);
     }
-    scene.add(plane);warningMeshes.set(e.id,plane);
+    plane.userData.startedAt=w.startedAt;scene.add(plane);warningMeshes.set(e.id,plane);
    }
    const plane=warningMeshes.get(e.id);
-   plane.material.opacity=.25+.16*(.5+.5*Math.sin(t*19));
+   const progress=Math.max(0,Math.min(1,(t-w.startedAt)/Math.max(.001,w.end-w.startedAt)));
+   plane.material.opacity=.23+progress*.25;
   }
   for(const [id,obj] of warningMeshes)if(!activeIds.has(id)){
    scene.remove(obj);obj.geometry.dispose();obj.material.dispose();warningMeshes.delete(id);
   }
  }
- const projectileGeometry=new THREE.SphereGeometry(.16,8,6);
  function update(snapshot,cameraOffset,player){
   const t=snapshot.time;
   const selected=snapshot.target;
@@ -125,12 +133,13 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
    const actor=actors.get(enemy.id);
    if(!actor)continue;
    const show=!enemy.dead&&!enemy.hidden,hit=enemy.hitFlashUntil>t;
+   const death=classicDeathProgress(enemy,t),dying=!enemy.hidden&&death!==null&&death<1;
    const dx=enemy.x-(actor.lastX??enemy.x),dz=enemy.z-(actor.lastZ??enemy.z);
    if(Math.hypot(dx,dz)>.001)actor.facing={x:dx,z:dz};
    else if(enemy.aggro&&player)actor.facing={x:player.x-enemy.x,z:player.z-enemy.z};
    actor.releaseUntil=enemy.releaseUntil||0;
    actor.hadWarning=!!enemy.warning;actor.lastX=enemy.x;actor.lastZ=enemy.z;
-   actor.sprite.visible=show;actor.shadow.visible=show;
+   actor.alive=show;actor.sprite.visible=show||dying;actor.shadow.visible=show||dying;
    actor.label.visible=show;
    // Avoid floating health bars on every peaceful creature.
    const displayHealth=show&&(enemy.hp<enemy.maxHp||enemy.aggro||selected?.id===enemy.id);
@@ -144,6 +153,18 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
     .12+(show&&enemy.aggro?.06:0)+recoil*.11,
     enemy.z+awayZ/awayLength*recoil*.19);
    actor.sprite.scale.copy(actor.baseScale).multiplyScalar(1-recoil*.055);
+   // Windup compresses, contact extends, death settles into a short fade.
+   // These visual offsets never move collision coordinates or hit geometry.
+   const preparation=enemy.warning?Math.max(0,Math.min(1,(t-enemy.warning.startedAt)/(enemy.warning.end-enemy.warning.startedAt))):0;
+   const contact=t<(enemy.releaseUntil||0)?Math.max(0,(enemy.releaseUntil-t)/.22):0;
+   if(!reducedMotion&&!enemy.dead){
+    actor.sprite.scale.y*=1-preparation*.07+contact*.07;
+    actor.sprite.position.y+=preparation*.07+contact*.12;
+   }
+   actor.sprite.material.opacity=dying?1-death:1;
+   actor.sprite.material.rotation=dying&&!reducedMotion?death*.65:0;
+   if(dying&&!reducedMotion){actor.sprite.scale.y*=1-death*.65;actor.sprite.position.y-=death*.15;}
+   actor.shadow.material.opacity=dying?.22*(1-death):.22;
    actor.shadow.position.set(enemy.x,.035,enemy.z);
    actor.label.position.set(enemy.x,enemy.boss?5.6:enemy.id==='guardian'?4.6:enemy.type==='boar'?3.5:3.65,enemy.z);
    const healthHeight=actor.sprite.scale.y+.15;
@@ -152,29 +173,20 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
    actor.hpFill.scale.set(fraction,1,1);
    actor.hpFill.position.set(enemy.x-(1-fraction)*1.125,healthHeight+.015,enemy.z);
    actor.sprite.material.color.set(hit?'#f9ad89':enemy.weak==='magic'?'#bad6cf':enemy.weak==='ranged'?'#cabce0':'#ffffff');
-   actor.update({facing:actor.facing||{x:0,z:1},cameraOffset,pose:enemy.warning?'windup':t<(actor.releaseUntil||0)?'strike':'idle',step:Math.hypot(dx,dz)>.001?1+Math.floor(t*5)%2:0});
+   actor.update({facing:actor.facing||{x:0,z:1},cameraOffset,
+    pose:classicAttackPose(t,enemy.warning?{startedAt:enemy.warning.startedAt,until:enemy.warning.end}:null,
+     enemy.releaseUntil?{time:enemy.releaseUntil-.22,family:'sword'}:null),
+    step:Math.hypot(dx,dz)>.001?1+Math.floor(t*5)%2:0});
   }
   updateWarnings(snapshot.monsters,t);
-  while(projectileNodes.length<snapshot.projectiles.length){
-   const mesh=new THREE.Mesh(projectileGeometry,
-    new THREE.MeshBasicMaterial({color:'#e8bc77'}));
-   scene.add(mesh);projectileNodes.push(mesh);
-  }
-  while(projectileNodes.length>snapshot.projectiles.length){
-   const mesh=projectileNodes.pop();scene.remove(mesh);mesh.material.dispose();
-  }
-  snapshot.projectiles.forEach((p,i)=>{
-   const mesh=projectileNodes[i];
-   mesh.position.set(p.x,1.55,p.z);
-   mesh.material.color.set(p.style==='magic'?'#a5d6ee':'#ead3a0');
-   mesh.scale.set(p.style==='magic'?1.6:1,1,1);
-  });
+  projectileView.update(snapshot.projectiles);
  }
- function hitObjects(){return [...actors.entries()].map(([id,a])=>({id,object:a.sprite}));}
- return {update,hitObjects,
+ function hitObjects(){return [...actors.entries()].filter(([,a])=>a.alive!==false).map(([id,a])=>({id,object:a.sprite}));}
+ return {update,hitObjects,stats:()=>({projectiles:projectileView.stats(),
+  actors:[...actors].map(([id,a])=>({id,visible:a.sprite.visible,opacity:a.sprite.material.opacity,scaleY:a.sprite.scale.y}))}),
   dispose(){
    scene.remove(selectedRing);selectedRing.geometry.dispose();selectedRing.material.dispose();
-   for(const mesh of projectileNodes){scene.remove(mesh);mesh.material.dispose();}
+   projectileView.dispose();
    for(const [id,mesh] of warningMeshes){scene.remove(mesh);mesh.geometry.dispose();mesh.material.dispose();}
    for(const actor of actors.values()){
     for(const obj of [actor.sprite,actor.shadow,actor.label,actor.hpBackground,actor.hpFill])scene.remove(obj);

@@ -1,4 +1,5 @@
 import {createClassicSimulationClock,classicWeaponInterval,nextCombatBeat,onCombatBeat,COMBAT_TICK_SECONDS} from './classic-combat-clock.js';
+import {classicEnemyProfile} from './classic-combat-motion.js';
 import {ADVENTURE_SPAWNS,ADVENTURE_XP_REWARDS} from './adventure-content.js';
 import {createAdventure} from './adventure-state.js';
 /**
@@ -37,7 +38,7 @@ function initialMonster(def){
   name:def.name||ENEMY_COMBAT[def.type].name,level:def.level||ENEMY_COMBAT[def.type].level,
   hp:def.maxHp,aggro:false,retreating:false,dead:false,lastAttack:0,
   warning:null,stunUntil:0,slowUntil:0,rootUntil:0,bleedUntil:0,nextBleed:0,
-  bleedSource:null,respawnAt:0,hitFlashUntil:0,life:0,aiState:'idle',recoverUntil:0,routeAt:0,stuckFor:0,patrolIndex:0,lastSeen:null,lostSightAt:null,releaseUntil:0};
+  bleedSource:null,respawnAt:0,deathAt:null,noticeSuppressed:false,hitFlashUntil:0,life:0,aiState:'idle',recoverUntil:0,routeAt:0,stuckFor:0,patrolIndex:0,lastSeen:null,lostSightAt:null,releaseUntil:0};
 }
 function safeWeapon(data,style){
  const id=data.gear?.[style],weapon=LOADOUTS[style]?.[id];
@@ -68,7 +69,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  const dropSession=Date.now().toString(36);
  let nextDrop=0;
  let time=0,style='melee',targetId=null,attackUntil=0,switchUntil=0,dodgeUntil=0,dodgeStart=-Infinity;
- let action=null,queuedAbility=null,shieldUntil=0,deadUntil=0,abilityRecoveryUntil=0,lastFailure=null;
+ let action=null,lastRelease=null,queuedAbility=null,shieldUntil=0,deadUntil=0,abilityRecoveryUntil=0,lastFailure=null;
  const clock=createClassicSimulationClock();
  let hp=maxHealth(levelFromXp(data.xp?.vitality||0).level);
  const emit=(type,details={})=>events.push({type,time,...details});
@@ -108,7 +109,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  function styleSwitch(next){
   if(!STYLE_ORDER.includes(next)||next===style||!canFight())return false;
   // Appearance/loadout changes immediately; committed recovery is never reset.
-  action=null;queuedAbility=null;style=next;switchUntil=time+.12;
+  action=null;lastRelease=null;queuedAbility=null;style=next;switchUntil=time+.12;
   emit('style',{style});return true;
  }
  const utility=ability=>['shield','heal','dash','dashback'].includes(ability?.kind);
@@ -127,6 +128,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  }
  function validateAttack(player,attackStyle,weapon,ability,target=getTarget()){
   if(!canFight())return {ok:false,reason:'Wait until you recover.'};
+  if(time<dodgeStart+DODGE.duration)return {ok:false,reason:'Finish dodging before attacking.'};
   if(!weapon)return {ok:false,reason:'Equip an owned weapon for this style.'};
   if(ability?.kind==='heal'&&hp>=maxHealth(levelFromXp(data.xp.vitality).level))return {ok:false,reason:'Health is already full.'};
   const targets=utility(ability)?[]:validTargets(player,weapon,ability,target);
@@ -152,7 +154,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   abilityRecoveryUntil=time+Math.max(.4,windup+.15);
   attackUntil=Math.max(attackUntil,nextCombatBeat(time+classicWeaponInterval(weapon)));
   action={type:'ability',style,ability,weapon,weaponId:data.gear[style],targetId,
-   targetLife:getTarget()?.life,impactAt:time+windup,source:snapshot()};
+   targetLife:getTarget()?.life,startedAt:time,impactAt:time+windup,source:snapshot()};
   emit('windup',{style,kind:ability.kind,name:ability.name,until:action.impactAt});
   return true;
  }
@@ -170,12 +172,15 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   attackUntil=time+classicWeaponInterval(weapon);
   const windup=Math.min(classicWeaponInterval(weapon)*.70,weapon.windup||weapon.interval*.25);
   action={type:'basic',style,weapon,weaponId:data.gear[style],targetId:enemy.id,
-   targetLife:enemy.life,impactAt:time+windup,source:snapshot()};
+   targetLife:enemy.life,startedAt:time,impactAt:time+windup,source:snapshot()};
   emit('windup',{style,kind:'basic',name:weapon.title,until:action.impactAt});
   return true;
  }
  function applyEnemyHit(enemy,damage,source,ability={}){
   if(!isAlive(enemy)||!source||!Number.isFinite(damage))return;
+  // A real attack reaching the creature is a fresh hostile trigger even if
+  // its accuracy roll misses. Selection alone does not provoke passive mobs.
+  enemy.aggro=enemy.type!=='dummy';enemy.noticeSuppressed=false;
   const max=ability.periodic?Math.max(1,Math.floor(damage)):
     maxHitForAction(source.maxHit,source.weaponBasic,damage);
   const chance=enemy.type==='dummy'?1:
@@ -183,19 +188,18 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
       enemy.guard??({mossling:0,boar:.04,bandit:.08}[enemy.type]||0),source.power);
   const result=ability.periodic?{hit:true,damage:max}:
     rollHit({maxHit:Math.max(1,Math.round(max*(enemy.weak===source.style?1.25:1))),accuracy:chance,random});
-  if(!result.hit){emit('miss',{id:enemy.id});return;}
+  if(!result.hit){emit('miss',{id:enemy.id,style:source.style});return;}
   enemy.hp=Math.max(0,enemy.hp-result.damage);
   enemy.hitFlashUntil=time+.18;
   if(ability.stun)enemy.stunUntil=time+ability.stun;
   if(ability.slow)enemy.slowUntil=time+ability.slow;
   if(ability.root)enemy.rootUntil=time+ability.root;
   if(ability.bleed){enemy.bleedUntil=time+ability.bleed;enemy.nextBleed=time+1;enemy.bleedSource=source;}
-  enemy.aggro=enemy.type!=='dummy';
-  emit('hit',{id:enemy.id,damage:result.damage,style:source.style,remaining:enemy.hp});
+  emit('hit',{id:enemy.id,damage:result.damage,style:source.style,family:source.weapon?.family,periodic:!!ability.periodic,remaining:enemy.hp});
   if(enemy.hp<=0){
    if(targetId===enemy.id){targetId=null;queuedAbility=null;}
    if(enemy.type==='dummy'){enemy.hp=enemy.maxHp;emit('dummy',{id:enemy.id});return;}
-   enemy.dead=true;enemy.aiState='death';enemy.aggro=false;enemy.warning=null;enemy.respawnAt=enemy.room!==undefined?Infinity:time+(enemy.adventure?45:12);
+   enemy.dead=true;enemy.deathAt=time;enemy.aiState='death';enemy.aggro=false;enemy.warning=null;enemy.respawnAt=enemy.room!==undefined?Infinity:time+(enemy.adventure?45:12);
    const xp=enemy.adventure?ADVENTURE_XP_REWARDS[enemy.id]??XP_BY_MOB[enemy.type]:XP_BY_MOB[enemy.type];
    const reward=awardMonsterVictory(data,enemy.type,source.style,xp);
    if(reward.awarded)emit('xp',{style:source.style,amount:reward.amount,reward});
@@ -230,7 +234,8 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    data.inventory.materials[id]-=amount;emit('adventure',{reason:'Used '+id,amount});
   }
   const targets=validation.targets;
-  emit('release',{style:current.style,kind:a?.kind||'basic',family:weapon.family});
+  lastRelease={time,style:current.style,kind:a?.kind||'basic',family:weapon.family};
+  emit('release',{...lastRelease});
   if(current.type==='basic'){
    if(current.style==='melee')for(const target of targets)applyEnemyHit(target,weapon.basic,source,
     {kind:'hit',bleed:weapon.family==='daggers'?1.5:0});
@@ -261,10 +266,10 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    p.direction=toward(p,target);
    const next=projectileTravel(p.travelled,p.speed,dt,p.remaining);
    const steps=Math.max(1,Math.ceil(next.step/.15)),oldX=p.x,oldZ=p.z;
-   let blocked=false,hit=false;
+   let blocked=false,hit=false,contact={x:p.x,z:p.z};
    for(let k=1;k<=steps;k++){
     const f=k/steps,x=oldX+p.direction.x*next.step*f,z=oldZ+p.direction.z*next.step*f;
-    if(solidAt(x,z,.08)){blocked=true;break;}
+    if(solidAt(x,z,.08)){blocked=true;contact={x,z};break;}
     if(Math.hypot(target.x-x,target.z-z)<(target.type==='boar'?.85:.67)){hit=true;break;}
    }
    if(hit){
@@ -272,25 +277,28 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
     if(p.ability?.explosion)for(const other of active())if(other!==target&&
      dist(other,target)<=p.ability.explosion&&wallClear(target,other))applyEnemyHit(other,p.damage*.45,p.source,{});
     projectiles.splice(i,1);
-   }else if(blocked||next.expired){emit('impact',{x:p.x,z:p.z,blocked});projectiles.splice(i,1);}
+   }else if(blocked||next.expired){emit('impact',{...contact,blocked});projectiles.splice(i,1);}
    else{p.x+=p.direction.x*next.step;p.z+=p.direction.z*next.step;p.travelled=next.distance;}
   }
  }
  function enemyAttack(enemy,warning,player){
-  const spec=enemy.pattern||ENEMY_PATTERNS[enemy.type];
+  const spec={...(enemy.pattern||ENEMY_PATTERNS[enemy.type]),...warning};
   if(!isAlive(enemy)||!canFight()||dist(enemy,player)>spec.engage+.1||
-   !isThreatened(warning.kind,warning,player)||!wallClear(enemy,player))return false;
+   !isThreatened(warning.kind,warning,player)||!wallClear(enemy,player)){
+   emit('enemy-whiff',{id:enemy.id});return false;
+  }
   if(dodgeInvulnerable(time,dodgeStart)){emit('evade',{id:enemy.id});return true;}
   const vitality=levelFromXp(data.xp.vitality).level,guard=equipmentModifiers(data,style).guard;
   const resistance=Math.min(.45,guard+defenceFor(data.armour[style]).physical*.5);
-  const result=rollHit({maxHit:Math.max(1,Math.round((enemy.pattern||ENEMY_PATTERNS[enemy.type]).damage)),
+  const result=rollHit({maxHit:Math.max(1,Math.round(spec.damage)),
    accuracy:accuracyFor(enemy.level,vitality,19,resistance),random});
   if(!result.hit){emit('enemy-miss',{id:enemy.id});return true;}
   const harm=Math.max(1,Math.round(damageAfterArmour(result.damage,shieldUntil>time,
    data.armour[style])*(1-guard)));
-  hp=Math.max(0,hp-harm);emit('hurt',{damage:harm,hp});
+  const guarded=shieldUntil>time;
+  hp=Math.max(0,hp-harm);emit('hurt',{id:enemy.id,damage:harm,hp,guarded});
   if(hp===0){
-   deadUntil=time+2.1;action=null;queuedAbility=null;targetId=null;projectiles.length=0;
+   deadUntil=time+2.1;action=null;lastRelease=null;queuedAbility=null;targetId=null;projectiles.length=0;
    emit('dead',{until:deadUntil});
   }
   return true;
@@ -311,7 +319,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   e.stuckFor=dist(before,e)<.0001?e.stuckFor+dt:0;
  }
  function returnHome(e,cfg,dt){
-  if(!e.retreating){e.returnAt=time;e.route=null;e.stuckFor=0;}
+  if(!e.retreating){e.returnAt=time;e.route=null;e.stuckFor=0;e.noticeSuppressed=true;}
   if(!e.retreating)emit('enemy-disengaged',{id:e.id});
   e.aiState='return';e.aggro=false;e.warning=null;e.retreating=true;
   e.bleedUntil=0;e.bleedSource=null;e.rootUntil=0;e.stunUntil=0;e.slowUntil=0;
@@ -343,7 +351,12 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    if(e.type==='dummy'||e.dead)continue;
    const cfg=ENEMY_COMBAT[e.type];
    if(e.boss){const phase=e.hp/e.maxHp>.66?0:e.hp/e.maxHp>.33?1:2;if(e.phase!==phase){e.phase=phase;emit('adventure-notice',{reason:'The keeper shifts: '+['roots yield to Magic','exposed echoes yield to Ranged','cracked heart yields to Melee'][phase]+'. Watch its warning shape.'});}e.weak=['magic','ranged','melee'][phase];e.pattern=[{kind:'charge',engage:10,length:10,width:1.7,windup:1.5,cooldown:4.4,damage:24},{kind:'pounce',engage:14,radius:3,windup:1.7,cooldown:4.2,damage:22},{kind:'cleave',engage:5,radius:5,halfAngle:1.1,windup:1.3,cooldown:3.8,damage:24}][phase];}
-   const spec=e.pattern||ENEMY_PATTERNS[e.type];
+   const spec=e.pattern||ENEMY_PATTERNS[e.type],profile=classicEnemyProfile(e,spec);
+   const noticeRadius=e.room!==undefined?(e.boss?15:10):cfg.sight;
+   // Returning does not itself constitute a new aggression trigger. Rearm
+   // only once the player has left the notice area, or actually hits again.
+   if(e.noticeSuppressed&&dist(player,{x:e.startX,z:e.startZ})>noticeRadius+1)
+    e.noticeSuppressed=false;
    const safeOrDead=isOakrestSafe(player.x,player.z)||!canFight();
    if(safeOrDead){e.aggro=false;e.warning=null;}
    let decision=safeOrDead?
@@ -368,7 +381,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    if(decision==='idle'){e.aiState='idle';continue;}
    if(time<e.recoverUntil){e.aiState='recover';continue;}
    if(decision==='acquire'){
-    if(e.aggressive===false||!wallClear(e,player)){e.aiState='idle';continue;}
+    if(e.noticeSuppressed||e.aggressive===false||!wallClear(e,player)){e.aiState='idle';continue;}
     e.aiState='aggro';e.aggro=true;e.lastAttack=Math.min(e.lastAttack,time-spec.cooldown+.25);
    }
    if(wallClear(e,player)){e.lastSeen={x:player.x,z:player.z};e.lostSightAt=null;}
@@ -379,7 +392,11 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
     e.aiState='attack';
     if(time>=e.warning.end){
      const warning=e.warning;e.warning=null;e.aiState='recover';
-     if(enemyAttack(e,warning,player)){e.releaseUntil=time+.22;emit('enemy-release',{id:e.id,kind:spec.kind});}
+     // The committed swing still happens when the player sidesteps it.
+     // Contact is checked separately against the frozen tell and current LOS.
+     const connected=enemyAttack(e,warning,player);
+     e.releaseUntil=time+.22;e.recoverUntil=time+profile.recovery;
+     emit('enemy-release',{id:e.id,kind:warning.kind,connected});
     }
     continue;
    }
@@ -389,14 +406,24 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
     const warning={kind:spec.kind,x:spec.kind==='pounce'?player.x:e.x,
      z:spec.kind==='pounce'?player.z:e.z,direction:dir,
      radius:spec.radius||1,length:spec.length||0,width:spec.width||0,
-     halfAngle:spec.halfAngle||0,end:time+spec.windup};
+     halfAngle:spec.halfAngle||0,engage:spec.engage,damage:spec.damage,startedAt:time,end:time+spec.windup};
     // Mosslings pounce onto a marked point; their tell is deliberately frozen.
     e.warning=warning;e.lastAttack=time;e.aiState='attack';emit('warning',{id:e.id,warning:{...warning}});
     continue;
    }
-   if(e.rootUntil>time||gap<Math.min(2.5,spec.engage*.75))continue;
+   if(e.rootUntil>time){e.aiState='rooted';continue;}
+   if(gap<profile.standOff&&wallClear(e,player)){
+    e.aiState='ready';
+    // Existing ranged casters keep their casting space, within their territory.
+    if(profile.caster&&gap<spec.engage*.38){
+     const away=toward(player,e),point={x:e.x+away.x*1.5,z:e.z+away.z*1.5};
+     if(dist(point,{x:e.startX,z:e.startZ})<(e.room!==undefined?20:cfg.leash)&&wallClear(e,point))
+      moveEnemy(e,point,profile.speed*.65,dt);
+    }
+    continue;
+   }
    e.aiState=e.lostSightAt===null?'chase':'investigate';
-   const speed=(e.type==='bandit'?2.5:e.type==='boar'?2.2:1.75)*(e.slowUntil>time?.42:1);
+   const speed=profile.speed*(e.slowUntil>time?.42:1);
    moveEnemy(e,e.lastSeen||player,speed,dt);
    if(e.stuckFor>2||dist(e,{x:e.startX,z:e.startZ})>(e.room!==undefined?20:cfg.leash))returnHome(e,cfg,dt);
 
@@ -404,7 +431,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  }
  function dodge(){
   if(!canFight()||time<dodgeUntil)return false;
-  dodgeStart=time;dodgeUntil=time+DODGE.cooldown;action=null;
+  dodgeStart=time;dodgeUntil=time+DODGE.cooldown;action=null;lastRelease=null;queuedAbility=null;
   emit('dodge',{until:dodgeUntil});return true;
  }
  function simulate(step,nextTime,player){
@@ -514,13 +541,14 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
     cooldownEnd:cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),a))||0,
     cooldown:a.cooldown||0,...abilityAvailability(a)}:null),
    monsters:monsters.map(e=>({...e,warning:e.warning?{...e.warning}:null})),
-   projectiles:projectiles.map(p=>({x:p.x,z:p.z,kind:p.kind,style:p.source.style})),
+   projectiles:projectiles.map(p=>({x:p.x,z:p.z,direction:{...p.direction},kind:p.kind,style:p.source.style,family:p.source.weapon?.family,travelled:p.travelled})),
    progression:{...data.xp},defeated:data.defeated||0,
    groundLoot:data.groundLoot.map(drop=>({...drop})),coins:data.coins,
    combatLevel:combatLevelFromXp(data.xp),
    // Kept as an alias for older QA tooling; a target is an attack intent, not a movement lock.
    targetLocked:!!getTarget(),attacking:!!getTarget(),
-   action:action?{type:action.type,until:action.impactAt,style:action.style}:null};
+   lastRelease:lastRelease?{...lastRelease}:null,
+   action:action?{type:action.type,startedAt:action.startedAt,until:action.impactAt,style:action.style,family:action.weapon.family}:null};
  }
  return {tick,getState,chooseTarget,stopTarget,styleSwitch,queueAbility,queueBasic,dodge,drain,
   canAttackFrom:(player,id)=>{const enemy=monsters.find(e=>e.id===id),weapon=styleWeapon();return !!weapon&&isAlive(enemy)&&inAttackRange(player,enemy,weapon.reach,wallClear(player,enemy));},

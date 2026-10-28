@@ -29,6 +29,7 @@ import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
+import {classicAttackPose} from './classic-combat-motion.js';
 import {breaksPlayerAttackIntent,createClassicCombatMovementIntent} from './classic-combat-intent.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicQuestBeacon} from './classic-quest-beacon.js';
@@ -88,7 +89,7 @@ let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
 let playerHurtUntil=0;
-let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
+let dodgeTravel=null,nextTargetUi=0;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(OAKREST_PALETTE.sky);
 scene.fog=new THREE.Fog(OAKREST_PALETTE.sky,75,160);
@@ -515,13 +516,13 @@ function combatEvents(events){
   damageFeedback.event(event,visualState,player);
   impactEffects.onEvent(event,visualState,player);
   if(event.type==='hurt')playerHurtUntil=Math.max(playerHurtUntil,event.time+.23);
-  if(event.type==='hit')audio.play('hit',event.damage>=14);
+  if(event.type==='hit'&&!event.periodic)audio.play(event.style==='magic'?'spell-impact':event.style==='ranged'?'arrow-impact':'hit',event.family==='greatsword'||event.family==='axe');
+  if(event.type==='hurt'&&event.guarded)audio.play('guard');
   if(event.type==='evade')audio.play('dodge');
   if(event.type==='release')audio.playAbility(event.style,event.kind,event.family);
   if(['hurt','warning','pickup','dead','dash'].includes(event.type))audio.play(({pickup:'loot',dead:'death',dash:'dodge'})[event.type]||event.type);
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
-  else if(event.type==='release')lastReleaseUntil=event.time+.18;
   else if(event.type==='hit')chat.record(event.style.toUpperCase()+' hit · '+event.damage+' damage','Game');
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated');
@@ -720,7 +721,7 @@ function drawStep(dt,render=true){
  heroShadow.position.set(player.x,.04,player.z);
  hero.update({facing:look,style,
   step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
-  pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
+  pose:classicAttackPose(state.time,state.action,state.lastRelease),
   worn:savedWorn(),cameraOffset});
  // Local-only damage response; the character's actual position never moves.
  const heroRecoil=hitRecoilStrength(playerHurtUntil,state.time,.23);
@@ -851,6 +852,7 @@ if(isQa)window.oakrestClassicQA={
  },
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),impactState:()=>({active:impactEffects.active(),heroTint:hero.sprite.material.color.getHexString()}),lockMonster:id=>chooseEnemy(id),
+ combatPresentation:()=>({heroPose:hero.sprite.userData.pose,...combatView.stats()}),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
  cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
