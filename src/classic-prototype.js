@@ -875,7 +875,7 @@ if(isQa)window.oakrestClassicQA={
   hotbarUse:index=>actionbar.activate(index),
   wornVisual:()=>savedWorn(),
   adventureState:()=>combat.adventureState(),
-  questBeacons:()=>[...npcActors.map(n=>({id:n.targetId,visible:n.beacon.sprite.visible})),
+  questBeacons:()=>[...npcActors.filter(n=>n.targetId).map(n=>({id:n.targetId,visible:n.beacon?.sprite.visible||false})),
    ...availableQuestGivers(combat.adventureState(),findClassicInteractable)],
   adventureAction:(kind,id,choice)=>{const r=combat.adventureAction(kind,{target:findClassicInteractable(id),choice},player);if(r.ok){if(r.teleport){player.x=r.teleport.x;player.z=r.teleport.z;navigation.stop();}markProgress();refreshHud();}return r;},
   heroPixelSignature:()=>{
