@@ -7,7 +7,7 @@ const ok=reason=>({ok:true,reason}),no=reason=>({ok:false,reason});
 export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGuardian,sight=()=>true,random=Math.random}){
  data.adventure=sanitizeAdventure(data.adventure);
  const a=data.adventure,mats=data.inventory.materials;
- const trees=new Map(),respawns=new Map();let work=null,eatUntil=0,drinkUntil=0;
+ const trees=new Map(),respawns=new Map();let work=null,recentCraft=null,eatUntil=0,drinkUntil=0;
  const progress=id=>a.quests[id];
  const completed=id=>progress(id)?.status==='completed';
  const unlocked=q=>(QUEST_PREREQUISITES[q.id]||[]).every(completed);
@@ -141,7 +141,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    return no('Make room in your backpack or bank a stack before crafting.');
   return {...ok('Ready'),recipe:r};
  }
- function finishCraft(r){
+ function finishCraft(r,time){
   // Materials and inventory rules are checked again at the instant of crafting.
   const check=craftCheck(r.id,r.station);
   if(!check.ok)return check;
@@ -152,24 +152,25 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(o.armour)data.inventory.armour.push(o.armour);
   if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
   if(['shield','arrows','frost','ember','seal'].includes(r.id))flag('craft:useful');
+  if(Number.isFinite(time))recentCraft={skill:r.profession,time};
   emit('adventure',{reason:'Made: '+r.title+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'')});
   return ok('Made: '+r.title);
  }
  /** No station interaction necessary; selecting two materials selects an
   * unambiguous matching craft. More complex shared inputs use the recipe book. */
- function handcraft(recipeId,threatened){
+ function handcraft(recipeId,threatened,time){
   if(work)return no('Finish or cancel your current work first.');
   if(threatened)return no('Cannot craft while enemies are attacking.');
   const check=craftCheck(recipeId,'inventory');
-  return check.ok?finishCraft(check.recipe):check;
+  return check.ok?finishCraft(check.recipe,time):check;
  }
- function combine(first,second,threatened){
+ function combine(first,second,threatened,time){
   if(typeof first!=='string'||typeof second!=='string'||first===second)return no('Choose two different crafting materials.');
   const matches=RECIPES.filter(r=>r.station==='inventory'&&
    Object.hasOwn(r.cost,first)&&Object.hasOwn(r.cost,second));
   if(!matches.length)return no('These items cannot be combined. Check the Skills unlock list.');
   if(matches.length>1)return no('Several recipes use those materials. Choose a result from MAKE in your backpack.');
-  return handcraft(matches[0].id,threatened);
+  return handcraft(matches[0].id,threatened,time);
  }
  function begin(target,time,recipeId){
   if(work)return no('Finish or cancel your current work first.');
@@ -198,7 +199,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(time<w.end)return;
   work=null;
   if(w.recipe){
-   const made=finishCraft(w.recipe);
+   const made=finishCraft(w.recipe,time);
    if(!made.ok)emit('adventure-notice',{reason:made.reason});
   }else if(w.material==='softwood-logs'){
    const result=chopOnce(data,trees.get(w.target.id),time,random);
@@ -219,8 +220,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    a.tracked=q.id;emit('adventure',{reason:'Tracking '+q.title});
    return ok('Tracking '+q.title);
   }
-  if(kind==='craft'&&!target)return handcraft(choice,threatened);
-  if(kind==='combine'&&!target)return combine(choice?.first,choice?.second,threatened);
+  if(kind==='craft'&&!target)return handcraft(choice,threatened,time);
+  if(kind==='combine'&&!target)return combine(choice?.first,choice?.second,threatened,time);
   if(kind==='eat'){
    if(time<eatUntil)return no('Wait before eating again.');
    if((mats.ration||0)<1)return no('Make field rations from reeds in your backpack.');
@@ -313,6 +314,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   state:()=>({...structuredClone(a),quest:quest(),ready:ready(),
    catalogue:QUESTS.map(q=>({...q,status:questStatus(q),flags:[...progress(q.id).flags],
     prerequisites:QUEST_PREREQUISITES[q.id]||[]})),
-   work:work?{name:work.recipe?.title||work.material,start:work.start,end:work.end}:null}),
+   work:work?{name:work.recipe?.title||work.material,start:work.start,end:work.end,
+     skill:work.recipe?.profession||work.target?.profession||(work.material==='softwood-logs'?'woodcutting':null),
+     targetId:work.target?.id||null,x:work.target?.x,z:work.target?.z}:null,
+    recentCraft:recentCraft?{...recentCraft}:null,
+    trees:[...trees].map(([id,tree])=>({id,respawnAt:tree.respawnAt,fallAt:tree.fallAt}))}),
   canPass:z=>z<241||!!a.run&&(z<269?a.run.wards.includes(0):z<297?a.run.wards.includes(1):a.run.wards.includes(2))};
 }
