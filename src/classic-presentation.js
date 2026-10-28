@@ -34,7 +34,10 @@ export const CLASSIC_NPCS=Object.freeze([
   targetId:'service:'+s.id
  })),
  Object.freeze({id:'guard',name:'Village Guard',x:5,z:48,role:'guard',colour:'#a8695d',targetId:'citizen:guard'}),
- Object.freeze({id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',targetId:'citizen:villager'})
+ Object.freeze({id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',targetId:'citizen:villager'}),
+ Object.freeze({id:'town-porter',name:'Town Porter',x:0,z:9,role:'porter',colour:'#a9866c',route:[[0,9],[0,22],[0,36],[0,53]]}),
+ Object.freeze({id:'town-messenger',name:'Market Messenger',x:3,z:61,role:'messenger',colour:'#7c98a1',route:[[3,61],[3,47],[3,32],[3,16]]}),
+ Object.freeze({id:'town-gardener',name:'Town Gardener',x:-2,z:74,role:'gardener',colour:'#88a477',route:[[-2,74],[-2,64],[-2,53],[-2,43]]})
 ]);
 export const CLASSIC_TREES=Object.freeze(Array.from({length:70},(_,i)=>{
  const column=i%14,row=Math.floor(i/14);
