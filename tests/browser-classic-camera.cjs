@@ -72,7 +72,8 @@ let browser;
   const reset=await read();
   assert.ok(Math.abs(reset.camera.yaw-original.camera.yaw)<1e-8);
   assert.ok(Math.abs(reset.camera.pitch-original.camera.pitch)<1e-8);
-  await page.locator('#classic-settings-close').click();
+  await page.locator('#classic-inventory-toggle').click();
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'closing settings restores permanent sidebar tab');
   // Home is the in-world reset shortcut.
   await page.keyboard.down('ArrowLeft');
   await page.evaluate(()=>oakrestClassicQA.step(.07));
