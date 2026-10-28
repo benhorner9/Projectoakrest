@@ -203,7 +203,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    if(!made.ok)emit('adventure-notice',{reason:made.reason});
   }else if(w.material==='softwood-logs'){
    const result=chopOnce(data,trees.get(w.target.id),time,random);
-   if(result.success){flag('gather:softwood-logs');emit('adventure',{reason:'Gathered softwood logs · +35 Woodcutting XP'});}
+   if(result.success){flag('gather:softwood-logs');emit('adventure',{reason:'Gathered softwood logs'+(result.xp?' · +'+result.xp+' Woodcutting XP':'')});}
    if(result.ok&&!result.depleted){work={...w,start:time,end:time+1.18};}
    else emit('adventure-notice',{reason:result.depleted?'Tree depleted; try another grove.':result.reason});
   }else if(roomFor(w.material)){
