@@ -35,7 +35,13 @@ let browser;
  await page.waitForFunction(()=>window.oakrestClassicQA);
  await page.evaluate(()=>oakrestClassicQA.enableSaving());
  const snapshot=()=>page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
- const open=mode=>page.evaluate(mode=>{if(oakrestClassicQA.windowState()===mode)oakrestClassicQA.openWindow(mode);oakrestClassicQA.openWindow(mode);},mode);
+ // The permanent sidebar does not toggle closed. Re-selecting the item's
+ // internal sub-tab refreshes that panel without hiding the entire menu.
+ const open=mode=>page.evaluate(mode=>{
+  if(oakrestClassicQA.windowState()===mode)
+   document.querySelector('#classic-item-window [data-item-tab="'+mode+'"]')?.click();
+  else oakrestClassicQA.openWindow(mode);
+ },mode);
  const bag=id=>page.locator('#classic-item-content [data-scope="bag"][data-canonical="'+id+'"]');
  async function drag(source,dest,touch=false){
   await source.scrollIntoViewIfNeeded();const a=await source.boundingBox();

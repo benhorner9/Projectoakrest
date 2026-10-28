@@ -78,7 +78,10 @@ let browser;
   await page.locator('#classic-quests-toggle').click();
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
   assert.equal(await page.locator('#classic-skills-window').isVisible(),false);
-  await page.locator('#classic-quests-close').click();
+  await page.locator('#classic-quests-toggle').click();
+  assert.equal(await page.locator('#classic-quests-window').isVisible(),true,'active QUESTS tab cannot be closed');
+  await page.locator('#classic-inventory-toggle').click();
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'BAG replaces QUESTS in the same sidebar');
   // A separate model window should never obstruct click-to-walk.
   await page.evaluate(()=>oakrestClassicQA.teleport(0,39));
   await page.keyboard.down('w');

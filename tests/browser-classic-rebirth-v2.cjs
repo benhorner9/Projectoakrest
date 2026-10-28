@@ -51,9 +51,10 @@ let browser;
   await page.screenshot({path:'qa/rebirth/town-world-first.png'});
   await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('.field-shortcuts button').count(),3);
-  await page.locator('.field-shortcuts button').filter({hasText:'Quests'}).click();
+  await page.locator('#classic-quests-toggle').click(); // The permanent QUESTS tab replaces hidden idle-state shortcuts.
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
-  await page.locator('#classic-quests-close').click();
+  await page.locator('#classic-quests-toggle').click();
+  assert.equal(await page.locator('#classic-quests-window').isVisible(),true,'the quest tab stays selected');
   await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('#classic-item-window').isVisible(),true);
   await page.locator('#classic-skills-toggle').click();
@@ -62,7 +63,8 @@ let browser;
   await page.locator('.classic-skill-card').filter({hasText:'Woodcutting'}).click();
   assert.ok(await page.locator('.classic-skill-unlock').count()>3);
   await page.screenshot({path:'qa/rebirth/skills-in-sidebar.png'});
-  await page.locator('#classic-skills-close').click();
+  await page.locator('#classic-inventory-toggle').click();
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'switching replaces skills without blanking sidebar');
   const surface=await page.evaluate(async()=>{
    const THREE=await import('three');
    const {createClassicTerrain}=await import('./src/classic-terrain-view.js');
