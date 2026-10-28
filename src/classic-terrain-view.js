@@ -57,5 +57,5 @@ export function createClassicTerrain(root){
  gravel.name='oakrest-irregular-trail-gravel';root.add(gravel);
  const wheelWear=groundPolygons(details.worn,.033,P.ruts);
  wheelWear.name='oakrest-faint-wagon-wear';root.add(wheelWear);
- return {ground:geometry,stones:details.gravel.length,roadBands:bands.length};
+ return {ground:geometry,stones:0,gravel:details.gravel.length,roadBands:bands.length};
 }
