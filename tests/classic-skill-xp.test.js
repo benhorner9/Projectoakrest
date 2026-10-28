@@ -4,6 +4,7 @@ import {freshCharacterSave} from '../src/rules.js';
 import {createClassicCombat} from '../src/classic-combat.js';
 import {findClassicInteractable} from '../src/classic-interactions.js';
 import {teachWoodcutting} from '../src/town-services.js';
+import {sanitizeAdventure} from '../src/adventure-content.js';
 import {WOODCUTTING_LEVEL_XP} from '../src/woodcutting.js';
 import {skillXpLabel,skillLevelUpLabel,SKILL_LEVEL_CAP} from '../src/classic-skill-xp-floats.js';
 
@@ -40,7 +41,8 @@ test('one successful chop awards one float and a correct 3-to-4 skill level even
  const c=createClassicCombat({save,adventure:true,random:()=>0});
  const {result,player}=gather(c,'adventure:softwood');
  assert.equal(result.ok,true,result.reason);
- const events=c.tick(1.3,player);
+ const events=[];
+ for(let i=0;i<14;i++)events.push(...c.tick(.1,player));
  const skills=events.filter(e=>e.type==='skill-xp');
  assert.equal(skills.length,1);
  assert.equal(skills[0].skill,'woodcutting');
@@ -76,6 +78,7 @@ test('failed or interrupted work, capped XP and resource recovery never invent s
 test('successful backpack craft emits exact fletching gain and level event, failures emit neither',()=>{
  const save=ready();
  save.inventory.materials={'softwood-logs':1};
+ save.adventure=sanitizeAdventure(save.adventure);
  save.adventure.skills.fletching=WOODCUTTING_LEVEL_XP[2]-18;
  const c=createClassicCombat({save,adventure:true,random:()=>0});
  const player={x:0,z:39};
