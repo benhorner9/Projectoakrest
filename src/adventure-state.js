@@ -1,6 +1,6 @@
 /** Stateful adventure transactions. The combat session owns this save; no storage here. */
 import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_SPAWNS,QUEST_PREREQUISITES,sanitizeAdventure} from './adventure-content.js';
-import {woodcuttingLevel,canCutTree,newTreeState,chopOnce,respawnTree} from './woodcutting.js';
+import {woodcuttingLevel,canCutTree,newTreeState,chopOnce,respawnTree,WOODCUTTING_CHAPTER_XP_CAP} from './woodcutting.js';
 import {inventoryKeyList} from './item-slot-layout.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const ok=reason=>({ok:true,reason}),no=reason=>({ok:false,reason});
@@ -150,7 +150,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(o.weapon)grantWeapon(o.style,o.weapon,false);
   if(o.slot)data.inventory.slotted.push(o.slot);
   if(o.armour)data.inventory.armour.push(o.armour);
-  if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
+  if(r.profession){const previous=a.skills[r.profession]||0;
+   a.skills[r.profession]=Math.max(previous,Math.min(WOODCUTTING_CHAPTER_XP_CAP,previous+r.xp));}
   if(['shield','arrows','frost','ember','seal'].includes(r.id))flag('craft:useful');
   emit('adventure',{reason:'Made: '+r.title+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'')});
   return ok('Made: '+r.title);
@@ -207,7 +208,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    else emit('adventure-notice',{reason:result.depleted?'Tree depleted; try another grove.':result.reason});
   }else if(roomFor(w.material)){
    add(w.material,1);
-   if(w.target.profession)a.skills[w.target.profession]=Math.min(200000000,(a.skills[w.target.profession]||0)+18);
+   if(w.target.profession){const previous=a.skills[w.target.profession]||0;
+    a.skills[w.target.profession]=Math.max(previous,Math.min(WOODCUTTING_CHAPTER_XP_CAP,previous+18));}
    respawns.set(w.target.id,time+3);flag('gather:'+w.material);emit('adventure',{reason:'Gathered '+w.material});
   }
  }
