@@ -150,3 +150,29 @@ test('Ice Barrier with no scroll is rejected without cooldown, effect or a fake 
  assert.equal(g.queueAbility(3,far),false);assert.equal(g.getState().abilities[3].cooldownEnd,0);
  advance(g,far,.1);assert.equal(g.getState().shieldUntil,0);assert.equal(g.getState().lastRelease,null);
 });
+
+test('Warmth heals actual missing health, spends one ember scroll and presents a self-heal pulse',()=>{
+ const save=kit();save.gear.magic='ember';
+ const g=game('magic',{save,monsterDefinitions:[{...dummy,id:'enemy',type:'mossling',x:10,z:87}]}),position={x:10,z:89};
+ advance(g,position,2);const before=g.getState().hp;assert.ok(before<g.getState().maxHp);
+ assert.equal(g.queueAbility(3,position),true);
+ const events=advance(g,position,1/60),s=g.getState(),healed=events.find(e=>e.type==='heal');
+ assert.equal(healed.amount,Math.min(30,s.maxHp-before));assert.equal(s.hp,before+healed.amount);
+ assert.equal(g.persistentSave().inventory.materials['ember-scroll'],99);
+ assert.equal(s.lastRelease.name,'Warmth');assert.equal(s.projectiles.length,0);
+ const scene=new THREE.Scene(),view=createClassicAbilityView(scene);view.update(s,position);
+ assert.equal(view.stats().phase,'release');assert.equal(scene.children[0].material.color.getHexString(),'a7e6ab');
+ view.update({...s,time:s.time+.7},position);assert.equal(view.stats().visible,false);view.dispose();
+});
+test('Warmth rejects full health without paying or inventing a heal',()=>{
+ const save=kit();save.gear.magic='ember';const g=game('magic',{save});
+ assert.equal(g.queueAbility(3,far),false);assert.equal(g.getState().abilities[3].cooldownEnd,0);
+ assert.equal(g.persistentSave().inventory.materials['ember-scroll'],100);
+ assert.equal(advance(g,far,.5).some(e=>e.type==='heal'),false);
+});
+test('death clears an active shield so defensive utility cannot leak into recovery',()=>{
+ const g=game('magic',{monsterDefinitions:[{...dummy,id:'enemy',type:'mossling',x:10,z:87,
+  pattern:{kind:'pounce',engage:3,radius:3,windup:.05,cooldown:.1,damage:10000}}]}),p={x:10,z:89};
+ g.queueAbility(3,p);advance(g,p,.5);assert.equal(g.getState().hp,0);
+ assert.equal(g.getState().shieldUntil,0);assert.equal(g.getState().shieldStyle,null);
+});

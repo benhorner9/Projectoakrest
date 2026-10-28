@@ -22,5 +22,5 @@ export function abilityDetails(style,weapon,ability,targetCount,adventure){
  const cost=supply?`${supply.amount} ${supply.id.replaceAll('-',' ')} at release`:'No consumable cost';
  const range=isUtilityAbility(ability)?'Self':`Range ${ability.reach||weapon.reach}`;
  return {note:ability.note,windup:abilityWindup(weapon,ability),reach:isUtilityAbility(ability)?0:ability.reach||weapon.reach,
-  supply,effect:abilityEffect(style,weapon,ability),description:`${ability.note} ${range} · ${cost} · ${ability.cooldown}s cooldown`};
+  supply,effect:abilityEffect(style,weapon,ability),description:`${ability.note}${ability.duration?' '+ability.duration+'s duration.':''} ${range} · ${cost} · ${ability.cooldown}s cooldown`};
 }
