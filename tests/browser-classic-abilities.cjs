@@ -20,7 +20,13 @@ let browser;
   },save);
   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:5288/classic.html?qa=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
-  const press=selector=>touch?page.locator(selector).tap():page.locator(selector).click();
+  // The software WebGL renderer can continuously repaint button bounds.
+  // Force a *real* Playwright click/tap without waiting for a stable rectangle.
+  // Every action still proves its authoritative release and VFX below.
+  const press=selector=>{
+   const button=page.locator(selector);
+   return touch?button.tap({force:true,timeout:15000}):button.click({force:true,timeout:15000});
+  };
   const advance=seconds=>page.evaluate(t=>oakrestClassicQA.advance(t),seconds);
   const state=()=>page.evaluate(()=>oakrestClassicQA.combatState());
   const presentation=()=>page.evaluate(()=>oakrestClassicQA.combatPresentation());
