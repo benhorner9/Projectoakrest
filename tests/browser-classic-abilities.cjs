@@ -8,7 +8,7 @@ let browser;
  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const {defaultSave,LOADOUTS}=await import('../src/rules.js');mkdirSync('qa/abilities',{recursive:true});const results=[];
  for(const touch of [false,true]){
-  const save=defaultSave();for(const style of ['melee','magic','ranged','vitality'])save.xp[style]=100000;
+  const save=defaultSave();for(const style of ['melee','magic','ranged','vitality'])save.xp[style]=100000;save.xp.vitality=5000;
   for(const style of ['melee','magic','ranged'])save.inventory.weapons[style]=Object.keys(LOADOUTS[style]);
   save.inventory.materials={'field-arrows':1000,'frost-scroll':1000,'ember-scroll':1000};
   for(const style of ['melee','magic','ranged'])for(const family of Object.keys(save.slots[style]))save.slots[style][family]=['w0','w1','w2','w3'];
