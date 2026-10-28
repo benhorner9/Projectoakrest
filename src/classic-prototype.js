@@ -144,7 +144,7 @@ for(const npc of CLASSIC_NPCS){
  scene.add(actor.sprite,shadow);
  actor.sprite.position.set(npc.x,.08,npc.z);
  shadow.position.set(npc.x,.04,npc.z);
- const beacon=createClassicQuestBeacon(scene,npc.x,npc.z,npc.targetId);
+ const beacon=npc.targetId?createClassicQuestBeacon(scene,npc.x,npc.z,npc.targetId):null;
  npcActors.push({...npc,actor,shadow,beacon});
 }
 const pointerMark=new THREE.Mesh(new THREE.RingGeometry(.54,.66,24),
@@ -704,7 +704,7 @@ function drawStep(dt,render=true){
  updateLocation();
  adventureWorld.update(adventureState,player,cameraOffset,state.time);
  village.update(state.time);
- for(const npc of npcActors)npc.beacon.update(adventureState,state.time);
+ for(const npc of npcActors)npc.beacon?.update(adventureState,state.time);
  // UI refresh is bounded; input, combat and world rendering remain at 60 Hz.
  if(state.time>=nextBookRefresh){
   adventureUi?.tick();skillsUi?.tick();itemUi?.tick();
