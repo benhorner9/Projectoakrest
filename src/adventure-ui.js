@@ -20,6 +20,9 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  const popupContent=el('div','',questPopup);popupContent.id='classic-quest-popup-content';
  popupContent.className='oakrest-quest-popup-content';
  document.getElementById('classic-app').append(questPopup);
+ // Let the modal handle keyboard input (especially Escape) without also invoking
+ // Classic's global movement/disengage/window-closing shortcuts.
+ questPopup.addEventListener('keydown',event=>event.stopPropagation());
  popupClose.addEventListener('click',()=>questPopup.close());
  questPopup.addEventListener('click',event=>{if(event.target===questPopup)questPopup.close();});
  questPopup.addEventListener('close',()=>{
