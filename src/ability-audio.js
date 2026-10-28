@@ -23,6 +23,6 @@ export function abilitySoundProfile(style='melee',kind='hit',family='sword',effe
  };
  // Offensive magic distinguishes Ember and Frost even when the ability
  // kind is shared. Defensive utility shares stable sounds across styles.
- const cue=effect==='heavy-slash'?{...base,hz:heavy?96:142,seconds:.32,sweep:.34}:effects[kind];
+ const cue=effect==='heavy-slash'?{...base,hz:heavy?96:142,seconds:.32,sweep:.34}:effect==='piercing-arrow'?{...base,hz:360,seconds:.24,sweep:.35}:effects[kind];
  return {...base,...(cue||{}),wave:cue?.wave||base.wave};
 }

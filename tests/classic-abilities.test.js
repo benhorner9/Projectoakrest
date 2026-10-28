@@ -59,3 +59,37 @@ test('ability input rejects invalid positions without cooldown or supplies; queu
  assert.equal(advance(g,near,.4).some(e=>e.type==='release'),false);
  assert.deepEqual(g.persistentSave().slots.melee.sword,['w2','w1',null,'w3']);
 });
+
+test('Piercing Arrow spends one arrow at release, travels before contact and retains ranged source after switch',()=>{
+ const g=game('ranged'),s=cast(g,0,far);
+ assert.equal(s.action.effect,'piercing-arrow');assert.equal(s.action.until-s.action.startedAt,.45);
+ assert.equal(s.abilities[0].supply.amount,1);assert.match(s.abilities[0].description,/at release/);
+ assert.equal(g.persistentSave().inventory.materials['field-arrows'],100);
+ const events=advance(g,far,.45);assert.equal(events.filter(e=>e.type==='projectile').length,1);
+ assert.equal(events.filter(e=>e.type==='hit').length,0);
+ assert.equal(g.persistentSave().inventory.materials['field-arrows'],99);
+ assert.equal(g.getState().projectiles[0].effect,'piercing-arrow');
+ g.stopTarget();g.styleSwitch('magic');
+ const impact=advance(g,far,.5).filter(e=>e.type==='hit');
+ assert.equal(impact.length,1);assert.equal(impact[0].style,'ranged');assert.equal(impact[0].abilityId,'w0');
+ assert.equal(g.persistentSave().inventory.materials['field-arrows'],99);
+});
+test('Piercing Arrow cancellation and zero supply never create an arrow or charge twice',()=>{
+ for(const mode of ['cancel','empty']){
+  const save=kit();if(mode==='empty')save.inventory.materials['field-arrows']=0;
+  const g=game('ranged',{save});g.chooseTarget('practice',far);
+  assert.equal(g.queueAbility(0,far),mode!=='empty');
+  if(mode==='cancel')g.dodge();
+  assert.equal(advance(g,far,.5).some(e=>e.type==='projectile'),false);
+  assert.equal(g.persistentSave().inventory.materials['field-arrows'],mode==='empty'?0:100);
+  assert.equal(g.getState().abilities[0].cooldownEnd,mode==='empty'?0:5.2);
+ }
+});
+test('Piercing Arrow uses a distinct reusable projectile and sound',async()=>{
+ const {createClassicProjectileView}=await import('../src/classic-projectile-view.js');
+ const scene=new THREE.Scene(),view=createClassicProjectileView(scene),p={x:0,z:0,style:'ranged',direction:{x:0,z:1}};
+ view.update([{...p,effect:'piercing-arrow'}]);const node=scene.children[0];
+ assert.equal(node.scale.y,1.7);assert.deepEqual(view.stats().effects,['piercing-arrow']);
+ view.update([p]);assert.equal(node.scale.y,1);assert.equal(scene.children.length,1);view.dispose();
+ assert.notDeepEqual(abilitySoundProfile('ranged','bolt','bow','piercing-arrow'),abilitySoundProfile('ranged','basic','bow'));
+});
