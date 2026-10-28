@@ -90,3 +90,17 @@
 .classic-camera-actions button:active{background:#775f40}
 .classic-camera-actions #classic-camera-reset{grid-column:1/-1;background:#6f5941}
 .classic-camera-actions button:focus-visible{outline:3px solid #f4d494;outline-offset:2px}
+
+
+/* Beyond-the-Horizon previews are deliberately visually different from
+   immediately trainable unlocks and have no interactive or gameplay action. */
+#classic-skill-book .skill-future-heading{margin:19px 0 5px;padding-top:13px;border-top:1px solid #95845c;
+ color:#e5bf7d;letter-spacing:.12em;font:800 12px/1.35 system-ui,sans-serif}
+#classic-skill-book .skill-future-intro{color:#c6b796;margin-bottom:10px}
+#classic-skill-book .classic-skill-unlock.future-preview{opacity:.88;border:1px dashed #887451;background:#2e382f;
+ border-radius:5px;margin:6px 0;padding:10px;display:flex;gap:12px;align-items:center;color:#ded0b5}
+#classic-skill-book .future-preview .skill-unlock-level{color:#d1a879;font:800 11px system-ui,sans-serif;min-width:38px}
+#classic-skill-book .future-preview .skill-unlock-text{flex:1;min-width:0}
+#classic-skill-book .future-preview .skill-unlock-text strong{color:#e4d6ae;display:block}
+#classic-skill-book .future-preview .skill-unlock-text small{color:#b2bba7;display:block;margin-top:3px}
+#classic-skill-book .future-preview .skill-unlock-status{filter:grayscale(1);opacity:.7}
