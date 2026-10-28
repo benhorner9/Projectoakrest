@@ -731,7 +731,9 @@
    right-side inventory. This file is the final HUD cascade layer. */
 #classic-app.oakrest-framed{
  grid-template-areas:"world side" "action side" "chat side"!important;
- grid-template-rows:minmax(0,1fr) 152px clamp(192px,27.5vh,282px)!important;
+ /* Keep the playfield >58% high on iPad and compact landscape screens.
+    Chat still has channels, log and composer; no overlays or lost controls. */
+ grid-template-rows:minmax(0,1fr) clamp(124px,15vh,150px) clamp(112px,21vh,225px)!important;
 }
 #classic-app.oakrest-framed #oakrest-action-deck{
  grid-area:action!important;position:relative!important;z-index:3;
@@ -759,7 +761,7 @@
 }
 @media(max-height:680px){
  #classic-app.oakrest-framed{
-  grid-template-rows:minmax(0,1fr) 142px 200px!important;
+  grid-template-rows:minmax(0,1fr) 124px clamp(112px,21vh,143px)!important;
  }
  #classic-app.oakrest-framed #oakrest-action-deck{
   min-height:0!important;max-height:none!important;height:100%!important;
