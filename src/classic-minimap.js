@@ -55,7 +55,7 @@ function polygon(ctx,project,corners,color){
 }
 function terrain(ctx,project,width,height,scale){
  ctx.fillStyle=OAKREST_PALETTE.meadow;ctx.fillRect(0,0,width,height);
- rect(ctx,project,{x:0,z:34,w:115,d:130},scale,OAKREST_PALETTE.meadow);
+ rect(ctx,project,{x:0,z:38,w:126,d:154},scale,OAKREST_PALETTE.meadow);
  for(const ground of ADVENTURE_SCENERY.ground)rect(ctx,project,ground,scale);
  for(const [i,room] of DUNGEON_ROOMS.entries()){
   rect(ctx,project,{x:0,z:(room.minZ+room.maxZ)/2,w:33,d:room.maxZ-room.minZ},
