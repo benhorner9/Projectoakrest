@@ -61,5 +61,7 @@ jobs:
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-save.cjs
       - name: Verify minimap, layout, context controls and exclusive game windows
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-hud.cjs
+      - name: Verify non-combat XP float and level banner at iPad size
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-classic-skill-xp.cjs
       - name: Verify navigation endpoints and canvas touch gestures
         run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-classic-navigation.cjs
