@@ -7,6 +7,7 @@ import {OAKREST_BUILDINGS,OAKREST_WELL,FACING,roadQuads} from './town-layout.js'
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_PLAZAS,CLASSIC_STALLS,classicRoofColour} from './classic-town-plan.js';
 import {CLASSIC_TREES,CLASSIC_NPCS} from './classic-presentation.js';
 import {OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
+import {interiorFixtures} from './classic-interior-fixtures.js';
 const MAT={
  grass:new THREE.MeshLambertMaterial({color:'#73956c'}),
  grass2:new THREE.MeshLambertMaterial({color:'#668c63'}),
@@ -25,6 +26,9 @@ const MAT={
  windowFrame:new THREE.MeshLambertMaterial({color:'#574b3b'}),
  roofDetail:new THREE.MeshLambertMaterial({color:'#b5a98c',side:THREE.DoubleSide}),
  grey:new THREE.MeshLambertMaterial({color:'#667b7c'}),
+ brass:new THREE.MeshLambertMaterial({color:'#d2ae66',emissive:'#36250c'}),
+ parchment:new THREE.MeshLambertMaterial({color:'#ead8aa'}),
+ produce:new THREE.MeshLambertMaterial({color:'#81975e'}),
  roofRed:new THREE.MeshLambertMaterial({color:'#9b675e',side:THREE.DoubleSide}),
  roofBlue:new THREE.MeshLambertMaterial({color:'#627886',side:THREE.DoubleSide}),
  roofGreen:new THREE.MeshLambertMaterial({color:'#728568',side:THREE.DoubleSide}),
@@ -83,27 +87,35 @@ function building(parent,b,i){
   cube(g,MAT.stone,x,h*.64-.44,d/2+.36,1.12,.15,.28);
  }
  for(const x of [-w/2+.6,w/2-.6])cube(g,MAT.wood,x,h/2,-d/2-.17,.18,h,.17);
- // Floors and simple readable service counters remain when roof is hidden.
+
+ // Solid interior furniture shares dimensions with the movement and A* collision model.
  cube(g,MAT.wood,0,.34,0,w-.5,.11,d-.5);
- if(b.kind==='bank'){
-  cube(g,MAT.trim,0,1.02,-d*.12,w*.68,1.35,1.15);
-  for(const x of [-2,0,2])cube(g,MAT.grey,x,1.76,-d*.12,.8,.28,.78);
- }else if(b.kind==='store'||b.kind==='trade'){
-  cube(g,MAT.trim,-w*.20,1,-d*.12,w*.45,1.25,1.3);
-  for(const x of [-1.2,-.2])cube(g,MAT.sand,x,1.75,-d*.12,.5,.28,.5);
- }else{
-  cube(g,MAT.darkwood,-w*.25,.75,-d*.2,2,.8,1.4);
-  cube(g,MAT.trim,w*.23,1.1,-d*.2,.8,1.5,.85);
+ for(let x=-w/2+.9;x<w/2;x+=1.25)cube(g,MAT.trim,x,.401,0,.035,.012,d-.65);
+ for(const f of interiorFixtures(b)){
+  cube(g,MAT[f.material]||MAT.wood,f.x,.39+f.h/2,f.z,f.w,f.h,f.d);
+  cube(g,MAT.darkwood,f.x,.39+f.h+.055,f.z,f.w+.11,.11,f.d+.11);
+  if(f.id==='teller-counter'){
+   for(const dx of [-f.w*.32,0,f.w*.32]){
+    cube(g,MAT.brass,dx,.39+f.h+.11,f.z,.42,.09,.28);
+    cube(g,MAT.parchment,dx,.39+f.h+.17,f.z,.32,.025,.21);
+   }
+  }else if(f.id==='shop-counter'){
+   for(const dx of [-f.w*.30,f.w*.08]){
+    cube(g,MAT.produce,f.x+dx,.39+f.h+.25,f.z,.55,.28,.51);
+    cube(g,MAT.parchment,f.x+dx,.39+f.h+.39,f.z,.62,.06,.54);
+   }
+  }else if(f.id==='back-shelves'){
+   for(const height of [0,.85,1.7])cube(g,MAT.trim,f.x,.55+height,f.z,f.w,.12,f.d+.08);
+   for(let j=0;j<7;j++)cube(g,j%3?MAT.parchment:MAT.produce,
+    f.x-f.w*.43+j*f.w*.14,1.1,f.z,.3,.65,.42);
+  }else if(f.id==='bank-safe')cube(g,MAT.brass,f.x,.39+f.h*.55,f.z+f.d/2+.07,.62,.72,.10);
+  else if(f.id==='supply-crates')for(const dx of [-.35,.35])
+   cube(g,MAT.produce,f.x+dx,.39+f.h+.19,f.z,.43,.32,.43);
+  else if(f.id==='bed')cube(g,MAT.roofGreen,f.x,.39+f.h+.07,f.z,f.w-.1,.14,f.d-.2);
  }
- // Fitted rear-wall furniture, kept clear of the canonical doorway and service approach.
- for(const shelfY of [1.0,1.8,2.6]){
-  cube(g,MAT.darkwood,0,shelfY,-d/2+.65,w*.65,.13,.65);
-  for(let book=0;book<5;book++)cube(g,book%2?MAT.roofGreen:MAT.trim,-w*.24+book*w*.12,shelfY+.22,-d/2+.65,.22,.35,.38);
- }
- if(!special){
-  cube(g,MAT.darkwood,w/2-1.25,.55,-d/2+2.1,1.6,.65,2.3);
-  cube(g,MAT.roofGreen,w/2-1.25,.94,-d/2+2.1,1.48,.14,2.15);
-  cube(g,MAT.light,w/2-1.25,1.07,-d/2+1.5,1.2,.22,.5);
+ if(b.kind==='bank'||b.kind==='store'||b.kind==='trade')for(const side of [-1,1]){
+  cube(g,MAT.brass,side*(doorWidth/2+.47),2.1,d/2+.41,.21,.44,.18);
+  cube(g,MAT.parchment,side*(doorWidth/2+.47),2.1,d/2+.54,.09,.2,.06);
  }
  // Carved fork braces and an acorn lintel are the village's repeated motif.
  for(const side of [-1,1]){

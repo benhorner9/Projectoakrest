@@ -7,6 +7,7 @@ import {STYLE_ORDER,LOADOUTS,levelFromXp,combatLevelFromXp,defaultSave} from './
 import {EQUIPMENT_SLOTS,allowsOffhand} from './equipment-slots.js';
 import {OAKREST_SERVICES,OAKREST_GROVES} from './town-services.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER,wallSolidAt} from './classic-town-plan.js';
+import {interiorFixtures,insideFixture} from './classic-interior-fixtures.js';
 
 // Canonical +Z is NORTH on the map. These values describe the INITIAL
 // south-of-player oblique view. The player may orbit/tilt freely afterward;
@@ -33,7 +34,10 @@ export const CLASSIC_NPCS=Object.freeze([
   targetId:'service:'+s.id
  })),
  Object.freeze({id:'guard',name:'Village Guard',x:5,z:48,role:'guard',colour:'#a8695d',targetId:'citizen:guard'}),
- Object.freeze({id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',targetId:'citizen:villager'})
+ Object.freeze({id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',targetId:'citizen:villager'}),
+ Object.freeze({id:'town-porter',name:'Town Porter',x:0,z:9,role:'porter',colour:'#a9866c',route:[[0,9],[0,22],[0,36],[0,53]]}),
+ Object.freeze({id:'town-messenger',name:'Market Messenger',x:3,z:61,role:'messenger',colour:'#7c98a1',route:[[3,61],[3,47],[3,32],[3,16]]}),
+ Object.freeze({id:'town-gardener',name:'Town Gardener',x:-2,z:74,role:'gardener',colour:'#88a477',route:[[-2,74],[-2,64],[-2,53],[-2,43]]})
 ]);
 export const CLASSIC_TREES=Object.freeze(Array.from({length:70},(_,i)=>{
  const column=i%14,row=Math.floor(i/14);
@@ -55,7 +59,7 @@ export function inBounds(x,z,radius=.4){
 /** Test against discrete wall segments; each building has a real front doorway.
  * localBuildingPosition aligns the same footprints used by the main town.
  */
-export function solidAt(x,z,radius=.38){
+export function solidAt(x,z,radius=.38,allowTalkAcrossCounter=false){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!inBounds(x,z,radius))return true;
  if(wallSolidAt(x,z,radius)||adventureSolidAt(x,z,radius))return true;
  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.r+radius)return true;
@@ -69,6 +73,7 @@ export function solidAt(x,z,radius=.38){
   if(Math.abs(p.z)<=hz+thick&&Math.abs(Math.abs(p.x)-hx)<thick)return true;
   // Centre gap 2.8 world units: a traversable front doorway.
   if(Math.abs(p.z-hz)<thick&&Math.abs(p.x)>1.4-radius)return true;
+  if(interiorFixtures(b).some(f=>!(allowTalkAcrossCounter&&f.id.endsWith('counter'))&&insideFixture(p,f,radius)))return true;
  }
  return false;
 }
@@ -134,7 +139,9 @@ export function clearClassicLine(a,b,radius=.38){
    segmentRect(p,q,-hx-t,-hx+t,-hz-t,hz+t)||
    segmentRect(p,q,hx-t,hx+t,-hz-t,hz+t)||
    segmentRect(p,q,-hx-t,-door,hz-t,hz+t)||
-   segmentRect(p,q,door,hx+t,hz-t,hz+t))return false;
+   segmentRect(p,q,door,hx+t,hz-t,hz+t)||
+   interiorFixtures(building).some(f=>segmentRect(p,q,f.x-f.w/2-radius,f.x+f.w/2+radius,
+    f.z-f.d/2-radius,f.z+f.d/2+radius)))return false;
  }
  return true;
 }

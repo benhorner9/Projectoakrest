@@ -19,7 +19,7 @@ test('bank/store/forester/trade NPCs use exact town-service coordinates and real
   assert.equal(npc.x,target.x);
   assert.equal(npc.z,target.z);
  }
- assert.equal(CLASSIC_NPCS.length,6);
+ assert.equal(CLASSIC_NPCS.length,9,'service staff stay anchored; three ambient workers are now in town');
  assert.ok(CLASSIC_INTERACTABLES.every(t=>Number.isFinite(t.x)&&Number.isFinite(t.z)));
 });
 
