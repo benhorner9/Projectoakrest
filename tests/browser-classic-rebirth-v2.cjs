@@ -51,7 +51,7 @@ let browser;
   await page.screenshot({path:'qa/rebirth/town-world-first.png'});
   await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('.field-shortcuts button').count(),3);
-  await page.locator('.field-shortcuts button').filter({hasText:'Quests'}).click();
+  await page.locator('#classic-quests-toggle').click(); // The permanent QUESTS tab replaces hidden idle-state shortcuts.
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true);
   await page.locator('#classic-quests-toggle').click();
   assert.equal(await page.locator('#classic-quests-window').isVisible(),true,'the quest tab stays selected');
