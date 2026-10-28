@@ -240,6 +240,17 @@ let browser;
  fs.mkdirSync('qa',{recursive:true});await page.screenshot({path:'qa/classic-block3-'+(process.env.BROWSER||'chromium')+'.png'});
  await page.setViewportSize({width:1194,height:834});await open('inventory');
  if(engine===chromium){
+  // After expanding the right sidebar, all 28 normal bag cells may fit
+  // without scrolling. Force temporary QA-only overflow so this regression
+  // continues exercising native touch-scroll and item drag disambiguation.
+  await page.evaluate(()=>{
+   const host=document.getElementById('classic-item-content');
+   const spacer=document.createElement('div');
+   spacer.id='qa-bag-overflow';spacer.style.height='420px';
+   spacer.style.pointerEvents='none';spacer.setAttribute('aria-hidden','true');
+   host.append(spacer);
+  });
+  assert.equal(await page.locator('#classic-item-content').evaluate(e=>e.scrollHeight>e.clientHeight+60),true);
   await bag('material.ration').scrollIntoViewIfNeeded(); // Wait for the resized viewport's stable layout before native input.
   const before=JSON.stringify((await snapshot()).inventorySlots),tile=await bag('material.ration').boundingBox();
   const cdp=await context.newCDPSession(page),x=tile.x+tile.width/2,y=tile.y+tile.height/2;
@@ -265,6 +276,7 @@ let browser;
   await native.send('Input.dispatchTouchEvent',{type:'touchEnd',timestamp:t+.05,touchPoints:[]});await native.detach();
   await page.waitForFunction(start=>document.getElementById('classic-item-content').scrollTop>start,start);
   assert.equal(JSON.stringify((await snapshot()).inventorySlots),before);
+  await page.evaluate(()=>document.getElementById('qa-bag-overflow')?.remove());
 
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
