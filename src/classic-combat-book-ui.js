@@ -1,5 +1,7 @@
 /** Spellbook-like COMBAT tab: presentation only, authoritative equip callbacks. */
 import {classicCombatBook} from './classic-combat-book.js';
+import {LOADOUTS} from './rules.js';
+import {abilityDetails} from './classic-abilities.js';
 const add=(parent,tag,cls,text)=>{
  const node=document.createElement(tag);node.className=cls||'';
  if(text!==undefined&&text!==null)node.textContent=String(text);
@@ -53,7 +55,8 @@ export function renderClassicCombatBook(content,{data,style,state,activeSlot=0,i
  const info=add(section,'section','oakrest-combat-book-inspect');
  info.setAttribute('aria-label','Selected combat ability information');
  add(info,'strong','oakrest-combat-book-inspect-title',inspected.name);
- add(info,'p','oakrest-combat-book-description',inspected.note);
+ const details=abilityDetails(style,LOADOUTS[style][book.weaponId],inspected,1,true);
+ add(info,'p','oakrest-combat-book-description',details.description);
  const facts=add(info,'div','oakrest-combat-book-facts');
  add(facts,'span','','LEVEL '+inspected.requiredLevel);
  add(facts,'span','','COOLDOWN '+inspected.cooldown+'s');
