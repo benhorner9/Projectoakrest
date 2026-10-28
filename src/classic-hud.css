@@ -100,3 +100,13 @@
  color:#f7dd9a;letter-spacing:.015em;text-shadow:0 1px 1px #16291e,1px 1px 2px #16291e,-1px -1px 2px #16291e,0 3px 6px #102319;
  will-change:transform,opacity;user-select:none;-webkit-user-select:none}
 #classic-game .classic-skill-xp-float[hidden]{display:none!important}
+
+
+/* A brief skill-only level-up, placed at the top of the playable world. */
+#classic-game .classic-skill-level-banner{position:absolute;z-index:3;top:clamp(10px,3vh,25px);left:50%;transform:translateX(-50%);
+ display:flex;flex-direction:column;align-items:center;gap:4px;min-width:180px;max-width:min(330px,78%);
+ padding:9px 24px 10px;background:#233b30ed;border:2px solid #deb96e;border-radius:8px;box-shadow:0 5px 22px #11251bd0,inset 0 0 0 1px #74613b;
+ pointer-events:none;text-align:center;color:#ffedc3;user-select:none;-webkit-user-select:none}
+#classic-game .classic-skill-level-banner[hidden]{display:none!important}
+#classic-game .classic-skill-level-banner span{font:700 10px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.16em;color:#e4c58a}
+#classic-game .classic-skill-level-banner strong{font:700 clamp(16px,1.5vw,21px)/1.25 Georgia,serif;white-space:nowrap}
