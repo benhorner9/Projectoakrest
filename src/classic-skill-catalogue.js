@@ -3,6 +3,7 @@
  */
 import {xpProgress,skillMilestones} from './rules.js';
 import {woodcuttingProgress,woodcuttingMilestones} from './woodcutting.js';
+import {CURRENT_SKILL_CAP,futureSkillTeasers} from './skill-cap.js';
 import {RECIPES} from './adventure-content.js';
 export const CLASSIC_SKILLS=Object.freeze([
  {id:'melee',name:'Melee',icon:'⚔',group:'Combat',description:'Close-range weapons, armour and fighting techniques.'},
@@ -37,7 +38,13 @@ export function skillBookSnapshot(save){
    def.id==='woodcutting'?save?.professions?.woodcuttingXp||0:skills[def.id]||0;
   const progression=['melee','ranged','magic','vitality'].includes(def.id)?xpProgress(xp):woodcuttingProgress(xp);
   const milestones=unlocked(def.id).sort((a,b)=>a.level-b.level||a.name.localeCompare(b.name));
-  return {...def,...progression,milestones,available:milestones.filter(m=>m.level<=progression.level).length,
-   next:milestones.find(m=>m.level>progression.level)||null};
+  const availableNow=milestones.filter(m=>m.level<=CURRENT_SKILL_CAP);
+  const future=milestones.filter(m=>m.level>CURRENT_SKILL_CAP).map(m=>({
+   ...m,previewOnly:true,authoritative:true
+  }));
+  if(!future.length)future.push(...futureSkillTeasers(def.id));
+  return {...def,...progression,cap:CURRENT_SKILL_CAP,milestones:availableNow,future,
+   available:availableNow.filter(m=>m.level<=progression.level).length,
+   next:availableNow.find(m=>m.level>progression.level)||null};
  });
 }
