@@ -15,8 +15,8 @@ test('each bank/store/trade counter and shelf is physically solid at its exact r
    const p=world(b,fixture),local=localBuildingPosition(b,p.x,p.z);
    assert.ok(insideFixture(local,fixture,.38),fixture.id);
    assert.ok(solidAt(p.x,p.z,.38),id+': '+fixture.id);
-   const left=world(b,{x:fixture.x-f.w/2,z:fixture.z});
-   const right=world(b,{x:fixture.x+f.w/2,z:fixture.z});
+   const left=world(b,{x:fixture.x-fixture.w/2,z:fixture.z});
+   const right=world(b,{x:fixture.x+fixture.w/2,z:fixture.z});
    assert.equal(clearClassicLine(left,right,.3),false,'swept line crosses '+id+'/'+fixture.id);
   }
  }
