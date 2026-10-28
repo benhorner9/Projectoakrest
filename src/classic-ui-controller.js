@@ -55,7 +55,7 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
  const adopt=name=>{
   if(transitioning)return;
   if(!name){
-   if(itemModes.has(current)||current===null)open(lastPermanent);
+   if(itemModes.has(current)||current===null){current=null;open(lastPermanent);}
    return;
   }
   if(!itemModes.has(name))return;
