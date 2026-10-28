@@ -17,6 +17,7 @@ export function createClassicCombatFeedback(root){
   if(event.type==='enemy-miss')add('0',player,event.time,'miss');
   if(event.type==='hurt')add('−'+event.damage,player,event.time,'hurt');
   if(event.type==='heal')add('+'+event.amount,player,event.time,'heal');
+  if(event.type==='evade')add('DODGED',player,event.time,'evade');
  },update(time,camera){
   const {width,height}=root.getBoundingClientRect();
   for(let i=labels.length-1;i>=0;i--){

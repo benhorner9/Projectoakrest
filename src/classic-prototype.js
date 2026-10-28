@@ -5,6 +5,7 @@ import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
 import {createClassicFrameBudget,classicAdaptiveRatio} from './classic-frame-budget.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
+import {createClassicCombatImpacts,hitRecoilStrength} from './classic-combat-impacts.js';
 import {bindClassicPress} from './classic-touch-press.js';
 import {setupClassicFieldNotes} from './classic-field-notes.js';
 import {setupClassicChat} from './classic-chat.js';
@@ -28,7 +29,7 @@ import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
-import {breaksPlayerAttackIntent} from './classic-combat-intent.js';
+import {breaksPlayerAttackIntent,createClassicCombatMovementIntent} from './classic-combat-intent.js';
 import {createClassicCombatView} from './classic-combat-view.js';
 import {createClassicQuestBeacon} from './classic-quest-beacon.js';
 import {availableQuestGivers} from './classic-quest-indicators.js';
@@ -82,9 +83,11 @@ function savedWorn(){
 }
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let combatPursuitId=null;
+const combatMovementIntent=createClassicCombatMovementIntent();
 let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
+let playerHurtUntil=0;
 let dodgeTravel=null,nextTargetUi=0,lastReleaseUntil=0;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(OAKREST_PALETTE.sky);
@@ -102,9 +105,11 @@ try{
 const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
 const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const village=createClassicVillage(scene);
+const reducedCombatMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+const impactEffects=createClassicCombatImpacts(scene,{reducedMotion:reducedCombatMotion});
 const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
-const combatView=createClassicCombatView(scene,combat.getState().monsters);
+const combatView=createClassicCombatView(scene,combat.getState().monsters,{reducedMotion:reducedCombatMotion});
 const groundView=createClassicGroundLoot(scene);
 let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
 const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!existing.profile,
@@ -341,6 +346,7 @@ function chooseInteraction(target){
 function disengageFromCombat(){
  const wasFighting=!!combat.getState().targetId;
  combatPursuitId=null;
+ combatMovementIntent.reset();
  combat.stopTarget('player-movement');
  return wasFighting;
 }
@@ -364,25 +370,38 @@ function chaseSelectedEnemy(){
 
 function chooseEnemy(id){
  const result=combat.chooseTarget(id,player);
+ combatMovementIntent.reset();
  if(result){
   navigation.stop();selectedTarget=null;pendingDrop=null;pointerMark.visible=false;windowUi?.hide();
   combatPursuitId=id;
   chaseSelectedEnemy();
   const e=combat.getState().monsters.find(m=>m.id===id);
-  if(combat.getState().targetId===id)feedback('Attacking '+e.name+' · Move to disengage');
+  if(combat.getState().targetId===id)feedback('Attacking '+e.name+' · Short steps reposition; retreat to escape.');
  }else feedback('Creature too far away or behind an obstacle.');
  return result;
 }
 function queueDestination(point){
  if(!point)return;
- // Any ground tap is a movement order, never an implicit monster lock.
- disengageFromCombat();navigation.stop();pendingDrop=null;
+ // Nearby taps are tactical footwork; longer moves are explicit retreats.
  const target=closestClickedInteractable(point);
  if(target){chooseInteraction(target);return;}
- selectedTarget=null;windowUi?.hide();
+ pendingDrop=null;selectedTarget=null;windowUi?.hide();
+ const engaged=!!combat.getState().targetId;
+ const escape=breaksPlayerAttackIntent({kind:'path'},{
+  player,target:combat.getState().target,destination:point});
+ // Even an unreachable manual destination must cancel autonomous pursuit.
+ // A clear escape order breaks attacks whether the suggested route is valid.
+ combatPursuitId=null;combatMovementIntent.reset();
+ if(escape)disengageFromCombat();
  const result=navigation.moveTo(player,point);
- if(result.ok){placeMark(point.x,point.z);feedback(result.arrived?'You are here.':'Walking to destination…');}
- else{pointerMark.visible=false;feedback(result.reason);}
+ if(!result.ok){
+  pointerMark.visible=false;
+  feedback(result.reason+(escape?' Find another escape route.':''));
+  return;
+ }
+ placeMark(point.x,point.z);
+ feedback(result.arrived?'You are here.':escape?'Escaping the fight — enemies may still chase.':
+  engaged?'Repositioning — target retained.':'Walking to destination…');
 }
 const canvasInput=installClassicCanvasInput(renderer.domElement,{
  orbit:(yaw,pitch)=>orbitCamera.turn(yaw,pitch),zoom:setZoom,currentZoom:()=>zoom,
@@ -412,7 +431,9 @@ function updateStick(clientX,clientY){
 joy.addEventListener('pointerdown',e=>{
  if(joystickId!==null&&joystickId!==e.pointerId)return;
  e.preventDefault();joystickId=e.pointerId;joy.setPointerCapture(e.pointerId);
- disengageFromCombat();navigation.stop();updateStick(e.clientX,e.clientY);
+ // A joystick touch alone is not fleeing. Physical movement decides.
+  combatPursuitId=null;combatMovementIntent.reset();
+  navigation.stop();updateStick(e.clientX,e.clientY);
  selectedTarget=null;pointerMark.visible=false;
 });
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joystickId)updateStick(e.clientX,e.clientY);});
@@ -481,20 +502,27 @@ function useCombatAbility(index){
 }
 function triggerDodge(){
  if(!combat.dodge())return;
- disengageFromCombat();
+ // Defensive repositioning preserves the target without automatic pursuit.
+ combatPursuitId=null;combatMovementIntent.reset();
  const keysDir=axesFromKeys(),length=Math.hypot(keysDir.x,keysDir.z);
  dodgeTravel={direction:length>.15?{x:keysDir.x/length,z:keysDir.z/length}:look,remaining:.32};
  navigation.stop();feedback('Dodged!');
 }
 function combatEvents(events){
+ if(!events.length)return;
+ const visualState=combat.getState();
  for(const event of events){
-  damageFeedback.event(event,combat.getState(),player);
+  damageFeedback.event(event,visualState,player);
+  impactEffects.onEvent(event,visualState,player);
+  if(event.type==='hurt')playerHurtUntil=Math.max(playerHurtUntil,event.time+.23);
+  if(event.type==='hit')audio.play('hit',event.damage>=14);
+  if(event.type==='evade')audio.play('dodge');
   if(event.type==='release')audio.playAbility(event.style,event.kind,event.family);
   if(['hurt','warning','pickup','dead','dash'].includes(event.type))audio.play(({pickup:'loot',dead:'death',dash:'dodge'})[event.type]||event.type);
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
   else if(event.type==='release')lastReleaseUntil=event.time+.18;
-  else if(event.type==='hit')feedback(event.style.toUpperCase()+' hit · '+event.damage+' damage');
+  else if(event.type==='hit')chat.record(event.style.toUpperCase()+' hit · '+event.damage+' damage','Game');
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated');
   else if(event.type==='adventure'){markProgress();itemUi?.render();refreshHud();if(!event.reason.startsWith('Used '))feedback(event.reason);}
@@ -585,11 +613,17 @@ function axesFromKeys(){
 function moveGame(dt){
  const previous={...player};
  const update=navigation.step(player,axesFromKeys(),dt);
- if(breaksPlayerAttackIntent(update)){
-  pendingDrop=null;
-  const wasFighting=disengageFromCombat();
-  if(wasFighting)feedback('You disengage and move freely.');
- }
+ if(update.kind==='manual'){
+  // Manual input overrides any pursuit. Only sustained outward movement
+  // abandons the target; a short step or circle strafe keeps combat.
+  combatPursuitId=null;
+  const retreat=combatMovementIntent.step({movement:update,start:previous,
+   end:update.position,target:combat.getState().target});
+  if(retreat){
+   pendingDrop=null;
+   if(disengageFromCombat())feedback('Escaping the fight — enemies may still chase.');
+  }
+ }else combatMovementIntent.reset();
  if(!combat.adventureCanPass(update.position.z)&&update.position.z>210){navigation.stop();feedback('Restore this chamber’s ward before proceeding.');}
  else {player.x=update.position.x;player.z=update.position.z;}
  if(update.heading){look=update.heading;walkClock+=dt;}
@@ -643,8 +677,8 @@ function drawStep(dt,render=true){
   if(combat.adventureCanPass(moved.z)){player.x=moved.x;player.z=moved.z;}
   dodgeTravel.remaining-=slice;if(dodgeTravel.remaining<=0)dodgeTravel=null;
  }
- // Follow only a deliberate click-to-attack. Never recreate pursuit after
- // a ground click, WASD, joystick, Escape, dodge or non-combat interaction.
+ // Follow only the original attack click until movement overrides it.
+ // Repositioning keeps the target but never restarts automatic pursuit.
  chaseSelectedEnemy();
  const events=combat.tick(dt,player);
  combatEvents(events);
@@ -688,6 +722,10 @@ function drawStep(dt,render=true){
   step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
   pose:state.action?'windup':state.time<lastReleaseUntil?'strike':'idle',
   worn:savedWorn(),cameraOffset});
+ // Local-only damage response; the character's actual position never moves.
+ const heroRecoil=hitRecoilStrength(playerHurtUntil,state.time,.23);
+ if(heroRecoil&&!reducedCombatMotion)hero.sprite.position.y+=heroRecoil*.16;
+ hero.sprite.material.color.set(playerHurtUntil>state.time?'#ffc4b7':'#ffffff');
  for(const n of npcActors){
   const life=citizenRoutine(n,state.time,player);
   n.actor.sprite.position.set(life.x,.08,life.z);n.shadow.position.set(life.x,.04,life.z);
@@ -703,6 +741,7 @@ function drawStep(dt,render=true){
  camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
  camera.lookAt(player.x,0,player.z);
  camera.updateMatrixWorld();damageFeedback.update(state.time,camera);
+ impactEffects.update(state.time,camera);
  audio.cityAmbience(state.time,player.z<80);
  if(render)renderer.render(scene,camera);
 }
@@ -811,7 +850,7 @@ if(isQa)window.oakrestClassicQA={
   return {x:p.x,y:-p.y};
  },
  navigationState:()=>navigation.state(),
- combatState:()=>combat.getState(),lockMonster:id=>chooseEnemy(id),
+ combatState:()=>combat.getState(),impactState:()=>({active:impactEffects.active(),heroTint:hero.sprite.material.color.getHexString()}),lockMonster:id=>chooseEnemy(id),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
  cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},

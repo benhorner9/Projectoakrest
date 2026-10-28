@@ -13,7 +13,7 @@ Oakrest runs as static files on the Cellbound shared host. No Vercel service is 
 1. Open a PR against Oakrest `dev`. Keep existing saves and completed systems. Review the unit, syntax, build and Chromium checks. The WebKit diagnostic records compatibility separately; a physical iPad is still required for hardware-specific behaviour.
 2. Merge only into `dev` after required checks pass.
 3. Update `OAKREST_COMMIT` in the deployment bridge to the exact reviewed dev commit and push that bridge branch. This is the deliberate handoff between repositories: the hosting credentials are not available in Oakrest, and no cross-repository automation token is currently configured.
-4. The bridge checks out the pinned commit, runs QA, creates `dist/`, fingerprints the public site, uploads **only** `./oakrest-dev/` over FTPS, verifies all uploaded game assets and runs the hosted gameplay flow. A push to `dev` alone runs QA; it does not implicitly publish production.
+4. The Classic bridge correction verifies that the pin belongs to `dev`, runs QA, creates `dist/`, and stamps it with `node scripts/stamp-development-release.mjs`. The stamp rejects a different checked-out SHA or a build containing the retired `src/main.js`. It fingerprints the public site, uploads **only** `./oakrest-dev/` over FTPS, verifies the exact hosted commit and all public build files, then runs the normal Classic entry flow. A push to `dev` alone runs QA; it does not implicitly publish production.
 5. Check the successful action run and `/oakrest-dev/build-meta.json` commit before testing. HTML, JavaScript, CSS and JSON revalidate on the host; imports and styles also carry an asset fingerprint.
 
 ## Local checks
@@ -24,15 +24,20 @@ npm run check
 npm test
 npm run build
 npx playwright install --with-deps chromium
-node tests/browser-smoke.cjs
-node tests/browser-town.cjs
-node tests/browser-equipment.cjs
-node tests/browser-ipad-creator.cjs
-node tests/browser-controller.cjs
-node tests/browser-release.cjs
+node tests/browser-classic-dev-launch.cjs
+node tests/browser-rebirth-world.cjs
+node tests/browser-classic-equipment-ui.cjs
+node tests/browser-classic-creator.cjs
+node tests/browser-classic-camera.cjs
+node tests/browser-classic-free-combat.cjs
+node tests/browser-classic-combat-overhaul.cjs
+node tests/browser-classic-combat-impacts.cjs
+node tests/browser-adventure-complete.cjs
 ```
 
-`browser-release.cjs` serves the **built** files under `/oakrest-dev/`. For the hosted equivalent, set `OAKREST_TEST_URL=https://playcellbound.com/oakrest-dev/`. The `?qa=1` inspection hooks are available only on localhost and the dev path; they are not enabled on `/oakrest/`. Tests use an isolated browser context and only its own local saves.
+`browser-classic-dev-launch.cjs` serves the **built** files under `/oakrest-dev/`. For the hosted equivalent, set `OAKREST_TEST_URL=https://playcellbound.com/oakrest-dev/` and `OAKREST_COMMIT` to the full pinned SHA. It verifies normal entry without QA, query/hash preservation, creation, identity, touch controls, earned onboarding gear, three-style contact, banking and reload. QA helpers accelerate travel and simulation after creation; this is not a natural-duration player playthrough. The `?qa=1` inspection hooks are available only on localhost and the dev path; they are not enabled on `/oakrest/`. Tests use an isolated browser context and only its own local saves.
+
+`scripts/verify-hosted.mjs` requires `OAKREST_COMMIT` and matching local stamped metadata. It rejects stale hosted metadata, changed asset bytes, invalid module MIME types, HTTP errors and redirects. Public deployment paths are rejected. The bridge correction is delivered in a separate Cellbound PR; its presence in Oakrest does not mean that bridge PR was merged or a release occurred.
 
 ## Saves and limitations
 

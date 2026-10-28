@@ -1,5 +1,6 @@
 import {batchClassicStatics} from './classic-static-batch.js';
 import {createClassicTerrain} from './classic-terrain-view.js';
+import {addClassicGroundDetails} from './classic-ground-detail-mesh.js';
 /** Block 2 scene builder. Only the renderer changes: coordinates come from town-layout. */
 import * as THREE from 'three';
 import {OAKREST_BUILDINGS,OAKREST_WELL,FACING,roadQuads} from './town-layout.js';
@@ -20,7 +21,9 @@ const MAT={
  wood:new THREE.MeshLambertMaterial({color:'#73533d'}),
  darkwood:new THREE.MeshLambertMaterial({color:'#57432f'}),
  trim:new THREE.MeshLambertMaterial({color:'#b58a59'}),
- glass:new THREE.MeshLambertMaterial({color:'#739a99'}),
+ glass:new THREE.MeshLambertMaterial({color:'#8faeab'}),
+ windowFrame:new THREE.MeshLambertMaterial({color:'#574b3b'}),
+ roofDetail:new THREE.MeshLambertMaterial({color:'#b5a98c',side:THREE.DoubleSide}),
  grey:new THREE.MeshLambertMaterial({color:'#667b7c'}),
  roofRed:new THREE.MeshLambertMaterial({color:'#9b675e',side:THREE.DoubleSide}),
  roofBlue:new THREE.MeshLambertMaterial({color:'#627886',side:THREE.DoubleSide}),
@@ -70,8 +73,14 @@ function building(parent,b,i){
  cube(g,MAT.trim,0,h-.56,d/2+.26,doorWidth+.35,.2,.35);
  for(const x of [-w/2+1,w/2-1]){
   cube(g,MAT.wood,x,h/2,d/2+.2,.16,h-.2,.14);
-  cube(g,MAT.glass,x,h*.64,d/2+.23,.67,.64,.09);
-  cube(g,MAT.stone,x,h*.64-.4,d/2+.28,.92,.15,.24);
+  // Recessed panes, timber mullions and tiny shutters read from the elevated camera.
+  cube(g,MAT.windowFrame,x,h*.64,d/2+.20,.91,.90,.16);
+  cube(g,MAT.glass,x,h*.64,d/2+.30,.70,.68,.09);
+  cube(g,MAT.trim,x,h*.64,d/2+.36,.06,.72,.10);
+  cube(g,MAT.trim,x,h*.64,d/2+.36,.74,.06,.10);
+  for(const side of [-1,1])
+   cube(g,MAT.wood,x+side*.53,h*.64,d/2+.28,.17,.82,.16);
+  cube(g,MAT.stone,x,h*.64-.44,d/2+.36,1.12,.15,.28);
  }
  for(const x of [-w/2+.6,w/2-.6])cube(g,MAT.wood,x,h/2,-d/2-.17,.18,h,.17);
  // Floors and simple readable service counters remain when roof is hidden.
@@ -118,6 +127,12 @@ function building(parent,b,i){
   const panel=cube(roofs,roofMaterial,0,h+1.33,(sign*(d/4+.25)),w+1.4,.20,slope+.38);
   panel.rotation.x=sign*angle;
   cube(roofs,MAT.wood,0,h+1.28,sign*(d/4+.25),w+1.5,.12,slope+.42).rotation.x=sign*angle;
+  // Two subtle eave/shingle highlight courses follow the slope, never raise roof geometry.
+  for(const offset of [-slope*.22,slope*.22]){
+   const stripe=cube(roofs,MAT.roofDetail,0,h+1.46-sign*Math.sin(angle)*offset,
+    sign*(d/4+.25)+Math.cos(angle)*offset,w+1.25,.032,.075);
+   stripe.rotation.x=sign*angle;
+  }
  }
  cube(roofs,MAT.trim,0,h+2.66,0,w+1.6,.28,.34);
  for(const end of [-1,1]){const tip=cube(roofs,MAT.darkwood,end*(w/2+.75),h+2.95,0,.23,1.05,.3);tip.rotation.z=-end*.45;}
@@ -170,17 +185,23 @@ function drawPerimeter(root){
   mesh(root,new THREE.ConeGeometry(3.1,2.05,8),MAT.roofBlue,x,6.2,z);
  }
 }
+// Shared woodland geometries let the existing static instancer batch hundreds
+// of trunks and crown lobes instead of creating a new GPU buffer for each tree.
+const TREE_TRUNK=new THREE.CylinderGeometry(.23,.34,3.1,6);
+const TREE_CROWN=new THREE.IcosahedronGeometry(1,1);
+const TREE_SHADOW=new THREE.CircleGeometry(2.1,16);
+const TREE_SHADOW_MATERIAL=new THREE.MeshBasicMaterial({color:'#243e31',transparent:true,opacity:.16,depthWrite:false});
 export function createOakrestTree(root,x,z,index,scale=1){
  const group=new THREE.Group();group.position.set(x,0,z);root.add(group);
- mesh(group,new THREE.CylinderGeometry(.23,.34,3.1,6),MAT.wood,0,1.5,0,scale,scale,scale);
+ mesh(group,TREE_TRUNK,MAT.wood,0,1.5,0,scale,scale,scale);
  // Broad, asymmetrical alder crowns replace the uniform conifer stacks.
  for(let k=0;k<4;k++){
   const angle=k*2.4+index,spread=k?1.05:0;
-  const crown=mesh(group,new THREE.IcosahedronGeometry(1,1),k%2?MAT.leafLight:MAT.leaf,
+  const crown=mesh(group,TREE_CROWN,k%2?MAT.leafLight:MAT.leaf,
    Math.cos(angle)*spread*scale,(3.8+(k%2)*.65)*scale,Math.sin(angle)*spread*scale,1.65*scale,1.35*scale,1.5*scale);
   crown.rotation.y=angle;
  }
- const shadow=mesh(group,new THREE.CircleGeometry(2.1*scale,16),new THREE.MeshBasicMaterial({color:'#243e31',transparent:true,opacity:.16,depthWrite:false}),0,.008,0);
+ const shadow=mesh(group,TREE_SHADOW,TREE_SHADOW_MATERIAL,0,.008,0,scale,scale,scale);
  shadow.rotation.x=-Math.PI/2;
  return group;
 }
@@ -196,6 +217,7 @@ function pathGeometry(quads){
 export function createClassicVillage(scene){
  const root=new THREE.Group();scene.add(root);
  createClassicTerrain(root);
+ const groundDetails=addClassicGroundDetails(root);
  drawPerimeter(root);
  // District marker posts make the town legible as multiple neighbourhoods.
  for(const district of CLASSIC_DISTRICTS){
@@ -257,7 +279,7 @@ export function createClassicVillage(scene){
  }
  const npcMarkers=CLASSIC_NPCS.map(n=>({id:n.id,x:n.x,z:n.z}));
  return {
-  root,roofs,npcMarkers,batching,perimeter:CLASSIC_PERIMETER,
+  root,roofs,npcMarkers,batching,groundDetails,perimeter:CLASSIC_PERIMETER,
   update(time){ribbons.forEach((r,i)=>{r.rotation.z=Math.sin(time*1.4+i)*.07;r.rotation.y=Math.sin(time*.9+i)*.15;});},
   updateCutaway(insideId){
    for(const item of roofs)item.roofs.visible=item.id!==insideId;

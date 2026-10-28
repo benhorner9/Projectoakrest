@@ -11,9 +11,12 @@ export function groundPolygons(polygons,y,color){
 }
 export function createClassicTerrain(root){
  const geometry=new THREE.PlaneGeometry(115,130,46,52);geometry.rotateX(-Math.PI/2);geometry.translate(0,-.025,34);
- const positions=geometry.attributes.position,colors=[],a=new THREE.Color(P.moss),b=new THREE.Color(P.fern);
+ const positions=geometry.attributes.position,colors=[],moss=new THREE.Color(P.moss),fern=new THREE.Color(P.fern),meadow=new THREE.Color(P.meadow);
  for(let i=0;i<positions.count;i++){
-  const c=a.clone().lerp(b,terrainVariation(positions.getX(i),positions.getZ(i)));
+  const x=positions.getX(i),z=positions.getZ(i);
+  const variation=terrainVariation(x,z);
+  const sunlit=Math.max(0,Math.sin(x*.47+z*.28)*Math.cos(z*.33-x*.23));
+  const c=moss.clone().lerp(fern,variation).lerp(meadow,sunlit*.25);
   colors.push(c.r,c.g,c.b);
  }
  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));

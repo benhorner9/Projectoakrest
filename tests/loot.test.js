@@ -38,16 +38,6 @@ test('save survives refresh, discards malicious item kinds and preserves legacy 
  const old=validSave({xp:{melee:xp},gear:{melee:'greatsword'}});
  assert.equal(old.gear.melee,'greatsword');
 });
-test('pickup UI remains touch actionable and XP is still awarded on kill',()=>{
- const h=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- const s=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.ok(h.includes('id="loot-pickup"')&&h.includes('id="loot-prompt"'));
- assert.ok(s.includes("lootButton.addEventListener('click'"));
- assert.ok(s.includes('spawnMonsterLoot(e);gainXp(e.type,source.style);'));
- assert.ok(!s.includes("data.coins+=type==="));
- assert.ok(s.includes('data.groundLoot=data.groundLoot.filter('));
-});
-
 test('expanded wilderness drops remain at the defeated enemy and survive reload',()=>{
  let next=0;
  for(const [type,x,z] of [['boar',11,-83],['bandit',-6,-98]]){

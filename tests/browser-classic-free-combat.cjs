@@ -41,13 +41,21 @@ let browser;
   assert.equal((await state()).targetId,'practice');
   for(let i=0;i<30&&!(await state()).action;i++)await step(.02);
   assert.ok((await state()).action,'selected target starts its windup by the next 600ms combat beat');
+  // A tactical sidestep stays engaged; physical movement overrides auto-pursuit.
   await page.keyboard.down('a');
   await step(.08);
-  assert.equal((await state()).targetId,null,'WASD disengages automatically');
-  assert.equal((await state()).action,null,'walking cancels pending attack windup');
+  assert.equal((await state()).targetId,'practice','short WASD sidestep keeps selected enemy');
   await page.keyboard.up('a');
+  await step(.2);
+  assert.equal((await state()).targetId,'practice','release of movement does not cancel combat');
+  // Holding away from the enemy is a clear escape instruction.
+  await page.keyboard.down('s');
+  await step(.65);
+  await page.keyboard.up('s');
+  assert.equal((await state()).targetId,null,'sustained outward movement disengages');
+  assert.equal((await state()).action,null,'retreat cancels a pending windup');
   await step(2);
-  assert.equal((await state()).targetId,null,'stopping movement does not resume attack');
+  assert.equal((await state()).targetId,null,'standing still never re-locks after retreat');
   assert.equal(await page.locator('#classic-attack').innerText().then(t=>t.includes('STOP')),false);
   // A deliberate click to attack again should work, but clicking ground cancels
   // both target and the auto-approach order before the next movement frame.
@@ -67,15 +75,31 @@ let browser;
   assert.equal((await state()).targetId,null,'a ground destination cancels the attack immediately');
   await step(.3);
   assert.equal((await state()).targetId,null,'auto-pursuit cannot steal back the movement');
-  // On touch devices moving the joystick is also a movement order.
+  // Long steps toward an enemy close distance without cancelling combat.
+  await page.evaluate(()=>{oakrestClassicQA.teleport(-1,66);
+   oakrestClassicQA.lockMonster('practice');oakrestClassicQA.moveTo(-1,69.8);});
+  assert.equal((await state()).targetId,'practice','closing the gap via a ground click keeps fighting');
+  await step(.15);
+  assert.equal((await state()).targetId,'practice');
+  // A nearby ground click is a reposition, not an accidental escape.
+  await page.evaluate(()=>{oakrestClassicQA.teleport(-1,71.3);
+   oakrestClassicQA.lockMonster('practice');oakrestClassicQA.moveTo(-2,70.4);});
+  assert.equal((await state()).targetId,'practice','short ground route keeps combat intent');
+  await step(.15);
+  assert.equal((await state()).targetId,'practice','moving to nearby ground stays in fight');
+  // Dodge is also combat footwork: preserve target, without automatic pursuit.
   await page.evaluate(()=>oakrestClassicQA.teleport(-1,71.3));
   await page.evaluate(()=>oakrestClassicQA.lockMonster('practice'));
+  await page.keyboard.press('Space');
+  await step(.08);
+  assert.equal((await state()).targetId,'practice','dodge keeps engagement');
+  // Tapping the joystick alone must not break an engaged target.
   const joy=await page.locator('#classic-joystick').boundingBox();
   assert.ok(joy,'touch joystick is available in iPad-style viewport');
   await page.touchscreen.tap(joy.x+joy.width*.75,joy.y+joy.height*.5);
   await step(.08);
-  assert.equal((await state()).targetId,null,'touch joystick cancels target without a STOP button');
+  assert.equal((await state()).targetId,'practice','brief joystick tap keeps engagement');
   assert.deepEqual(errors,[],'no browser exceptions');
-  console.log('PASS: click-to-attack approach, WASD escape, ground-click escape, touch escape and no sticky re-engagement.');
+  console.log('PASS: short sidestep, near-click reposition, combat dodge, joystick touch, deliberate keyboard/ground retreat and no re-engagement.');
  }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

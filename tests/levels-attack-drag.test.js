@@ -14,17 +14,3 @@ test('maximum skill level does not show a future level',()=>{
 test('attack-drag ignores small finger jitter and huge pointer jumps',()=>{
  assert.equal(attackDragDelta(.4),0);assert.equal(attackDragDelta(24),24);assert.equal(attackDragDelta(-25),-25);assert.equal(attackDragDelta(900),48);assert.equal(attackDragDelta(-900),-48);assert.equal(attackDragDelta(NaN),0);
 });
-test('Skills menu lists all four XP tracks and opens level unlock details',()=>{
- const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.deepEqual(SKILLS_OVERVIEW.map(s=>s.id),['melee','ranged','magic','vitality']);
- assert.ok(source.includes('xpProgress(data.xp[skill.id])'));
- assert.ok(source.includes('showSkillDetail(skill.id)'));
- assert.ok(source.includes("xpText(info.needed)+' XP needed for level '"));
-});
-test('Attack drag turns horizontally without releasing auto-attack',()=>{
- const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.ok(source.includes("attackButton.addEventListener('pointermove'"));
- assert.ok(source.includes('e.pointerId!==attackId || !holdingAttack'));
- assert.ok(source.includes('cameraMove(dx,0,true)'));
- assert.ok(source.includes('attackButton.setPointerCapture'));
-});

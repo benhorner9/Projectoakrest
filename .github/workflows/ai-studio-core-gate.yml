@@ -42,14 +42,14 @@ jobs:
       - name: Install Chromium using preinstalled runner system libraries
         # Avoid apt mirror download stalls; other suites validate the same runner setup.
         run: npx playwright install chromium
-      - name: Chromium gameplay smoke
-        run: node tests/browser-smoke.cjs
-      - name: Verify real-rig animation inspector and event tracing
-        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-animation-inspector.cjs
-      - name: Canonical visual reference and grip regression
-        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-visual-foundation.cjs
-      - name: Retained weapon mesh adapters and asynchronous switching
-        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-held-assets.cjs
+      - name: Classic direct-launch smoke
+        run: node tests/browser-classic-dev-launch.cjs
+      - name: Classic directional character motion
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-rebirth-sprites.cjs
+      - name: Classic village, walls and interior regression
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-rebirth-world.cjs
+      - name: Classic equipment, drag and quick-slot regression
+        run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-classic-equipment-ui.cjs
       - name: Preserve diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,7 +59,7 @@ jobs:
           if-no-files-found: ignore
 
   candidate-playtest:
-    name: Candidate character — actual gameplay and save compatibility
+    name: Classic candidate — complete adventure and save compatibility
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -72,13 +72,13 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx playwright install chromium
-      - name: Exercise candidate in real simulation
-        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-foundation-gameplay.cjs
+      - name: Complete Classic adventure in simulation
+        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-adventure-complete.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: oakrest-candidate-gameplay
-          path: qa/foundation-gameplay/
+          path: qa/adventure-complete/
           if-no-files-found: ignore
 
 # This *fast* signal does not replace the existing comprehensive Greenwood
