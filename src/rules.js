@@ -1,3 +1,4 @@
+import {CURRENT_SKILL_CAP} from './skill-cap.js';
 import {normalizeQuickSlots} from './quick-slots.js';
 import {ADVENTURE_MATERIAL_IDS,sanitizeAdventure} from './adventure-content.js';
 import {blankEquipment,EXTRA_SLOTS,SLOT_ITEMS,canEquipSlotItem,allowsOffhand} from './equipment-slots.js';
@@ -225,12 +226,12 @@ export function validGroundLoot(list){
 export const XP_BY_MOB = {dummy:0,mossling:30,boar:46,bandit:75};
 export function nextStyle(style) { const i=STYLE_ORDER.indexOf(style); return STYLE_ORDER[(i+1)%STYLE_ORDER.length]; }
 export function xpToLevel(level) { return 65 + level*45; }
-export function levelFromXp(xp) { let level=1; while(level<99 && xp>=xpToLevel(level)){xp-=xpToLevel(level);level++;} return {level,progress:xp/xpToLevel(level),remaining:xp}; }
+export function levelFromXp(xp) { let level=1; while(level<CURRENT_SKILL_CAP && xp>=xpToLevel(level)){xp-=xpToLevel(level);level++;} return {level,progress:level===CURRENT_SKILL_CAP?1:xp/xpToLevel(level),remaining:xp}; }
 /** Per-skill current XP, remaining XP and percentage, consistent with existing level rules. */
 export function xpProgress(totalXp){
  const xp=Number.isFinite(totalXp)?Math.max(0,Math.floor(totalXp)):0;
  const {level,remaining}=levelFromXp(xp);
- const maxed=level===99;
+ const maxed=level===CURRENT_SKILL_CAP;
  const required=maxed?0:xpToLevel(level);
  const current=maxed?0:remaining;
  return {level,totalXp:xp,current,required,needed:maxed?0:required-current,progress:maxed?1:Math.min(1,current/required),maxed};
