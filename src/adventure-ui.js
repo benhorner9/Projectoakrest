@@ -6,8 +6,26 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  const dialog=document.getElementById('classic-dialogue'),title=document.getElementById('classic-dialogue-name'),body=document.getElementById('classic-dialogue-text');
  const content=el('div','',dialog);content.id='adventure-content';
  dialog.insertBefore(content,document.getElementById('classic-dialogue-close'));
- let current=null,lastWork='',selectedQuest=null,lastJournalKey='',journalView='list';
+ let current=null,lastWork='',selectedQuest=null,lastJournalKey='';
  const questBook=document.getElementById('classic-quest-book');
+ // The list stays in the sidebar; quest details use the browser's native modal top layer.
+ const questPopup=document.createElement('dialog');
+ questPopup.id='classic-quest-popup';questPopup.className='oakrest-quest-popup';
+ questPopup.setAttribute('aria-labelledby','classic-quest-popup-label');
+ questPopup.setAttribute('aria-modal','true');
+ const popupHeader=el('header','',questPopup);popupHeader.className='oakrest-quest-popup-header';
+ const popupHeading=el('strong','QUEST JOURNAL',popupHeader);popupHeading.id='classic-quest-popup-label';
+ const popupClose=el('button','×',popupHeader);popupClose.type='button';
+ popupClose.className='oakrest-quest-popup-close';popupClose.setAttribute('aria-label','Close quest details');
+ const popupContent=el('div','',questPopup);popupContent.id='classic-quest-popup-content';
+ popupContent.className='oakrest-quest-popup-content';
+ document.getElementById('classic-app').append(questPopup);
+ popupClose.addEventListener('click',()=>questPopup.close());
+ questPopup.addEventListener('click',event=>{if(event.target===questPopup)questPopup.close();});
+ questPopup.addEventListener('close',()=>{
+  if(windowUi.current()==='quests')
+   questBook.querySelector('[data-quest-id="'+selectedQuest+'"]')?.focus({preventScroll:true});
+ });
  const eatButton=el('button','Eat',document.querySelector('.classic-item-buttons'));eatButton.type='button';eatButton.id='adventure-eat';eatButton.title='Eat field ration (35 Health)';el('small','RATION',eatButton);
  const work=el('button','',document.querySelector('.classic-footer-events'));work.id='adventure-work';work.hidden=true;work.type='button';work.title='Cancel gathering or crafting';
  const tracker=el('button','',document.querySelector('.classic-sidebar-map'));tracker.id='adventure-journal';tracker.type='button';tracker.title='Open quest journal';
@@ -78,26 +96,35 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   btn('View quest journal',showJournal);
  }
  function showJournal(){
-  current=null;journalView='list';windowUi.open('quests');
+  current=null;windowUi.open('quests');
   if(windowUi.current()==='quests'){lastJournalKey='';renderJournal();}
+  else if(questPopup.open)questPopup.close();
  }
- function renderJournal(){
-  if(windowUi.current()!=='quests')return;
-  const a=combat.adventureState();
-  if(!a.catalogue.some(q=>q.id===selectedQuest))
-   selectedQuest=a.tracked||a.catalogue.find(q=>q.status==='active'||q.status==='available')?.id||a.catalogue[0]?.id;
-  renderClassicQuestJournal(questBook,a,{
-   view:journalView,
-   selectedQuest,
-   findTarget,
-   onSelect:id=>{selectedQuest=id;journalView='detail';renderJournal();},
-   onBack:()=>{journalView='list';renderJournal();},
+ function renderQuestPopup(a){
+  if(!questPopup.open)return;
+  const scroll=popupContent.querySelector('.oakrest-quest-page-scroll')?.scrollTop||0;
+  renderClassicQuestJournal(popupContent,a,{
+   view:'detail',selectedQuest,findTarget,onBack:()=>questPopup.close(),
    onTrack:id=>{
     const result=combat.adventureAction('track',{choice:id},player());
     notify(result.reason);
     if(result.ok){changed();renderJournal();}
    }
   });
+  const detail=popupContent.querySelector('.oakrest-quest-page-scroll');
+  if(detail)detail.scrollTop=scroll;
+ }
+ function showQuestPopup(id){
+  selectedQuest=id;
+  if(!questPopup.open)questPopup.showModal();
+  renderQuestPopup(combat.adventureState());
+  popupClose.focus({preventScroll:true});
+ }
+ function renderJournal(){
+  if(windowUi.current()!=='quests')return;
+  const a=combat.adventureState();
+  renderClassicQuestJournal(questBook,a,{onSelect:showQuestPopup});
+  if(questPopup.open)renderQuestPopup(a);
   lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
  }
  function objective(){
@@ -123,6 +150,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   if(text!==lastWork){work.textContent=text;work.hidden=!text;lastWork=text;}
   const tracking=a.catalogue.find(q=>q.id===a.tracked);
   tracker.textContent=tracking?(tracking.status==='completed'?'✓ ':tracking.status==='ready'?'◆ ':tracking.status==='active'?'✦ ':'! ')+tracking.title:'✓ All quests complete';
+  if(questPopup.open&&windowUi.current()!=='quests')questPopup.close();
   if(windowUi.current()==='quests'){
    const key=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
    if(key!==lastJournalKey)renderJournal();
