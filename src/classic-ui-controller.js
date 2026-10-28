@@ -1,44 +1,68 @@
-/** Block 7: one window at a time, with NPC dialogue taking priority. */
+/** Persistent Oakrest Classic sidebar: switching tabs never leaves a blank book. */
 export function createClassicWindowController({items,map,settings,dialogue,minimap,quests,skills,social}){
- let current=null;
+ const permanent=new Set(['inventory','equipment','abilities','skills','quests','map','social']);
+ const itemModes=new Set(['inventory','equipment','abilities','bank','shop']);
+ const panels=new Set([...permanent,'bank','shop','settings','dialogue']);
+ const buttonIds={
+  inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',
+  abilities:'classic-abilities-toggle',skills:'classic-skills-toggle',
+  quests:'classic-quests-toggle',map:'classic-map-toggle',
+  social:'classic-social-toggle',settings:'classic-settings-toggle'
+ };
+ let current=null,lastPermanent='inventory',transitioning=false;
  const body=document.getElementById('classic-sidebar-body');
- const close=()=>{
-  items.hide();map.hidden=true;settings.hidden=true;dialogue.hidden=true;quests.hidden=true;skills.hidden=true;social.hidden=true;
-  minimap.setExpanded(false);current=null;if(body)body.dataset.active='none';
-  for(const b of document.querySelectorAll('.classic-item-buttons button'))
-   b.setAttribute('aria-pressed','false');
+ // Close controls are intentionally kept in the DOM for existing bindings,
+ // but never exposed as a way to dismiss the permanent book.
+ for(const id of ['classic-item-close','classic-skills-close','classic-quests-close',
+  'classic-map-close','classic-social-close','classic-settings-close']){
+  const control=document.getElementById(id);
+  if(control){control.hidden=true;control.disabled=true;control.tabIndex=-1;}
+ }
+ const pressed=name=>{
+  for(const button of document.querySelectorAll('.classic-item-buttons button'))
+   button.setAttribute('aria-pressed',String(button.id===buttonIds[name]));
  };
- const open=(name)=>{
-  if(name===current){close();return;}
-  close();
-  if(['inventory','equipment','abilities','bank','shop'].includes(name)){
-   items.open(name);current=name;
-  }else if(name==='skills'){
-   skills.hidden=false;current=name;
-  }else if(name==='quests'){
-   quests.hidden=false;current=name;
-  }else if(name==='map'){
-   map.hidden=false;minimap.setExpanded(true);current=name;
-  }else if(name==='social'){
-   social.hidden=false;current=name;
-  }else if(name==='settings'){
-   settings.hidden=false;current=name;
-  }else if(name==='dialogue'){
-   dialogue.hidden=false;current=name;
-  }
-  if(body)body.dataset.active=current||'none';
-  const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',
-   abilities:'classic-abilities-toggle',map:'classic-map-toggle',quests:'classic-quests-toggle',skills:'classic-skills-toggle',
-   settings:'classic-settings-toggle',social:'classic-social-toggle'}[name];
-  if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
+ const reset=()=>{
+  transitioning=true;
+  try{
+   items.hide();map.hidden=true;settings.hidden=true;dialogue.hidden=true;
+   quests.hidden=true;skills.hidden=true;social.hidden=true;
+   minimap.setExpanded(false);
+  }finally{transitioning=false;}
+  current=null;
  };
- const hide=()=>close();
+ const open=name=>{
+  if(!panels.has(name)||name===current)return;
+  reset();
+  if(itemModes.has(name))items.open(name);
+  else if(name==='skills')skills.hidden=false;
+  else if(name==='quests')quests.hidden=false;
+  else if(name==='map'){map.hidden=false;minimap.setExpanded(true);}
+  else if(name==='social')social.hidden=false;
+  else if(name==='settings')settings.hidden=false;
+  else if(name==='dialogue')dialogue.hidden=false;
+  current=name;
+  if(permanent.has(name))lastPermanent=name;
+  if(body)body.dataset.active=name;
+  pressed(name);
+ };
+ // Dismiss an NPC/service/settings view to the previous permanent tab.
+ // Calling hide() on a permanent tab does not clear the sidebar.
+ const hide=()=>{
+  if(!permanent.has(current))open(lastPermanent);
+ };
+ // Internal BAG/GEAR/COMBAT sub-tabs directly invoke the item renderer.
  const adopt=name=>{
-  current=name;if(body)body.dataset.active=name||'none';
-  for(const b of document.querySelectorAll('.classic-item-buttons button'))b.setAttribute('aria-pressed','false');
-  const id={inventory:'classic-inventory-toggle',equipment:'classic-equipment-toggle',abilities:'classic-abilities-toggle'}[name];
-  if(id)document.getElementById(id)?.setAttribute('aria-pressed','true');
+  if(transitioning)return;
+  if(!name){
+   if(itemModes.has(current)||current===null)open(lastPermanent);
+   return;
+  }
+  if(!itemModes.has(name))return;
+  current=name;
+  if(permanent.has(name))lastPermanent=name;
+  if(body)body.dataset.active=name;
+  pressed(name);
  };
- const isOpen=()=>current!==null;
- return {open,hide,isOpen,adopt,current:()=>current};
+ return {open,hide,isOpen:()=>current!==null,adopt,current:()=>current};
 }
