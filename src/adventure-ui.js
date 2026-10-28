@@ -78,7 +78,10 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   btn('View quest journal',showJournal);
  }
  function showJournal(){
-  current=null;journalView function renderJournal(){
+  current=null;journalView='list';windowUi.open('quests');
+  if(windowUi.current()==='quests'){lastJournalKey='';renderJournal();}
+ }
+ function renderJournal(){
   if(windowUi.current()!=='quests')return;
   const a=combat.adventureState();
   if(!a.catalogue.some(q=>q.id===selectedQuest))
@@ -96,8 +99,6 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
    }
   });
   lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
- }
-.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
  }
  function objective(){
   const a=combat.adventureState(),q=a.quest;
