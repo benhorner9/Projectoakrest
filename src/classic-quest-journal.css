@@ -136,3 +136,69 @@
  #classic-app.oakrest-framed .oakrest-quest-row,
  #classic-app.oakrest-framed .oakrest-quest-back{scroll-behavior:auto;transition:none}
 }
+
+/* Quest entries remain in the sidebar; the selected journal floats above the game. */
+#classic-app.oakrest-framed dialog.oakrest-quest-popup:not([open]){display:none!important}
+#classic-app.oakrest-framed dialog.oakrest-quest-popup[open]{
+ box-sizing:border-box;
+ position:fixed;inset:0;margin:auto;
+ display:flex;flex-direction:column;gap:0;
+ width:min(600px,calc(100vw - 40px));height:min(580px,calc(100dvh - 48px));
+ max-width:calc(100vw - 20px);max-height:calc(100dvh - 24px);
+ padding:0;overflow:hidden;
+ border:2px solid #bd9d64;border-radius:7px;
+ color:#efdfbd;background:linear-gradient(150deg,#2a3227,#151f19);
+ box-shadow:0 18px 55px #070d0bd9,inset 0 0 0 2px #927b505c;
+ z-index:9999;
+}
+#classic-app.oakrest-framed dialog.oakrest-quest-popup::backdrop{
+ background:#050b08ad;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-header{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ flex:none;min-height:58px;padding:7px 12px 7px 17px;
+ border-bottom:2px solid #93784b;
+ background:linear-gradient(90deg,#454330,#253427);
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-header strong{
+ color:#f3d698;font:700 19px/1.2 Georgia,serif;letter-spacing:.04em;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-close{
+ display:grid;place-items:center;
+ flex:none;width:44px;height:44px;min-height:44px;
+ border:1px solid #aa8b57;border-radius:4px;
+ color:#f7e4ba;background:#443d30;
+ font:28px/1 system-ui,sans-serif;cursor:pointer;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-close:focus-visible{
+ outline:3px solid #f5d58f;outline-offset:2px;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-content{
+ display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-page{
+ flex:1;min-height:0;overflow:hidden;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-toolbar{
+ padding:6px 12px;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-page-scroll{
+ padding:16px 20px 22px;overscroll-behavior:contain;touch-action:pan-y;
+}
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-title{font-size:23px}
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-intro,
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-contact,
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-record,
+#classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-objectives li{
+ font-size:13px;line-height:1.6;
+}
+@media(max-width:700px),(max-height:620px){
+ #classic-app.oakrest-framed dialog.oakrest-quest-popup[open]{
+  width:calc(100vw - 24px);height:calc(100dvh - 22px);
+  max-height:calc(100dvh - 16px);
+ }
+ #classic-app.oakrest-framed .oakrest-quest-popup-header{min-height:46px;padding:5px 10px}
+ #classic-app.oakrest-framed .oakrest-quest-popup-header strong{font-size:16px}
+ #classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-page-scroll{padding:10px 12px 16px}
+ #classic-app.oakrest-framed .oakrest-quest-popup-content .oakrest-quest-title{font-size:19px}
+}
