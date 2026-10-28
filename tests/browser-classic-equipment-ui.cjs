@@ -19,6 +19,9 @@ let browser;
  save.inventory.materials={ration:8,'woodland-tonic':4,'softwood-logs':20,'moss-fibre':10,reed:6};
  const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',other='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
  await context.addInitScript(({save,id,other,prefix})=>{
+  // Repeatable varying rolls, including UUID generation; a constant random
+  // value breaks Three.js identities. The gameplay still resolves every hit.
+  let seed=149;Math.random=()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;};
   if(!localStorage.getItem(prefix+'characters-v1')){
    localStorage.setItem(prefix+'characters-v1',JSON.stringify([{id,name:'Bag Tester'},{id:other,name:'Other Adventurer'}]));
    localStorage.setItem(prefix+'active-character',id);
@@ -179,10 +182,12 @@ let browser;
  await page.evaluate(()=>{
   const e=oakrestClassicQA.combatState().monsters.find(m=>m.id==='bandit-a');
   oakrestClassicQA.teleport(e.x,e.z-1);
-  for(let n=0;n<80&&oakrestClassicQA.combatState().hp>oakrestClassicQA.combatState().maxHp-40;n++)oakrestClassicQA.advance(.5);
+  // Wait for actual damage, bounded to 120 accelerated seconds. Forty
+  // seconds could end before enough random hits for the food-use assertion.
+  for(let n=0;n<240&&oakrestClassicQA.combatState().hp>oakrestClassicQA.combatState().maxHp-40;n++)oakrestClassicQA.advance(.5);
   oakrestClassicQA.teleport(0,39);
  });
- const hurt=await page.evaluate(()=>oakrestClassicQA.combatState());assert.ok(hurt.hp>0&&hurt.hp<=hurt.maxHp-40);
+ const hurt=await page.evaluate(()=>oakrestClassicQA.combatState());assert.ok(hurt.hp>0&&hurt.hp<=hurt.maxHp-40,'real damage setup: '+JSON.stringify({hp:hurt.hp,maxHp:hurt.maxHp,bandit:hurt.monsters.find(m=>m.id==='bandit-a')}));
  const food=(await snapshot()).inventory.materials.ration;
  await page.locator('[data-hotbar-slot="1"]').tap();
  assert.equal((await snapshot()).inventory.materials.ration,food-1);
