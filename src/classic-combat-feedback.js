@@ -12,6 +12,8 @@ export function createClassicCombatFeedback(root){
   labels.push({node,x:position.x,z:position.z,time});
  }
  return {event(event,state,player){
+  if(event.type==='release'&&event.name)add(event.name,player,event.time,'ability');
+  if(event.type==='action-cancelled'&&event.name)add('CANCELLED',player,event.time,'miss');
   if(event.type==='hit')add(String(event.damage),state.monsters.find(m=>m.id===event.id),event.time,'hit');
   if(event.type==='miss')add('MISS',state.monsters.find(m=>m.id===event.id),event.time,'miss');
   if(event.type==='enemy-miss'||event.type==='enemy-whiff')add('MISS',player,event.time,'miss');

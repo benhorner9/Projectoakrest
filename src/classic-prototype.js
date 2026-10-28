@@ -29,6 +29,7 @@ import {installGameZoomGuard} from './touch-gestures.js';
 import {CLASSIC_CAMERA,CLASSIC_NPCS,classicScreenBasis,clamp,occupantBuilding,presentationSnapshot,slideMove} from './classic-presentation.js';
 import {createClassicOrbitCamera} from './classic-camera-controls.js';
 import {createClassicCombat} from './classic-combat.js';
+import {createClassicAbilityView} from './classic-ability-view.js';
 import {classicAttackPose} from './classic-combat-motion.js';
 import {breaksPlayerAttackIntent,createClassicCombatMovementIntent} from './classic-combat-intent.js';
 import {createClassicCombatView} from './classic-combat-view.js';
@@ -107,6 +108,7 @@ const camera=new THREE.OrthographicCamera(-20,20,20,-20,.1,270);
 const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const village=createClassicVillage(scene);
 const reducedCombatMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+const abilityView=createClassicAbilityView(scene,{reducedMotion:reducedCombatMotion});
 const impactEffects=createClassicCombatImpacts(scene,{reducedMotion:reducedCombatMotion});
 const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
@@ -499,7 +501,7 @@ function useCombatAbility(index){
  const ability=combat.getState().abilities[index];
  if(!ability){feedback('Ability slot locked or empty.');return false;}
  if(!combat.queueAbility(index,player)){feedback(combat.getState().lastFailure);return false;}
- feedback(ability.name+' activated.');return true;
+ feedback(ability.name+(combat.getState().queuedAbility?' queued.':' preparing.'));return true;
 }
 function triggerDodge(){
  if(!combat.dodge())return;
@@ -519,7 +521,7 @@ function combatEvents(events){
   if(event.type==='hit'&&!event.periodic)audio.play(event.style==='magic'?'spell-impact':event.style==='ranged'?'arrow-impact':'hit',event.family==='greatsword'||event.family==='axe');
   if(event.type==='hurt'&&event.guarded)audio.play('guard');
   if(event.type==='evade')audio.play('dodge');
-  if(event.type==='release')audio.playAbility(event.style,event.kind,event.family);
+  if(event.type==='release')audio.playAbility(event.style,event.kind,event.family,event.effect);
   if(['hurt','warning','pickup','dead','dash'].includes(event.type))audio.play(({pickup:'loot',dead:'death',dash:'dodge'})[event.type]||event.type);
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
@@ -708,7 +710,7 @@ function drawStep(dt,render=true){
   nextBookRefresh=state.time+.12;
  }
  if(state.style!==style){style=state.style;refreshHud();}
- combatView.update(state,cameraOffset,player);
+ combatView.update(state,cameraOffset,player);abilityView.update(state,player);
  groundView.update(state.groundLoot,state.time);
  minimap.update({player,facing:look,destination:navigation.state().goal,cameraOffset,
   monsters:state.monsters,drops:state.groundLoot,objective:adventureUi?.objective(),
@@ -852,7 +854,7 @@ if(isQa)window.oakrestClassicQA={
  },
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),impactState:()=>({active:impactEffects.active(),heroTint:hero.sprite.material.color.getHexString()}),lockMonster:id=>chooseEnemy(id),
- combatPresentation:()=>({heroPose:hero.sprite.userData.pose,...combatView.stats()}),
+ combatPresentation:()=>({heroPose:hero.sprite.userData.pose,ability:abilityView.stats(),...combatView.stats()}),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
  cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},

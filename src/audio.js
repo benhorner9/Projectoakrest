@@ -29,10 +29,10 @@ export function createAudio(storage=null,key='oakrest-audio'){
   osc.start(t);osc.stop(t+(isBird?.32:.93));
   osc.onended=()=>{voices--;osc.disconnect();gain.disconnect();};
  },
- playAbility(style,kind,family){
+ playAbility(style,kind,family,effect){
   if(!enabled||!volume||!ctx||ctx.state!=='running'||voices>=10)return;
   if(!gate.admit('ability:'+style+':'+kind,ctx.currentTime))return;
-  const profile=abilitySoundProfile(style,kind,family);
+  const profile=abilitySoundProfile(style,kind,family,effect);
   const osc=ctx.createOscillator(),gain=ctx.createGain(),t=ctx.currentTime;
   voices++;
   osc.type=profile.wave;

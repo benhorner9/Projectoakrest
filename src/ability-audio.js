@@ -3,7 +3,7 @@
  * Pure presentation data: does not influence hit rolls or gameplay timing.
  * Positive exponential frequency sweeps are safe on WebAudio across Safari.
  */
-export function abilitySoundProfile(style='melee',kind='hit',family='sword'){
+export function abilitySoundProfile(style='melee',kind='hit',family='sword',effect=null){
  const magic=style==='magic',ranged=style==='ranged';
  const ember=family==='ember',heavy=family==='greatsword'||family==='crossbow';
  const base=magic?
@@ -23,6 +23,6 @@ export function abilitySoundProfile(style='melee',kind='hit',family='sword'){
  };
  // Offensive magic distinguishes Ember and Frost even when the ability
  // kind is shared. Defensive utility shares stable sounds across styles.
- const effect=effects[kind];
- return {...base,...(effect||{}),wave:effect?.wave||base.wave};
+ const cue=effect==='heavy-slash'?{...base,hz:heavy?96:142,seconds:.32,sweep:.34}:effects[kind];
+ return {...base,...(cue||{}),wave:cue?.wave||base.wave};
 }
