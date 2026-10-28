@@ -725,3 +725,43 @@
 #classic-app.oakrest-framed #classic-settings-close{
  display:none!important;
 }
+
+
+/* 28 Oct iPad layout: action bar belongs ABOVE LEFT CHAT, not under the
+   right-side inventory. This file is the final HUD cascade layer. */
+#classic-app.oakrest-framed{
+ grid-template-areas:"world side" "action side" "chat side"!important;
+ grid-template-rows:minmax(0,1fr) 152px clamp(192px,27.5vh,282px)!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck{
+ grid-area:action!important;position:relative!important;z-index:3;
+ width:100%!important;height:100%!important;min-width:0!important;
+ min-height:0!important;max-height:none!important;flex:none!important;
+ box-sizing:border-box;overflow:visible;
+ border-right:4px ridge #a78956!important;
+ border-bottom:3px ridge #b69760!important;
+ box-shadow:inset 0 0 0 2px #4c412f!important;
+}
+#classic-app.oakrest-framed #classic-sidebar{
+ grid-area:side!important;height:100%!important;min-height:0!important;
+}
+#classic-app.oakrest-framed #classic-sidebar-body{
+ flex:1 1 auto!important;min-height:0!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-action-footer{
+ flex:1 1 auto!important;min-height:0!important;
+}
+#classic-app.oakrest-framed #oakrest-action-deck .classic-combat-dock{
+ flex:1 1 auto!important;min-height:0!important;
+}
+#classic-app.oakrest-framed .oakrest-chat{
+ grid-area:chat!important;min-height:0!important;
+}
+@media(max-height:680px){
+ #classic-app.oakrest-framed{
+  grid-template-rows:minmax(0,1fr) 142px 200px!important;
+ }
+ #classic-app.oakrest-framed #oakrest-action-deck{
+  min-height:0!important;max-height:none!important;height:100%!important;
+ }
+}
