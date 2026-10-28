@@ -65,6 +65,11 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  }
  const roomFor=(id,amount=1)=>canCarry({[id]:amount});
  function add(id,n){mats[id]=(mats[id]||0)+n;}
+ // Strictly cosmetic: only actual non-combat XP deltas create floating feedback.
+ const reportSkillXp=(skill,before,after)=>{
+  const earned=Math.max(0,(Number(after)||0)-(Number(before)||0));
+  if(skill&&Number.isFinite(earned)&&earned>0)emit('skill-xp',{skill,amount:earned});
+ };
  function event(e){
   if(e.type==='hit'&&e.id==='practice')flag('hit:'+e.style);
   if(e.type==='defeated'){
@@ -150,7 +155,11 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(o.weapon)grantWeapon(o.style,o.weapon,false);
   if(o.slot)data.inventory.slotted.push(o.slot);
   if(o.armour)data.inventory.armour.push(o.armour);
-  if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
+  if(r.profession){
+   const previous=a.skills[r.profession]||0;
+   a.skills[r.profession]=Math.min(200000000,previous+r.xp);
+   reportSkillXp(r.profession,previous,a.skills[r.profession]);
+  }
   if(['shield','arrows','frost','ember','seal'].includes(r.id))flag('craft:useful');
   emit('adventure',{reason:'Made: '+r.title+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'')});
   return ok('Made: '+r.title);
@@ -201,13 +210,21 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    const made=finishCraft(w.recipe);
    if(!made.ok)emit('adventure-notice',{reason:made.reason});
   }else if(w.material==='softwood-logs'){
+   const previous=data.professions.woodcuttingXp||0;
    const result=chopOnce(data,trees.get(w.target.id),time,random);
-   if(result.success){flag('gather:softwood-logs');emit('adventure',{reason:'Gathered softwood logs · +35 Woodcutting XP'});}
+   if(result.success){
+    reportSkillXp('woodcutting',previous,data.professions.woodcuttingXp);
+    flag('gather:softwood-logs');emit('adventure',{reason:'Gathered softwood logs · +35 Woodcutting XP'});
+   }
    if(result.ok&&!result.depleted){work={...w,start:time,end:time+1.18};}
    else emit('adventure-notice',{reason:result.depleted?'Tree depleted; try another grove.':result.reason});
   }else if(roomFor(w.material)){
    add(w.material,1);
-   if(w.target.profession)a.skills[w.target.profession]=Math.min(200000000,(a.skills[w.target.profession]||0)+18);
+   if(w.target.profession){
+    const previous=a.skills[w.target.profession]||0;
+    a.skills[w.target.profession]=Math.min(200000000,previous+18);
+    reportSkillXp(w.target.profession,previous,a.skills[w.target.profession]);
+   }
    respawns.set(w.target.id,time+3);flag('gather:'+w.material);emit('adventure',{reason:'Gathered '+w.material});
   }
  }
