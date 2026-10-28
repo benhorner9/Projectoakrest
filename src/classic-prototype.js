@@ -525,11 +525,13 @@ function combatEvents(events){
   if(['hurt','warning','pickup','dead','dash'].includes(event.type))audio.play(({pickup:'loot',dead:'death',dash:'dodge'})[event.type]||event.type);
   if(['xp','ground-loot','item','pickup'].includes(event.type))markProgress();
   if(event.type==='style'){style=event.style;refreshHud();}
+  else if(event.type==='release'&&event.name)feedback(event.name+' released.');
   else if(event.type==='hit')chat.record(event.style.toUpperCase()+' hit · '+event.damage+' damage','Game');
   else if(event.type==='miss')feedback('Miss');
   else if(event.type==='defeated')feedback(event.name+' defeated');
   else if(event.type==='adventure'){markProgress();itemUi?.render();refreshHud();if(!event.reason.startsWith('Used '))feedback(event.reason);}
-  else if(event.type==='adventure-notice'||event.type==='action-cancelled')feedback(event.reason);
+  else if(event.type==='action-cancelled')feedback((event.name?event.name+' cancelled: ':'')+event.reason);
+  else if(event.type==='adventure-notice')feedback(event.reason);
   else if(event.type==='xp'){
    refreshHud();$('classic-session-xp').textContent='Session XP +'+event.amount+' ('+event.style+')';
   }else if(event.type==='warning')feedback('Enemy attack incoming — MOVE or DODGE!');

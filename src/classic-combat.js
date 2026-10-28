@@ -530,9 +530,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  function drain(){eventCursor=0;return events.splice(0,events.length);}
  function abilityAvailability(ability){
   const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability);
-  const valid=validateAttack(playerForAction,style,styleWeapon(),ability);
+  const weapon=styleWeapon(),valid=validateAttack(playerForAction,style,weapon,ability);
   const reason=(cooldowns.get(id)||0)>time?'Ability is cooling down.':valid.ok?null:valid.reason;
-  return {available:!reason,unavailableReason:reason};
+  return {...abilityDetails(style,weapon,ability,valid.targets?.length||0,!!adventureSystem),available:!reason,unavailableReason:reason};
  }
  function getState(){
   const weapon=styleWeapon(),maxHp=maxHealth(levelFromXp(data.xp.vitality).level);
@@ -545,7 +545,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    reach:weapon?.reach||0,
    abilities:skills().map((a,index)=>a?{index,id:a.id,name:a.name,kind:a.kind,
     cooldownEnd:cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),a))||0,
-    cooldown:a.cooldown||0,...abilityDetails(style,weapon,a,validTargets(playerForAction,weapon,a).length,!!adventureSystem),...abilityAvailability(a)}:null),
+    cooldown:a.cooldown||0,...abilityAvailability(a)}:null),
    monsters:monsters.map(e=>({...e,warning:e.warning?{...e.warning}:null})),
    projectiles:projectiles.map(p=>({x:p.x,z:p.z,direction:{...p.direction},kind:p.kind,style:p.source.style,family:p.source.weapon?.family,abilityId:p.ability?.id||null,effect:abilityEffect(p.source.style,p.source.weapon,p.ability?.id?p.ability:null),travelled:p.travelled})),
    progression:{...data.xp},defeated:data.defeated||0,

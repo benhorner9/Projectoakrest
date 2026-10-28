@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [classic, classic-navigation, classic-camera, classic-creator, classic-free-combat, classic-combat-overhaul, classic-combat-impacts, classic-combat-engagement, classic-equipment-ui, classic-framed, classic-hud, classic-save, adventure, rebirth-world, rebirth-sprites, rebirth-touch, rebirth-feedback, adventure-complete]
+        suite: [classic, classic-navigation, classic-camera, classic-creator, classic-free-combat, classic-combat-overhaul, classic-combat-impacts, classic-combat-engagement, classic-abilities, classic-equipment-ui, classic-framed, classic-hud, classic-save, adventure, rebirth-world, rebirth-sprites, rebirth-touch, rebirth-feedback, adventure-complete]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

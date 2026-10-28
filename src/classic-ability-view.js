@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+const supportedEffects=new Set(['heavy-slash','piercing-arrow','ice-shard','heal']);
 /** One reusable tell and release arc. Reads authoritative state, never damage. */
 export function createClassicAbilityView(scene,{reducedMotion=false}={}){
  const ring=new THREE.RingGeometry(.85,1,32);
@@ -12,9 +13,8 @@ export function createClassicAbilityView(scene,{reducedMotion=false}={}){
   shield.visible=state.hp>0&&state.shieldUntil>state.time;
   if(shield.visible){shieldMaterial.color.set(state.shieldStyle==='magic'?'#9ee3ed':'#edc496');shield.position.set(player.x,.12,player.z);shield.scale.setScalar(1.15);
    shieldMaterial.opacity=.18+.16*Math.min(1,state.shieldUntil-state.time);}
-  const supported=e=>['heavy-slash','piercing-arrow','ice-shard','heal'].includes(e);
-  const a=state.action,r=state.lastRelease,duration=r?.effect==='heal'?.65:.28,preparing=supported(a?.effect),
-   released=supported(r?.effect)&&state.time>=r.time&&state.time-r.time<duration;
+  const a=state.action,r=state.lastRelease,duration=r?.effect==='heal'?.65:.28,preparing=supportedEffects.has(a?.effect),
+   released=supportedEffects.has(r?.effect)&&state.time>=r.time&&state.time-r.time<duration;
   tell.visible=state.hp>0&&(preparing||released);phase=tell.visible?(preparing?'prepare':'release'):null;
   if(!tell.visible)return;
   const action=preparing?a:r,origin=preparing?player:r,target=state.target,melee=action.effect==='heavy-slash';
