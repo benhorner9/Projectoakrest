@@ -4,6 +4,8 @@ import {ADVENTURE_TARGETS,ADVENTURE_PATHS,ADVENTURE_TREES,ADVENTURE_WALLS,DUNGEO
 import {makeClassicActor} from './classic-sprites.js';
 import {createClassicQuestBeacon} from './classic-quest-beacon.js';
 import {QUEST_GIVER_IDS} from './classic-quest-indicators.js';
+import {groundPolygons} from './classic-terrain-view.js';
+import {terrainVariation,terrainPatch,organicRoadPolygons,trailDetailPolygons,OAKREST_PALETTE} from './classic-art-direction.js';
 /** Lightweight shared geometry; scene geometry and map use the same content anchors. */
 export function createAdventureWorld(scene){
  const root=new THREE.Group();scene.add(root);
@@ -16,16 +18,47 @@ export function createAdventureWorld(scene){
   const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthWrite:false}));sprite.scale.set(6.5,.82,1);sprite.position.set(x,y,z);root.add(sprite);return sprite;
  }
- for(const g of ADVENTURE_SCENERY.ground)box(g.x,g.y,g.z,g.w,g.h,g.d,g.color);
+ // Undulating vertex-colour meshes replace giant hard-edged rectangular grass slabs.
+ // Geometry remains below the fixed gameplay plane so combat and navigation stay authoritative.
+ for(const [index,g] of ADVENTURE_SCENERY.ground.entries()){
+  const geometry=new THREE.PlaneGeometry(g.w,g.d,
+   Math.max(4,Math.ceil(g.w/3)),Math.max(4,Math.ceil(g.d/3)));
+  geometry.rotateX(-Math.PI/2);geometry.translate(g.x,0,g.z);
+  const positions=geometry.attributes.position,colors=[];
+  const base=new THREE.Color(g.color),forest=new THREE.Color('#718b68'),
+   gravel=new THREE.Color('#9d9976');
+  for(let i=0;i<positions.count;i++){
+   const x=positions.getX(i),z=positions.getZ(i),n=terrainVariation(x,z),p=terrainPatch(x,z);
+   positions.setY(i,-.037+index*.004+(p-.5)*.009);
+   const c=base.clone().lerp(index===3?gravel:forest,n*.27).lerp(base,p*.12);
+   colors.push(c.r,c.g,c.b);
+  }
+  geometry.computeVertexNormals();
+  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  const plane=new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+  plane.name='oakrest-frontier-ground-'+index;root.add(plane);
+ }
  for(const [i,r] of DUNGEON_ROOMS.entries()){
   box(0,-.025,(r.minZ+r.maxZ)/2,33,.05,r.maxZ-r.minZ,ADVENTURE_SCENERY.roomColours[i]);
   label(r.name,0,r.minZ+4,4);
   for(const x of [-14,14]){box(x,.4,r.minZ+8,1.2,.8,1.2,'#8b927d');const flame=new THREE.Mesh(new THREE.OctahedronGeometry(.4),mat('#bdc78b'));flame.position.set(x,1.4,r.minZ+8);root.add(flame);}
  }
- for(const path of ADVENTURE_PATHS)for(let i=1;i<path.length;i++){
-  const [x1,z1]=path[i-1],[x2,z2]=path[i],dx=x2-x1,dz=z2-z1;
-  const road=box((x1+x2)/2,.015,(z1+z2)/2,3.6,.04,Math.hypot(dx,dz),'#a08e6b');road.rotation.y=Math.atan2(dx,dz);
+ // Frontier lanes are now real continuous dirt paths, not rectangular boxes at every bend.
+ const outerPaths=ADVENTURE_PATHS.filter(path=>path[0][1]<195);
+ const cavePaths=ADVENTURE_PATHS.filter(path=>path[0][1]>=195);
+ for(const [paths,width,y,col,name] of [
+  [outerPaths,6.4,.002,OAKREST_PALETTE.verge,'frontier-grass-verge'],
+  [outerPaths,5.1,.008,OAKREST_PALETTE.earth,'frontier-track-shoulder'],
+  [outerPaths,3.55,.017,OAKREST_PALETTE.path,'frontier-packed-track'],
+  [cavePaths,4.15,.014,'#697671','hollow-stone-path'],
+  [cavePaths,2.7,.023,'#8d9689','hollow-worn-centre']
+ ]){
+  const mesh=groundPolygons(organicRoadPolygons(paths,width),y,col);
+  mesh.name=name;root.add(mesh);
  }
+ const patches=trailDetailPolygons(outerPaths);
+ const gravel=groundPolygons(patches.gravel,.027,OAKREST_PALETTE.gravel);
+ gravel.name='frontier-scattered-gravel';root.add(gravel);
  for(const w of ADVENTURE_WALLS){box(w.x,1.4,w.z,w.w,2.8,w.d,'#65716b');box(w.x,2.85,w.z,w.w+.2,.15,w.d+.2,'#889584');}
  // The creek runs beside, rather than across, its accessible investigation path.
  for(const creek of ADVENTURE_SCENERY.creek)box(creek.x,creek.y,creek.z,creek.w,creek.h,creek.d,creek.color);
