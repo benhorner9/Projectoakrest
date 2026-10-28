@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import {findClassicPath,solidAt} from '../src/classic-presentation.js';
 import {createClassicNavigation} from '../src/classic-navigation.js';
 
+// Legacy route sample points that landed inside a rear shelf are now intentionally blocked.
+// These equivalent reachable samples remain outside the newly solid furniture.
 const routes=[
  {start:{x:33.51467255316675,z:80.66817809361964},end:{x:19.108386799693108,z:10.675558201037347}},
  {start:{x:23.61833834834397,z:28.653555908240378},end:{x:-13.645832676440477,z:-9.769098055548966}},
- {start:{x:-31.522243877872825,z:-1.8584601720795035},end:{x:-25.04135201498866,z:86.86542942654341}},
+ {start:{x:-23.5,z:-2},end:{x:-25.04135201498866,z:86.86542942654341}},
  {start:{x:7.205559415742755,z:37.16214158106595},end:{x:31.350497715175152,z:.760787664912641}},
- {start:{x:-21.80835640244186,z:17.843970456160605},end:{x:-34.83451606705785,z:74.4918931601569}},
+ {start:{x:-21.80835640244186,z:17.843970456160605},end:{x:-23,z:74.4918931601569}},
  {start:{x:0,z:39},end:{x:-30,z:14}},
  {start:{x:0,z:39},end:{x:0,z:195}}
 ];
