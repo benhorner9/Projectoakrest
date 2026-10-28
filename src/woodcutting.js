@@ -1,4 +1,5 @@
 import {BAG_MIN_SLOTS,inventoryKeyList} from './item-slot-layout.js';
+import {CURRENT_SKILL_CAP} from './skill-cap.js';
 
 /** Data-driven Woodcutting definitions: no arbitrary item rarity. */
 export const TREE_SPECIES=Object.freeze([
@@ -37,14 +38,15 @@ for(let level=1;level<99;level++){
 }
 export const WOODCUTTING_LEVEL_XP=Object.freeze(levelThresholds);
 export const WOODCUTTING_MAX_XP=200000000;
+export const WOODCUTTING_CHAPTER_XP_CAP=WOODCUTTING_LEVEL_XP[CURRENT_SKILL_CAP];
 export function woodcuttingLevel(xp){
  const safe=Math.max(0,Math.min(WOODCUTTING_MAX_XP,Number(xp)||0));
  let level=1;
- while(level<99&&safe>=WOODCUTTING_LEVEL_XP[level+1])level++;
- const next=level===99?WOODCUTTING_LEVEL_XP[99]:WOODCUTTING_LEVEL_XP[level+1];
+ while(level<CURRENT_SKILL_CAP&&safe>=WOODCUTTING_LEVEL_XP[level+1])level++;
+ const next=level===CURRENT_SKILL_CAP?WOODCUTTING_LEVEL_XP[CURRENT_SKILL_CAP]:WOODCUTTING_LEVEL_XP[level+1];
  const previous=WOODCUTTING_LEVEL_XP[level];
  return {level,totalXp:safe,required:next,remaining:Math.max(0,next-safe),
-  progress:level===99?1:(safe-previous)/(next-previous),maxed:level===99};
+  progress:level===CURRENT_SKILL_CAP?1:(safe-previous)/(next-previous),maxed:level===CURRENT_SKILL_CAP};
 }
 /** Matches the Combat skills card/detail XP units while keeping the slower Woodcutting curve. */
 export function woodcuttingProgress(xp){
@@ -109,7 +111,8 @@ export function chopOnce(data,state,time,random=Math.random){
  const mats=data.inventory.materials;
  mats[eligible.tree.logId]=(mats[eligible.tree.logId]||0)+1;
  const previous=eligible.level;
- data.professions.woodcuttingXp=Math.min(WOODCUTTING_MAX_XP,(data.professions.woodcuttingXp||0)+eligible.tree.xp);
+ const existingXp=data.professions.woodcuttingXp||0;
+ data.professions.woodcuttingXp=Math.max(existingXp,Math.min(WOODCUTTING_CHAPTER_XP_CAP,existingXp+eligible.tree.xp));
  state.logs--;
  let respawnSeconds=0;
  if(state.logs===0){
@@ -117,7 +120,7 @@ export function chopOnce(data,state,time,random=Math.random){
   state.fallAt=time;
   state.respawnAt=time+respawnSeconds;
  }
- return {ok:true,success:true,logId:eligible.tree.logId,xp:eligible.tree.xp,
+ return {ok:true,success:true,logId:eligible.tree.logId,xp:data.professions.woodcuttingXp-existingXp,
   levelUp:woodcuttingLevel(data.professions.woodcuttingXp).level>previous,
   newLevel:woodcuttingLevel(data.professions.woodcuttingXp).level,
   depleted:state.logs===0,respawnSeconds,remaining:state.logs,chance,axe:eligible.axe};

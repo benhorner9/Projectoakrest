@@ -4,8 +4,8 @@ import {cloneDropTables,DEFAULT_DROP_TABLES,rollDropTable,readDropTables,sanitiz
 import {createMonsterDrops,saveGroundDrops,collectDrop} from '../src/loot.js';
 import {freshCharacterSave} from '../src/rules.js';
 import {isDropEditorAllowed} from '../src/drop-editor.js';
-test('defaults preserve all original loot weights and coin amounts',()=>{
- const expected={mossling:[100,65,8],boar:[100,78,13,7],bandit:[100,100,19,9]};
+test('defaults preserve original weights and add equivalent magic and ranged upgrade opportunities',()=>{
+ const expected={mossling:[100,65,8],boar:[100,78,13,7],bandit:[100,100,19,19,9,9,9]};
  for(const [monster,chances] of Object.entries(expected)){
   assert.deepEqual(DEFAULT_DROP_TABLES[monster].map(e=>e.chancePercent),chances);
   const drops=rollDropTable(monster,()=>0);

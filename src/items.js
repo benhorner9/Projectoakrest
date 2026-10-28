@@ -12,7 +12,7 @@ const add=(id,kind,title,legacy,accent,shape,extra={})=>{
 add('currency.coins','coins','Gold Coins',{kind:'coins',itemId:'coins'},'#eed077','coin');
 const matColours={'moss-fibre':'#81ba73','boar-hide':'#b98560','bandit-token':'#d6aa65'};
 const matShapes={'moss-fibre':'fibre','boar-hide':'hide','bandit-token':'token'};
-for(const mat of Object.values(MATERIAL_DROPS))add('material.'+mat.id,'material',mat.title,{kind:'material',itemId:mat.id},matColours[mat.id]||'#8abf91',matShapes[mat.id]||'fibre');
+for(const mat of Object.values(MATERIAL_DROPS))add('material.'+mat.id,'material',mat.title,{kind:'material',itemId:mat.id},matColours[mat.id]||'#8abf91',matShapes[mat.id]||'fibre',{description:({'moss-fibre':'Weave robes and an apprentice focus, inscribe ember scrolls or blend tonics.','boar-hide':'Stitch hardened leather or bind a bronze quiver.','bandit-token':'Proof of a defeated bandit. Exchange five with Elowen for field supplies.'})[mat.id]});
 const armourColours={traveller:'#7ba19b',leather:'#b1835c',plate:'#b5cad0'};
 for(const [id,a] of Object.entries(ARMOUR))add('armour.'+id,'armour',a.title,{kind:'armour',itemId:id},armourColours[id]||'#9cacc0','armour',{description:a.description});
 const styleColours={melee:'#c3c9ca',magic:'#8aa8df',ranged:'#c99c68'};
@@ -31,7 +31,7 @@ for(const item of Object.values(SLOT_ITEMS)){
 // All seven logs come only from Woodcutting, never monster drops.
 for(const tree of TREE_SPECIES)add('material.'+tree.logId,'material',tree.name+' Logs',
  {kind:'material',itemId:tree.logId},tree.bark,'logs',
- {dropAllowed:false,description:'Logs cut from a '+tree.name+' tree. A resource for future crafting.'});
+ {dropAllowed:false,description:tree.id==='softwood'?'Fletch arrows and bows, inscribe frost scrolls, or reinforce equipment. Sell five to Darrin for eight coins.':'Timber cut from a '+tree.name+' tree. Bank it while training Woodcutting.'});
 // This scroll already exists as a persisted onboarding balance, not as a general monster drop.
 catalogue.push(Object.freeze({id:'scroll.teleport',kind:'scroll',title:'Teleportation Scroll',legacy:Object.freeze({kind:'scroll',itemId:'teleport'}),accent:'#9bcfe6',shape:'scroll',dropAllowed:false}));
 for(const [id,[title,description,shape]] of Object.entries(ADVENTURE_MATERIALS))add('material.'+id,'material',title,{kind:'material',itemId:id},'#bdad85',shape,{description,dropAllowed:['hollow-shard','warden-heart'].includes(id)});

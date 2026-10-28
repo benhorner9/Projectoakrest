@@ -28,14 +28,14 @@ export function setupClassicSkills({combat,windowUi}){
   make(detail,'h2','',current.icon+' '+current.name);
   make(detail,'p','skill-description',current.description);
   make(detail,'div','skill-progress-heading',
-   'Level '+current.level+' / 99 · '+current.totalXp.toLocaleString('en-GB')+' XP');
+   'Level '+current.level+' / '+current.cap+' · '+current.totalXp.toLocaleString('en-GB')+' XP');
   const track=make(detail,'div','skill-xp-track');
   const fill=make(track,'div');fill.style.width=(100*current.progress).toFixed(2)+'%';
-  make(detail,'p','skill-xp-caption',current.maxed?'Level 99 reached':
+  make(detail,'p','skill-xp-caption',current.maxed?'CURRENT LEVEL CAP REACHED — '+current.cap+'/'+current.cap:
    current.needed.toLocaleString('en-GB')+' XP to level '+(current.level+1));
   make(detail,'h3','',current.next?'NEXT UNLOCK · Level '+current.next.level:'UNLOCKED METHODS');
   if(current.next)make(detail,'p','skill-next',current.next.name);
-  make(detail,'h3','','LEVEL UNLOCKS');
+  make(detail,'h3','','AVAILABLE THIS CHAPTER — LEVELS 1–'+current.cap);
   if(!current.milestones.length)make(detail,'p','skill-description','More training methods will arrive as Oakrest grows.');
   for(const m of current.milestones){
    const unlocked=m.level<=current.level;
@@ -45,6 +45,21 @@ export function setupClassicSkills({combat,windowUi}){
    make(text,'strong','',m.name);
    make(text,'small','',m.type+' · '+m.detail);
    make(row,'span','skill-unlock-status',unlocked?'✓':'○');
+  }
+  // Future entries are lore/teasers only: not used by crafting, gathering,
+  // item requirements or the authoritative unlock table.
+  if(current.future.length){
+   make(detail,'h3','skill-future-heading','BEYOND THE HORIZON');
+   make(detail,'p','skill-description skill-future-intro',
+    'Sealed until a future level-cap expansion. Preview only — cannot unlock yet.');
+   for(const m of current.future){
+    const row=make(detail,'div','classic-skill-unlock future-preview');
+    make(row,'span','skill-unlock-level','LV '+m.level);
+    const copy=make(row,'div','skill-unlock-text');
+    make(copy,'strong','',m.name);
+    make(copy,'small','',m.detail);
+    make(row,'span','skill-unlock-status','🔒');
+   }
   }
   if(current.id==='fletching'||current.id==='inscription'||current.id==='cooking')
    make(detail,'p','skill-hint','Make these items in BAG → MAKE. No crafting table needed.');

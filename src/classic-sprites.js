@@ -19,7 +19,7 @@ function polygon(ctx,color,points){
  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fill();
 }
 function outline(ctx,x,y,w,h,c='#2c2b2a'){fill(ctx,c,x-2,y-2,w+4,h+4);}
-function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs,amulet,ring,outfit,hairstyle,sex,pose}){
+function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,weapon,arrows,chest,legs,amulet,ring,outfit,hairstyle,sex,pose,workSkill}){
  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
  const direction=mirroredDirection(dir);dir=direction.dir;
@@ -98,8 +98,41 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  // Equipment drawn after hands ensures correctly attached 2D silhouette.
  const wx=grip.weapon.x,wy=grip.weapon.y;
  c.save();
- if(style==='melee'&&weapon!=='none'){c.translate(grip.hand.x,grip.hand.y);c.rotate(grip.angle);c.translate(-grip.hand.x,-grip.hand.y);}
- if(weapon!=='none'&&style==='melee'){
+ if((style==='melee'&&weapon!=='none')||workSkill){c.translate(grip.hand.x,grip.hand.y);c.rotate(grip.angle);c.translate(-grip.hand.x,-grip.hand.y);}
+ if(workSkill){
+  // A temporary held work tool, never a weapon added to the player's loadout.
+  // All seven current non-combat professions have their own visible silhouette.
+  const handle='#8f6a49',steel='#c9d3d0',shine='#e7e6ce';
+  if(workSkill==='woodcutting'){
+   fill(c,handle,wx-3,wy-16,7,66);
+   polygon(c,steel,[[wx-5,wy-14],[wx+22,wy-24],[wx+21,wy-2],[wx-5,wy-2]]);
+   fill(c,shine,wx+15,wy-17,4,9);
+  }else if(workSkill==='mining'){
+   fill(c,handle,wx-3,wy-22,7,71);
+   polygon(c,steel,[[wx-28,wy-24],[wx+27,wy-27],[wx+9,wy-15],[wx-10,wy-15]]);
+   polygon(c,shine,[[wx-28,wy-24],[wx-12,wy-31],[wx-9,wy-21]]);
+  }else if(workSkill==='foraging'){
+   fill(c,handle,wx-3,wy+3,7,42);
+   c.strokeStyle=steel;c.lineWidth=7;c.beginPath();c.arc(wx+8,wy-16,19,Math.PI*.65,Math.PI*1.83);c.stroke();
+   polygon(c,'#92b989',[[wx+19,wy-9],[wx+13,wy-30],[wx+30,wy-23]]);
+  }else if(workSkill==='blacksmithing'){
+   fill(c,handle,wx-3,wy-10,7,62);
+   fill(c,steel,wx-23,wy-20,43,19);fill(c,shine,wx-20,wy-17,35,5);
+  }else if(workSkill==='fletching'){
+   fill(c,handle,wx-2,wy-7,5,41);
+   polygon(c,steel,[[wx-3,wy-8],[wx+18,wy-20],[wx+16,wy-2],[wx-3,wy+8]]);
+   fill(c,'#d6bd86',wx-29,wy+24,32,4);
+  }else if(workSkill==='inscription'){
+   fill(c,'#ecddb3',wx-29,wy+18,42,19);
+   fill(c,'#b48c60',wx-30,wy+18,4,19);fill(c,'#b48c60',wx+10,wy+18,4,19);
+   polygon(c,'#e8f3d6',[[wx,wy-18],[wx+7,wy-32],[wx+9,wy-10]]);
+   fill(c,'#6c9289',wx+2,wy-7,3,25);
+  }else if(workSkill==='cooking'){
+   c.fillStyle='#927b61';c.beginPath();c.ellipse(wx-10,wy+30,26,12,0,0,Math.PI*2);c.fill();
+   c.fillStyle='#d5c3a1';c.beginPath();c.ellipse(wx-10,wy+27,20,7,0,0,Math.PI*2);c.fill();
+   fill(c,handle,wx,wy-9,5,46);
+  }
+ }else if(weapon!=='none'&&style==='melee'){
   if(/dagger/i.test(weapon)){
    fill(c,'#e3ded1',wx-2,wy-3,4,25);fill(c,'#8a6b4a',wx-2,wy+20,4,12);
   }else if(/axe/i.test(weapon)){
@@ -162,7 +195,7 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
 function keyFor(config,dir,step){
  return [config.coat,config.skin,config.hair,config.outfit,config.hairstyle,config.sex,
   config.helm,config.shield,config.boots,config.offhand,config.arrows,config.amulet,config.ring,
-  config.weapon,config.chest,config.legs,config.style,config.pose,dir,step].join('|');
+  config.weapon,config.chest,config.legs,config.style,config.pose,config.workSkill,dir,step].join('|');
 }
 export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',hair='#493529',
  outfit='tunic',hairstyle='short',sex='male',worn={},npc=false,armed=false,npcWeapon='sword'}={}){
@@ -170,14 +203,14 @@ export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',ha
  const sprite=new THREE.Sprite(material);sprite.scale.set(2.65,3.55,1);
  sprite.center.set(.5,0);
  let lastKey='';
- function update({facing={x:0,z:1},cameraOffset,step=0,pose='idle',style:nextStyle=style,worn:nextWorn=worn}={}){
-  sprite.userData.pose=pose;
-  const config={style:nextStyle,coat,skin,hair,outfit,hairstyle,sex,
-   helm:nextWorn.helm||null,shield:!!(nextStyle==='melee'&&nextWorn.offhand),
+ function update({facing={x:0,z:1},cameraOffset,step=0,pose='idle',workSkill=null,style:nextStyle=style,worn:nextWorn=worn}={}){
+  sprite.userData.pose=pose;sprite.userData.workSkill=workSkill;
+  const config={style:workSkill?'melee':nextStyle,workSkill,coat,skin,hair,outfit,hairstyle,sex,
+   helm:nextWorn.helm||null,shield:!!(!workSkill&&nextStyle==='melee'&&nextWorn.offhand),
    offhand:nextWorn.offhand||null,boots:nextWorn.boots||null,arrows:!!nextWorn.arrows,
    amulet:!!nextWorn.amulet,ring:!!nextWorn.ring,
    chest:nextWorn.chest||null,legs:nextWorn.legs||null,pose,
-   weapon:npc?(armed?npcWeapon:'none'):(nextWorn.weapon||'none')};
+   weapon:workSkill?'work-'+workSkill:npc?(armed?npcWeapon:'none'):(nextWorn.weapon||'none')};
   const dir=spriteDirection(facing.x,facing.z,cameraOffset),frame=step%3,key=keyFor(config,dir,frame);
   if(key===lastKey)return;
   if(!textureCache.has(key))textureCache.set(key,renderActor({...config,dir,step:frame}));

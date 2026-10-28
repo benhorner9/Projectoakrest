@@ -1,4 +1,5 @@
-import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_MATERIALS} from './adventure-content.js';
+import {hollowGoals,hollowShardTotal,recipeGuidance} from './classic-progression.js';
+import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_MATERIALS,WATCH_BOUNTIES} from './adventure-content.js';
 import {woodcuttingLevel} from './woodcutting.js';
 import {renderClassicQuestJournal} from './classic-quest-journal.js';
 const el=(tag,text,parent)=>{const e=document.createElement(tag);e.textContent=text;parent?.append(e);return e;};
@@ -79,18 +80,43 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
    btn('The watch hid a treasure vault',()=>act('answer','treasure'));
   }
   if(t.id==='citizen:guard'&&state.catalogue.find(q=>q.id==='seal')?.status==='active')btn('Check my expedition supplies',()=>act('prepare'));
-  if(t.id==='citizen:guard'&&state.catalogue.find(q=>q.id==='hollow')?.status==='completed')btn('Supply the watch · 2 shards',()=>act('contract'));
+  if(t.id==='citizen:guard'){
+   if(state.catalogue.find(q=>q.id==='hollow')?.status==='completed'){
+    el('p','One watch contract per completed expedition: trade 2 shards for 35 coins and 3 rations. Unclaimed contracts: '+Math.max(0,state.clears-state.contracts)+'.',content);
+    btn('Supply the watch · 2 shards',()=>act('contract'));
+   }
+   const tokens=combat.sandboxSave().inventory.materials['bandit-token']||0;
+   el('h3','Bandit bounties',content);
+   el('p','Bring 5 bandit tokens for a supply pack. In your bag: '+tokens+'.',content);
+   for(const [id,reward] of Object.entries(WATCH_BOUNTIES)){
+    const b=btn(reward.title+' · 5 tokens',()=>act('bounty',id));b.dataset.bounty=id;b.disabled=tokens<5;
+   }
+  }
   if(t.id==='adventure:stump')btn('Calm guardian · 1 restoration seal',()=>act('calm'));
   if(t.id==='adventure:spring')btn('Rest and recover Health',()=>act('rest'));
   if(t.kind==='resource'||t.kind==='grove')btn(t.kind==='grove'||t.material==='softwood-logs'?'Chop softwood':'Gather resource',()=>act('gather'));
+  if(t.kind==='resource'&&t.material!=='softwood-logs')btn('Gather 5 · stop if you move or take damage',()=>act('gather',{batches:5}));
   if(t.kind==='station'){
    const data=combat.sandboxSave();
    for(const r of RECIPES.filter(r=>r.station===t.station)){
     const row=el('section','',content);row.className='adventure-recipe';el('strong',r.title,row);
     el('p',Object.entries(r.cost).map(([id,n])=>(ADVENTURE_MATERIALS[id]?.[0]||id)+': '+(data.inventory.materials[id]||0)+' / '+n).join(' · '),row);
-    if(r.profession)el('small',r.profession+' '+woodcuttingLevel(state.skills[r.profession]).level+' / requires '+r.level,row);
-    const b=el('button','Craft',row);b.type='button';b.addEventListener('click',()=>act('craft',r.id));
+    if(r.profession)el('small',recipeGuidance(data,r).training+' · current level '+woodcuttingLevel(state.skills[r.profession]).level,row);
+    const guide=recipeGuidance(data,r);
+    const b=el('button',guide.owned?'Owned':'Craft',row);b.type='button';b.disabled=guide.owned||!guide.ready;b.addEventListener('click',()=>act('craft',r.id));
+    if(r.result.material){const batch=el('button','Craft 5 batches',row);batch.type='button';batch.addEventListener('click',()=>act('craft',{id:r.id,batches:5}));}
    }
+  }
+  if(['entrance','heart'].includes(t.kind)){
+   const goals=el('section','',content);goals.className='adventure-farming';
+   el('h3','Hollow rewards',goals);
+   el('p','Every clear: 1 Warden heart and 4 shards at the heartstone. Pick up guardian loot for '+hollowShardTotal()+' total shards. Restore chamber wards for free healing; refuge bells let you resupply without losing cleared rooms.',goals);
+   for(const goal of hollowGoals(combat.sandboxSave())){
+    el('strong',goal.title+(goal.owned?' · Owned':''),goals);
+    el('p',goal.requirement,goals);
+    el('p',goal.materials.map(m=>m.title+': '+m.bag+'/'+m.required+' in bag'+(m.bank?' ('+m.bank+' banked)':'')).join(' · '),goals);
+   }
+   el('p','Craft from materials in your backpack; metalwork requires Brann’s forge. Each new expedition needs one seal.',goals);
   }
   if(t.kind==='entrance')btn(state.run&&!state.run.complete?'Resume expedition':'Begin expedition · 1 seal',()=>act('enter'));
   if(t.kind==='exit')btn('Return to forest',()=>act('leave'));

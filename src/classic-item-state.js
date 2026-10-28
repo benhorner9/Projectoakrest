@@ -1,3 +1,4 @@
+import {materialUses,materialSource} from './classic-progression.js';
 import {QUICK_ACTIONS,normalizeQuickSlots,assignQuickSlot} from './quick-slots.js';
 import {combatSourceSnapshot} from './gameplay-core.js';
 import {classicWeaponInterval} from './classic-combat-clock.js';
@@ -188,7 +189,7 @@ export function classicPickup(data,player,id){
   return {ok:false,reason:'Your backpack is full. Bank or drop an item first.'};
  commitFields(data.inventory,candidate.inventory);data.coins=candidate.coins;
  data.groundLoot=data.groundLoot.filter(x=>x.id!==id);
- return {ok:true,reason:'Picked up '+item.title};
+ return {ok:true,reason:duplicate?'Already owned '+item.title+' · salvaged for 8 coins':'Picked up '+(drop.amount>1?drop.amount+' × ':'')+item.title};
 }
 export function classicItemDetails(data,id,style){
  const item=getItem(id);if(!item)return null;
@@ -199,6 +200,10 @@ export function classicItemDetails(data,id,style){
   const w=LOADOUTS[legacy.style]?.[legacy.itemId];
   facts.push(['Style',legacy.style],['Hands',w.hands||1],['Requires',legacy.style+' '+w.requiredLevel],
    ['Weapon power',w.basic],['Interval',classicWeaponInterval(w).toFixed(1)+'s'],['Reach',w.reach+'m']);
+  const equippedWeapon=LOADOUTS[legacy.style][data.gear[legacy.style]];
+  const candidateHit=combatSourceSnapshot({...data,gear:{...data.gear,[legacy.style]:legacy.itemId}},legacy.style,w).maxHit;
+  const currentHit=equippedWeapon?combatSourceSnapshot(data,legacy.style,equippedWeapon).maxHit:0;
+  facts.push(['Max basic hit',candidateHit+' ('+(candidateHit-currentHit>=0?'+':'')+(candidateHit-currentHit)+' vs equipped)']);
   allowed=owned(data,item)&&canEquipWeapon(legacy.style,legacy.itemId,data.xp);
   equipped=data.gear[legacy.style]===legacy.itemId;
   action={type:'equip',kind,style:legacy.style,id:equipped?null:legacy.itemId};
@@ -221,7 +226,13 @@ export function classicItemDetails(data,id,style){
    facts.push(['Used by',equippedStyles.length?equippedStyles.map(s=>s.toUpperCase()).join(', '):'Not equipped']);
   }
   action={type:'equip',kind,style:targetStyle,slot:def.slot,id:equipped?null:legacy.itemId};
- }else if(kind==='material')facts.push(['Owned',data.inventory?.materials?.[legacy.itemId]||0]);
+ }else if(kind==='material'){
+  facts.push(['Owned',data.inventory?.materials?.[legacy.itemId]||0]);
+  const source=materialSource(legacy.itemId),uses=materialUses(legacy.itemId);
+  if(source)facts.push(['Find',source]);
+  if(uses.length)facts.push(['Make',uses.join(' · ')]);
+  if(legacy.itemId==='bandit-token')facts.push(['Trade','Elowen: 5 tokens for ammunition, scrolls or rations']);
+ }
  else if(kind==='coins')facts.push(['Owned',data.coins||0]);
  else if(kind==='scroll')facts.push(['Owned',data.onboarding?.teleportScrolls||0]);
  return {item,title:item.title,description:item.description||'An item found in Oakrest.',

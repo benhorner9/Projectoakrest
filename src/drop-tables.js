@@ -7,7 +7,7 @@ const entry=(itemId,chancePercent)=>({itemId,chancePercent});
 const tables={
  mossling:[entry('currency.coins',100),entry('material.moss-fibre',MATERIAL_DROPS.mossling.chance*100),entry('weapon.melee.daggers',8)],
  boar:[entry('currency.coins',100),entry('material.boar-hide',MATERIAL_DROPS.boar.chance*100),entry('armour.leather',13),entry('weapon.ranged.shortbow',7)],
- bandit:[entry('currency.coins',100),entry('material.bandit-token',MATERIAL_DROPS.bandit.chance*100),entry('weapon.ranged.crossbow',19),entry('weapon.melee.forged_sword',9)]
+ bandit:[entry('currency.coins',100),entry('material.bandit-token',MATERIAL_DROPS.bandit.chance*100),entry('weapon.ranged.crossbow',19),entry('weapon.magic.ember',19),entry('weapon.melee.forged_sword',9),entry('weapon.magic.runic_frost',9),entry('weapon.ranged.reinforced_bow',9)]
 };
 export const DEFAULT_DROP_TABLES=Object.freeze(Object.fromEntries(Object.entries(tables).map(([key,entries])=>[key,Object.freeze(entries.map(row=>Object.freeze(row)))])));
 export const cloneDropTables=()=>Object.fromEntries(LOOT_ENEMIES.map(type=>[type,DEFAULT_DROP_TABLES[type].map(row=>({...row}))]));
