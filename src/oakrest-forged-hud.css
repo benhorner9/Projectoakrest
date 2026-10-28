@@ -714,3 +714,14 @@
  #classic-app.oakrest-framed .classic-gear-owned{flex-basis:49px;padding-top:2px}
  #classic-app.oakrest-framed .classic-gear-choices .classic-gear-choice{font-size:7px}
 }
+
+
+/* The right-hand Classic menu is permanent: its tabs switch views, never dismiss it. */
+#classic-app.oakrest-framed #classic-item-close,
+#classic-app.oakrest-framed #classic-skills-close,
+#classic-app.oakrest-framed #classic-quests-close,
+#classic-app.oakrest-framed #classic-map-close,
+#classic-app.oakrest-framed #classic-social-close,
+#classic-app.oakrest-framed #classic-settings-close{
+ display:none!important;
+}
