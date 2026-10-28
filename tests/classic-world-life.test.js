@@ -4,13 +4,20 @@ import * as THREE from 'three';
 import {citizenRoutine} from '../src/classic-world-life.js';
 import {CLASSIC_NPCS,solidAt} from '../src/classic-presentation.js';
 import {batchClassicStatics} from '../src/classic-static-batch.js';
-test('citizen routines stay traversable and within canonical interaction reach',()=>{
+test('stationary staff remain anchored and working citizens traverse unobstructed paths',()=>{
  for(const npc of CLASSIC_NPCS)for(let t=0;t<60;t+=.2){
   const p=citizenRoutine(npc,t,{x:0,z:150});
-  assert.ok(Math.hypot(p.x-npc.x,p.z-npc.z)<1,npc.id);
-  if(['citizen','guard'].includes(npc.role))assert.equal(solidAt(p.x,p.z,.1),false,npc.id);
-  else assert.deepEqual([p.x,p.z],[npc.x,npc.z]);
-  const near=citizenRoutine(npc,t,npc);assert.equal(near.moving,false);
+  if(npc.route?.length>=2){
+   assert.equal(solidAt(p.x,p.z,.1),false,npc.id+' patrol must avoid scenery');
+   const xs=npc.route.map(q=>q[0]),zs=npc.route.map(q=>q[1]);
+   assert.ok(p.x>=Math.min(...xs)-.01&&p.x<=Math.max(...xs)+.01,npc.id+' x in route');
+   assert.ok(p.z>=Math.min(...zs)-.01&&p.z<=Math.max(...zs)+.01,npc.id+' z in route');
+   assert.equal(citizenRoutine(npc,t,npc).moving,p.moving,'player proximity must not fake a walk cycle');
+  }else{
+   assert.deepEqual([p.x,p.z],[npc.x,npc.z],npc.id+' is stationary');
+   assert.equal(p.moving,false,npc.id);
+   assert.equal(citizenRoutine(npc,t,npc).moving,false);
+  }
  }
 });
 test('static batches retain cutaways and interaction anchors and world transforms',()=>{
