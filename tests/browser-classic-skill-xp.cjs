@@ -39,7 +39,7 @@ let browser;
     currentXp:qa.persistentSnapshot().professions.woodcuttingXp};
   });
   assert.ok(result.feedback.labels.includes('+35 Woodcutting XP'),JSON.stringify(result));
-  assert.equal(result.feedback.levelBanner,'Woodcutting 4/99');
+  assert.equal(result.feedback.levelBanner,`Woodcutting 4/${WOODCUTTING_LEVEL_XP.length-1}`);
   assert.equal(result.floatVisible,true);
   assert.equal(result.floatWithin,true,'XP rises within the world canvas instead of over UI');
   assert.equal(result.bannerVisible,true);
