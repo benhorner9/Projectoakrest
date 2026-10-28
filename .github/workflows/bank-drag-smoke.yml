@@ -32,4 +32,4 @@ jobs:
       # 6m30s of the 8m job in run 39940405072 and cancelled the real bank test.
       - run: timeout --signal=TERM --kill-after=10s 2m npx playwright install chromium
       - name: Town bank, shop and drag browser walkthrough
-        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-town.cjs
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-equipment-ui.cjs

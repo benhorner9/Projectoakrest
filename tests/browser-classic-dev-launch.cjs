@@ -1,5 +1,5 @@
-// Player entry route acceptance for the *actual* /oakrest-dev/ link:
-// ensures old 3D homepage offers a visible Classic button and a fresh
+// Canonical Classic entry regression for the *actual* /oakrest-dev/ link:
+// ensures the development home routes directly to Classic and a fresh
 // iPad-like browser can create an adventurer, tap game controls and move.
 const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
@@ -8,17 +8,26 @@ const {chromium,webkit}=require('playwright');
 const engine=process.env.OAKREST_BROWSER||'chromium';
 const root=path.resolve(__dirname,'..'),stage=path.join(root,'qa','classic-launch-host');
 let server,browser;
-const url='http://127.0.0.1:5278/';
+const base=process.env.OAKREST_TEST_URL||'http://127.0.0.1:5278/oakrest-dev/';
 (async()=>{
  try{
+  const {developmentBase,requireCommit}=await import('../scripts/development-release.mjs');
+  developmentBase(base);
+  if(process.env.OAKREST_TEST_URL){
+   requireCommit(process.env.OAKREST_COMMIT);
+   const res=await fetch(base+'build-meta.json?entry='+Date.now(),{redirect:'error',cache:'no-store'});
+   assert.equal(res.status,200);
+   const meta=await res.json();
+   assert.equal(meta.commit,process.env.OAKREST_COMMIT,'normal route must serve the pinned release');
+   assert.equal(meta.environment,'development');
+  }else{
   fs.mkdirSync(stage,{recursive:true});
-  for(const game of ['oakrest-dev','oakrest']){
-   const target=path.join(stage,game);
-   fs.rmSync(target,{recursive:true,force:true});
-   fs.cpSync(path.join(root,'dist'),target,{recursive:true});
-  }
+  const target=path.join(stage,'oakrest-dev');
+  fs.rmSync(target,{recursive:true,force:true});
+  fs.cpSync(path.join(root,'dist'),target,{recursive:true});
   server=spawn('python3',['-m','http.server','5278','--bind','127.0.0.1'],{cwd:stage,stdio:'ignore'});
   await new Promise(resolve=>setTimeout(resolve,950));
+  }
   browser=await ({chromium,webkit}[engine]).launch({
    headless:true,...(engine==='chromium'?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{})
   });
@@ -30,30 +39,11 @@ const url='http://127.0.0.1:5278/';
   page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
   page.on('response',res=>{if(res.status()>=400)httpErrors.push([res.status(),res.url()]);});
   page.on('requestfailed',req=>failedRequests.push(req.url()+': '+req.failure()?.errorText));
-  // This acceptance case tests the real inline home link -> Classic startup.
-  // On CI's software-rendered WebKit container the *separate* legacy 3D
-  // homepage can monopolise the UI thread before link visibility can be
-  // queried. Cover legacy 3D in its own Core/Greenwood browser gates; avoid
-  // loading only that legacy module here, never Classic's actual engine.
-  if(engine==='webkit')await page.route('**/src/main.js*',route=>
-   route.fulfill({status:200,contentType:'text/javascript',body:'// Classic link QA: legacy 3D runtime covered separately'}));
-  await page.goto(url+'oakrest/',{waitUntil:'domcontentloaded'});
-  assert.equal(await page.locator('#oakrest-classic-launch').isVisible(),false,
-   'public production must not advertise an unshipped Classic game');
-  await page.goto(url+'oakrest-dev/',{waitUntil:'domcontentloaded'});
-  const launcher=page.locator('#oakrest-classic-launch');
-  assert.equal(await launcher.isVisible(),true,'dev homepage must link to playable Classic');
-  assert.equal(await launcher.getAttribute('href'),'./classic.html');
-  const hit=await launcher.boundingBox();
-  assert.ok(hit?.height>=44,'Classic launch button is easy to tap on iPad');
-  const tapX=hit.x+hit.width/2,tapY=hit.y+hit.height/2;
-  // Measure the visible link and send a real touch at its screen coordinates.
-  // WebKit's locator.tap actionability wait can stall on the animated home
-  // page, despite the anchor itself remaining visible and hittable.
-  const uncovered=await page.evaluate(({x,y})=>!!document.elementFromPoint(x,y)?.closest('#oakrest-classic-launch'),{x:tapX,y:tapY});
-  assert.equal(uncovered,true,'Classic launch touch target must be unobstructed');
-  await page.touchscreen.tap(tapX,tapY);
-  await page.waitForURL(/\/oakrest-dev\/classic\.html/);
+  // The default development URL now opens Classic directly, never the
+  // retired third-person game; QA params and save namespace are preserved.
+  await page.goto(base+'?entry=normal#village',{waitUntil:'domcontentloaded'});
+  await page.waitForURL(/\/oakrest-dev\/classic\.html\?entry=normal#village/);
+  assert.equal(await page.locator('#game').count(),0,'legacy 3D game is absent');
   await page.waitForFunction(()=>!!document.querySelector('#classic-game canvas'),{timeout:30000}).catch(async err=>{
    const state=await page.evaluate(()=>({
     url:location.href,title:document.title,stage:document.readyState,
@@ -89,7 +79,9 @@ const url='http://127.0.0.1:5278/';
   assert.equal(await page.locator('#classic-name').textContent(),'Ipad Tester');
   // Public players launch without ?qa. Only enable the developer QA helpers
   // after demonstrating that normal character creation works unassisted.
-  await page.goto(url+'oakrest-dev/classic.html?qa=1',{waitUntil:'domcontentloaded'});
+  const identity=await page.evaluate(()=>localStorage.getItem('oakrest-dev-active-character'));
+  assert.ok(identity,'fresh character has a persistent identity');
+  await page.goto(base+'?qa=1',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000}).catch(async err=>{
    const state=await page.evaluate(()=>({url:location.href,canvas:!!document.querySelector('#classic-game canvas'),
     fatal:document.getElementById('classic-error')?.hidden,
@@ -100,6 +92,9 @@ const url='http://127.0.0.1:5278/';
   assert.equal(await page.locator('#oakrest-chat').isVisible(),true);
   assert.equal(await page.locator('#oakrest-action-deck').isVisible(),true);
   assert.equal(await page.locator('#classic-item-window').isVisible(),true);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-dev-active-character')),identity,
+   'normal entry keeps the same saved character');
+  assert.equal(await page.locator('#classic-name').textContent(),'Ipad Tester');
   await page.locator('[data-style=magic]').tap();
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'magic');
   assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
@@ -126,9 +121,60 @@ const url='http://127.0.0.1:5278/';
   await page.mouse.up();
   assert.ok(Math.abs(after.z-before.z)+Math.abs(after.x-before.x)>.02,
    'new player can move using the joystick with an actual captured pointer');
+  // Earn the welcome reward and training kit through the mounted simulation;
+  // use QA travel/time helpers, never inject coins, XP, damage or quest flags.
+  await page.evaluate(async()=>{
+   oakrestClassicQA.pauseAutomaticLoop();
+   const {findClassicInteractable}=await import('./src/classic-interactions.js');
+   const act=(kind,id)=>{
+    const t=findClassicInteractable(id);oakrestClassicQA.teleport(t.x,t.z-1.6);
+    const result=oakrestClassicQA.adventureAction(kind,id);
+    if(!result?.ok)throw Error(JSON.stringify({kind,id,result}));
+   };
+   act('accept','citizen:guard');
+   for(const id of ['service:bank','service:store','service:forester']){
+    const t=findClassicInteractable(id);oakrestClassicQA.teleport(t.x,t.z-1);
+    if(!oakrestClassicQA.selectTarget(id))throw Error('Cannot visit '+id);
+   }
+   act('finish','citizen:guard');act('accept','adventure:rowan');
+  });
+  for(const style of ['melee','ranged','magic']){
+   await page.locator('[data-style='+style+']').tap();
+   const hit=await page.evaluate(style=>{
+    const qa=oakrestClassicQA;qa.teleport(-1,71.3);
+    qa.advance(2);
+    if(!qa.lockMonster('practice'))throw Error('Cannot select training dummy');
+    const hp=()=>qa.combatState().monsters.find(m=>m.id==='practice').hp;
+    const before=hp();
+    for(let i=0;i<20&&hp()===before;i++)qa.advance(.6);
+    return hp()<before;
+   },style);
+   assert.equal(hit,true,style+' must land a real hit');
+  }
+  await page.evaluate(async()=>{
+   const {findClassicInteractable}=await import('./src/classic-interactions.js');
+   const t=findClassicInteractable('adventure:rowan');oakrestClassicQA.teleport(t.x,t.z-1.6);
+   const result=oakrestClassicQA.adventureAction('finish','adventure:rowan');
+   if(!result?.ok)throw Error('Three-style training did not complete: '+JSON.stringify(result));
+   oakrestClassicQA.teleport(-30,14);
+  });
+  // Persist a real bank transaction, then reload through the normal entry.
+  const coins=await page.evaluate(()=>oakrestClassicQA.itemState().coins);
+  assert.ok(coins>=1,'welcome and training earn spendable coins');
+  const deposited=await page.evaluate(()=>oakrestClassicQA.itemAction({type:'bank',kind:'coins',direction:'deposit',quantity:1}));
+  assert.equal(deposited.ok,true);
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
+  await page.goto(base+'?qa=1',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!!window.oakrestClassicQA);
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.itemState().coins),coins-1);
+  assert.equal(await page.evaluate(()=>oakrestClassicQA.itemState().bankCoins),1);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-dev-active-character')),identity);
+  fs.mkdirSync(path.join(root,'qa'),{recursive:true});
+  await page.screenshot({path:path.join(root,'qa','classic-direct-release-'+engine+'.png')});
   assert.deepEqual(errors,[],'fresh player must not encounter JS exceptions');
   const critical=failedRequests.filter(v=>/\.js|\.css|\.html/.test(v));
   assert.deepEqual(critical,[],'necessary game assets must load');
-  console.log('PASS '+engine+': dev homepage -> Classic -> create -> iPad touch style, chat, inventory, movement. Public entry unchanged.');
+  assert.deepEqual(httpErrors,[],'game assets must return successful HTTP status');
+  console.log('PASS '+engine+': '+base+' -> Classic, fresh creator, saved identity, touch style, quick slots, movement and bank/reload persistence.');
  }finally{await browser?.close();server?.kill();}
 })().catch(err=>{console.error(engine,err);process.exitCode=1;});

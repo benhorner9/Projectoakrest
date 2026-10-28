@@ -35,7 +35,7 @@ jobs:
       # Bound setup separately so apt mirror delays cannot consume visual QA time.
       - run: timeout --signal=TERM --kill-after=10s 3m npx playwright install chromium
       - name: Capture roads and meadows at iPad landscape viewport
-        run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-city-ground.cjs
+        run: timeout --signal=TERM --kill-after=10s 9m node tests/browser-rebirth-world.cjs
       - name: Preserve town surface evidence
         if: always()
         uses: actions/upload-artifact@v4

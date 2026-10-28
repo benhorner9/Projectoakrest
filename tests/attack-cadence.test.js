@@ -43,17 +43,6 @@ test('new weapons require levels, keep family ability slots, and load from saved
  const saved=validSave({xp:{ranged:xpForLevel(3),melee:xpForLevel(7)},gear:{ranged:'shortbow',melee:'greatsword'}});
  assert.equal(saved.gear.ranged,'shortbow');assert.equal(saved.gear.melee,'greatsword');
 });
-test('runtime uses pending windup, actual projectile limits and timing UI',()=>{
- const s=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.ok(s.includes('pendingBasic={style,weapon:data.gear[style],impactAt:t+windup'));
- assert.ok(s.includes('resolveBasicAttack(t)'));
- assert.ok(s.includes('projectileTravel(p.distance, p.speed, dt, p.maxDistance)'));
- assert.ok(s.includes("attackButton.classList.toggle('recovering'"));
- assert.ok(s.includes("const timer=attackCooldown("));
- const h=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- assert.ok(h.includes('id="attack-timer"'));
-});
-
 test('baseline auto-attacks are slightly slower without flattening weapon identities',()=>{
  const melee=LOADOUTS.melee,magic=LOADOUTS.magic,ranged=LOADOUTS.ranged;
  // Deliberate tuning from prior baseline of sword .95s, frost .92s and longbow 1.40s.

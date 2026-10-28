@@ -60,15 +60,3 @@ test('miss and damage rolls stay independent; successful damage remains bounded'
  assert.deepEqual(rollHit({maxHit:23,accuracy:.72,random:rng}),{hit:true,damage:1});
  assert.deepEqual(rollHit({maxHit:23,accuracy:.72,random:rng}),{hit:true,damage:23});
 });
-
-test('hit resolution snapshots equipment/style and still checks physical contact',()=>{
- const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.match(main,/accuracyFor\(source\.level,e\.level,source\.weaponBasic,.*source\.power\)/);
- assert.match(main,/sourceSnapshot\(\)/);
- assert.match(main,/sweptStrikeHit\(/);
- assert.match(main,/segmentWorldHit\(/);
- assert.match(main,/projectileTravel\(/);
- assert.match(main,/e\.type==='dummy'\?1:/);
- assert.match(main,/defenceFor\(data\.armour\[style\]\)\.physical/);
- assert.match(main,/data\.onboarding\?\.area==='tutorial'/);
-});

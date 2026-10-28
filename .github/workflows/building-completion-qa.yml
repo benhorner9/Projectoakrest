@@ -41,7 +41,7 @@ jobs:
       # Avoid unbounded apt mirror provisioning consuming the building test budget.
       - run: timeout --signal=TERM --kill-after=10s 3m npx playwright install chromium
       - name: Capture each facade corner and interior at iPad-size viewport
-        run: OAKREST_BUILDING_SHARD=${{ matrix.shard }} timeout --signal=TERM --kill-after=10s 10m node tests/browser-building-completion.cjs
+        run: OAKREST_BUILDING_SHARD=${{ matrix.shard }} timeout --signal=TERM --kill-after=10s 10m node tests/browser-rebirth-world.cjs
       - name: Preserve 48 building audit screenshots and failure details
         if: always()
         uses: actions/upload-artifact@v4

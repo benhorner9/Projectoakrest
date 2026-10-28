@@ -36,12 +36,3 @@ test('returning enemies must reach home before aggro again',()=>{
  assert.equal(enemyBehaviour('mossling',away,{x:6,z:0},false),'return');
  assert.equal(enemyBehaviour('mossling',{...away,x:0.1},{x:20,z:0},false),'idle');
 });
-test('player and enemy combat levels are visible in HUD and live target labels',()=>{
- const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.ok(html.includes('id="combat-level-value"'));assert.ok(html.includes('id="enemy-level-layer"'));
- assert.ok(main.includes('updateEnemyLevelLabels()'));
- assert.ok(main.includes("ENEMY_COMBAT[aim.type].name+' · Combat Lv '"));
- assert.ok(main.includes('disengageEnemy(e,t)'));
- assert.ok(main.includes('e.warningMesh')||main.includes('cancelEnemyWarning(e)'));
-});

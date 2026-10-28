@@ -15,7 +15,3 @@ test('damping is frame independent',()=>{
 test('rotation wraps through shortest angle',()=>{
  const a=dampAngle(3.12,-3.12,18,.016);assert.ok(a>3.12&&a<3.25);
 });
-test('camera and model smoothing do not displace combat input',()=>{
- const s=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- for(const t of ['motion=smoothMotion','dampAngle(visualHeading','cameraFocus.lerp(cameraAim',"attackButton.addEventListener('pointermove'", "characterFacingTarget({mode:cameraSettings.mode", "gait>.3||combatFacing?heading:visualHeading", "cameraFocus.copy(cameraAim)"])assert.ok(s.includes(t),t);
-});
