@@ -14,6 +14,7 @@ export function abilityEffect(style,weapon,ability){
  if(isUtilityAbility(ability))return ability.kind;
  if(style==='melee'&&ability.id==='w0'&&['sword','greatsword'].includes(weapon.family))return 'heavy-slash';
  if(style==='ranged'&&ability.id==='w0'&&['bow','shortbow'].includes(weapon.family))return 'piercing-arrow';
+ if(style==='magic'&&ability.id==='w0'&&weapon.family==='frost')return 'ice-shard';
  return ability.kind;
 }
 export function abilityDetails(style,weapon,ability,targetCount,adventure){

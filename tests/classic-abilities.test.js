@@ -93,3 +93,33 @@ test('Piercing Arrow uses a distinct reusable projectile and sound',async()=>{
  view.update([p]);assert.equal(node.scale.y,1);assert.equal(scene.children.length,1);view.dispose();
  assert.notDeepEqual(abilitySoundProfile('ranged','bolt','bow','piercing-arrow'),abilitySoundProfile('ranged','basic','bow'));
 });
+
+test('Ice Shard spends one scroll and slows only on authoritative projectile contact',()=>{
+ const g=game('magic'),s=cast(g,0,far);
+ assert.equal(s.action.effect,'ice-shard');assert.equal(s.abilities[0].supply.id,'frost-scroll');
+ assert.equal(g.persistentSave().inventory.materials['frost-scroll'],100);
+ const release=advance(g,far,.3);assert.ok(release.some(e=>e.type==='release'&&e.effect==='ice-shard'));
+ assert.equal(g.persistentSave().inventory.materials['frost-scroll'],99);
+ assert.equal(g.getState().monsters[0].slowUntil,0);
+ const events=advance(g,far,.4),hit=events.find(e=>e.type==='hit');
+ assert.equal(hit.control,'SLOWED');assert.equal(hit.abilityId,'w0');
+ assert.ok(Math.abs(g.getState().monsters[0].slowUntil-hit.time-2.8)<1e-8);
+ g.stopTarget();advance(g,far,3);assert.ok(g.getState().monsters[0].slowUntil<g.getState().time);
+});
+test('Ice Shard range loss cancels casting without a scroll charge, but retains cooldown',()=>{
+ const g=game('magic');cast(g,0,far);
+ const events=advance(g,{x:-1,z:50},.4);
+ assert.ok(events.some(e=>e.type==='action-cancelled'&&e.name==='Ice Shard'));
+ assert.equal(events.some(e=>e.type==='projectile'),false);
+ assert.equal(g.persistentSave().inventory.materials['frost-scroll'],100);
+ assert.equal(g.getState().abilities[0].cooldownEnd,4.2);
+});
+test('Ice Shard crystalline mesh and audio differ from a basic frost bolt without extra shots',async()=>{
+ const {createClassicProjectileView}=await import('../src/classic-projectile-view.js');
+ const scene=new THREE.Scene(),view=createClassicProjectileView(scene),p={x:0,z:0,style:'magic',family:'frost'};
+ view.update([{...p,effect:'ice-shard'}]);const node=scene.children[0];
+ assert.equal(node.children[4].visible,true);assert.equal(node.children[2].visible,false);
+ view.update([p]);assert.equal(node.children[4].visible,false);assert.equal(node.children[2].visible,true);
+ assert.equal(scene.children.length,1);view.dispose();
+ assert.notDeepEqual(abilitySoundProfile('magic','bolt','frost','ice-shard'),abilitySoundProfile('magic','basic','frost'));
+});
