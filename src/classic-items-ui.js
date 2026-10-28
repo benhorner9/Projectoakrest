@@ -7,7 +7,8 @@ import {woodcuttingLevel} from './woodcutting.js';
 import {getItem,itemIconUrl,itemFromDrop} from './items.js';
 import {STYLE_ORDER,LOADOUTS} from './rules.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
-import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
+import {classicItemDetails,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
+import {renderClassicCombatBook} from './classic-combat-book-ui.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries} from './town-ui.js';
 import {positionedEntries,BAG_MIN_SLOTS,VAULT_MIN_SLOTS} from './item-slot-layout.js';
@@ -32,6 +33,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,arrange=false,moveStart=null,selectedBank=null,selectedShop=null;
  let combineSource=null,showMaking=false,toolsExpanded=false;
+ let activeCombatSlot=0,inspectedCombatSkill=null,lastCombatBookStyle=null;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
@@ -319,27 +321,20 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
  }
  function renderAbilities(){
-  const data=save(),current=style(),weapon=data.gear[current],state=combat.getState();
-  element(content,'strong','classic-section-title',current.toUpperCase()+' · '+state.weapon);
-  element(content,'p','classic-muted',state.target?'Target: '+state.target.name:'Select a creature to use offensive abilities.');
-  element(content,'p','classic-muted','Only unlocked skills can be slotted. Four abilities are saved separately per weapon family.');
-  if(!LOADOUTS[current]?.[weapon]){element(content,'p',null,'Equip a weapon first.');return;}
-  const list=classicAbilityCatalogue(data,current);
-  const slots=data.slots?.[current]?.[LOADOUTS[current][weapon].family]||[];
-  for(let i=0;i<4;i++){
-   const row=element(content,'div','classic-ability-row');
-   element(row,'strong',null,'SLOT '+(i+1)+' · '+(list.find(x=>x.id===slots[i])?.name||'Empty'));
-   const status=state.abilities[i];
-   if(status?.description)element(row,'small','classic-muted',status.description);
-   element(row,'small','classic-ability-status',status?(status.available?'Ready':status.unavailableReason):'Empty or locked');
-   const select=element(row,'select','classic-ability-select');
-   const empty=element(select,'option',null,'— Empty —');empty.value='';
-   for(const skill of list){const opt=element(select,'option',null,skill.name+' · Lv '+skill.requiredLevel);
-    opt.value=skill.id;opt.disabled=!skill.unlocked;
-   }
-   select.value=slots[i]||'';
-   select.addEventListener('change',()=>transact({type:'ability',style:current,weapon,index:i,id:select.value||null}));
+  const current=style(),data=save();
+  if(lastCombatBookStyle!==current){
+   lastCombatBookStyle=current;activeCombatSlot=0;inspectedCombatSkill=null;
   }
+  renderClassicCombatBook(content,{
+   data,style:current,state:combat.getState(),
+   activeSlot:activeCombatSlot,inspectedId:inspectedCombatSkill,
+   onSlot:(index,id)=>{activeCombatSlot=index;inspectedCombatSkill=id;render();},
+   onInspect:id=>{inspectedCombatSkill=id;render();},
+   onEquip:(index,id)=>{
+    inspectedCombatSkill=id;
+    transact({type:'ability',style:current,weapon:data.gear[current],index,id});
+   }
+  });
  }
  function render(){
   if(host.hidden)return;
@@ -347,8 +342,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    tab.classList.toggle('active',tab.dataset.itemTab===mode);
    tab.setAttribute('aria-selected',String(tab.dataset.itemTab===mode));
   }
-  title.textContent={inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store',abilities:'Abilities'}[mode];
-  subtitle.textContent='OAKREST · CHARACTER INVENTORY';
+  title.textContent={inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store',abilities:({melee:'Melee Techniques',magic:'Magic Spellbook',ranged:'Ranged Techniques'}[style()]||'Combat Book')}[mode];
+  subtitle.textContent=mode==='abilities'?'OAKREST · '+style().toUpperCase()+' COMBAT':'OAKREST · CHARACTER INVENTORY';
   const scroll=content.scrollTop;
   content.dataset.view=mode;
   content.replaceChildren();
@@ -386,8 +381,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     node.textContent=remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK';
    }
   }else if(!host.hidden&&mode==='abilities'){
-   const state=combat.getState(),nodes=content.querySelectorAll('.classic-ability-status');
-   nodes.forEach((node,i)=>{const a=state.abilities[i],remaining=Math.max(0,(a?.cooldownEnd||0)-state.time);node.textContent=!a?'Empty or locked':remaining>0?'Ready in '+remaining.toFixed(1)+'s':a.available?'Ready':a.unavailableReason;});
+   const state=combat.getState(),nodes=content.querySelectorAll('[data-combat-slot-status]');
+   nodes.forEach(node=>{const a=state.abilities[Number(node.dataset.combatSlotStatus)],remaining=Math.max(0,(a?.cooldownEnd||0)-state.time);node.textContent=!a?'Empty or locked':remaining>0?'Ready in '+remaining.toFixed(1)+'s':a.available?'Ready':a.unavailableReason;});
   }}
  };
 }
