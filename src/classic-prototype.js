@@ -6,6 +6,7 @@ import {createAudio} from './audio.js';
 import {createClassicFrameBudget,classicAdaptiveRatio} from './classic-frame-budget.js';
 import {createClassicCombatFeedback} from './classic-combat-feedback.js';
 import {createClassicCombatImpacts,hitRecoilStrength} from './classic-combat-impacts.js';
+import {createClassicSkillXpFloats} from './classic-skill-xp-floats.js';
 import {bindClassicPress} from './classic-touch-press.js';
 import {setupClassicFieldNotes} from './classic-field-notes.js';
 import {setupClassicChat} from './classic-chat.js';
@@ -16,6 +17,7 @@ import {createAdventureWorld} from './adventure-world.js';
 import {setupAdventureUI} from './adventure-ui.js';
 import {installClassicIntegratedLayout} from './classic-integrated-layout.js';
 import {setupClassicSkills} from './classic-skills-ui.js';
+import {skillVisualFrame} from './classic-skill-visuals.js';
 import {DUNGEON_ROOMS,ADVENTURE_REGIONS} from './adventure-content.js';
 /** Oakrest Classic Block 3 — input shell around renderer-free navigation.
  * Retains the original character save and all gameplay rules untouched.
@@ -110,6 +112,7 @@ const village=createClassicVillage(scene);
 const reducedCombatMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 const abilityView=createClassicAbilityView(scene,{reducedMotion:reducedCombatMotion});
 const impactEffects=createClassicCombatImpacts(scene,{reducedMotion:reducedCombatMotion});
+const skillXpFloats=createClassicSkillXpFloats(root,{reducedMotion:reducedCombatMotion});
 const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters,{reducedMotion:reducedCombatMotion});
@@ -338,6 +341,8 @@ function placeMark(x,z){
 function chooseInteraction(target){
  if(!target)return false;
  disengageFromCombat();
+ // Clear the previous interaction through its controller before approaching again.
+ if(windowUi.current()==='dialogue')windowUi.hide();
  dialogue.hidden=true;pendingDrop=null;selectedTarget=target;
  placeMark(target.x,target.z);
  const result=navigation.interactWith(player,target);
@@ -515,6 +520,11 @@ function combatEvents(events){
  if(!events.length)return;
  const visualState=combat.getState();
  for(const event of events){
+  if(event.type==='skill-xp'||event.type==='skill-level-up'){
+   if(event.type==='skill-xp')skillXpFloats.push(event,player);
+   else skillXpFloats.levelUp(event);
+   continue;
+  }
   damageFeedback.event(event,visualState,player);
   impactEffects.onEvent(event,visualState,player);
   if(event.type==='hurt')playerHurtUntil=Math.max(playerHurtUntil,event.time+.23);
@@ -697,13 +707,18 @@ function drawStep(dt,render=true){
   if(d>.001)look={x:dx/d,z:dz/d};
  }
  const adventureState=combat.adventureState();
+ const skillVisual=skillVisualFrame(adventureState,state.time);
+ if(skillVisual?.target&&lastMovement.movedDistance<.001&&!state.action){
+  const dx=skillVisual.target.x-player.x,dz=skillVisual.target.z-player.z,d=Math.hypot(dx,dz);
+  if(d>.001)look={x:dx/d,z:dz/d};
+ }
  // Accelerated QA executes all movement, combat, rewards and guarded saves,
  // then presents its final frame. Do not flood Canvas/WebGL with intermediate
  // minimap and sprite uploads that cannot be displayed.
  if(!render)return;
  updateLocation();
- adventureWorld.update(adventureState,player,cameraOffset,state.time);
- village.update(state.time);
+ adventureWorld.update(adventureState,player,cameraOffset,state.time,skillVisual);
+ village.update(state.time,skillVisual,adventureState.trees);
  for(const npc of npcActors)npc.beacon?.update(adventureState,state.time);
  // UI refresh is bounded; input, combat and world rendering remain at 60 Hz.
  if(state.time>=nextBookRefresh){
@@ -725,8 +740,8 @@ function drawStep(dt,render=true){
  heroShadow.position.set(player.x,.04,player.z);
  hero.update({facing:look,style,
   step:movement.movedDistance>.001?1+Math.floor(walkClock/.17)%2:0,
-  pose:classicAttackPose(state.time,state.action,state.lastRelease),
-  worn:savedWorn(),cameraOffset});
+  pose:skillVisual?.pose||classicAttackPose(state.time,state.action,state.lastRelease),
+  workSkill:skillVisual?.skill||null,worn:savedWorn(),cameraOffset});
  // Local-only damage response; the character's actual position never moves.
  const heroRecoil=hitRecoilStrength(playerHurtUntil,state.time,.23);
  if(heroRecoil&&!reducedCombatMotion)hero.sprite.position.y+=heroRecoil*.16;
@@ -745,7 +760,7 @@ function drawStep(dt,render=true){
  // following lag that could invert navigation while the view is catching up.
  camera.position.set(player.x+cameraOffset.x,cameraOffset.y,player.z+cameraOffset.z);
  camera.lookAt(player.x,0,player.z);
- camera.updateMatrixWorld();damageFeedback.update(state.time,camera);
+ camera.updateMatrixWorld();skillXpFloats.update(camera,state.time);damageFeedback.update(state.time,camera);
  impactEffects.update(state.time,camera);
  audio.cityAmbience(state.time,player.z<80);
  if(render)renderer.render(scene,camera);
@@ -791,7 +806,7 @@ $('classic-settings-window').append($('adventure-eat'));
 $('adventure-eat').hidden=true;
 if(existing.profile&&existing.save.adventure?.autoSave){saveManager.enable();showSaveState();}
 characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.pathname,
- onOpen:()=>{windowUi.hide();releaseAll();combat.reset();},
+ onOpen:()=>{windowUi.hide();releaseAll();combat.reset();skillXpFloats.clear();},
  beforeSwitch:()=>{
   if(needsSave&&saveManager.status().enabled&&!saveNow())return false;
   return !sessionMutated||saveManager.status().enabled||
@@ -856,7 +871,8 @@ if(isQa)window.oakrestClassicQA={
  },
  navigationState:()=>navigation.state(),
  combatState:()=>combat.getState(),impactState:()=>({active:impactEffects.active(),heroTint:hero.sprite.material.color.getHexString()}),lockMonster:id=>chooseEnemy(id),
- combatPresentation:()=>({heroPose:hero.sprite.userData.pose,ability:abilityView.stats(),...combatView.stats()}),
+ combatPresentation:()=>({heroPose:hero.sprite.userData.pose,workSkill:hero.sprite.userData.workSkill,ability:abilityView.stats(),...combatView.stats()}),
+ skillXpFloatState:()=>({active:skillXpFloats.active(),levelBanner:skillXpFloats.levelState(),labels:[...root.querySelectorAll('.classic-skill-xp-float')].map(e=>e.textContent)}),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
  cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
