@@ -134,3 +134,19 @@ test('Counterguard visibly lasts exactly its authoritative duration through a st
  advance(g,near,4.1);view.update(g.getState(),near);assert.equal(view.stats().shield,false);
  view.dispose();assert.equal(scene.children.length,0);
 });
+
+test('Ice Barrier uses one scroll at release, remains visible across styles and expires after five seconds',()=>{
+ const g=game('magic');assert.equal(g.queueAbility(3,far),true);
+ assert.equal(g.persistentSave().inventory.materials['frost-scroll'],100);
+ advance(g,far,1/60);assert.equal(g.persistentSave().inventory.materials['frost-scroll'],99);
+ const s=g.getState();assert.equal(s.shieldStyle,'magic');assert.ok(Math.abs(s.shieldUntil-s.time-5)<1e-8);
+ assert.equal(s.abilities[3].cooldownEnd,16.2);
+ const scene=new THREE.Scene(),view=createClassicAbilityView(scene);g.styleSwitch('melee');view.update(g.getState(),far);
+ assert.equal(view.stats().shield,true);assert.equal(scene.children[1].material.color.getHexString(),'9ee3ed');
+ advance(g,far,5.1);view.update(g.getState(),far);assert.equal(view.stats().shield,false);view.dispose();
+});
+test('Ice Barrier with no scroll is rejected without cooldown, effect or a fake shield',()=>{
+ const save=kit();save.inventory.materials['frost-scroll']=0;const g=game('magic',{save});
+ assert.equal(g.queueAbility(3,far),false);assert.equal(g.getState().abilities[3].cooldownEnd,0);
+ advance(g,far,.1);assert.equal(g.getState().shieldUntil,0);assert.equal(g.getState().lastRelease,null);
+});

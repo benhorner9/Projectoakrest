@@ -10,7 +10,7 @@ export function createClassicAbilityView(scene,{reducedMotion=false}={}){
  let phase=null;
  function update(state,player){
   shield.visible=state.hp>0&&state.shieldUntil>state.time;
-  if(shield.visible){shield.position.set(player.x,.12,player.z);shield.scale.setScalar(1.15);
+  if(shield.visible){shieldMaterial.color.set(state.shieldStyle==='magic'?'#9ee3ed':'#edc496');shield.position.set(player.x,.12,player.z);shield.scale.setScalar(1.15);
    shieldMaterial.opacity=.18+.16*Math.min(1,state.shieldUntil-state.time);}
   const supported=e=>['heavy-slash','piercing-arrow','ice-shard'].includes(e);
   const a=state.action,r=state.lastRelease,preparing=supported(a?.effect),

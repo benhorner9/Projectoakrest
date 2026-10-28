@@ -70,7 +70,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  const dropSession=Date.now().toString(36);
  let nextDrop=0;
  let time=0,style='melee',targetId=null,attackUntil=0,switchUntil=0,dodgeUntil=0,dodgeStart=-Infinity;
- let action=null,lastRelease=null,queuedAbility=null,shieldUntil=0,deadUntil=0,abilityRecoveryUntil=0,lastFailure=null;
+ let action=null,lastRelease=null,queuedAbility=null,shieldUntil=0,shieldStyle=null,deadUntil=0,abilityRecoveryUntil=0,lastFailure=null;
  const clock=createClassicSimulationClock();
  let hp=maxHealth(levelFromXp(data.xp?.vitality||0).level);
  const emit=(type,details={})=>events.push({type,time,...details});
@@ -242,7 +242,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    return;
   }
   if(utility(a)){
-   if(a.kind==='shield'){shieldUntil=time+a.duration;emit('shield',{until:shieldUntil});}
+   if(a.kind==='shield'){shieldUntil=time+a.duration;shieldStyle=current.style;emit('shield',{until:shieldUntil});}
    else if(a.kind==='heal'){
     const before=hp;hp=Math.min(maxHealth(levelFromXp(data.xp.vitality).level),hp+a.heal);emit('heal',{amount:hp-before});
    }else emit('dash',{distance:(a.kind==='dash'?1:-1)*a.distance});
@@ -297,7 +297,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   const guarded=shieldUntil>time;
   hp=Math.max(0,hp-harm);emit('hurt',{id:enemy.id,damage:harm,hp,guarded});
   if(hp===0){
-   deadUntil=time+2.1;actionCancel('Defeated.');shieldUntil=0;lastRelease=null;targetId=null;projectiles.length=0;
+   deadUntil=time+2.1;actionCancel('Defeated.');shieldUntil=0;shieldStyle=null;lastRelease=null;targetId=null;projectiles.length=0;
    emit('dead',{until:deadUntil});
   }
   return true;
@@ -538,7 +538,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   const weapon=styleWeapon(),maxHp=maxHealth(levelFromXp(data.xp.vitality).level);
   return {time,combatTick:Math.floor((time+1e-9)/COMBAT_TICK_SECONDS),tickSeconds:COMBAT_TICK_SECONDS,
    attackInterval:weapon?classicWeaponInterval(weapon):0,maxHit:snapshot()?.maxHit||0,lastFailure,
-   style,hp,maxHp,attackUntil,switchUntil,dodgeUntil,deadUntil,shieldUntil,
+   style,hp,maxHp,attackUntil,switchUntil,dodgeUntil,deadUntil,shieldUntil,shieldStyle,
    queuedAbility:queuedAbility?{index:queuedAbility.index,id:queuedAbility.id,name:queuedAbility.name}:null,
    consumableCooldowns:adventureSystem?.consumableCooldowns()||{eat:0,drink:0},
    targetId,target:getTarget()?{...getTarget()}:null,weapon:weapon?.title||'No equipped weapon',
