@@ -338,6 +338,8 @@ function placeMark(x,z){
 function chooseInteraction(target){
  if(!target)return false;
  disengageFromCombat();
+ // Close through the controller so the next NPC/resource can reopen dialogue.
+ if(windowUi.current()==='dialogue')windowUi.hide();
  dialogue.hidden=true;pendingDrop=null;selectedTarget=target;
  placeMark(target.x,target.z);
  const result=navigation.interactWith(player,target);

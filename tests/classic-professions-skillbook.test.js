@@ -36,7 +36,7 @@ test('use-with requires two actual different components and fails safely without
  const after=c.persistentSave();
  assert.equal(after.inventory.materials.reed,2);
  assert.equal(after.inventory.materials['moss-fibre'],1);
- assert.equal(after.inventory.materials['ember-scroll'],30);
+ assert.equal(after.inventory.materials['ember-scroll'],60);
  assert.equal(after.adventure.skills.inscription,18);
 });
 test('metalwork cannot be crafted from the backpack and cannot duplicate owned items',()=>{

@@ -51,6 +51,9 @@ jobs:
       - name: Classic equipment, inventory drag and quick slots
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-equipment-ui.cjs
+      - name: Classic progression, crafting and farming controls
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-classic-progression.cjs
       - name: Classic iPad-size character creation
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-creator.cjs

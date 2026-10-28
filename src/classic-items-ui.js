@@ -1,3 +1,4 @@
+import {recipeGuidance} from './classic-progression.js';
 import {findClassicInteractable} from './classic-interactions.js';
 import {RECIPES,ADVENTURE_MATERIALS} from './adventure-content.js';
 import {woodcuttingLevel} from './woodcutting.js';
@@ -170,17 +171,20 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    element(maker,'p','classic-muted','Fletching, Inscription and Fieldcraft are made by hand. Metalwork still requires a forge.');
    const materials=data.inventory.materials,progress=data.adventure?.skills||{};
    for(const recipe of RECIPES.filter(r=>r.station==='inventory')){
-    const row=element(maker,'div','craft-option');
+    const row=element(maker,'div','craft-option');row.dataset.recipe=recipe.id;
     element(row,'strong',null,recipe.title);
     element(row,'small',null,Object.entries(recipe.cost).map(([id,n])=>
      (ADVENTURE_MATERIALS[id]?.[0]||getItem('material.'+id)?.title||id)+
      ' '+(materials[id]||0)+'/'+n).join(' · '));
     const level=recipe.profession?woodcuttingLevel(progress[recipe.profession]||0).level:99;
     const ready=Object.entries(recipe.cost).every(([id,n])=>(materials[id]||0)>=n);
-    element(row,'small',null,(recipe.profession?recipe.profession+' level '+recipe.level+' · ':'')+
-     (ready?'Materials ready':'Gather more materials'));
-    button(row,'classic-item-action',ready&&level>=recipe.level?'MAKE':'LOCKED / MATERIALS',
-     ()=>craftFromBag('craft',recipe.id),!ready||level<recipe.level);
+    const guide=recipeGuidance(data,recipe);
+    element(row,'small',null,guide.training+(guide.requirement?' · '+guide.requirement:''));
+    element(row,'small',null,guide.owned?'Already owned in bag or bank':ready?'Materials ready':'Gather more materials');
+    button(row,'classic-item-action',guide.owned?'OWNED':ready&&level>=recipe.level?'MAKE':'LOCKED / MATERIALS',
+     ()=>craftFromBag('craft',recipe.id),guide.owned||!ready||level<recipe.level);
+    if(recipe.result.material)button(row,'classic-item-action','MAKE 5 BATCHES · '+recipe.result.amount*5,
+     ()=>craftFromBag('craft',{id:recipe.id,batches:5}),level<recipe.level||!Object.entries(recipe.cost).every(([id,n])=>(materials[id]||0)>=n*5));
    }
   }
  }

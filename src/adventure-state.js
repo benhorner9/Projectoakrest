@@ -1,5 +1,5 @@
 /** Stateful adventure transactions. The combat session owns this save; no storage here. */
-import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_SPAWNS,QUEST_PREREQUISITES,sanitizeAdventure} from './adventure-content.js';
+import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_SPAWNS,QUEST_PREREQUISITES,WATCH_BOUNTIES,sanitizeAdventure} from './adventure-content.js';
 import {woodcuttingLevel,canCutTree,newTreeState,chopOnce,respawnTree} from './woodcutting.js';
 import {inventoryKeyList} from './item-slot-layout.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -44,8 +44,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  // Validate a multi-item grant against the *post-transaction* bag, not each
  // stack independently. This prevents two new reward stacks both claiming the
  // final free slot and permits crafting when consumed materials free a slot.
- function canCarry(rewards={},cost={},equipment=[]){
+ function canCarry(rewards={},cost={},equipment=[],coins=0){
   const candidate=structuredClone(data),bag=candidate.inventory.materials;
+  if(!Number.isSafeInteger(coins)||coins<0||candidate.coins>10000000-coins)return false;
+  candidate.coins+=coins;
   for(const [id,n] of Object.entries(cost)){
    if(!Number.isSafeInteger(n)||n<0||(bag[id]||0)<n)return false;
    bag[id]-=n;if(bag[id]===0)delete bag[id];
@@ -100,6 +102,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   const q=QUESTS.find(q=>q.npc===id&&(!choice||q.id===choice)&&readyFor(q));
   if(!q)return no('There is still work to do.');
   if(data.coins>10000000-q.coins)return no('Bank some coins before claiming your full quest reward.');
+  if(!canCarry({}, {}, [],q.coins))return no('Make room for your quest coins before claiming the reward.');
   data.coins+=q.coins;
   progress(q.id).status='completed';progress(q.id).flags=[];
   a.tracked=QUESTS.find(x=>questStatus(x)==='ready')?.id||
@@ -127,8 +130,15 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }
   return ok(t.text||t.name);
  }
- function craftCheck(id,station){
-  const r=RECIPES.find(r=>r.id===id&&r.station===station);if(!r)return no('This recipe needs another crafting method or workstation.');
+ function craftCheck(choice,station){
+  const id=typeof choice==='string'?choice:choice?.id;
+  const batches=typeof choice==='string'?1:choice?.batches;
+  const original=RECIPES.find(r=>r.id===id&&r.station===station);
+  if(!Number.isSafeInteger(batches)||batches<1||batches>10)return no('Choose between 1 and 10 batches.');
+  if(batches>1&&!original?.result.material)return no('Equipment is made one item at a time.');
+  const r=original?{...original,batches,cost:Object.fromEntries(Object.entries(original.cost).map(([key,n])=>[key,n*batches])),
+   result:{...original.result,...(original.result.material?{amount:original.result.amount*batches}:{})},xp:original.xp*batches,seconds:original.seconds*batches}:null;
+  if(!r)return no('This recipe needs another crafting method or workstation.');
   if(r.profession&&woodcuttingLevel(a.skills[r.profession]).level<r.level)return no(r.profession+' level '+r.level+' required.');
   if(!enough(r.cost))return no('You need all the listed materials in your backpack.');
   const o=r.result;
@@ -143,7 +153,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  }
  function finishCraft(r){
   // Materials and inventory rules are checked again at the instant of crafting.
-  const check=craftCheck(r.id,r.station);
+  const check=craftCheck({id:r.id,batches:r.batches},r.station);
   if(!check.ok)return check;
   const o=r.result;spend(r.cost);
   if(o.material)add(o.material,o.amount);
@@ -152,8 +162,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(o.armour)data.inventory.armour.push(o.armour);
   if(r.profession)a.skills[r.profession]=Math.min(200000000,a.skills[r.profession]+r.xp);
   if(['shield','arrows','frost','ember','seal'].includes(r.id))flag('craft:useful');
-  emit('adventure',{reason:'Made: '+r.title+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'')});
-  return ok('Made: '+r.title);
+  const message='Made: '+r.title+(r.batches>1?' × '+r.batches+' batches':'')+(r.profession?' · +'+r.xp+' '+r.profession+' XP':'');
+  emit('adventure',{reason:message});return ok(message);
  }
  /** No station interaction necessary; selecting two materials selects an
   * unambiguous matching craft. More complex shared inputs use the recipe book. */
@@ -178,6 +188,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    work={target,recipe:check.recipe,start:time,end:time+check.recipe.seconds};
   }else if(target.kind==='resource'||target.kind==='grove'){
    if((respawns.get(target.id)||0)>time)return no('This resource is recovering. Try another nearby deposit.');
+   const repeats=recipeId?.batches??1;
+   if(!Number.isSafeInteger(repeats)||repeats<1||repeats>5)return no('Gather between 1 and 5 resources at a time.');
    const material=target.material||'softwood-logs';
    if(!roomFor(material))return no('Your backpack is full. Visit Mara at the bank.');
    if(material==='softwood-logs'){
@@ -186,7 +198,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
     respawnTree(trees.get(target.id),time,random);
     if(trees.get(target.id).respawnAt)return no('This tree is regrowing.');
    }
-   work={target,material,start:time,end:time+(target.seconds||1.18)};
+   work={target,material,remaining:repeats,start:time,end:time+(target.seconds||1.18)};
   }else return no('Nothing to gather here.');
   return ok('Working… moving away or taking damage cancels.');
  }
@@ -208,8 +220,9 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }else if(roomFor(w.material)){
    add(w.material,1);
    if(w.target.profession)a.skills[w.target.profession]=Math.min(200000000,(a.skills[w.target.profession]||0)+18);
-   respawns.set(w.target.id,time+3);flag('gather:'+w.material);emit('adventure',{reason:'Gathered '+w.material});
-  }
+   respawns.set(w.target.id,time+3);flag('gather:'+w.material);emit('adventure',{reason:'Gathered '+w.material+' · +18 '+w.target.profession+' XP'});
+   if(w.remaining>1)work={...w,remaining:w.remaining-1,start:time,end:time+3+(w.target.seconds||3)};
+  }else emit('adventure-notice',{reason:'Gathering stopped: make room in your backpack.'});
  }
  function action(kind,{target,choice,time,player,threatened=false}={}){
   if(kind==='cancel'){work=null;return ok('Work cancelled.');}
@@ -298,11 +311,20 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    if(data.coins>10000000-8||!data.coins&&inventoryKeyList(data).length>=28&&(mats['softwood-logs']||0)>5)return no('Make room for the coins before selling.');
    spend({'softwood-logs':5});data.coins+=8;emit('adventure',{reason:'Sold 5 logs for 8 coins'});return ok('Good timber. Oakrest always needs repairs.');
   }
+  if(kind==='bounty'&&target.id==='citizen:guard'){
+   const reward=Object.hasOwn(WATCH_BOUNTIES,choice)?WATCH_BOUNTIES[choice]:null;
+   if(!reward)return no('Choose a watch supply pack.');
+   if(!enough({'bandit-token':5}))return no('Bring five bandit tokens for a supply pack.');
+   if(!canCarry({[reward.material]:reward.amount},{'bandit-token':5}))return no('Make room for the full supply pack first.');
+   spend({'bandit-token':5});add(reward.material,reward.amount);
+   const reason='Watch supplies · '+reward.title+' received for 5 bandit tokens';
+   emit('adventure',{reason});return ok(reason);
+  }
   if(kind==='contract'&&target.id==='citizen:guard'){
    if(!completed('hollow')||a.contracts>=a.clears)return no('Complete another Hollow expedition to supply the watch.');
    if(!enough({'hollow-shard':2}))return no('Bring two Hollow shards.');
    if(data.coins>10000000-35)return no('Bank coins before supplying the watch so none of the reward is lost.');
-   if(!canCarry({ration:3},{'hollow-shard':2}))return no('Make room for the three rations before supplying the watch.');
+   if(!canCarry({ration:3},{'hollow-shard':2},[],35))return no('Make room for the coins and three rations before supplying the watch.');
    spend({'hollow-shard':2});a.contracts++;data.coins+=35;add('ration',3);
    emit('adventure',{reason:'Watch supplied · 35 coins and 3 rations'});return ok('These will hold the ward until your next expedition.');
   }
