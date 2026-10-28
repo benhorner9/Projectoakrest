@@ -27,6 +27,7 @@ let browser;
  assert.equal(await page.locator('#classic-styles button').count(),3);
  assert.equal(await page.locator('#classic-ability-buttons [data-ability]').count(),4);
  assert.equal(await page.locator('#oakrest-action-deck .classic-attack-row button').count(),8);
+ assert.equal(await page.evaluate(()=>document.getElementById('oakrest-action-deck').parentElement.id),'classic-app');
  assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'5');
  assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'6');
  assert.equal(await page.locator('#classic-dodge').getAttribute('data-hotbar-slot'),'7');
@@ -40,22 +41,36 @@ let browser;
    return {world:bounds('#classic-game'),chat:bounds('#oakrest-chat'),side:bounds('#classic-sidebar'),
     map:bounds('.classic-sidebar-map'),nav:bounds('.classic-item-buttons'),
     actions:bounds('#oakrest-action-deck'),dock:bounds('.classic-combat-dock'),
+    sidebarBody:bounds('#classic-sidebar-body'),inventory:bounds('#classic-item-window'),
     canvas:bounds('#classic-game canvas'),
     styles:[...document.querySelectorAll('#classic-styles button')].map(e=>e.getBoundingClientRect().height),
     menu:[...document.querySelectorAll('.classic-item-buttons button')].map(e=>e.getBoundingClientRect().height)};
   });
   const overlap=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
-  assert.ok(l.world.width>size.width*.54&&l.world.height>size.height*.57,JSON.stringify({size,l}));
+  assert.ok(l.world.width>size.width*.54&&l.world.height>size.height*.40,JSON.stringify({size,l}));
+  assert.ok(l.actions.top>=l.world.bottom-2,'quick actions follow the playfield');
+  assert.ok(Math.abs(l.actions.bottom-l.chat.top)<=2,'eight-slot deck immediately precedes chat');
+  assert.equal(overlap(l.actions,l.chat),0,'quick actions never overlap chat');
+  assert.equal(overlap(l.actions,l.side),0,'quick actions are no longer inside inventory sidebar');
+  assert.equal(overlap(l.dock,l.side),0,'combat controls have moved out of the right sidebar');
+  assert.ok(Math.abs(l.sidebarBody.bottom-l.side.bottom)<=5,'sidebar book extends to page bottom');
+  assert.ok(Math.abs(l.inventory.bottom-l.sidebarBody.bottom)<=5,'bag uses full available sidebar height');
   assert.equal(overlap(l.world,l.side),0,'world separate from right panel');
   assert.equal(overlap(l.world,l.chat),0,'chat does not float over world');
   assert.equal(overlap(l.chat,l.side),0,'chat remains left');
-  assert.equal(overlap(l.actions,l.map),0,'action bar stays below map');
+  assert.equal(overlap(l.actions,l.map),0,'action bar is outside the map and inventory');
   assert.equal(overlap(l.nav,l.map),0,'tabs below map');
   assert.ok(l.styles.every(h=>h>=33),'styles reachable at landscape sizes');
   assert.ok(l.menu.every(h=>h>=44),'tab targets accessible on iPad');
   assert.ok(Math.abs(l.canvas.width-l.world.width)<=4);
  }
  await page.setViewportSize({width:1194,height:834});
+ // ARRANGE remains usable after moving the original live deck.
+ await page.locator('#oakrest-hotbar-edit').click();
+ assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),true);
+ assert.equal(await page.locator('#oakrest-hotbar-select-1').count(),1);
+ await page.locator('#oakrest-hotbar-edit').click();
+ assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),false);
  mkdirSync('qa/mmorpg-ui',{recursive:true});
  await page.screenshot({path:'qa/mmorpg-ui/bag-chat-melee.png'});
  const initial=await page.locator('#oakrest-action-deck').getAttribute('data-combat-style');
@@ -111,5 +126,5 @@ let browser;
  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'switching to BAG is immediate');
  assert.deepEqual(errors,[],'no browser errors when switching styles/chat/menus');
  assert.equal(await page.evaluate(()=>localStorage.getItem('oakrest-v1')),raw,'presentation/chat do not silently mutate saves');
- console.log('PASS: approved Oakrest MMORPG shell, chat log, 8-slot style bar, iPad proportions and non-network channels');
+ console.log('PASS: live eight-slot deck above chat, bottom-extended inventory, touch style switches and chat across iPad sizes');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});
