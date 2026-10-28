@@ -1,4 +1,5 @@
 import {createClassicSimulationClock,classicWeaponInterval,nextCombatBeat,onCombatBeat,COMBAT_TICK_SECONDS} from './classic-combat-clock.js';
+import {isUtilityAbility as utility,isAreaAbility as area,abilityWindup,abilitySupply,abilityEffect,abilityDetails} from './classic-abilities.js';
 import {classicEnemyProfile} from './classic-combat-motion.js';
 import {ADVENTURE_SPAWNS,ADVENTURE_XP_REWARDS} from './adventure-content.js';
 import {createAdventure} from './adventure-state.js';
@@ -69,7 +70,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  const dropSession=Date.now().toString(36);
  let nextDrop=0;
  let time=0,style='melee',targetId=null,attackUntil=0,switchUntil=0,dodgeUntil=0,dodgeStart=-Infinity;
- let action=null,lastRelease=null,queuedAbility=null,shieldUntil=0,deadUntil=0,abilityRecoveryUntil=0,lastFailure=null;
+ let action=null,lastRelease=null,queuedAbility=null,shieldUntil=0,shieldStyle=null,deadUntil=0,abilityRecoveryUntil=0,lastFailure=null;
  const clock=createClassicSimulationClock();
  let hp=maxHealth(levelFromXp(data.xp?.vitality||0).level);
  const emit=(type,details={})=>events.push({type,time,...details});
@@ -90,7 +91,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   // Cancels windups and queued offensive skills immediately, but never refunds
   // an already fired projectile or bypasses the real weapon cooldown.
   if(targetId||action||queuedAbility){
-   targetId=null;action=null;queuedAbility=null;
+   actionCancel(reason);targetId=null;
    emit('target-lost',{reason});
   }
 }
@@ -103,17 +104,15 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   if(e?.room!==undefined&&(!data.adventure?.run||!adventureSystem?.canPass(e.startZ)))return false;
   if(!e||!isAlive(e)||!canFight()||dist(e,player)>30)return false;
   playerForAction={x:player.x,z:player.z};
-  if(targetId!==id){action=null;queuedAbility=null;}
+  if(targetId!==id)actionCancel('Target changed.');
   targetId=id;emit('target',{id,name:e.name,level:e.level});queueBasic(player);return true;
  }
  function styleSwitch(next){
   if(!STYLE_ORDER.includes(next)||next===style||!canFight())return false;
   // Appearance/loadout changes immediately; committed recovery is never reset.
-  action=null;lastRelease=null;queuedAbility=null;style=next;switchUntil=time+.12;
+  actionCancel('Style changed.');lastRelease=null;style=next;switchUntil=time+.12;
   emit('style',{style});return true;
  }
- const utility=ability=>['shield','heal','dash','dashback'].includes(ability?.kind);
- const area=ability=>['sweep','nova'].includes(ability?.kind);
  function validTargets(player,weapon,ability,target=getTarget()){
   const reach=ability?.reach||weapon.reach;
   const reachable=e=>isAlive(e)&&inAttackRange(player,e,reach,wallClear(player,e));
@@ -121,12 +120,10 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   return reachable(target)?[target]:[];
  }
  function supplyFor(attackStyle,weapon,ability,targets){
-  if(!adventureSystem||attackStyle==='melee'||(attackStyle==='ranged'&&utility(ability)))return null;
-  const id=attackStyle==='magic'?(weapon.family==='ember'?'ember-scroll':'frost-scroll'):'field-arrows';
-  const amount=attackStyle==='ranged'?(ability?.kind==='burst'?(ability.count||3):area(ability)?targets.length:1):1;
-  return {id,amount};
+  return abilitySupply(attackStyle,weapon,ability,targets.length,!!adventureSystem);
  }
  function validateAttack(player,attackStyle,weapon,ability,target=getTarget()){
+  if(!Number.isFinite(player?.x)||!Number.isFinite(player?.z))return {ok:false,reason:'Choose a valid position.'};
   if(!canFight())return {ok:false,reason:'Wait until you recover.'};
   if(time<dodgeStart+DODGE.duration)return {ok:false,reason:'Finish dodging before attacking.'};
   if(!weapon)return {ok:false,reason:'Equip an owned weapon for this style.'};
@@ -147,9 +144,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   if(!validation.ok)return fail(validation.reason);
   lastFailure=null;
   if(action||time<abilityRecoveryUntil||time<switchUntil){
-   queuedAbility={index,style,weapon:data.gear[style],targetId};return true;
+   queuedAbility={index,id:ability.id,name:ability.name,style,weapon:data.gear[style],targetId};return true;
   }
-  const windup=utility(ability)?0:Math.min(weapon.family==='greatsword'?.6:.45,weapon.windup);
+  const windup=abilityWindup(weapon,ability);
   cooldowns.set(id,time+ability.cooldown);
   abilityRecoveryUntil=time+Math.max(.4,windup+.15);
   attackUntil=Math.max(attackUntil,nextCombatBeat(time+classicWeaponInterval(weapon)));
@@ -195,7 +192,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   if(ability.slow)enemy.slowUntil=time+ability.slow;
   if(ability.root)enemy.rootUntil=time+ability.root;
   if(ability.bleed){enemy.bleedUntil=time+ability.bleed;enemy.nextBleed=time+1;enemy.bleedSource=source;}
-  emit('hit',{id:enemy.id,damage:result.damage,style:source.style,family:source.weapon?.family,periodic:!!ability.periodic,remaining:enemy.hp});
+  emit('hit',{id:enemy.id,abilityId:ability.id||null,control:ability.root?'ROOTED':ability.stun?'STAGGERED':ability.slow?'SLOWED':ability.bleed?'BLEEDING':null,damage:result.damage,style:source.style,family:source.weapon?.family,periodic:!!ability.periodic,remaining:enemy.hp});
   if(enemy.hp<=0){
    if(targetId===enemy.id){targetId=null;queuedAbility=null;}
    if(enemy.type==='dummy'){enemy.hp=enemy.maxHp;emit('dummy',{id:enemy.id});return;}
@@ -212,12 +209,12 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    emit('defeated',{id:enemy.id,name:enemy.name});
   }
  }
- function addProjectile(enemy,damage,source,ability,speed,kind){
+ function addProjectile(enemy,damage,source,ability,speed,kind,delay=0){
   if(!enemy||!source)return;
   const dir=toward(playerForAction,enemy),range=source.weapon?.reach||20;
   projectiles.push({x:playerForAction.x,z:playerForAction.z,direction:dir,speed,
    remaining:ability?.reach||range,targetId:enemy.id,targetLife:enemy.life,damage,source,
-   ability,kind,travelled:0});
+   ability,kind,delay,travelled:0});
   emit('projectile',{style:source.style,kind,x:playerForAction.x,z:playerForAction.z});
  }
  let playerForAction={x:0,z:73};
@@ -228,13 +225,15 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   const enemy=monsters.find(e=>e.id===current.targetId&&e.life===current.targetLife);
   const weapon=current.weapon,source=current.source,a=current.ability;
   const validation=validateAttack(player,current.style,weapon,a,enemy||null);
-  if(!validation.ok){lastFailure=validation.reason;emit('action-cancelled',{reason:validation.reason});return;}
+  if(!validation.ok){lastFailure=validation.reason;emit('action-cancelled',{name:a?.name||null,reason:validation.reason});return;}
   if(validation.supply){
    const {id,amount}=validation.supply;
    data.inventory.materials[id]-=amount;emit('adventure',{reason:'Used '+id,amount});
   }
   const targets=validation.targets;
-  lastRelease={time,style:current.style,kind:a?.kind||'basic',family:weapon.family};
+  lastRelease={time,style:current.style,kind:a?.kind||'basic',family:weapon.family,abilityId:a?.id||null,
+   name:a?.name||null,effect:abilityEffect(current.style,weapon,a),reach:a?.reach||weapon.reach,
+   x:player.x,z:player.z,direction:enemy?toward(player,enemy):null};
   emit('release',{...lastRelease});
   if(current.type==='basic'){
    if(current.style==='melee')for(const target of targets)applyEnemyHit(target,weapon.basic,source,
@@ -243,7 +242,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    return;
   }
   if(utility(a)){
-   if(a.kind==='shield'){shieldUntil=time+a.duration;emit('shield',{until:shieldUntil});}
+   if(a.kind==='shield'){shieldUntil=time+a.duration;shieldStyle=current.style;emit('shield',{until:shieldUntil});}
    else if(a.kind==='heal'){
     const before=hp;hp=Math.min(maxHealth(levelFromXp(data.xp.vitality).level),hp+a.heal);emit('heal',{amount:hp-before});
    }else emit('dash',{distance:(a.kind==='dash'?1:-1)*a.distance});
@@ -255,13 +254,15 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    emit(a.kind==='nova'?'area':'swing',{x:player.x,z:player.z,radius:a.reach,reach:a.reach,style,kind:a.kind});
   }else{
    for(const target of targets)for(let n=0;n<(a.kind==='burst'?(a.count||3):1);n++)
-    addProjectile(target,a.damage,source,a,a.speed||(current.style==='magic'?21:36),a.kind);
+    addProjectile(target,a.damage,source,a,a.speed||(current.style==='magic'?21:36),a.kind,n*.09);
    if(a.kind==='retreat')emit('dash',{distance:-4});
   }
  }
  function moveProjectiles(dt){
   for(let i=projectiles.length-1;i>=0;i--){
-   const p=projectiles[i],target=monsters.find(e=>e.id===p.targetId);
+   const p=projectiles[i];
+   if(p.delay>0){p.delay=Math.max(0,p.delay-dt);continue;}
+   const target=monsters.find(e=>e.id===p.targetId);
    if(!isAlive(target)||target.life!==p.targetLife){projectiles.splice(i,1);continue;}
    p.direction=toward(p,target);
    const next=projectileTravel(p.travelled,p.speed,dt,p.remaining);
@@ -298,7 +299,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   const guarded=shieldUntil>time;
   hp=Math.max(0,hp-harm);emit('hurt',{id:enemy.id,damage:harm,hp,guarded});
   if(hp===0){
-   deadUntil=time+2.1;action=null;lastRelease=null;queuedAbility=null;targetId=null;projectiles.length=0;
+   deadUntil=time+2.1;actionCancel('Defeated.');shieldUntil=0;shieldStyle=null;lastRelease=null;targetId=null;projectiles.length=0;
    emit('dead',{until:deadUntil});
   }
   return true;
@@ -431,7 +432,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  }
  function dodge(){
   if(!canFight()||time<dodgeUntil)return false;
-  dodgeStart=time;dodgeUntil=time+DODGE.cooldown;action=null;lastRelease=null;queuedAbility=null;
+  dodgeStart=time;dodgeUntil=time+DODGE.cooldown;actionCancel('Dodged.');lastRelease=null;
   emit('dodge',{until:dodgeUntil});return true;
  }
  function simulate(step,nextTime,player){
@@ -444,7 +445,9 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   executeAction(player);moveProjectiles(step);updateMonsters(player,step);
   if(!action&&queuedAbility&&time>=abilityRecoveryUntil&&time>=switchUntil){
    const queued=queuedAbility;queuedAbility=null;
-   if(style===queued.style&&data.gear[style]===queued.weapon&&targetId===queued.targetId)queueAbility(queued.index,player);
+   if(style===queued.style&&data.gear[style]===queued.weapon&&targetId===queued.targetId&&skills()[queued.index]?.id===queued.id){
+    if(!queueAbility(queued.index,player))emit('action-cancelled',{name:queued.name,reason:lastFailure});
+   }
   }
   if(adventureSystem){for(const e of events.slice(eventCursor))adventureSystem.event(e);
    eventCursor=events.length;adventureSystem.tick(time,step,player);eventCursor=events.length;}
@@ -457,7 +460,11 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   clock.advance(dt,(step,nextTime)=>simulate(step,nextTime,player));
   return drain();
  }
- function actionCancel(){action=null;queuedAbility=null;}
+ function actionCancel(reason='Equipment changed.') {
+  const name=action?.ability?.name||queuedAbility?.name;
+  if(name)emit('action-cancelled',{name,reason});
+  action=null;queuedAbility=null;
+ }
  function itemAction(action,player){
   if(action?.type==='drop'&&Object.entries(loaned).some(([s,id])=>action.id==='weapon.'+s+'.'+id))return {ok:false,reason:'Practice weapons cannot be dropped.'};
   if(action?.type==='use'){
@@ -525,15 +532,16 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
  function drain(){eventCursor=0;return events.splice(0,events.length);}
  function abilityAvailability(ability){
   const id=abilityCooldownKey(style,slotFamily(style,data.gear[style]),ability);
-  const valid=validateAttack(playerForAction,style,styleWeapon(),ability);
+  const weapon=styleWeapon(),valid=validateAttack(playerForAction,style,weapon,ability);
   const reason=(cooldowns.get(id)||0)>time?'Ability is cooling down.':valid.ok?null:valid.reason;
-  return {available:!reason,unavailableReason:reason};
+  return {...abilityDetails(style,weapon,ability,valid.targets?.length||0,!!adventureSystem),available:!reason,unavailableReason:reason};
  }
  function getState(){
   const weapon=styleWeapon(),maxHp=maxHealth(levelFromXp(data.xp.vitality).level);
   return {time,combatTick:Math.floor((time+1e-9)/COMBAT_TICK_SECONDS),tickSeconds:COMBAT_TICK_SECONDS,
    attackInterval:weapon?classicWeaponInterval(weapon):0,maxHit:snapshot()?.maxHit||0,lastFailure,
-   style,hp,maxHp,attackUntil,switchUntil,dodgeUntil,deadUntil,
+   style,hp,maxHp,attackUntil,switchUntil,dodgeUntil,deadUntil,shieldUntil,shieldStyle,
+   queuedAbility:queuedAbility?{index:queuedAbility.index,id:queuedAbility.id,name:queuedAbility.name}:null,
    consumableCooldowns:adventureSystem?.consumableCooldowns()||{eat:0,drink:0},
    targetId,target:getTarget()?{...getTarget()}:null,weapon:weapon?.title||'No equipped weapon',
    reach:weapon?.reach||0,
@@ -541,14 +549,14 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
     cooldownEnd:cooldowns.get(abilityCooldownKey(style,slotFamily(style,data.gear[style]),a))||0,
     cooldown:a.cooldown||0,...abilityAvailability(a)}:null),
    monsters:monsters.map(e=>({...e,warning:e.warning?{...e.warning}:null})),
-   projectiles:projectiles.map(p=>({x:p.x,z:p.z,direction:{...p.direction},kind:p.kind,style:p.source.style,family:p.source.weapon?.family,travelled:p.travelled})),
+   projectiles:projectiles.filter(p=>p.delay<=0).map(p=>({x:p.x,z:p.z,direction:{...p.direction},kind:p.kind,name:p.ability?.name||null,style:p.source.style,family:p.source.weapon?.family,abilityId:p.ability?.id||null,effect:abilityEffect(p.source.style,p.source.weapon,p.ability?.id?p.ability:null),travelled:p.travelled})),
    progression:{...data.xp},defeated:data.defeated||0,
    groundLoot:data.groundLoot.map(drop=>({...drop})),coins:data.coins,
    combatLevel:combatLevelFromXp(data.xp),
    // Kept as an alias for older QA tooling; a target is an attack intent, not a movement lock.
    targetLocked:!!getTarget(),attacking:!!getTarget(),
    lastRelease:lastRelease?{...lastRelease}:null,
-   action:action?{type:action.type,startedAt:action.startedAt,until:action.impactAt,style:action.style,family:action.weapon.family}:null};
+   action:action?{type:action.type,startedAt:action.startedAt,until:action.impactAt,style:action.style,family:action.weapon.family,abilityId:action.ability?.id||null,name:action.ability?.name||null,effect:abilityEffect(action.style,action.weapon,action.ability),reach:action.ability?.reach||action.weapon.reach}:null};
  }
  return {tick,getState,chooseTarget,stopTarget,styleSwitch,queueAbility,queueBasic,dodge,drain,
   canAttackFrom:(player,id)=>{const enemy=monsters.find(e=>e.id===id),weapon=styleWeapon();return !!weapon&&isAlive(enemy)&&inAttackRange(player,enemy,weapon.reach,wallClear(player,enemy));},

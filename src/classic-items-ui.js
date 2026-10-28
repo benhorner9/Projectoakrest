@@ -330,6 +330,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    const row=element(content,'div','classic-ability-row');
    element(row,'strong',null,'SLOT '+(i+1)+' · '+(list.find(x=>x.id===slots[i])?.name||'Empty'));
    const status=state.abilities[i];
+   if(status?.description)element(row,'small','classic-muted',status.description);
    element(row,'small','classic-ability-status',status?(status.available?'Ready':status.unavailableReason):'Empty or locked');
    const select=element(row,'select','classic-ability-select');
    const empty=element(select,'option',null,'— Empty —');empty.value='';

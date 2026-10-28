@@ -1,0 +1,27 @@
+/** Presentation-only identities; catalogue IDs, combat values and saves are unchanged. */
+export const CLASSIC_ABILITY_PROFILES={
+ 'Phase Step':{'shape': 'ring', 'color': '#b9cce9', 'duration': 0.26, 'length': 1},
+ 'Arcane Bolt':{'shape': 'ring', 'color': '#c1b6e9', 'duration': 0.3, 'length': 1.15},
+ 'Blink':{'shape': 'ring', 'color': '#e9c5ac', 'duration': 0.24, 'length': 1},
+ 'Flame Wave':{'shape': 'area', 'color': '#edbe8c', 'duration': 0.42, 'length': 1.1},
+ 'Firebolt':{'shape': 'ring', 'color': '#f2b077', 'duration': 0.32, 'length': 1.3},
+ 'Frozen Binding':{'shape': 'binding', 'color': '#b7eaf2', 'duration': 0.4, 'length': 1.2},
+ 'Frost Nova':{'shape': 'area', 'color': '#a4e0ed', 'duration': 0.45, 'length': 1},
+ 'Focus Shot':{'shape': 'ring', 'color': '#e5dca8', 'duration': 0.4, 'length': 1.65},
+ 'Evasive Roll':{'shape': 'ring', 'color': '#bfdbc8', 'duration': 0.28, 'length': 1},
+ 'Roll Back':{'shape': 'ring', 'color': '#cfddc0', 'duration': 0.3, 'length': 1},
+ 'Snare Bolt':{'shape': 'binding', 'color': '#b5d1b7', 'duration': 0.34, 'length': 1.1},
+ 'Scattershot':{'shape': 'area', 'color': '#d9cbac', 'duration': 0.36, 'length': 0.9},
+ 'Crack Shot':{'shape': 'ring', 'color': '#edcba0', 'duration': 0.38, 'length': 1.5},
+ 'Retreating Shot':{'shape': 'ring', 'color': '#c5d8ac', 'duration': 0.32, 'length': 1},
+ 'Pinning Shot':{'shape': 'binding', 'color': '#b3ddd5', 'duration': 0.34, 'length': 1.2},
+ 'Rapid Shot':{'shape': 'ring', 'color': '#d6dca1', 'duration': 0.38, 'length': 0.8},
+ 'Second Wind':{'shape': 'ring', 'color': '#a7e6ab', 'duration': 0.65, 'length': 1},
+ 'Battle Rush':{'shape': 'ring', 'color': '#e4c295', 'duration': 0.25, 'length': 1},
+ 'Open Wound':{'shape': 'arc', 'color': '#e9a396', 'duration': 0.38, 'length': 1},
+ 'Shadow Step':{'shape': 'ring', 'color': '#acb9d4', 'duration': 0.24, 'length': 1},
+ 'Twin Strike':{'shape': 'arc', 'color': '#eee2ca', 'duration': 0.24, 'length': 1},
+ 'Quick Slice':{'shape': 'arc', 'color': '#da9e92', 'duration': 0.2, 'length': 1},
+ 'Guard Break':{'shape': 'arc', 'color': '#eadc93', 'duration': 0.32, 'length': 1},
+ 'Cleave':{'shape': 'arc', 'color': '#e7bd86', 'duration': 0.34, 'length': 1},};
+export const classicAbilityProfile=name=>CLASSIC_ABILITY_PROFILES[name]||null;
