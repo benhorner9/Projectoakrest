@@ -68,7 +68,12 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
  // Strictly cosmetic: only actual non-combat XP deltas create floating feedback.
  const reportSkillXp=(skill,before,after)=>{
   const earned=Math.max(0,(Number(after)||0)-(Number(before)||0));
-  if(skill&&Number.isFinite(earned)&&earned>0)emit('skill-xp',{skill,amount:earned});
+  if(!skill||!Number.isFinite(earned)||earned<=0)return;
+  emit('skill-xp',{skill,amount:earned});
+  // Use the same 1–99 progression as the Skills book for now. A later
+  // redesign of max level changes the model, not this presentation event.
+  const from=woodcuttingLevel(before).level,to=woodcuttingLevel(after).level;
+  if(to>from)emit('skill-level-up',{skill,level:to,previousLevel:from});
  };
  function event(e){
   if(e.type==='hit'&&e.id==='practice')flag('hit:'+e.style);
