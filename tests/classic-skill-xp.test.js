@@ -6,6 +6,7 @@ import {findClassicInteractable} from '../src/classic-interactions.js';
 import {teachWoodcutting} from '../src/town-services.js';
 import {sanitizeAdventure} from '../src/adventure-content.js';
 import {WOODCUTTING_LEVEL_XP} from '../src/woodcutting.js';
+import {CURRENT_SKILL_CAP} from '../src/skill-cap.js';
 import {skillXpLabel,skillLevelUpLabel,SKILL_LEVEL_CAP} from '../src/classic-skill-xp-floats.js';
 
 const ready=()=>{
@@ -32,7 +33,7 @@ test('only supported non-combat skills create floating text or skill level banne
  assert.equal(skillLevelUpLabel({type:'skill-level-up',skill:'magic',level:4}),null);
  assert.equal(skillLevelUpLabel({type:'xp',skill:'woodcutting',level:4}),null);
  assert.equal(skillLevelUpLabel({type:'skill-level-up',skill:'woodcutting',level:0}),null);
- assert.equal(SKILL_LEVEL_CAP,WOODCUTTING_LEVEL_XP.length-1);
+ assert.equal(SKILL_LEVEL_CAP,CURRENT_SKILL_CAP);
 });
 
 test('one successful chop awards one float and a correct 3-to-4 skill level event',()=>{
