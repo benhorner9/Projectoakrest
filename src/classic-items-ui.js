@@ -5,7 +5,9 @@ import {woodcuttingLevel} from './woodcutting.js';
  * DOM concerns stay here. All mutations use combat.itemAction and combat.pickup.
  */
 import {getItem,itemIconUrl,itemFromDrop} from './items.js';
-import {STYLE_ORDER,LOADOUTS} from './rules.js';
+import {STYLE_ORDER,LOADOUTS,levelFromXp} from './rules.js';
+import {classicBookIcon,classicBookStyleName} from './classic-combat-book.js';
+import {abilityDetails} from './classic-abilities.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
 import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
 import {inventoryEntries} from './equipment-ui.js';
@@ -31,6 +33,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const content=q(host,'classic-item-content'),close=q(host,'classic-item-close');
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,arrange=false,moveStart=null,selectedBank=null,selectedShop=null;
+ let abilitySlot=0,inspectedAbilityId=null,lastCombatBookKey='';
  let combineSource=null,showMaking=false,toolsExpanded=false;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
@@ -319,27 +322,91 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   }
  }
  function renderAbilities(){
-  const data=save(),current=style(),weapon=data.gear[current],state=combat.getState();
-  element(content,'strong','classic-section-title',current.toUpperCase()+' · '+state.weapon);
-  element(content,'p','classic-muted',state.target?'Target: '+state.target.name:'Select a creature to use offensive abilities.');
-  element(content,'p','classic-muted','Only unlocked skills can be slotted. Four abilities are saved separately per weapon family.');
-  if(!LOADOUTS[current]?.[weapon]){element(content,'p',null,'Equip a weapon first.');return;}
-  const list=classicAbilityCatalogue(data,current);
-  const slots=data.slots?.[current]?.[LOADOUTS[current][weapon].family]||[];
-  for(let i=0;i<4;i++){
-   const row=element(content,'div','classic-ability-row');
-   element(row,'strong',null,'SLOT '+(i+1)+' · '+(list.find(x=>x.id===slots[i])?.name||'Empty'));
-   const status=state.abilities[i];
-   if(status?.description)element(row,'small','classic-muted',status.description);
-   element(row,'small','classic-ability-status',status?(status.available?'Ready':status.unavailableReason):'Empty or locked');
-   const select=element(row,'select','classic-ability-select');
-   const empty=element(select,'option',null,'— Empty —');empty.value='';
-   for(const skill of list){const opt=element(select,'option',null,skill.name+' · Lv '+skill.requiredLevel);
-    opt.value=skill.id;opt.disabled=!skill.unlocked;
-   }
-   select.value=slots[i]||'';
-   select.addEventListener('change',()=>transact({type:'ability',style:current,weapon,index:i,id:select.value||null}));
+  const data=save(),current=style(),weaponId=data.gear[current],weapon=LOADOUTS[current]?.[weaponId],
+   state=combat.getState(),level=levelFromXp(data.xp[current]||0).level;
+  const bookKey=current+':'+weaponId;
+  if(lastCombatBookKey!==bookKey){abilitySlot=0;inspectedAbilityId=null;lastCombatBookKey=bookKey;}
+  const book=element(content,'section','oakrest-combat-book');
+  book.dataset.combatStyle=current;
+  book.setAttribute('aria-label',classicBookStyleName(current)+' ability book');
+  const head=element(book,'div','oakrest-combat-book-heading');
+  element(head,'strong',null,classicBookStyleName(current));
+  element(head,'span','oakrest-combat-book-level','Level '+level);
+  element(book,'p','oakrest-combat-book-weapon',weapon?.title||'Equip a weapon');
+  if(!weapon){
+   element(book,'p','classic-muted','Equip a '+current+' weapon to prepare abilities.');
+   return;
   }
+  const list=classicAbilityCatalogue(data,current);
+  const slots=data.slots?.[current]?.[weapon.family]||[];
+  element(book,'p','oakrest-combat-book-hint','Choose a slot, then tap an ability to equip it.');
+  const bar=element(book,'div','oakrest-combat-book-slots');
+  bar.setAttribute('role','group');bar.setAttribute('aria-label','Four equipped ability slots');
+  for(let i=0;i<4;i++){
+   const skill=list.find(s=>s.id===slots[i]),status=state.abilities[i];
+   const selected=i===abilitySlot;
+   const tile=button(bar,'oakrest-combat-slot'+(selected?' selected':''),'',()=>{
+    abilitySlot=i;
+    inspectedAbilityId=slots[i]||null;
+    render();
+   });
+   tile.dataset.slot=String(i+1);
+   tile.setAttribute('aria-pressed',String(selected));
+   tile.setAttribute('aria-label','Ability slot '+(i+1)+': '+(skill?.name||'Empty')+(selected?', selected':''));
+   element(tile,'span','oakrest-combat-slot-number',String(i+1));
+   element(tile,'span','oakrest-combat-slot-name',skill?.name||'Empty');
+   const runtime=element(tile,'span','classic-ability-status',status?(status.available?'Ready':status.unavailableReason):'Empty or locked');
+   runtime.dataset.slotIndex=String(i);
+  }
+  const gridHead=element(book,'div','oakrest-combat-book-grid-head');
+  element(gridHead,'strong',null,current==='magic'?'SPELLS':current==='ranged'?'SHOTS & TECHNIQUES':'COMBAT TECHNIQUES');
+  element(gridHead,'span',null,list.filter(s=>s.unlocked).length+' / '+list.length+' unlocked');
+  const grid=element(book,'div','oakrest-combat-book-grid');
+  grid.setAttribute('role','group');grid.setAttribute('aria-label','Available '+current+' abilities');
+  if(!list.length)element(book,'p','classic-muted','There are no abilities for the equipped weapon.');
+  for(const skill of list){
+   const assigned=slots.indexOf(skill.id),inspected=inspectedAbilityId===skill.id;
+   const tile=button(grid,'oakrest-spell-tile'+(skill.unlocked?'':' locked')+(inspected?' inspected':'')+(assigned>=0?' assigned':''),'',()=>{
+    inspectedAbilityId=skill.id;
+    if(skill.unlocked)transact({type:'ability',style:current,weapon:weaponId,index:abilitySlot,id:skill.id});
+    else render();
+   });
+   tile.dataset.abilityId=skill.id;
+   tile.dataset.abilityName=skill.name;
+   // Locked tiles are still interactive for inspecting their unlock requirements.
+   tile.dataset.locked=String(!skill.unlocked);
+   tile.setAttribute('aria-label',skill.name+', level '+skill.requiredLevel+(skill.unlocked?', equip to slot '+(abilitySlot+1):', locked'));
+   tile.title=skill.name+' — '+skill.note;
+   const sigil=element(tile,'span','oakrest-spell-sigil');
+   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+   svg.setAttribute('viewBox','0 0 32 32');
+   svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');
+   svg.setAttribute('stroke-width','1.8');svg.setAttribute('aria-hidden','true');
+   const use=document.createElementNS('http://www.w3.org/2000/svg','use');
+   use.setAttribute('href','./src/oakrest-ui-icons.svg#'+classicBookIcon(skill.kind));
+   svg.append(use);sigil.append(svg);
+   element(tile,'span','oakrest-spell-name',skill.name);
+   if(!skill.unlocked)element(tile,'span','oakrest-spell-level','Lv '+skill.requiredLevel);
+   else if(assigned>=0)element(tile,'span','oakrest-spell-equipped',''+(assigned+1));
+  }
+  const shown=list.find(s=>s.id===inspectedAbilityId)||list.find(s=>s.id===slots[abilitySlot])||list[0];
+  if(shown){
+   const info=element(book,'section','oakrest-spell-info');
+   info.setAttribute('aria-label','Selected ability details');
+   const infoHead=element(info,'div','oakrest-spell-info-head');
+   element(infoHead,'strong',null,shown.name);
+   element(infoHead,'span',null,shown.unlocked?'UNLOCKED':'LEVEL '+shown.requiredLevel+' REQUIRED');
+   element(info,'p',null,abilityDetails(current,weapon,shown,1,true).description);
+   element(info,'p','oakrest-spell-info-meta','Cooldown '+shown.cooldown+'s · Unlocks at '+classicBookStyleName(current)+' level '+shown.requiredLevel);
+   const assigned=slots.indexOf(shown.id);
+   if(assigned>=0)element(info,'small','oakrest-spell-info-equipped','Equipped in slot '+(assigned+1));
+   else if(shown.unlocked)element(info,'small','oakrest-spell-info-available','Tap the ability above to assign it to slot '+(abilitySlot+1));
+   else element(info,'small','oakrest-spell-info-locked','Train '+classicBookStyleName(current)+' to unlock this ability.');
+  }
+  const foot=element(book,'div','oakrest-combat-book-footer');
+  button(foot,'oakrest-combat-clear','CLEAR SLOT '+(abilitySlot+1),
+   ()=>transact({type:'ability',style:current,weapon:weaponId,index:abilitySlot,id:null}),!slots[abilitySlot]);
+  element(foot,'span',null,'Saved per weapon family · changes update your combat bar');
  }
  function render(){
   if(host.hidden)return;
@@ -347,8 +414,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    tab.classList.toggle('active',tab.dataset.itemTab===mode);
    tab.setAttribute('aria-selected',String(tab.dataset.itemTab===mode));
   }
-  title.textContent={inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store',abilities:'Abilities'}[mode];
-  subtitle.textContent='OAKREST · CHARACTER INVENTORY';
+  title.textContent=mode==='abilities'?classicBookStyleName(style()):{inventory:'Backpack',equipment:'Equipment',bank:'Oakrest Bank',shop:'General Store'}[mode];
+  subtitle.textContent=mode==='abilities'?'OAKREST · STYLE COMBAT BOOK':'OAKREST · CHARACTER INVENTORY';
   const scroll=content.scrollTop;
   content.dataset.view=mode;
   content.replaceChildren();

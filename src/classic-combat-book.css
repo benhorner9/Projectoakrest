@@ -1,0 +1,159 @@
+/* Oakrest Classic Combat Book — compact grid selection, original glyphs and palette. */
+#classic-app.oakrest-framed #classic-item-content[data-view="abilities"]{
+ padding:7px 6px 10px!important;overflow-x:hidden;overflow-y:auto!important;
+ overscroll-behavior:contain;touch-action:pan-y;
+ scrollbar-width:thin;scrollbar-color:#847149 #1e231e;
+}
+#classic-app.oakrest-framed .oakrest-combat-book{
+ --book-ink:#e5c498;--book-tint:#795035;--book-dark:#32271f;
+ display:flex;flex-direction:column;gap:6px;
+ color:#e8dec7;min-width:0;min-height:100%;
+}
+#classic-app.oakrest-framed .oakrest-combat-book[data-combat-style="magic"]{
+ --book-ink:#c6d8f7;--book-tint:#4f689f;--book-dark:#1e2d48;
+}
+#classic-app.oakrest-framed .oakrest-combat-book[data-combat-style="ranged"]{
+ --book-ink:#c8dfb4;--book-tint:#4e7859;--book-dark:#1e3526;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-heading,
+#classic-app.oakrest-framed .oakrest-combat-book-grid-head{
+ display:flex;align-items:center;justify-content:space-between;gap:5px;
+ padding:4px 6px;background:linear-gradient(90deg,var(--book-dark),#1b241ef0);
+ border-left:3px solid var(--book-tint);border-bottom:1px solid #96815b5e;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-heading strong{
+ font:700 15px/1.2 Georgia,serif;color:var(--book-ink);letter-spacing:.025em;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-level,
+#classic-app.oakrest-framed .oakrest-combat-book-grid-head span{
+ font:700 10px/1.2 system-ui,sans-serif;color:#c9c4ae;white-space:nowrap;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-weapon{
+ margin:0 6px;color:#e8d4a6;font:600 11px/1.35 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-hint{
+ margin:0 6px;color:#c1c1b6;font:10px/1.3 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-slots{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;
+}
+#classic-app.oakrest-framed .oakrest-combat-slot{
+ min-width:0;min-height:57px;display:flex;flex-direction:column;justify-content:center;
+ gap:4px;align-items:center;padding:5px 2px;border:1px solid #70664e;border-radius:4px;
+ background:linear-gradient(155deg,#30362d,#121e1a);
+ color:#ded5b7;cursor:pointer;text-align:center;
+}
+#classic-app.oakrest-framed .oakrest-combat-slot.selected{
+ background:linear-gradient(160deg,var(--book-tint),var(--book-dark));
+ border-color:#edcf91;box-shadow:inset 0 0 0 1px #edd29a4d,0 0 0 1px #edd29a18;
+}
+#classic-app.oakrest-framed .oakrest-combat-slot-number{
+ font:700 13px/1 Georgia,serif;color:var(--book-ink);
+}
+#classic-app.oakrest-framed .oakrest-combat-slot-name{
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+ overflow:hidden;overflow-wrap:anywhere;
+ font:600 9px/1.15 system-ui,sans-serif;min-width:0;
+}
+#classic-app.oakrest-framed .oakrest-combat-slot .classic-ability-status{
+ color:#d1c09b;font:8px/1.1 system-ui,sans-serif;
+ max-width:100%;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-grid-head{
+ padding:6px;margin-top:2px;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-grid-head strong{
+ color:var(--book-ink);font:700 11px/1.2 Georgia,serif;letter-spacing:.06em;
+}
+#classic-app.oakrest-framed .oakrest-combat-book-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;
+}
+#classic-app.oakrest-framed .oakrest-spell-tile{
+ display:flex;position:relative;flex-direction:column;gap:3px;align-items:center;
+ justify-content:center;min-width:0;min-height:76px;padding:7px 2px 5px;
+ cursor:pointer;border:1px solid #71674d;border-radius:5px;
+ background:radial-gradient(ellipse at 50% 20%,var(--book-tint),var(--book-dark) 65%,#171e1c);
+ box-shadow:inset 0 1px 0 #e2d9b126,0 2px 3px #080d0b;
+ color:var(--book-ink);
+}
+#classic-app.oakrest-framed .oakrest-spell-tile.inspected,
+#classic-app.oakrest-framed .oakrest-spell-tile:hover{
+ border-color:#e9d19f;box-shadow:inset 0 0 0 1px #ebd5a45a,0 0 0 1px #806b40;
+}
+#classic-app.oakrest-framed .oakrest-spell-tile.locked{
+ filter:saturate(.35);color:#999a96;background:radial-gradient(ellipse,#3d403e,#1f2523);
+ border-color:#5a5d57;
+}
+#classic-app.oakrest-framed .oakrest-spell-tile:focus-visible,
+#classic-app.oakrest-framed .oakrest-combat-slot:focus-visible,
+#classic-app.oakrest-framed .oakrest-combat-clear:focus-visible{
+ outline:2px solid #ffe5aa;outline-offset:1px;
+}
+#classic-app.oakrest-framed .oakrest-spell-sigil{
+ display:flex;align-items:center;justify-content:center;width:35px;height:35px;
+ border:1px solid #d4bb8b50;border-radius:6px;
+ background:radial-gradient(circle at 50% 25%,#ffffee25,transparent 70%);
+}
+#classic-app.oakrest-framed .oakrest-spell-sigil svg{
+ display:block;width:29px;height:29px;stroke:currentColor;
+}
+#classic-app.oakrest-framed .oakrest-spell-name{
+ color:inherit;font:700 9px/1.2 system-ui,sans-serif;
+ text-align:center;overflow-wrap:anywhere;min-width:0;
+}
+#classic-app.oakrest-framed .oakrest-spell-level,
+#classic-app.oakrest-framed .oakrest-spell-equipped{
+ position:absolute;top:3px;right:3px;padding:1px 3px;
+ border:1px solid #9b8b61;border-radius:3px;
+ background:#192019e8;color:#f2d9a0;font:700 8px/1.2 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-spell-level{border-color:#77736b;color:#cccac2}
+#classic-app.oakrest-framed .oakrest-spell-info{
+ margin:1px 0 0;padding:7px 8px;border:1px solid #82704d;border-left:3px solid var(--book-tint);
+ background:linear-gradient(145deg,#272f29,#18211d);min-width:0;
+}
+#classic-app.oakrest-framed .oakrest-spell-info-head{
+ display:flex;justify-content:space-between;align-items:center;gap:5px;
+ color:var(--book-ink);
+}
+#classic-app.oakrest-framed .oakrest-spell-info-head strong{
+ font:700 13px/1.25 Georgia,serif;
+}
+#classic-app.oakrest-framed .oakrest-spell-info-head span{
+ flex:none;color:#e2c995;font:700 9px/1.1 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-spell-info p{
+ margin:5px 0;color:#ded8c7;font:11px/1.4 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-spell-info .oakrest-spell-info-meta{
+ color:#c1ae86;font-size:10px;
+}
+#classic-app.oakrest-framed .oakrest-spell-info small{
+ display:block;color:#c9d4af;font:10px/1.35 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-spell-info .oakrest-spell-info-locked{color:#e2ab93}
+#classic-app.oakrest-framed .oakrest-combat-book-footer{
+ display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-bottom:8px;
+}
+#classic-app.oakrest-framed .oakrest-combat-clear{
+ min-height:40px;padding:7px 11px;border:1px solid #987e52;
+ border-radius:4px;background:#39352a;color:#e8d5ae;
+ font:700 11px/1.3 system-ui,sans-serif;
+}
+#classic-app.oakrest-framed .oakrest-combat-clear:disabled{opacity:.5;cursor:default}
+#classic-app.oakrest-framed .oakrest-combat-book-footer span{
+ color:#c1b8a3;font:10px/1.3 system-ui,sans-serif;
+}
+@media(max-width:780px),(max-height:630px){
+ #classic-app.oakrest-framed .oakrest-combat-book{gap:4px}
+ #classic-app.oakrest-framed .oakrest-combat-book-heading strong{font-size:13px}
+ #classic-app.oakrest-framed .oakrest-combat-book-grid{gap:3px}
+ #classic-app.oakrest-framed .oakrest-spell-tile{min-height:64px;padding:5px 1px}
+ #classic-app.oakrest-framed .oakrest-spell-sigil{width:30px;height:30px}
+ #classic-app.oakrest-framed .oakrest-spell-sigil svg{width:26px;height:26px}
+ #classic-app.oakrest-framed .oakrest-combat-slot{min-height:49px}
+}
+@media(prefers-reduced-motion:reduce){
+ #classic-app.oakrest-framed .oakrest-spell-tile,
+ #classic-app.oakrest-framed .oakrest-combat-slot{transition:none!important}
+}
