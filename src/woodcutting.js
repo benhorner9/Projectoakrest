@@ -120,7 +120,7 @@ export function chopOnce(data,state,time,random=Math.random){
   state.fallAt=time;
   state.respawnAt=time+respawnSeconds;
  }
- return {ok:true,success:true,logId:eligible.tree.logId,xp:eligible.tree.xp,
+ return {ok:true,success:true,logId:eligible.tree.logId,xp:data.professions.woodcuttingXp-existingXp,
   levelUp:woodcuttingLevel(data.professions.woodcuttingXp).level>previous,
   newLevel:woodcuttingLevel(data.professions.woodcuttingXp).level,
   depleted:state.logs===0,respawnSeconds,remaining:state.logs,chance,axe:eligible.axe};
