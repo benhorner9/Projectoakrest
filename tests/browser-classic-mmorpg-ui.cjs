@@ -54,7 +54,7 @@ let browser;
   assert.equal(overlap(l.actions,l.side),0,'quick actions are no longer inside inventory sidebar');
   assert.equal(overlap(l.dock,l.side),0,'combat controls have moved out of the right sidebar');
   assert.ok(Math.abs(l.sidebarBody.bottom-l.side.bottom)<=5,'sidebar book extends to page bottom');
-  assert.ok(Math.abs(l.inventory.bottom-l.sidebarBody.bottom)<=5,'bag uses full available sidebar height');
+  assert.ok(Math.abs(l.inventory.bottom-l.sidebarBody.bottom)<=16,'bag fills sidebar inside its decorative frame: '+JSON.stringify({size,body:l.sidebarBody,bag:l.inventory}));
   assert.equal(overlap(l.world,l.side),0,'world separate from right panel');
   assert.equal(overlap(l.world,l.chat),0,'chat does not float over world');
   assert.equal(overlap(l.chat,l.side),0,'chat remains left');
