@@ -30,6 +30,7 @@ let browser;
     return {world:box('#classic-game'),side:box('#classic-sidebar'),
      footer:box('.classic-action-footer'),map:box('.classic-sidebar-map'),
      nav:box('.classic-item-buttons'),dock:box('.classic-combat-dock'),
+     deck:box('#oakrest-action-deck'),chat:box('#oakrest-chat'),
      quick:box('.field-shortcuts'),buttons:[...document.querySelectorAll('.classic-item-buttons button')].map(b=>b.getBoundingClientRect().height),
      canvas:box('#classic-game canvas'),
      css:getComputedStyle(document.querySelector('#classic-app')).gridTemplateColumns};
@@ -42,7 +43,10 @@ let browser;
    assert.equal(overlap(l.world,l.footer),0,'action footer never covers the world');
    assert.equal(overlap(l.map,l.nav),0,'minimap stays above navigation');
    assert.equal(overlap(l.dock,l.world),0,'attack buttons stay clear of world');
-   assert.ok(overlap(l.dock,l.side)>100,'eight-slot bar belongs inside right-hand sidebar');
+   assert.equal(overlap(l.dock,l.side),0,'combat controls no longer occupy the inventory sidebar');
+   assert.ok(overlap(l.dock,l.deck)>100,'the original eight-slot controls remain inside the action deck');
+   assert.equal(overlap(l.deck,l.chat),0,'combat bar and chat have separate reserved space');
+   assert.ok(Math.abs(l.deck.bottom-l.chat.top)<=2,'action deck sits immediately above chat');
    assert.ok(l.buttons.every(h=>h>=40),'touch menu target size '+JSON.stringify({size,l}));
    assert.ok(Math.abs(l.canvas.width-l.world.width)<=4,'renderer tracks the usable viewport minus the 3px frame border');
   }
