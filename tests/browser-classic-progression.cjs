@@ -80,7 +80,7 @@ let browser;
    for(const [id,n] of Object.entries(saved.inventory.materials))assert.equal(loaded.inventory.materials[id]||0,n);
    assert.deepEqual(loaded.bank,saved.bank);assert.deepEqual(loaded.adventure,saved.adventure);assert.deepEqual(loaded.xp,saved.xp);
    assert.equal(await page.evaluate(other=>localStorage.getItem('oakrest-character-save-'+other),other),JSON.stringify({sentinel:'unchanged'}));
-   assert.deepEqual(errors,[]);reports.push({touch,batches:true,recipes:7,gatheredReeds:5,bounty:'60 frost scrolls',persisted:true,otherCharacterUnchanged:true});
+   assert.deepEqual(errors,[]);reports.push({touch,batches:true,recipes:8,equipmentRecipes:6,gatheredReeds:5,bounty:'60 frost scrolls',persisted:true,otherCharacterUnchanged:true});
   }catch(e){await page.screenshot({path:'qa/progression/failure.png'}).catch(()=>{});console.error(await page.evaluate(()=>({state:window.oakrestClassicQA?.state(),body:document.getElementById('classic-dialogue')?.innerText})).catch(()=>null));throw e;}
   finally{await context.close();}
  }
