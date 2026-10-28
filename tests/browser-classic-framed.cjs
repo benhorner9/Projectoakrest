@@ -45,6 +45,7 @@ let browser;
     const world=box('#classic-game'),canvas=box('#classic-game canvas');
     return {world,canvas,side:box('#classic-sidebar'),nav:box('.classic-item-buttons'),
      map:box('.classic-minimap-frame'),footer:box('.classic-action-footer'),
+     actions:box('#oakrest-action-deck'),chat:box('#oakrest-chat'),
      dock:box('.classic-combat-dock'),joystick:box('#classic-joystick'),
      rendererSize:{w:document.querySelector('#classic-game canvas').width,h:document.querySelector('#classic-game canvas').height},
      app:box('#classic-app')};
@@ -56,7 +57,10 @@ let browser;
    assert.equal(intersects(view.world,view.footer),0,'combat buttons must not cover the world');
    assert.equal(intersects(view.nav,view.map),0,'menu buttons must sit below the minimap');
    assert.equal(intersects(view.dock,view.world),0,'combat dock must not cover world');
-   assert.ok(intersects(view.dock,view.side)>100,'eight-slot combat dock is intentionally within the right sidebar');
+   assert.equal(intersects(view.dock,view.side),0,'the quick actions must not occupy the right sidebar');
+   assert.ok(intersects(view.dock,view.actions)>100,'original combat buttons remain in the left-side action deck');
+   assert.equal(intersects(view.actions,view.chat),0,'chat and combat deck have separate reserved space');
+   assert.ok(Math.abs(view.actions.bottom-view.chat.y)<=2,'quick actions sit directly above chat');
    assert.ok(Math.abs(view.canvas.w-view.world.w)<=4&&Math.abs(view.canvas.h-view.world.h)<=4,
     'canvas fills world content rectangle (minus ornamental frame border): '+JSON.stringify({size,view}));
    assert.ok(view.rendererSize.w>0&&view.rendererSize.h>0,'WebGL framebuffer is valid');
@@ -89,6 +93,6 @@ let browser;
   await page.keyboard.up('w');
   assert.ok((await page.evaluate(()=>oakrestClassicQA.state())).z>39,'movement remains responsive');
   assert.deepEqual(errors,[],'no browser runtime exceptions');
-  console.log('PASS: integrated Oakrest world viewport, world-relative WebGL sizing, fixed controls and in-frame RPG books at 4 sizes.');
+  console.log('PASS: Classic reflow reserves action buttons above chat and full-height right book at four sizes.');
  }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

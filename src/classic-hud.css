@@ -90,3 +90,38 @@
 .classic-camera-actions button:active{background:#775f40}
 .classic-camera-actions #classic-camera-reset{grid-column:1/-1;background:#6f5941}
 .classic-camera-actions button:focus-visible{outline:3px solid #f4d494;outline-offset:2px}
+
+
+/* Lightweight world-anchored skill XP, not the combat damage/XP channel.
+   This layer lives inside the scaled Classic canvas rectangle. */
+#classic-game .classic-skill-xp-layer{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;contain:layout style}
+#classic-game .classic-skill-xp-float{position:absolute;display:block;white-space:nowrap;pointer-events:none;
+ transform:translate(-50%,-100%);font:800 clamp(12px,1.1vw,15px)/1.2 system-ui,-apple-system,sans-serif;
+ color:#f7dd9a;letter-spacing:.015em;text-shadow:0 1px 1px #16291e,1px 1px 2px #16291e,-1px -1px 2px #16291e,0 3px 6px #102319;
+ will-change:transform,opacity;user-select:none;-webkit-user-select:none}
+#classic-game .classic-skill-xp-float[hidden]{display:none!important}
+
+
+/* A brief skill-only level-up, placed at the top of the playable world. */
+#classic-game .classic-skill-level-banner{position:absolute;z-index:3;top:clamp(10px,3vh,25px);left:50%;transform:translateX(-50%);
+ display:flex;flex-direction:column;align-items:center;gap:4px;min-width:180px;max-width:min(330px,78%);
+ padding:9px 24px 10px;background:#233b30ed;border:2px solid #deb96e;border-radius:8px;box-shadow:0 5px 22px #11251bd0,inset 0 0 0 1px #74613b;
+ pointer-events:none;text-align:center;color:#ffedc3;user-select:none;-webkit-user-select:none}
+#classic-game .classic-skill-level-banner[hidden]{display:none!important}
+#classic-game .classic-skill-level-banner span{font:700 10px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.16em;color:#e4c58a}
+#classic-game .classic-skill-level-banner strong{font:700 clamp(16px,1.5vw,21px)/1.25 Georgia,serif;white-space:nowrap}
+
+
+
+/* Beyond-the-Horizon previews are deliberately visually different from
+   immediately trainable unlocks and have no interactive or gameplay action. */
+#classic-skill-book .skill-future-heading{margin:19px 0 5px;padding-top:13px;border-top:1px solid #95845c;
+ color:#e5bf7d;letter-spacing:.12em;font:800 12px/1.35 system-ui,sans-serif}
+#classic-skill-book .skill-future-intro{color:#c6b796;margin-bottom:10px}
+#classic-skill-book .classic-skill-unlock.future-preview{opacity:.88;border:1px dashed #887451;background:#2e382f;
+ border-radius:5px;margin:6px 0;padding:10px;display:flex;gap:12px;align-items:center;color:#ded0b5}
+#classic-skill-book .future-preview .skill-unlock-level{color:#d1a879;font:800 11px system-ui,sans-serif;min-width:38px}
+#classic-skill-book .future-preview .skill-unlock-text{flex:1;min-width:0}
+#classic-skill-book .future-preview .skill-unlock-text strong{color:#e4d6ae;display:block}
+#classic-skill-book .future-preview .skill-unlock-text small{color:#b2bba7;display:block;margin-top:3px}
+#classic-skill-book .future-preview .skill-unlock-status{filter:grayscale(1);opacity:.7}

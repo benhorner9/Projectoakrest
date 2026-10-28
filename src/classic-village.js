@@ -8,6 +8,7 @@ import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_PLAZAS,CLASSIC
 import {CLASSIC_TREES,CLASSIC_NPCS} from './classic-presentation.js';
 import {OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 import {interiorFixtures} from './classic-interior-fixtures.js';
+import {applySkillTreeVisual} from './classic-skill-visuals.js';
 const MAT={
  grass:new THREE.MeshLambertMaterial({color:'#73956c'}),
  grass2:new THREE.MeshLambertMaterial({color:'#668c63'}),
@@ -242,10 +243,16 @@ export function createClassicVillage(scene){
  }
  const roofs=OAKREST_BUILDINGS.map((b,i)=>building(root,b,i));
  for(const [i,t] of CLASSIC_TREES.entries())createOakrestTree(root,t.x,t.z,i,.85+(i%4)*.09);
- // Training groves and noticeboards now occupy canonical interaction anchors.
+ // Interactive grove meshes must remain unbatched so axes can shake and fell them.
+ // Collision and resource yields are still owned by their existing systems.
+ const groveVisuals=new Map();
  for(const [i,grove] of OAKREST_GROVES.entries()){
   const treeGroup=createOakrestTree(root,grove.x,grove.z,i,1.02);
   treeGroup.userData.interactId='grove:'+grove.id;
+  treeGroup.userData.dynamic=true;
+  const stump=mesh(root,ring,MAT.wood,grove.x,.28,grove.z,.52,.55,.52);
+  stump.visible=false;stump.userData.dynamic=true;
+  groveVisuals.set(treeGroup.userData.interactId,{tree:treeGroup,stump});
  }
  for(const notice of OAKREST_NOTICES){
   const g=new THREE.Group();g.position.set(notice.x,0,notice.z);root.add(g);
@@ -292,7 +299,12 @@ export function createClassicVillage(scene){
  const npcMarkers=CLASSIC_NPCS.map(n=>({id:n.id,x:n.x,z:n.z}));
  return {
   root,roofs,npcMarkers,batching,groundDetails,perimeter:CLASSIC_PERIMETER,
-  update(time){ribbons.forEach((r,i)=>{r.rotation.z=Math.sin(time*1.4+i)*.07;r.rotation.y=Math.sin(time*.9+i)*.15;});},
+  update(time,action=null,trees=[]){
+    ribbons.forEach((r,i)=>{r.rotation.z=Math.sin(time*1.4+i)*.07;r.rotation.y=Math.sin(time*.9+i)*.15;});
+    const states=new Map(trees.map(s=>[s.id,s]));
+    for(const [id,visual] of groveVisuals)
+     applySkillTreeVisual(visual.tree,visual.stump,states.get(id),action,time);
+   },
   updateCutaway(insideId){
    for(const item of roofs)item.roofs.visible=item.id!==insideId;
   },

@@ -6,7 +6,7 @@
  * Keep effects such as toasts, HUD refreshes, HP presentation and saving in
  * the calling shell.
  */
-import {XP_BY_MOB, levelFromXp, skillCatalogue, outgoingMultiplier} from './rules.js';
+import {XP_BY_MOB, levelFromXp, skillCatalogue, outgoingMultiplier,COMBAT_SKILL_XP_CAP} from './rules.js';
 import {equipmentModifiers} from './equipment-slots.js';
 import {maxHitFor} from './auto-combat.js';
 
@@ -34,8 +34,11 @@ export function awardMonsterVictory(data, type, sourceStyle, encounterXp=XP_BY_M
 
   const oldLevel=levelFromXp(data.xp[sourceStyle]).level;
   const oldVital=levelFromXp(data.xp.vitality).level;
-  data.xp[sourceStyle]=Math.min(200000000,data.xp[sourceStyle]+val);
-  data.xp.vitality=Math.min(200000000,data.xp.vitality+Math.floor(val*.55));
+  // Don't bank invisible progress past this chapter's level cap. Preserve
+  // any historical legacy XP above the new ceiling without adding more.
+  const styleBefore=data.xp[sourceStyle],healthBefore=data.xp.vitality;
+  data.xp[sourceStyle]=Math.max(styleBefore,Math.min(COMBAT_SKILL_XP_CAP,styleBefore+val));
+  data.xp.vitality=Math.max(healthBefore,Math.min(COMBAT_SKILL_XP_CAP,healthBefore+Math.floor(val*.55)));
 
   const newLevel=levelFromXp(data.xp[sourceStyle]).level;
   const newVital=levelFromXp(data.xp.vitality).level;
@@ -48,7 +51,7 @@ export function awardMonsterVictory(data, type, sourceStyle, encounterXp=XP_BY_M
   data.defeated++;
   return {
     awarded:true,
-    amount:val,
+    amount:data.xp[sourceStyle]-styleBefore,
     style:sourceStyle,
     oldLevel,
     newLevel,

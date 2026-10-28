@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {freshCharacterSave,validSave} from '../src/rules.js';
 import {teachWoodcutting,bankMaterials} from '../src/town-services.js';
+import {CURRENT_SKILL_CAP} from '../src/skill-cap.js';
 import {registerWorldObstacle,removeWorldObstacle,blocked,clearWorldObstacles} from '../src/terrain.js';
 import {createWoodcuttingTree} from '../src/woodcutting-art.js';
 import {
@@ -17,8 +18,8 @@ test('seven distinct tree and axe tiers have usable progression',()=>{
  assert.equal(new Set(TREE_SPECIES.map(s=>s.shape)).size,7);
  assert.equal(new Set(TREE_SPECIES.map(s=>s.logId)).size,7);
  assert.ok(WOODCUTTING_LEVEL_XP[99]>13_000_000);
- assert.equal(woodcuttingLevel(WOODCUTTING_LEVEL_XP[99]).level,99);
- assert.equal(woodcuttingLevel(WOODCUTTING_LEVEL_XP[85]).level,85);
+ assert.equal(woodcuttingLevel(WOODCUTTING_LEVEL_XP[99]).level,CURRENT_SKILL_CAP);
+ assert.equal(woodcuttingLevel(WOODCUTTING_LEVEL_XP[85]).level,CURRENT_SKILL_CAP);
  assert.equal(woodcuttingLevel(WOODCUTTING_LEVEL_XP[20]-1).level,19);
 });
 
@@ -32,8 +33,10 @@ test('axeless woodcutters are refused, trainer gives Bronze and higher trees sta
  d.inventory.weapons.melee.push('pryrite-axe');
  assert.equal(bestWoodcuttingAxe(d).id,'bronze-axe','cannot use an advanced axe at level one');
  d.professions.woodcuttingXp=WOODCUTTING_LEVEL_XP[85];
- assert.equal(bestWoodcuttingAxe(d).id,'pryrite-axe');
- assert.equal(canCutTree(d,'elderwood').ok,true);
+ assert.equal(bestWoodcuttingAxe(d).id,'bronze-axe','future axes remain sealed at the chapter cap');
+ assert.equal(canCutTree(d,'elderwood').ok,false);
+ d.inventory.weapons.melee.push('safferite-axe');
+ assert.equal(bestWoodcuttingAxe(d).id,'safferite-axe','live level-50 axe remains usable');
 });
 
 test('higher-tier axes significantly outperform bronze on familiar low-level trees',()=>{
@@ -110,7 +113,7 @@ test('each species has a distinct low-poly 3D model and removable trunk collisio
  clearWorldObstacles();
 });
 
-test('Woodcutting uses accurate 1–99 skill-card XP and lists all tree and axe level unlocks',()=>{
+test('Woodcutting keeps future XP definitions while the live skill card caps at 60',()=>{
  const milestones=woodcuttingMilestones();
  assert.equal(milestones.length,14);
  assert.deepEqual(milestones.filter(e=>e.type==='Tree').map(e=>e.level),[1,10,20,35,50,70,85]);

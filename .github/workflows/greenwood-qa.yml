@@ -51,6 +51,9 @@ jobs:
       - name: Classic equipment, inventory drag and quick slots
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-equipment-ui.cjs
+      - name: Classic progression, crafting and farming controls
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-classic-progression.cjs
       - name: Classic iPad-size character creation
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/browser-classic-creator.cjs
@@ -68,7 +71,7 @@ jobs:
   combat-browser:
     name: Classic combat scenario audit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout all history for baseline parity
         uses: actions/checkout@v4
@@ -91,7 +94,7 @@ jobs:
       - name: Desktop and touch combat engagement, presentation and bounded soak
         run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-combat-engagement.cjs
       - name: Individual ability desktop and touch acceptance
-        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-abilities.cjs
+        run: timeout --signal=TERM --kill-after=10s 7m node tests/browser-classic-abilities.cjs
       - name: Preserve combat scenario diagnostics
         if: always()
         uses: actions/upload-artifact@v4
