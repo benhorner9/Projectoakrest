@@ -7,6 +7,7 @@ import {woodcuttingLevel} from './woodcutting.js';
 import {getItem,itemIconUrl,itemFromDrop} from './items.js';
 import {STYLE_ORDER,LOADOUTS,levelFromXp} from './rules.js';
 import {classicBookIcon,classicBookStyleName} from './classic-combat-book.js';
+import {abilityDetails} from './classic-abilities.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
 import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
 import {inventoryEntries} from './equipment-ui.js';
@@ -372,7 +373,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    });
    tile.dataset.abilityId=skill.id;
    tile.dataset.abilityName=skill.name;
-   tile.setAttribute('aria-disabled',String(!skill.unlocked));
+   // Locked tiles are still interactive for inspecting their unlock requirements.
+   tile.dataset.locked=String(!skill.unlocked);
    tile.setAttribute('aria-label',skill.name+', level '+skill.requiredLevel+(skill.unlocked?', equip to slot '+(abilitySlot+1):', locked'));
    tile.title=skill.name+' — '+skill.note;
    const sigil=element(tile,'span','oakrest-spell-sigil');
@@ -394,7 +396,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    const infoHead=element(info,'div','oakrest-spell-info-head');
    element(infoHead,'strong',null,shown.name);
    element(infoHead,'span',null,shown.unlocked?'UNLOCKED':'LEVEL '+shown.requiredLevel+' REQUIRED');
-   element(info,'p',null,shown.note);
+   element(info,'p',null,abilityDetails(current,weapon,shown,1,true).description);
    element(info,'p','oakrest-spell-info-meta','Cooldown '+shown.cooldown+'s · Unlocks at '+classicBookStyleName(current)+' level '+shown.requiredLevel);
    const assigned=slots.indexOf(shown.id);
    if(assigned>=0)element(info,'small','oakrest-spell-info-equipped','Equipped in slot '+(assigned+1));
