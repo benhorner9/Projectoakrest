@@ -157,9 +157,11 @@ let browser;
  await open('equipment');
  await page.locator('#classic-styles [data-style="ranged"]').tap();
  assert.match(await page.locator('.classic-item-style-list .selected').textContent(),/RANGED/);
- await open('abilities');assert.equal(await page.locator('.classic-ability-select').count(),4);
+ await open('abilities');assert.equal(await page.locator('.oakrest-combat-book-slot').count(),4);assert.equal(await page.locator('.oakrest-combat-book-spell').count(),6);
  await page.locator('#classic-styles [data-style="magic"]').tap();
+ assert.equal(await page.locator('.oakrest-combat-book').getAttribute('data-combat-style'),'magic','style switch updates combat book immediately');
  assert.match(await page.locator('#classic-item-content').textContent(),/MAGIC.*Frostwood/);
+ assert.equal(await page.locator('.oakrest-combat-book-spell').count(),6);
  // Custom amounts and cross-grid dragging use the same banker transaction.
  await page.evaluate(()=>oakrestClassicQA.teleport(-30,14));await open('bank');
  await bag('material.softwood-logs').tap();
