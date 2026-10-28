@@ -48,11 +48,13 @@ export function installClassicIntegratedLayout(doc=document){
  footer.append(doc.querySelector('.classic-panel'),doc.querySelector('.classic-combat-dock'));
  const feed=node('div','classic-footer-events',footer);
  feed.append(get('classic-combat-target'),doc.querySelector('.classic-interaction-bar'),get('classic-toasts'));
- // Stable MMORPG shell: render the chat UNDER the world and the action deck
- // UNDER the sidebar book, rather than overlaying any part of the game.
+ // Keep the action deck inside the LEFT world/chat column, immediately
+ // above chat. The right sidebar book now owns the entire column height.
+ // Reparent existing controls and retain their listeners and character state.
  const chat=node('section','oakrest-chat',app);
  chat.id='oakrest-chat';chat.setAttribute('aria-label','Oakrest chat and game messages');
- const action=node('section','oakrest-action-deck',sidebar);
+ const action=node('section','oakrest-action-deck',app);
+ app.insertBefore(action,chat);
  action.id='oakrest-action-deck';action.setAttribute('aria-label','Equipped combat style and eight action slots');
  action.append(footer);
  footer.prepend(get('classic-styles'));
