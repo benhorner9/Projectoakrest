@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {defaultSave,validSave,LOADOUTS,STYLE_ORDER} from '../src/rules.js';
+import {createClassicCombat} from '../src/classic-combat.js';
 import {createAdventure} from '../src/adventure-state.js';
 import {ADVENTURE_TARGETS,ADVENTURE_SPAWNS,RECIPES,sanitizeAdventure,WATCH_BOUNTIES} from '../src/adventure-content.js';
 import {classicItemDetails,classicPickup} from '../src/classic-item-state.js';
@@ -151,4 +152,20 @@ test('gathering batches stop on distance or capacity without inventing resources
  h.data.inventory.materials.reed=0;
  assert.ok(h.adventure.action('gather',{target:t,choice:{batches:5},player:{x:t.x,z:t.z-1},time:12}).ok);
  h.adventure.tick(15,3,{x:0,z:39});assert.equal(h.data.inventory.materials.reed,0);assert.equal(h.adventure.state().work,null);
+});
+
+test('training reward never duplicates already banked weapons or equips them remotely',()=>{
+ const d=defaultSave();d.characterFresh=true;d.adventure=sanitizeAdventure({index:1});
+ d.inventory.materials={'field-arrows':1,'frost-scroll':1,ration:1};
+ for(const [style,id] of [['melee','sword'],['magic','frost'],['ranged','bow']]){d.inventory.weapons[style]=[];d.bank.weapons[style]=[id];d.gear[style]=null;}
+ const original=validSave(d),c=createClassicCombat({save:original,adventure:true}),target=ADVENTURE_TARGETS.find(t=>t.id==='adventure:rowan');
+ const result=c.adventureAction('accept',{target,choice:'training'},{x:target.x,z:target.z-1.5});assert.ok(result.ok,result.reason);
+ const saved=c.persistentSave();
+ for(const [style,id] of [['melee','sword'],['magic','frost'],['ranged','bow']]){
+  assert.equal(saved.inventory.weapons[style].includes(id),false);assert.deepEqual(saved.bank.weapons[style],[id]);assert.equal(saved.gear[style],original.gear[style]);
+ }
+ assert.equal(saved.inventory.materials['frost-scroll'],41);
+ const reloaded=createClassicCombat({save:validSave(saved),adventure:true});
+ assert.equal(reloaded.adventureAction('accept',{target,choice:'training'},{x:target.x,z:target.z-1.5}).ok,false);
+ assert.deepEqual(reloaded.persistentSave().bank,saved.bank);
 });

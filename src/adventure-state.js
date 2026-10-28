@@ -92,7 +92,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   progress(q.id).status='active';progress(q.id).flags=[];a.tracked=q.id;a.autoSave=true;
   syncLegacy();
   if(q.id==='training'){
-   for(const [s,w] of [['melee','sword'],['magic','frost'],['ranged','bow']])grantWeapon(s,w);
+   // Existing bank ownership is still ownership: do not issue a second copy
+   // or equip an item that has not been withdrawn into the backpack.
+   for(const [s,w] of [['melee','sword'],['magic','frost'],['ranged','bow']])
+    if(!data.bank.weapons[s].includes(w))grantWeapon(s,w);
    add('frost-scroll',40);add('field-arrows',40);add('ration',3);
   }
   if(q.id==='provisions')teach();

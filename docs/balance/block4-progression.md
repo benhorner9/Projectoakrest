@@ -60,7 +60,7 @@ Ranged is slower in this close, stationary test, but its 30 m starter reach and 
 
 ## Validation and release boundary
 
-Regression coverage includes all three styles and power gains, each new equipment recipe, each bounty, craft batch count/cost/output/XP, interruption, deposit recovery, capacity and stack caps, bank ownership, duplicate salvage, repeat rewards and reload. Desktop and 1194×834 touch-emulated browser flows use real buttons for batch crafting, six equipment recipes, gathering, bounty redemption, reward goals and separate-character save protection. Full First Adventure and equipment/bank flows are retained.
+Regression coverage includes all three styles and power gains, each new equipment recipe, each bounty, craft batch count/cost/output/XP, interruption, deposit recovery, capacity and stack caps, bank ownership (including training weapons already banked), duplicate salvage, repeat rewards and reload. Desktop and 1194×834 touch-emulated browser flows use real buttons for batch crafting, six equipment recipes, gathering, bounty redemption, reward goals and separate-character save protection. Full First Adventure and equipment/bank flows are retained.
 
 Local check/test/build and browser outcomes are recorded in the PR; CI must run on the exact published candidate before integration. No new save fields or namespaces. UI structure, nine slots and eight quick slots are retained. New UI is rendered only when its existing panel/dialogue is opened; no new render-loop effects or assets.
 
