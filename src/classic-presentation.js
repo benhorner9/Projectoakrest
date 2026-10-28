@@ -59,7 +59,7 @@ export function inBounds(x,z,radius=.4){
 /** Test against discrete wall segments; each building has a real front doorway.
  * localBuildingPosition aligns the same footprints used by the main town.
  */
-export function solidAt(x,z,radius=.38){
+export function solidAt(x,z,radius=.38,allowTalkAcrossCounter=false){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!inBounds(x,z,radius))return true;
  if(wallSolidAt(x,z,radius)||adventureSolidAt(x,z,radius))return true;
  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.r+radius)return true;
@@ -73,7 +73,7 @@ export function solidAt(x,z,radius=.38){
   if(Math.abs(p.z)<=hz+thick&&Math.abs(Math.abs(p.x)-hx)<thick)return true;
   // Centre gap 2.8 world units: a traversable front doorway.
   if(Math.abs(p.z-hz)<thick&&Math.abs(p.x)>1.4-radius)return true;
-  if(interiorFixtures(b).some(f=>insideFixture(p,f,radius)))return true;
+  if(interiorFixtures(b).some(f=>!(allowTalkAcrossCounter&&f.id.endsWith('counter'))&&insideFixture(p,f,radius)))return true;
  }
  return false;
 }
