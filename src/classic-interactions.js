@@ -6,7 +6,7 @@ import {ADVENTURE_TARGETS} from './adventure-content.js';
  */
 import {OAKREST_SERVICES,OAKREST_GROVES,OAKREST_NOTICES,SHOP_STOCK,townInteraction} from './town-services.js';
 import {woodcuttingLevel} from './woodcutting.js';
-import {solidAt} from './classic-presentation.js';
+import {solidAt,occupantBuilding} from './classic-presentation.js';
 
 export const CLASSIC_INTERACTABLES=Object.freeze([
  ...ADVENTURE_TARGETS,
@@ -49,12 +49,15 @@ export function interactionSight(a,target){
  if(!a||!target)return false;
  const d=Math.hypot(target.x-a.x,target.z-a.z);
  if(!Number.isFinite(d))return false;
+ // Service counters block walking but people can talk over them from the customer side.
+ const sameServiceRoom=target.kind==='service'&&occupantBuilding(a.x,a.z)?.id===target.sourceId&&
+  occupantBuilding(target.x,target.z)?.id===target.sourceId;
  const count=Math.ceil(Math.max(0,d-1.25)/.30);
  for(let i=1;i<=count;i++){
   const distance=Math.min(d-1.25,i*.30);
   if(distance<=0)continue;
   const t=distance/d;
-  if(solidAt(a.x+(target.x-a.x)*t,a.z+(target.z-a.z)*t,.15))return false;
+  if(solidAt(a.x+(target.x-a.x)*t,a.z+(target.z-a.z)*t,.15,sameServiceRoom))return false;
  }
  return true;
 }
