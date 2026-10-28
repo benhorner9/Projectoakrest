@@ -123,3 +123,14 @@ test('Ice Shard crystalline mesh and audio differ from a basic frost bolt withou
  assert.equal(scene.children.length,1);view.dispose();
  assert.notDeepEqual(abilitySoundProfile('magic','bolt','frost','ice-shard'),abilitySoundProfile('magic','basic','frost'));
 });
+
+test('Counterguard visibly lasts exactly its authoritative duration through a style switch',()=>{
+ const g=game();assert.equal(g.queueAbility(3,near),true);
+ const e=advance(g,near,1/60);assert.ok(e.some(e=>e.type==='shield'));
+ const until=g.getState().shieldUntil;assert.ok(Math.abs(until-g.getState().time-4)<1e-8);
+ assert.equal(g.getState().abilities[3].cooldownEnd,13.2);
+ const scene=new THREE.Scene(),view=createClassicAbilityView(scene);view.update(g.getState(),near);assert.equal(view.stats().shield,true);
+ g.styleSwitch('ranged');view.update(g.getState(),near);assert.equal(view.stats().shield,true);
+ advance(g,near,4.1);view.update(g.getState(),near);assert.equal(view.stats().shield,false);
+ view.dispose();assert.equal(scene.children.length,0);
+});

@@ -5,8 +5,13 @@ export function createClassicAbilityView(scene,{reducedMotion=false}={}){
  const arc=new THREE.RingGeometry(.8,1,32,1,Math.PI*.1,Math.PI*.8);
  const material=new THREE.MeshBasicMaterial({color:'#edc496',transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false});
  const tell=new THREE.Mesh(arc,material);tell.rotation.x=-Math.PI/2;tell.visible=false;scene.add(tell);
+ const shieldMaterial=new THREE.MeshBasicMaterial({color:'#b1d4dc',transparent:true,opacity:.32,side:THREE.DoubleSide,depthWrite:false});
+ const shield=new THREE.Mesh(ring,shieldMaterial);shield.rotation.x=-Math.PI/2;shield.visible=false;scene.add(shield);
  let phase=null;
  function update(state,player){
+  shield.visible=state.hp>0&&state.shieldUntil>state.time;
+  if(shield.visible){shield.position.set(player.x,.12,player.z);shield.scale.setScalar(1.15);
+   shieldMaterial.opacity=.18+.16*Math.min(1,state.shieldUntil-state.time);}
   const supported=e=>['heavy-slash','piercing-arrow','ice-shard'].includes(e);
   const a=state.action,r=state.lastRelease,preparing=supported(a?.effect),
    released=supported(r?.effect)&&state.time>=r.time&&state.time-r.time<.28;
@@ -21,5 +26,5 @@ export function createClassicAbilityView(scene,{reducedMotion=false}={}){
   tell.scale.setScalar(scale);material.opacity=preparing?.12+Math.min(1,progress)*.15:.5*(1-progress);
   if(!reducedMotion&&!preparing)tell.rotation.z+=(progress-.5)*.35;
  }
- return {update,stats:()=>({phase,visible:tell.visible}),dispose(){scene.remove(tell);arc.dispose();ring.dispose();material.dispose();}};
+ return {update,stats:()=>({phase,visible:tell.visible,shield:shield.visible}),dispose(){scene.remove(tell,shield);shieldMaterial.dispose();arc.dispose();ring.dispose();material.dispose();}};
 }
