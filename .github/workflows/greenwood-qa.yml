@@ -88,6 +88,8 @@ jobs:
         run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-rebirth-feedback.cjs
       - name: Integrated contact effects and expiry
         run: timeout --signal=TERM --kill-after=10s 3m node tests/browser-classic-combat-impacts.cjs
+      - name: Desktop and touch combat engagement, presentation and bounded soak
+        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-combat-engagement.cjs
       - name: Preserve combat scenario diagnostics
         if: always()
         uses: actions/upload-artifact@v4

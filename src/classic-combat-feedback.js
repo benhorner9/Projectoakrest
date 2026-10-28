@@ -13,11 +13,12 @@ export function createClassicCombatFeedback(root){
  }
  return {event(event,state,player){
   if(event.type==='hit')add(String(event.damage),state.monsters.find(m=>m.id===event.id),event.time,'hit');
-  if(event.type==='miss')add('0',state.monsters.find(m=>m.id===event.id),event.time,'miss');
-  if(event.type==='enemy-miss')add('0',player,event.time,'miss');
-  if(event.type==='hurt')add('−'+event.damage,player,event.time,'hurt');
+  if(event.type==='miss')add('MISS',state.monsters.find(m=>m.id===event.id),event.time,'miss');
+  if(event.type==='enemy-miss'||event.type==='enemy-whiff')add('MISS',player,event.time,'miss');
+  if(event.type==='hurt')add((event.guarded?'GUARD ':'')+'−'+event.damage,player,event.time,event.guarded?'evade':'hurt');
   if(event.type==='heal')add('+'+event.amount,player,event.time,'heal');
   if(event.type==='evade')add('DODGED',player,event.time,'evade');
+  if(event.type==='impact'&&event.blocked)add('BLOCKED',event,event.time,'miss');
  },update(time,camera){
   const {width,height}=root.getBoundingClientRect();
   for(let i=labels.length-1;i>=0;i--){

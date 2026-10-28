@@ -1,0 +1,41 @@
+import * as THREE from 'three';
+/** Shared geometry and a reusable bounded pool: no per-shot geometry uploads.
+ * Arrow/bolt position and direction come directly from fixed-step simulation. */
+export const CLASSIC_PROJECTILE_VIEW_LIMIT=32;
+export function createClassicProjectileView(scene){
+ const shapes={shaft:new THREE.CylinderGeometry(.035,.035,.65,5),
+  tip:new THREE.ConeGeometry(.10,.22,5),orb:new THREE.SphereGeometry(.17,8,6),
+  tail:new THREE.ConeGeometry(.12,.65,6)};
+ const materials={wood:new THREE.MeshBasicMaterial({color:'#c6a46a'}),
+  steel:new THREE.MeshBasicMaterial({color:'#e8e2cf'}),
+  frost:new THREE.MeshBasicMaterial({color:'#a5ddec'}),
+  ember:new THREE.MeshBasicMaterial({color:'#f3b06e'})};
+ const pool=[],up=new THREE.Vector3(0,1,0),direction=new THREE.Vector3();
+ function allocate(){
+  const root=new THREE.Group(),shaft=new THREE.Mesh(shapes.shaft,materials.wood),
+   tip=new THREE.Mesh(shapes.tip,materials.steel),orb=new THREE.Mesh(shapes.orb,materials.frost),
+   tail=new THREE.Mesh(shapes.tail,materials.frost);
+  tip.position.y=.40;tail.position.y=-.4;tail.rotation.z=Math.PI;
+  orb.scale.y=1.5;root.add(shaft,tip,orb,tail);scene.add(root);
+  const node={root,shaft,tip,orb,tail};pool.push(node);return node;
+ }
+ function update(projectiles){
+  const count=Math.min(CLASSIC_PROJECTILE_VIEW_LIMIT,projectiles.length);
+  while(pool.length<count)allocate();
+  for(let i=0;i<pool.length;i++){
+   const n=pool[i],p=projectiles[i];n.root.visible=i<count;
+   if(i>=count)continue;
+   const magic=p.style==='magic';
+   n.shaft.visible=n.tip.visible=!magic;n.orb.visible=n.tail.visible=magic;
+   n.orb.material=n.tail.material=p.family==='ember'?materials.ember:materials.frost;
+   direction.set(p.direction?.x||0,0,p.direction?.z||0);
+   if(direction.lengthSq()<.001)direction.set(0,0,1);
+   n.root.quaternion.setFromUnitVectors(up,direction.normalize());
+   n.root.position.set(p.x,1.55,p.z);
+  }
+ }
+ return {update,stats:()=>({allocated:pool.length,visible:pool.filter(n=>n.root.visible).length}),
+  dispose(){for(const n of pool)scene.remove(n.root);pool.length=0;
+   for(const g of Object.values(shapes))g.dispose();
+   for(const m of Object.values(materials))m.dispose();}};
+}

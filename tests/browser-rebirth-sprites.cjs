@@ -14,11 +14,11 @@ const server=spawn('python3',['-m','http.server','5248','--bind','127.0.0.1'],{s
   const signatures=[],clipped=[];
   for(const [row,[style,weapon]] of styles.entries()){
    const actor=makeClassicActor({style,coat:'#667f78',hairstyle:'swept'});
-   for(const [col,pose] of ['idle','windup','strike'].entries()){
+   for(const [col,pose] of ['idle','prepare','windup','swing','strike','follow','recover'].entries()){
     actor.update({style,pose,worn:{weapon},facing:{x:0,z:-1}});
-    const image=actor.sprite.material.map.image;c.drawImage(image,70+col*180,row*130+5,90,120);
+    const image=actor.sprite.material.map.image;c.drawImage(image,40+col*165,row*130+5,90,120);
     signatures.push(image.toDataURL());
-    if(style==='melee'){const pixels=image.getContext('2d').getImageData(0,0,image.width,image.height).data;for(let y=0;y<image.height;y++)if(pixels[(y*image.width)*4+3]||pixels[(y*image.width+image.width-1)*4+3]){clipped.push([weapon,pose]);break;}}c.fillStyle='#e1e8d8';c.fillText(style+' '+pose,35+col*180,row*130+125);
+    if(style==='melee'){const pixels=image.getContext('2d').getImageData(0,0,image.width,image.height).data;for(let y=0;y<image.height;y++)if(pixels[(y*image.width)*4+3]||pixels[(y*image.width+image.width-1)*4+3]){clipped.push([weapon,pose]);break;}}c.fillStyle='#e1e8d8';c.fillText(style+' '+pose,15+col*165,row*130+125);
    }
    actor.dispose();
   }
@@ -32,5 +32,5 @@ const server=spawn('python3',['-m','http.server','5248','--bind','127.0.0.1'],{s
  assert.equal(result.distinct,result.count,'every weapon/pose has distinct presentation');
  assert.ok(result.cache.textures<=256,JSON.stringify(result));assert.deepEqual(errors,[]);
  mkdirSync('qa/rebirth',{recursive:true});await page.screenshot({path:'qa/rebirth/weapon-poses.png'});
- console.log('PASS: 21 weapon action poses, connected shared rig and bounded disposed creator texture cache',result);
+ console.log('PASS: 49 weapon action poses, connected shared rig and bounded disposed creator texture cache',result);
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

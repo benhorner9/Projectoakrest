@@ -16,8 +16,8 @@ export const combatImpactScale=damage=>
  Math.min(1.35,.75+Math.max(0,Number(damage)||0)/45);
 export function combatImpactPosition(event,snapshot,player){
  const kind=combatImpactKind(event);
- if(kind==='hurt')return player&&Number.isFinite(player.x)&&Number.isFinite(player.z)?player:null;
- if(kind==='hit'||kind==='evade'){
+ if(kind==='hurt'||kind==='evade')return player&&Number.isFinite(player.x)&&Number.isFinite(player.z)?player:null;
+ if(kind==='hit'){
   const enemy=snapshot?.monsters?.find(e=>e.id===event.id);
   return enemy&&Number.isFinite(enemy.x)&&Number.isFinite(enemy.z)?enemy:null;
  }
