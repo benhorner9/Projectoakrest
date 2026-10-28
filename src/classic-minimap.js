@@ -55,14 +55,17 @@ function polygon(ctx,project,corners,color){
 }
 function terrain(ctx,project,width,height,scale){
  ctx.fillStyle=OAKREST_PALETTE.meadow;ctx.fillRect(0,0,width,height);
- rect(ctx,project,{x:0,z:34,w:115,d:130},scale,OAKREST_PALETTE.meadow);
+ rect(ctx,project,{x:0,z:38,w:126,d:154},scale,OAKREST_PALETTE.meadow);
  for(const ground of ADVENTURE_SCENERY.ground)rect(ctx,project,ground,scale);
  for(const [i,room] of DUNGEON_ROOMS.entries()){
   rect(ctx,project,{x:0,z:(room.minZ+room.maxZ)/2,w:33,d:room.maxZ-room.minZ},
    scale,ADVENTURE_SCENERY.roomColours[i]);
  }
- // The village uses mitred 4.1m road polygons; outer tracks are 3.6m wide.
- for(const quad of organicRoadPolygons(CLASSIC_ROADS))polygon(ctx,project,quad,OAKREST_PALETTE.path);
+ // Town cartography uses the same continuous, tapered route geometry as the 2.5D world.
+ for(const [width,colour] of [[7.3,OAKREST_PALETTE.verge],
+  [6.25,OAKREST_PALETTE.earth],[4.65,OAKREST_PALETTE.trail],
+  [2.55,OAKREST_PALETTE.path]])
+  for(const quad of organicRoadPolygons(CLASSIC_ROADS,width))polygon(ctx,project,quad,colour);
  ctx.lineCap='butt';ctx.lineJoin='miter';ctx.strokeStyle='#a08e6b';
  ctx.lineWidth=Math.max(1,3.6*scale);
  for(const path of ADVENTURE_PATHS){
@@ -70,7 +73,10 @@ function terrain(ctx,project,width,height,scale){
    const p=project({x,z});i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
   });ctx.stroke();
  }
- for(const plaza of CLASSIC_PLAZAS)polygon(ctx,project,plazaOutline(plaza),OAKREST_PALETTE.earth);
+ for(const plaza of CLASSIC_PLAZAS){
+  polygon(ctx,project,plazaOutline(plaza),OAKREST_PALETTE.earth);
+  polygon(ctx,project,plazaOutline({...plaza,w:plaza.w*.82,d:plaza.d*.82}),OAKREST_PALETTE.packed);
+ }
  for(const creek of ADVENTURE_SCENERY.creek)rect(ctx,project,creek,scale,creek.color);
  // Stone defensive walls and separate dungeon corridors have real openings.
  ctx.strokeStyle='#879083';ctx.lineCap='butt';ctx.lineWidth=Math.max(1,.9*scale);

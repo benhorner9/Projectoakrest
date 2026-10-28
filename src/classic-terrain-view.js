@@ -1,32 +1,61 @@
 import * as THREE from 'three';
-import {OAKREST_PALETTE as P,terrainVariation,organicRoadPolygons,plazaOutline} from './classic-art-direction.js';
+import {OAKREST_PALETTE as P,terrainVariation,terrainPatch,organicRoadPolygons,
+ trailDetailPolygons,plazaOutline} from './classic-art-direction.js';
 import {CLASSIC_ROADS,CLASSIC_PLAZAS} from './classic-town-plan.js';
 
+/** Single draw-call surface per layer; no thousands of separate ground meshes. */
 export function groundPolygons(polygons,y,color){
  const vertices=[];
  for(const points of polygons)for(let i=1;i<points.length-1;i++)
   for(const [x,z] of [points[0],points[i],points[i+1]])vertices.push(x,y,z);
- const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.computeVertexNormals();
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ g.computeVertexNormals();
  return new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,side:THREE.DoubleSide}));
 }
 export function createClassicTerrain(root){
- const geometry=new THREE.PlaneGeometry(115,130,46,52);geometry.rotateX(-Math.PI/2);geometry.translate(0,-.025,34);
- const positions=geometry.attributes.position,colors=[],moss=new THREE.Color(P.moss),fern=new THREE.Color(P.fern),meadow=new THREE.Color(P.meadow);
+ // The navigable world remains a flat physics plane; subtle mesh-only height and
+ // vertex colours make the grass look varied without invalidating player paths.
+ const geometry=new THREE.PlaneGeometry(126,154,63,77);
+ geometry.rotateX(-Math.PI/2);geometry.translate(0,-.055,38);
+ const positions=geometry.attributes.position,colors=[];
+ const shaded=new THREE.Color(P.moss),lush=new THREE.Color(P.fern),
+  green=new THREE.Color(P.meadow),dry=new THREE.Color('#86906a');
  for(let i=0;i<positions.count;i++){
   const x=positions.getX(i),z=positions.getZ(i);
-  const variation=terrainVariation(x,z);
-  const sunlit=Math.max(0,Math.sin(x*.47+z*.28)*Math.cos(z*.33-x*.23));
-  const c=moss.clone().lerp(fern,variation).lerp(meadow,sunlit*.25);
-  colors.push(c.r,c.g,c.b);
+  const variation=terrainVariation(x,z),patch=terrainPatch(x,z);
+  // Keep micro-elevation BELOW the walk plane. The road meshes cover it.
+  positions.setY(i,-.053+(patch-.5)*.025);
+  const colour=shaded.clone().lerp(lush,variation*.86)
+   .lerp(green,Math.max(0,1-Math.abs(variation-.62)*2)*.26)
+   .lerp(dry,Math.max(0,patch-.6)*.42);
+  colors.push(colour.r,colour.g,colour.b);
  }
+ geometry.computeVertexNormals();
  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
- root.add(new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({vertexColors:true})));
- root.add(groundPolygons(organicRoadPolygons(CLASSIC_ROADS,5.5),.005,P.verge));
- root.add(groundPolygons(organicRoadPolygons(CLASSIC_ROADS),.012,P.path));
- root.add(groundPolygons(CLASSIC_PLAZAS.map(plazaOutline),.025,P.earth));
- // No square paving stones or regularly spaced ground tiles. Oakrest's
- // town centre remains a grassy commons with gently irregular, worn-earth
- // gathering spaces drawn by plazaOutline. This keeps the terrain uncluttered
- // and the town model distinct from RuneScape's tiled paving.
- return {ground:geometry,stones:0};
+ const meadow=new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+ meadow.name='oakrest-natural-meadow';root.add(meadow);
+ // Four distinct material widths, with shared centreline and tapered shoulder
+ // geometry. No player-facing regular square paving or disconnected road tiles.
+ const bands=[
+  [7.3,.001,P.verge,'oakrest-soft-grass-verges'],
+  [6.25,.006,P.earth,'oakrest-dusty-road-shoulders'],
+  [4.65,.012,P.trail,'oakrest-packed-earth-paths'],
+  [2.55,.017,P.path,'oakrest-footworn-track']
+ ];
+ for(const [width,y,colour,name] of bands){
+  const mesh=groundPolygons(organicRoadPolygons(CLASSIC_ROADS,width),y,colour);
+  mesh.name=name;root.add(mesh);
+ }
+ // The village square reads as a natural market clearing instead of a tile field.
+ const plazaBase=groundPolygons(CLASSIC_PLAZAS.map(plazaOutline),.023,P.earth);
+ plazaBase.name='oakrest-market-clearing';root.add(plazaBase);
+ const plazaInner=groundPolygons(CLASSIC_PLAZAS.map(p=>plazaOutline({...p,w:p.w*.82,d:p.d*.82})),.027,P.packed);
+ plazaInner.name='oakrest-market-worn-centres';root.add(plazaInner);
+ const details=trailDetailPolygons(CLASSIC_ROADS);
+ const gravel=groundPolygons(details.gravel,.035,P.gravel);
+ gravel.name='oakrest-irregular-trail-gravel';root.add(gravel);
+ const wheelWear=groundPolygons(details.worn,.033,P.ruts);
+ wheelWear.name='oakrest-faint-wagon-wear';root.add(wheelWear);
+ return {ground:geometry,stones:0,gravel:details.gravel.length,roadBands:bands.length};
 }
