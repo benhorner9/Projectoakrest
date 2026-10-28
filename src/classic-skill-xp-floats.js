@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {WOODCUTTING_LEVEL_XP} from './woodcutting.js';
+import {woodcuttingLevel} from './woodcutting.js';
 
 /** Deliberately excludes Melee, Ranged, Magic and Health. The combat XP
  * event is never interpreted as a skilling event by this presenter. */
@@ -10,7 +10,9 @@ export const SKILL_XP_NAMES=Object.freeze({
 });
 const LIFE_SECONDS=1.35;
 const BANNER_SECONDS=3.15;
-export const SKILL_LEVEL_CAP=WOODCUTTING_LEVEL_XP.length-1;
+// Authoritative level calculator: automatically follows future chapter caps,
+// even while higher-level XP threshold data is retained for sealed previews.
+export const SKILL_LEVEL_CAP=woodcuttingLevel(Number.MAX_SAFE_INTEGER).level;
 const MAX_FLOATS=5;
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
