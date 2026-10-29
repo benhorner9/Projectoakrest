@@ -22,7 +22,7 @@ let browser;
  assert.equal(await page.getByRole('button',{name:'ARRANGE SLOTS'}).isVisible(),true);
  assert.equal(await page.getByRole('button',{name:'MAKE FROM BAG'}).isVisible(),true);
  await page.locator('#classic-abilities-toggle').click();
- const levels=await page.locator('.oakrest-spell-tile').evaluateAll(els=>els.map(el=>Number(el.getAttribute('aria-label')?.match(/level (\\d+)/)?.[1]||0)));
+ const levels=await page.locator('.oakrest-spell-tile').evaluateAll(els=>els.map(el=>Number(el.getAttribute('aria-label')?.match(/level (\d+)/)?.[1]||0)));
  assert.equal(levels.length,6);
  assert.deepEqual(levels,[...levels].sort((a,b)=>a-b),'combat abilities ordered by unlock level');
  await page.locator('#classic-skills-toggle').click();
