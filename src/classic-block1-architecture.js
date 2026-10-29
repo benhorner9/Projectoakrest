@@ -27,10 +27,12 @@ export function addBlock1BuildingIdentity({building,index,house,roofs,mat,cube,m
   }
  }
  for(const side of [-1,1]){
-  const z=side*(d/2+.10);
-  const ring=mesh(roofs,ringGeo,decor,0,h+.86,z,.95,.95,.95);
-  ring.name=id+' attic roundel';parts++;
-  mesh(roofs,sealGeo,mat.darkwood,0,h+.86,z+side*.09,.9,.9,.3);parts++;
+  // Oakrest roofs slope along Z; the true triangular gable ends are X walls.
+  // Keep the roundel flush with those ends instead of floating over the eaves.
+  const x=side*(w/2+.15);
+  const ring=mesh(roofs,ringGeo,decor,x,h+.86,0,.95,.95,.95);
+  ring.rotation.y=Math.PI/2;ring.name=id+' attic roundel';parts++;
+  mesh(roofs,sealGeo,mat.darkwood,x+side*.085,h+.86,0,.32,.9,.9);parts++;
  }
  // Flower-box sills sit below real windows, outside the 3.1m entry corridor.
  for(const side of [-1,1]){
