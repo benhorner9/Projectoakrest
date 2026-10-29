@@ -9,6 +9,8 @@ import {CLASSIC_TREES,CLASSIC_NPCS} from './classic-presentation.js';
 import {OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 import {interiorFixtures} from './classic-interior-fixtures.js';
 import {applySkillTreeVisual} from './classic-skill-visuals.js';
+import {addBlock1Ecology} from './classic-block1-ecology.js';
+import {addBlock1BuildingIdentity} from './classic-block1-architecture.js';
 const MAT={
  grass:new THREE.MeshLambertMaterial({color:'#73956c'}),
  grass2:new THREE.MeshLambertMaterial({color:'#668c63'}),
@@ -160,6 +162,7 @@ function building(parent,b,i){
  // Chimney stacks and ridge caps share the same house-specific roof group.
  if(i%3!==1){cube(roofs,MAT.stone,-w*.26,h+2.8,-d*.16,.8,2.1,.75);
   cube(roofs,MAT.trim,-w*.26,h+3.88,-d*.16,1.1,.22,1.02);}
+ addBlock1BuildingIdentity({building:b,index:i,house:g,roofs,mat:MAT,cube,mesh});
  if(b.kind==='bank')nameBoard(g,'OAKREST BANK',d/2+.48);
  if(b.kind==='store')nameBoard(g,'GENERAL STORE',d/2+.48);
  if(b.kind==='forester')nameBoard(g,'FORESTER',d/2+.48);
@@ -196,6 +199,9 @@ function drawPerimeter(root){
   }
   // Portcullis is raised: never put a box collider across the opening.
   cube(root,MAT.darkwood,gate.x,4.6,gate.z,horizontal?gate.opening:1.5,1.05,horizontal?1.5:gate.opening);
+  // Timber crest above each fully open gate, no doorway or wall collision.
+  cube(root,MAT.darkwood,gate.x,6.26,gate.z,horizontal?gate.opening+1.7:.52,.31,horizontal?.52:gate.opening+1.7);
+  mesh(root,new THREE.OctahedronGeometry(.44),MAT.brass,gate.x,6.66,gate.z);
   const board=new THREE.Mesh(new THREE.PlaneGeometry(3.4,.7),
     new THREE.MeshBasicMaterial({map:signTexture(gate.name.toUpperCase()),side:THREE.DoubleSide}));
   board.position.set(gate.x,4.55,gate.z+(horizontal?1.0:0));root.add(board);
@@ -238,6 +244,7 @@ export function createClassicVillage(scene){
  const root=new THREE.Group();scene.add(root);
  createClassicTerrain(root);
  const groundDetails=addClassicGroundDetails(root);
+ const ecology=addBlock1Ecology(root,'town');
  drawPerimeter(root);
  // District marker posts make the town legible as multiple neighbourhoods.
  for(const district of CLASSIC_DISTRICTS){
@@ -305,7 +312,7 @@ export function createClassicVillage(scene){
  }
  const npcMarkers=CLASSIC_NPCS.map(n=>({id:n.id,x:n.x,z:n.z}));
  return {
-  root,roofs,npcMarkers,batching,groundDetails,perimeter:CLASSIC_PERIMETER,
+  root,roofs,npcMarkers,batching,groundDetails,ecology:ecology.counts,perimeter:CLASSIC_PERIMETER,
   update(time,action=null,trees=[]){
     ribbons.forEach((r,i)=>{r.rotation.z=Math.sin(time*1.4+i)*.07;r.rotation.y=Math.sin(time*.9+i)*.15;});
     const states=new Map(trees.map(s=>[s.id,s]));

@@ -4,7 +4,7 @@
 export const OAKREST_PALETTE=Object.freeze({
  meadow:'#6b885b',fern:'#78976b',moss:'#546f54',earth:'#9c825e',
  path:'#b29a77',verge:'#777f62',stone:'#a4a592',bark:'#504636',
- bronze:'#b49b65',sky:'#c1cabb',sun:'#ffe7bb',shade:'#526b62',
+ bronze:'#b49b65',sky:'#c2cfbf',sun:'#ffe7c2',shade:'#587063',
  packed:'#927a5e',trail:'#a78b68',gravel:'#c9b99b',ruts:'#9f896c'
 });
 /** Seamless two-dimensional value noise gives natural meadows rather than tiled triangles. */
@@ -22,6 +22,15 @@ export function terrainVariation(x,z){
  return Math.max(0,Math.min(1,hills*.5+patches*.35+grain*.15));
 }
 export function terrainPatch(x,z){return softNoise(x/19+12,z/19-8);}
+/** Smooth macro colour weights, independent of fixed gameplay elevations. */
+export function block1TerrainTones(x,z){
+ const macro=softNoise(x/42+4,z/42-3);
+ const micro=softNoise(x/9-4,z/9+8);
+ const clamp=v=>Math.max(0,Math.min(1,v));
+ return {forest:clamp((z-35)/135+.14*(macro-.5)),
+  dry:clamp((micro-.42)*1.25+.15*(macro-.5)),
+  soil:clamp((1-Math.abs(x)/72)*(.22+.20*(1-macro)))};
+}
 export function classicPixelRatio(width,height,dpr=1){
  const pixels=Math.max(1,width)*Math.max(1,height);
  return Math.max(.75,Math.min(Number.isFinite(dpr)?Math.max(.75,dpr):1,1.5,Math.sqrt(1500000/pixels)));

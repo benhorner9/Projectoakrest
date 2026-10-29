@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {OAKREST_PALETTE as P,terrainVariation,terrainPatch,organicRoadPolygons,
- trailDetailPolygons,plazaOutline} from './classic-art-direction.js';
+ trailDetailPolygons,plazaOutline,block1TerrainTones} from './classic-art-direction.js';
 import {CLASSIC_ROADS,CLASSIC_PLAZAS} from './classic-town-plan.js';
 
 /** Single draw-call surface per layer; no thousands of separate ground meshes. */
@@ -20,15 +20,17 @@ export function createClassicTerrain(root){
  geometry.rotateX(-Math.PI/2);geometry.translate(0,-.055,38);
  const positions=geometry.attributes.position,colors=[];
  const shaded=new THREE.Color(P.moss),lush=new THREE.Color(P.fern),
-  green=new THREE.Color(P.meadow),dry=new THREE.Color('#86906a');
+  green=new THREE.Color(P.meadow),dry=new THREE.Color('#86906a'),
+  forest=new THREE.Color('#4d715b'),soil=new THREE.Color('#938463');
  for(let i=0;i<positions.count;i++){
   const x=positions.getX(i),z=positions.getZ(i);
-  const variation=terrainVariation(x,z),patch=terrainPatch(x,z);
+  const variation=terrainVariation(x,z),patch=terrainPatch(x,z),tone=block1TerrainTones(x,z);
   // Keep micro-elevation BELOW the walk plane. The road meshes cover it.
   positions.setY(i,-.053+(patch-.5)*.025);
   const colour=shaded.clone().lerp(lush,variation*.86)
    .lerp(green,Math.max(0,1-Math.abs(variation-.62)*2)*.26)
-   .lerp(dry,Math.max(0,patch-.6)*.42);
+   .lerp(dry,Math.max(0,patch-.6)*.42)
+   .lerp(forest,tone.forest*.27).lerp(soil,tone.dry*.1+tone.soil*.1);
   colors.push(colour.r,colour.g,colour.b);
  }
  geometry.computeVertexNormals();
