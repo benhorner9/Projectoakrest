@@ -26,7 +26,7 @@ let browser;
  const stop=page.locator('#adventure-work');
  assert.equal(await stop.isVisible(),true);
  assert.equal(await stop.textContent(),'Chopping wood · tap to stop');
- assert.doesNotMatch(await stop.textContent(),/\\d+(?:\\.\\d+)?s/,'no next-log countdown');
+ assert.doesNotMatch(await stop.textContent(),/\d+(?:\.\d+)?s/,'no next-log countdown');
  await page.evaluate(()=>oakrestClassicQA.advance(20));
  const awarded=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
  assert.ok(awarded.professions.woodcuttingXp>0,'real gameplay awards XP');
