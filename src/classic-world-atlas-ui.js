@@ -16,7 +16,7 @@ export function setupClassicWorldAtlas({root,canvas,onChange=()=>{}}){
  toolbar.setAttribute('aria-label','World atlas area selection');
  const top=make('div','oakrest-atlas-controls',null,toolbar);
  const modeButton=make('button','oakrest-atlas-mode','Inspect map',top);
- modeButton.type='button';modeButton.setAttribute('aria-pressed','false');
+ modeButton.type='button';modeButton.id='oakrest-atlas-mode';modeButton.setAttribute('aria-pressed','false');
  const label=make('label','oakrest-atlas-picker-label','AREA',top);
  const picker=make('select','oakrest-atlas-picker',null,label);
  picker.id='oakrest-atlas-picker';picker.setAttribute('aria-label','Select named Oakrest area');
@@ -33,6 +33,7 @@ export function setupClassicWorldAtlas({root,canvas,onChange=()=>{}}){
  const actions=make('div','oakrest-atlas-actions',null,panel);
  const copyBrief=make('button','','Copy area brief',actions);
  const copyJSON=make('button','','Copy JSON',actions);
+ copyBrief.id='oakrest-atlas-copy-brief';copyJSON.id='oakrest-atlas-copy-json';
  const expand=make('details','oakrest-atlas-details',null,panel);
  make('summary','','Read or manually copy the brief',expand);
  const preview=make('textarea','oakrest-atlas-preview','',expand);
