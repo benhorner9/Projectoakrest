@@ -18,12 +18,14 @@
  <link rel="stylesheet" href="./src/classic-quest-journal.css" />
  <link rel="stylesheet" href="./src/classic-combat-book.css" />
  <link rel="stylesheet" href="./src/classic-world-atlas.css" />
+ <link rel="stylesheet" href="./src/classic-cleanup.css" />
 </head>
 <body>
 <main id="classic-app">
  <div id="classic-game" aria-label="Oakrest 2.5D explorable village"></div>
  <header class="classic-top" aria-label="Oakrest game title">
   <div class="brand"><span class="brand-rune">✥</span><strong>OAKREST</strong></div>
+  <button id="classic-logout" class="oakrest-logout" type="button" aria-label="Log out to character selection" title="Save and return to character selection">LOG OUT</button>
  </header>
  <aside class="classic-panel" aria-label="Character status">
   <div class="character-heading">
@@ -107,7 +109,7 @@
  <aside id="classic-map-window" class="classic-modal" aria-label="World map" hidden>
   <header class="classic-modal-header"><strong>THE OAKREST VALLEY</strong><button type="button" id="classic-map-close" aria-label="Close map">×</button></header>
   <p class="classic-modal-intro">Tap a road or clearing to set your walking destination.</p>
-  <canvas id="classic-map-canvas" width="440" height="510" aria-label="Full Oakrest map with roads and services"></canvas>
+  <canvas id="classic-map-canvas" width="720" height="800" aria-label="Full Oakrest map with roads and services"></canvas>
   <div class="classic-map-legend"><span>◉ Bank</span><span>◉ Store</span><span>◉ Forester</span><span>◉ Trade</span><span>✦ Quest available</span><span>✓ Quest ready</span></div>
   <div class="classic-map-zoom"><button type="button" id="classic-map-zoom-out" aria-label="Zoom minimap out">−</button><span>MINIMAP SCALE</span><button type="button" id="classic-map-zoom-in" aria-label="Zoom minimap in">+</button></div>
  </aside>
@@ -143,7 +145,7 @@
   <div class="zoom-group" aria-label="Camera zoom"><button type="button" id="classic-zoom-out" aria-label="Zoom camera out">−</button><span>CAMERA DISTANCE</span><button type="button" id="classic-zoom-in" aria-label="Zoom camera in">+</button></div>
   <p id="classic-inside" class="hint">Walk through the building doors to enter.</p>
   <p id="classic-session-xp" class="classic-muted">Session XP until saved mode is enabled.</p>
-  <a class="return-link" href="./index.html">Original Oakrest 3D ↗</a>
+  <a class="return-link" href="./index.html">Return to Oakrest</a>
   <p class="save-note">Oakrest Classic uses your existing character save, with a backup and external-change checks when persistent mode is enabled.</p>
  </aside>
  <section id="classic-creator" class="classic-creator-overlay" role="dialog" aria-modal="true" aria-label="Create or choose an Oakrest character" hidden>

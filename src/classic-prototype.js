@@ -42,6 +42,7 @@ import {setupClassicItems} from './classic-items-ui.js';
 import {createClassicMinimap} from './classic-minimap.js';
 import {worldZoneAt,worldAtlasSnapshot} from './classic-world-atlas.js';
 import {setupClassicWorldAtlas} from './classic-world-atlas-ui.js';
+import {setupClassicMapPopup} from './classic-map-popup.js';
 import {createClassicWindowController} from './classic-ui-controller.js';
 import {createClassicNavigation} from './classic-navigation.js';
 import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
@@ -119,7 +120,7 @@ const adventureWorld=createAdventureWorld(scene);
 let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters,{reducedMotion:reducedCombatMotion});
 const groundView=createClassicGroundLoot(scene);
-let itemUi=null,windowUi=null,characterUI=null,skillsUi=null;
+let itemUi=null,windowUi=null,characterUI=null,skillsUi=null,mapPopup=null;
 const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!existing.profile,
  activateBinding:binding=>{
   if(/^ability[0-3]$/.test(binding))return useCombatAbility(Number(binding.at(-1)));
@@ -484,7 +485,7 @@ $('classic-abilities-toggle').addEventListener('click',()=>windowUi.open('abilit
 $('classic-skills-toggle').addEventListener('click',()=>skillsUi?.open());
 $('classic-skills-close').addEventListener('click',()=>windowUi.hide());
 $('classic-map-toggle').addEventListener('click',()=>windowUi.open('map'));
-$('classic-minimap-expand').addEventListener('click',()=>windowUi.open('map'));
+$('classic-minimap-expand').addEventListener('click',()=>mapPopup?.open());
 $('classic-settings-toggle').addEventListener('click',()=>windowUi.open('settings'));
 $('classic-social-toggle').addEventListener('click',()=>windowUi.open('social'));
 $('classic-social-close').addEventListener('click',()=>windowUi.hide());
@@ -803,6 +804,7 @@ bindClassicItemDrag($('classic-app'),payload=>{
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
  settings:$('classic-settings-window'),dialogue,minimap,quests:$('classic-quests-window'),skills:$('classic-skills-window'),social:$('classic-social-window')});
 skillsUi=setupClassicSkills({combat,windowUi});
+mapPopup=setupClassicMapPopup({map:$('classic-map-window'),body:$('classic-sidebar-body'),windowUi,minimap,app:$('classic-app')});
 adventureUi=setupAdventureUI({combat,player:()=>player,windowUi,notify:feedback,findTarget:findClassicInteractable,
  changed:()=>{if(!sessionMutated&&existing.profile&&!saveManager.status().enabled)saveManager.enable();markProgress();refreshHud();itemUi?.render();},
  teleport:p=>{disengageFromCombat();player.x=p.x;player.z=p.z;navigation.stop();dodgeTravel=null;selectedTarget=null;}});
@@ -820,6 +822,13 @@ characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.path
  }
 });
 $('classic-characters-open').addEventListener('click',()=>characterUI.show());
+$('classic-logout').addEventListener('click',()=>{
+ // This prototype uses local characters rather than server-side sessions.
+ // Guard the current save before returning to the character picker.
+ if(needsSave&&saveManager.status().enabled&&!saveNow())return;
+ mapPopup?.close();skillsUi?.closePopup();
+ characterUI.show();
+});
 // Inventory is the default right-hand book, as in the approved MMORPG layout.
 windowUi.open('inventory');
 feedback(lastStatus);refreshHud();updateLocation();updateCombatUi(combat.getState());
