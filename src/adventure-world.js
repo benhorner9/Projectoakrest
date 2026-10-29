@@ -57,7 +57,11 @@ export function createAdventureWorld(scene){
   const mesh=groundPolygons(organicRoadPolygons(paths,width),y,col);
   mesh.name=name;root.add(mesh);
  }
- const patches=trailDetailPolygons(outerPaths);
+ // Keep gravel/wheel-wear aligned with the *curved* path. Sampling only
+ // every second centreline point gives detail strokes enough arc length;
+ // using every short spline segment would silently remove all gravel.
+ const detailCurves=outerPaths.map(path=>path.filter((_,i)=>i%2===0||i===path.length-1));
+ const patches=trailDetailPolygons(detailCurves);
  const gravel=groundPolygons(patches.gravel,.027,OAKREST_PALETTE.gravel);
  gravel.name='frontier-scattered-gravel';root.add(gravel);
  for(const w of ADVENTURE_WALLS){box(w.x,1.4,w.z,w.w,2.8,w.d,'#65716b');box(w.x,2.85,w.z,w.w+.2,.15,w.d+.2,'#889584');}
