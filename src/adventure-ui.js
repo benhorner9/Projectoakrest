@@ -26,6 +26,9 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  questPopup.addEventListener('keydown',event=>event.stopPropagation());
  popupClose.addEventListener('click',()=>questPopup.close());
  questPopup.addEventListener('click',event=>{if(event.target===questPopup)questPopup.close();});
+ // A programmatic tab switch, item sub-tab, or character transition must not
+ // leave a top-layer modal blocking the next game panel until the next frame.
+ windowUi.subscribe?.(name=>{if(name!=='quests'&&questPopup.open)questPopup.close();});
  questPopup.addEventListener('close',()=>{
   if(windowUi.current()==='quests')
    questBook.querySelector('[data-quest-id="'+selectedQuest+'"]')?.focus({preventScroll:true});
@@ -152,7 +155,10 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  function renderJournal(){
   if(windowUi.current()!=='quests')return;
   const a=combat.adventureState();
+  const listScroll=questBook.querySelector('.oakrest-quest-scroll')?.scrollTop||0;
   renderClassicQuestJournal(questBook,a,{onSelect:showQuestPopup});
+  const list=questBook.querySelector('.oakrest-quest-scroll');
+  if(list)list.scrollTop=listScroll;
   if(questPopup.open)renderQuestPopup(a);
   lastJournalKey=JSON.stringify([a.tracked,a.catalogue.map(q=>[q.id,q.status,q.flags]),a.clears,a.discoveries,a.run?.kills,a.run?.wards]);
  }

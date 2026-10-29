@@ -67,6 +67,12 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
    assert.deepEqual(after.adventure,before.adventure,label+' adventure reload');
    assert.deepEqual(after.xp,before.xp,label+' XP reload');
    assert.deepEqual(after.bank,before.bank,label+' bank reload');
+   assert.equal(after.coins,before.coins,label+' wallet reload');
+   assert.deepEqual(after.gear,before.gear,label+' three-style weapon loadout reload');
+   assert.deepEqual(after.slots,before.slots,label+' four-ability loadouts reload');
+   assert.deepEqual(after.armour,before.armour,label+' armour preset reload');
+   assert.deepEqual(after.equipment,before.equipment,label+' nine-slot equipment reload');
+   assert.deepEqual(after.professions,before.professions,label+' Woodcutting training reload');   assert.deepEqual(after.bank,before.bank,label+' bank reload');
    // Canonical validation omits exhausted stacks and rebuilds slot-order keys.
    for(const [id,count] of Object.entries(before.inventory.materials))
     assert.equal(after.inventory.materials[id]||0,count,label+' material '+id);
@@ -98,6 +104,16 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
    },id),true);
   }
   await act('finish','citizen:guard','welcome');
+  // Completed quests are single-claim even when the same NPC is used again.
+  const firstClaim=(await snapshot()).coins;
+  await act('finish','citizen:guard','welcome',false);
+  assert.equal((await snapshot()).coins,firstClaim,'quest cannot pay a second time');
+  // Invalid crafting consumes no materials and awards no profession XP.
+  const failedCraftBefore=await snapshot();
+  await act('craft',null,'arrows',false);
+  const failedCraftAfter=await snapshot();
+  assert.deepEqual(failedCraftAfter.inventory.materials,failedCraftBefore.inventory.materials);
+  assert.deepEqual(failedCraftAfter.adventure.skills,failedCraftBefore.adventure.skills);
   await act('accept','adventure:rowan','training');
   for(const style of ['melee','magic','ranged']){
    await page.evaluate(style=>{oakrestClassicQA.teleport(-1,71);oakrestClassicQA.switchStyle(style);},style);
@@ -111,6 +127,15 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
   await ensureLog();
   await act('craft',null,'arrows');
   await act('finish','adventure:smith','provisions');
+  // Move actual quest-earned coins into the real bank before checkpoint one.
+  // This proves the full-journey save protects nonempty bank ownership,
+  // rather than merely comparing two empty default bank objects.
+  const bankDeposit=await page.evaluate(()=>{
+   oakrestClassicQA.teleport(-30,14);
+   return oakrestClassicQA.itemAction({type:'bank',kind:'coins',direction:'deposit',quantity:10});
+  });
+  assert.equal(bankDeposit.ok,true,'legitimate first-three-quest coins can be banked');
+  assert.equal((await snapshot()).bank.coins,10);
   await checkpoint('first three quests');
   await act('accept','citizen:guard','road');
   await act('inspect','adventure:cart');await act('inspect','adventure:tracks');

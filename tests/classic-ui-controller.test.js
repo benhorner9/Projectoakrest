@@ -70,6 +70,25 @@ test('NPC dialogue, service and settings dismissal restore the last selected tab
   assert.equal(h.controller.current(),'map');
  }finally{h.restore();}
 });
+test('sidebar subscribers close panel-owned overlays immediately, without repeated toggle events',()=>{
+ const h=harness();
+ try{
+  const transitions=[];
+  const unsubscribe=h.controller.subscribe(name=>transitions.push(name));
+  h.controller.open('quests');
+  h.controller.open('map');
+  h.controller.open('map');
+  assert.deepEqual(transitions,['quests','map'],'only actual changes notify observers');
+  h.controller.open('dialogue');
+  h.controller.hide();
+  assert.deepEqual(transitions.slice(-2),['dialogue','map'],'returning to previous tab notifies modal owner');
+  unsubscribe();
+  const count=transitions.length;
+  h.controller.open('social');
+  assert.equal(transitions.length,count,'unsubscribed listeners do not receive future changes');
+ }finally{h.restore();}
+});
+
 test('legacy item close callback repairs a hidden book without leaving current null',()=>{
  const h=harness();
  try{
