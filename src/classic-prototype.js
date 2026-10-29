@@ -40,6 +40,8 @@ import {availableQuestGivers} from './classic-quest-indicators.js';
 import {createClassicGroundLoot} from './classic-loot-view.js';
 import {setupClassicItems} from './classic-items-ui.js';
 import {createClassicMinimap} from './classic-minimap.js';
+import {worldZoneAt,worldAtlasSnapshot} from './classic-world-atlas.js';
+import {setupClassicWorldAtlas} from './classic-world-atlas-ui.js';
 import {createClassicWindowController} from './classic-ui-controller.js';
 import {createClassicNavigation} from './classic-navigation.js';
 import {CLASSIC_INTERACTABLES,closestClickedInteractable,findClassicInteractable,
@@ -132,8 +134,14 @@ const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!ex
   const result=combat.itemAction(details?.action?{...details.action,id:details.item.legacy.itemId}:{type:'use',id},player);
   feedback(result.reason);if(result.ok){markProgress();itemUi?.render();refreshHud();}return result.ok;
  },changed:()=>{markProgress();itemUi?.render();},feedback});
+let atlasUi=null;
 const minimap=createClassicMinimap({canvas:$('classic-minimap-canvas'),fullCanvas:$('classic-map-canvas'),
- onDestination:point=>{windowUi?.hide();queueDestination(point);}});
+ onDestination:point=>{windowUi?.hide();queueDestination(point);},
+ isInspecting:()=>atlasUi?.isInspecting()||false,
+ onInspect:point=>atlasUi?.selectAt(point),
+ selectedZoneId:()=>atlasUi?.selectedId()||null});
+atlasUi=setupClassicWorldAtlas({root:$('classic-map-window'),canvas:$('classic-map-canvas'),
+ onChange:()=>minimap.redraw()});
 const hero=makeClassicActor({style,skin:existing.profile?.skinTone||'#f0ceaa',
  hair:existing.profile?.hairColor||'#39271f',coat:existing.profile?.outfitColor||'#607b7c',
  outfit:existing.profile?.outfit||'tunic',hairstyle:existing.profile?.hairstyle||'short',
@@ -277,13 +285,11 @@ function updateLocation(){
  $('classic-location').textContent=building
   ?building.kind==='bank'?'Oakrest Bank':building.kind==='store'?'General Store':
    building.kind==='forester'?'Forester Lodge':building.kind==='trade'?'Trade Hall':building.id.replace(/-/g,' ')
-  :player.z>210?(DUNGEON_ROOMS.find(r=>player.z>=r.minZ&&player.z<=r.maxZ)?.name||'Warden’s Hollow'):player.z>80?([...ADVENTURE_REGIONS].sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z))[0].name):'Oakrest Village';
+  :worldZoneAt(player)?.name||'Oakrest Valley';
  const areaDescription=$('classic-area-description');
  if(areaDescription)areaDescription.textContent=building
   ?'Inside the village · Visit services and explore.'
-  :player.z>210?'The depths beyond the village walls.'
-  :player.z>80?'Beyond Oakrest · Explore the frontier.'
-  :'A home for adventurers, traders and new arrivals.';
+  :worldZoneAt(player)?.description||'Explore the Oakrest Valley.';
  $('classic-inside').textContent=building?'You are indoors; the roof has lifted.'
   :'Follow the lane to an open doorway to explore building interiors.';
 }
@@ -874,6 +880,10 @@ if(isQa)window.oakrestClassicQA={
  combatPresentation:()=>({heroPose:hero.sprite.userData.pose,workSkill:hero.sprite.userData.workSkill,ability:abilityView.stats(),...combatView.stats()}),
  skillXpFloatState:()=>({active:skillXpFloats.active(),levelBanner:skillXpFloats.levelState(),labels:[...root.querySelectorAll('.classic-skill-xp-float')].map(e=>e.textContent)}),
  minimapState:()=>({position:minimap.coordinates(),zoom:minimap.zoom(),features:minimap.features(),cameraOffset:orbitCamera.offset()}),
+ atlasState:()=>({selected:atlasUi.selectedId(),inspecting:atlasUi.isInspecting(),
+  current:worldZoneAt(player)?.id||null,zones:worldAtlasSnapshot().zones.map(z=>z.id),
+  blueprint:atlasUi.blueprint(),brief:atlasUi.exportBrief()}),
+ atlasSelect:id=>atlasUi.select(id),atlasInspect:enabled=>atlasUi.setInspect(enabled),
  cameraState:()=>({...orbitCamera.state(),zoom}),cameraKeys:()=>[...keys],cameraNudge:key=>{orbitCamera.nudge(key);draw(0);},
  resetCamera:()=>{orbitCamera.reset();draw(0);},
  openWindow:name=>name==='skills'?skillsUi.open():windowUi.open(name),windowState:()=>windowUi.current(),

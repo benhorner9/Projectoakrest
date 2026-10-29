@@ -1,0 +1,46 @@
+name: Oakrest World Atlas — canonical zones and touch selection
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/classic-world-atlas*.js'
+      - 'src/classic-world-atlas.css'
+      - 'src/classic-world-spawns.js'
+      - 'src/classic-minimap.js'
+      - 'src/classic-combat.js'
+      - 'src/classic-prototype.js'
+      - 'classic.html'
+      - 'tests/classic-world-atlas.test.js'
+      - 'tests/browser-classic-world-atlas.cjs'
+      - '.github/workflows/world-atlas-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  atlas:
+    name: World Atlas — source, schema, map, real Chromium touch
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check && npm test && npm run build
+      - name: Install Chromium
+        run: npx playwright install chromium
+      - name: Verify named zones and browse the read-only inspector on real app
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-classic-world-atlas.cjs
+      - name: Keep click-to-move, quest/minimap and existing world stable
+        run: |
+          timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-navigation.cjs
+          timeout --signal=TERM --kill-after=10s 5m node tests/browser-classic-framed.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oakrest-zone-atlas-evidence
+          path: qa/world-atlas/

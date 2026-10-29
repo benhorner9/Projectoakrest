@@ -8,13 +8,15 @@ import {CLASSIC_ROADS,CLASSIC_PERIMETER,CLASSIC_DISTRICTS,CLASSIC_PLAZAS,CLASSIC
 import {OAKREST_SERVICES,OAKREST_GROVES,OAKREST_NOTICES} from './town-services.js';
 import {CLASSIC_LIMITS,CLASSIC_TREES,classicScreenBasis} from './classic-presentation.js';
 import {QUEST_GIVER_IDS} from './classic-quest-indicators.js';
+import {CLASSIC_WORLD_ZONES,findWorldZone} from './classic-world-atlas.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const CLASSIC_MAP_FEATURES=Object.freeze({
  bounds:CLASSIC_LIMITS,buildings:OAKREST_BUILDINGS,roads:CLASSIC_ROADS,
  walls:CLASSIC_PERIMETER.walls,gates:CLASSIC_PERIMETER.gates,districts:CLASSIC_DISTRICTS,
  trees:[...CLASSIC_TREES,...OAKREST_GROVES],well:OAKREST_WELL,
  services:OAKREST_SERVICES,notices:OAKREST_NOTICES,adventure:ADVENTURE_TARGETS,
- scenery:ADVENTURE_SCENERY,plazas:CLASSIC_PLAZAS,stalls:CLASSIC_STALLS,questGivers:QUEST_GIVER_IDS
+ scenery:ADVENTURE_SCENERY,plazas:CLASSIC_PLAZAS,stalls:CLASSIC_STALLS,questGivers:QUEST_GIVER_IDS,
+ zones:CLASSIC_WORLD_ZONES
 });
 /** Match the ACTUAL control orientation on the angled 2.5D game view.
  * The large world map is north-up; the corner minimap is camera-aligned.
@@ -198,7 +200,8 @@ function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cam
  }
  playerArrow(ctx,project(player),facing,full,cameraOffset);
 }
-export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
+export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
+ onInspect=()=>{},isInspecting=()=>false,selectedZoneId=()=>null}){
  const ctx=canvas.getContext('2d'),full=fullCanvas.getContext('2d');
  if(!ctx||!full)throw Error('Canvas minimap is unavailable');
  const staticMap=document.createElement('canvas');staticMap.width=720;staticMap.height=800;
@@ -241,6 +244,26 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
   const p=point=>({x:tr.x+(point.x-CLASSIC_LIMITS.minX)*tr.scale,
    y:tr.y+(CLASSIC_LIMITS.maxZ-point.z)*tr.scale});
   terrain(full,p,width,height,tr.scale);
+  // Zone outlines are the same canonical coordinates used by the Inspector,
+  // not a separate drawing-only set of fictional map pins. Selecting them
+  // changes cartographic highlighting only, never gameplay collision.
+  const selected=findWorldZone(selectedZoneId());
+  for(const zone of CLASSIC_WORLD_ZONES){
+   const b=zone.bounds,left=p({x:b.minX,z:b.maxZ}),right=p({x:b.maxX,z:b.minZ});
+   const x=left.x,y=left.y,w=right.x-x,h=right.y-y;
+   if(selected?.id===zone.id){
+    full.fillStyle='#f2d28b2c';full.fillRect(x,y,w,h);
+    full.strokeStyle='#ffe4a0';full.lineWidth=2;
+   }else{
+    full.strokeStyle='#e6d29a70';full.lineWidth=.75;
+   }
+   full.strokeRect(x,y,w,h);
+   if(zone.id.startsWith('OAK-WD')||zone.id==='OAK-VL-001'){
+    full.font='bold 9px system-ui';full.textAlign='center';full.textBaseline='middle';
+    full.fillStyle=selected?.id===zone.id?'#fff2c5':'#f0e1b4';
+    full.fillText(zone.name,x+w/2,y+h/2,Math.max(25,w-3));
+   }
+  }
   markers(full,p,data,true);
   full.font='bold 15px Georgia';full.fillStyle='#f4e5bb';full.textAlign='center';
   full.fillText('NORTH ↑',width/2,20);
@@ -258,8 +281,12 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{}}){
   const point=fullMapWorld({x:(e.clientX-r.left)*fullCanvas.width/r.width,
    y:(e.clientY-r.top)*fullCanvas.height/r.height},fullCanvas.width,fullCanvas.height);
   if(point.x>=CLASSIC_LIMITS.minX&&point.x<=CLASSIC_LIMITS.maxX&&
-     point.z>=CLASSIC_LIMITS.minZ&&point.z<=CLASSIC_LIMITS.maxZ)onDestination(point);
+     point.z>=CLASSIC_LIMITS.minZ&&point.z<=CLASSIC_LIMITS.maxZ){
+    if(isInspecting()){onInspect(point);return;}
+    onDestination(point);
+  }
  });
- return {update,setExpanded,setZoom,zoom:()=>zoom,features:()=>CLASSIC_MAP_FEATURES,
+ return {update,setExpanded,setZoom,redraw:()=>{if(last){drawSmall(last);if(expanded)drawLarge(last);}},
+  zoom:()=>zoom,features:()=>CLASSIC_MAP_FEATURES,
   coordinates:()=>last?.player};
 }
