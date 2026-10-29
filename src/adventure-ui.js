@@ -82,7 +82,8 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  function open(){if(windowUi.current()!=='dialogue')windowUi.open('dialogue');content.hidden=false;body.textContent='';}
  function act(kind,choice){
   const result=combat.adventureAction(kind,{target:current,choice},player());notify(result?.reason||'Action unavailable');
-  if(result?.ok){changed();if(result.teleport){windowUi.hide();teleport(result.teleport);}else if(kind==='gather'||kind==='craft'){windowUi.hide();}else render();}
+  if(result?.ok){changed();if(result.teleport){windowUi.hide();teleport(result.teleport);}else if(kind==='gather'||kind==='craft'){windowUi.hide();}else render();
+   if(kind==='finish'&&result.completion)showCompletion(result.completion);}
   return result;
  }
  function talk(target){
