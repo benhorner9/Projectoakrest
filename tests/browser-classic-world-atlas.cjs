@@ -35,7 +35,7 @@ let browser;
    },{x,z});
    await map.click({position:at});
   }
-  for(const size of [{width:1194,height:834},{width:1024,height:768},{width:1180,height:600}]){
+  for(const [sizeIndex,size] of [{width:1194,height:834},{width:1024,height:768},{width:1180,height:600}].entries()){
    await page.setViewportSize(size);
    await page.locator('#classic-map-toggle').click();
    assert.equal(await page.locator('#classic-map-window').isVisible(),true);
@@ -57,14 +57,14 @@ let browser;
    await page.locator('#oakrest-atlas-mode').click();
    assert.equal(await page.locator('#oakrest-atlas-mode').getAttribute('aria-pressed'),'true');
    const before=await page.evaluate(()=>JSON.stringify(oakrestClassicQA.navigationState()));
-   await clickWorld(0,93);
+   await clickWorld(0,93+sizeIndex);
    assert.equal((await page.evaluate(()=>oakrestClassicQA.atlasState())).selected,'OAK-WD-001',
     'touch selects named zone from canonical map coordinates');
    assert.equal(await page.evaluate(()=>JSON.stringify(oakrestClassicQA.navigationState())),before,
     'inspecting a zone cannot accidentally issue a move order');
    await page.locator('#oakrest-atlas-mode').click();
    assert.equal(await page.locator('#oakrest-atlas-mode').getAttribute('aria-pressed'),'false');
-   await clickWorld(0,93);
+   await clickWorld(0,93+sizeIndex);
    assert.notEqual(await page.evaluate(()=>JSON.stringify(oakrestClassicQA.navigationState())),before,
     'travel mode retains the existing map click-to-move contract');
    assert.equal(await page.evaluate(()=>JSON.stringify(oakrestClassicQA.persistentSnapshot())),baseline,
