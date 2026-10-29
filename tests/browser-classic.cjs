@@ -74,10 +74,23 @@ let browser;
   await page.locator('#classic-equipment-toggle').click();
   assert.equal(await page.locator('.classic-paper-slot').count(),9);
   await page.keyboard.press('Escape');
-  await page.evaluate(()=>oakrestClassicQA.teleport(-16,59));
-  await page.locator('#classic-interact-button').click();
-  assert.match(await page.locator('#classic-dialogue').textContent(),/Woodcutting/);
-  await page.evaluate(()=>oakrestClassicQA.teleport(0,39));
+  // Tree selection now *is* Chop: the original dialogue-confirmation
+  // expectation is obsolete. Teach the skill, then verify immediate work.
+  const lesson=await page.evaluate(()=>{
+   oakrestClassicQA.teleport(-32.7,44.4);
+   return oakrestClassicQA.adventureAction('teach','service:forester');
+  });
+  assert.equal(lesson.ok,true,lesson.reason);
+  await page.evaluate(()=>{
+   oakrestClassicQA.teleport(-18,57.4);
+   oakrestClassicQA.selectTarget('grove:pine-west');
+   oakrestClassicQA.step(.05);
+  });
+  assert.equal((await page.evaluate(()=>oakrestClassicQA.adventureState().work))?.skill,'woodcutting',
+   'one click must start Woodcutting without an extra button');
+  assert.notEqual(await page.evaluate(()=>oakrestClassicQA.windowState()),'dialogue',
+   'tree selection should not open the old Chop confirmation dialogue');
+  await page.evaluate(()=>{oakrestClassicQA.teleport(0,39);oakrestClassicQA.step(.1);});
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().interior),null);
   // Block 4: battle is real in-session but never modifies the browser's character.
   await page.evaluate(()=>oakrestClassicQA.teleport(-1,71));
