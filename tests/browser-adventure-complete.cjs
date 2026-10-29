@@ -104,6 +104,16 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
    },id),true);
   }
   await act('finish','citizen:guard','welcome');
+  // Completed quests are single-claim even when the same NPC is used again.
+  const firstClaim=(await snapshot()).coins;
+  await act('finish','citizen:guard','welcome',false);
+  assert.equal((await snapshot()).coins,firstClaim,'quest cannot pay a second time');
+  // Invalid crafting consumes no materials and awards no profession XP.
+  const failedCraftBefore=await snapshot();
+  await act('craft',null,'arrows',false);
+  const failedCraftAfter=await snapshot();
+  assert.deepEqual(failedCraftAfter.inventory.materials,failedCraftBefore.inventory.materials);
+  assert.deepEqual(failedCraftAfter.adventure.skills,failedCraftBefore.adventure.skills);
   await act('accept','adventure:rowan','training');
   for(const style of ['melee','magic','ranged']){
    await page.evaluate(style=>{oakrestClassicQA.teleport(-1,71);oakrestClassicQA.switchStyle(style);},style);
