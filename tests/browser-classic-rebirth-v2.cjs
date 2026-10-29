@@ -67,6 +67,8 @@ let browser;
   await page.locator('.classic-skill-card').filter({hasText:'Woodcutting'}).click();
   assert.ok(await page.locator('.classic-skill-unlock').count()>3);
   await page.screenshot({path:'qa/rebirth/skills-in-sidebar.png'});
+  assert.equal(await page.locator('#classic-skill-popup').evaluate(e=>e.open),true);
+  await page.locator('#classic-skill-popup-close').click();
   await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('#classic-item-window').isVisible(),true,'switching replaces skills without blanking sidebar');
   const surface=await page.evaluate(async()=>{

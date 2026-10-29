@@ -23,13 +23,14 @@ test('four gated stone wall runs join every corner with no unplanned entrances',
  assert.equal(solidAt(46,39),false,'eastern gateway open');
  assert.equal(solidAt(-46,39),false,'western gateway open');
 });
-test('loops are additive, lead to multiple distinct quarters, and keep canonical shops fixed',()=>{
- assert.ok(CLASSIC_LOOP_PATHS.length>=12);
+test('reduced village lanes connect four gates and keep the green commons open',()=>{
+ assert.ok(CLASSIC_LOOP_PATHS.length>=4&&CLASSIC_LOOP_PATHS.length<=8);
+ assert.ok(CLASSIC_ROADS.length<=24,'the old road mesh dominated the village');
  assert.equal(CLASSIC_ROADS.length,OAKREST_PATHS.length+CLASSIC_LOOP_PATHS.length);
  assert.equal(CLASSIC_ROADS[0],OAKREST_PATHS[0]);
  assert.equal(CLASSIC_DISTRICTS.length,5);
- assert.ok(CLASSIC_ROADS.some(route=>route.some(([x,z])=>x===-39&&z===39)));
- assert.ok(CLASSIC_ROADS.some(route=>route.some(([x,z])=>x===39&&z===39)));
+ assert.ok(CLASSIC_ROADS.some(route=>route.some(([x,z])=>x===-46&&z===39)));
+ assert.ok(CLASSIC_ROADS.some(route=>route.some(([x,z])=>x===46&&z===39)));
  for(const service of OAKREST_SERVICES){
   const b=OAKREST_BUILDINGS.find(b=>b.id===service.id);
   assert.ok(b);

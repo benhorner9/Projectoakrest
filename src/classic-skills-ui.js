@@ -2,29 +2,33 @@ import {skillBookSnapshot,CLASSIC_SKILLS} from './classic-skill-catalogue.js';
 const make=(parent,tag,name,text)=>{const e=document.createElement(tag);if(name)e.className=name;if(text!==undefined)e.textContent=String(text);parent.append(e);return e;};
 export function setupClassicSkills({combat,windowUi}){
  const host=document.getElementById('classic-skill-book');
+ const popup=document.createElement('dialog');
+ popup.id='classic-skill-popup';popup.className='oakrest-skill-popup';
+ popup.setAttribute('aria-labelledby','classic-skill-popup-title');
+ const header=make(popup,'header','oakrest-skill-popup-header');
+ const title=make(header,'strong','', 'SKILL UNLOCKS');title.id='classic-skill-popup-title';
+ const close=make(header,'button','oakrest-skill-popup-close','×');
+ close.id='classic-skill-popup-close';
+ close.type='button';close.setAttribute('aria-label','Close skill unlocks');
+ const popupContent=make(popup,'div','oakrest-skill-popup-content');
+ document.getElementById('classic-app').append(popup);
  let selected='melee',rendered=null,lastKey='',lastPoll=-Infinity;
- function render(){
-  if(windowUi.current()!=='skills')return;
-  const skills=skillBookSnapshot(combat.sandboxSave());
-  const current=skills.find(s=>s.id===selected)||skills[0];
-  const scroll=rendered===selected?host.querySelector(".classic-skill-detail")?.scrollTop||0:0;
-  host.replaceChildren();
-  const root=make(host,'div','classic-skill-layout');
-  const sidebar=make(root,'nav','classic-skill-list');
-  sidebar.setAttribute('aria-label','All character skills');
-  for(const group of ['Combat','Gathering','Making']){
-   make(sidebar,'h3','',group);
-   const grid=make(sidebar,'div','classic-skill-grid');
-   for(const skill of skills.filter(s=>s.group===group)){
-    const button=make(grid,'button','classic-skill-card'+(selected===skill.id?' active':''));button.type='button';
-    button.setAttribute('aria-pressed',String(selected===skill.id));button.setAttribute('aria-label',skill.name+' level '+skill.level+', inspect unlocks');
-    make(button,'span','skill-icon',skill.icon);
-    make(button,'span','skill-name',skill.name);
-    make(button,'strong','skill-level',skill.level);
-    button.addEventListener('click',()=>{selected=skill.id;render();});
-   }
-  }
-  const detail=make(root,'section','classic-skill-detail');
+ const showSkill=id=>{
+  selected=id;
+  render();
+  if(!popup.open)popup.showModal();
+  renderDetail(skillBookSnapshot(combat.sandboxSave()).find(s=>s.id===selected));
+ };
+ close.addEventListener('click',()=>popup.close());
+ popup.addEventListener('click',e=>{if(e.target===popup)popup.close();});
+ popup.addEventListener('keydown',e=>e.stopPropagation());
+ popup.addEventListener('close',()=>host.querySelector('.classic-skill-card[data-skill-id="'+selected+'"]')?.focus({preventScroll:true}));
+ windowUi.subscribe?.(name=>{if(name!=='skills'&&popup.open)popup.close();});
+ function renderDetail(current){
+  if(!current)return;
+  const scroll=rendered===selected?popupContent.querySelector('.classic-skill-detail')?.scrollTop||0:0;
+  popupContent.replaceChildren();
+  const detail=make(popupContent,'section','classic-skill-detail');
   make(detail,'h2','',current.icon+' '+current.name);
   make(detail,'p','skill-description',current.description);
   make(detail,'div','skill-progress-heading',
@@ -68,10 +72,33 @@ export function setupClassicSkills({combat,windowUi}){
   if(current.id==='woodcutting')
    make(detail,'p','skill-hint','Learn Woodcutting from Alden in the Forester’s Lodge; take an axe to the trees.');
   detail.scrollTop=scroll;rendered=selected;
+
+ }
+ function render(){
+  if(windowUi.current()!=='skills')return;
+  const skills=skillBookSnapshot(combat.sandboxSave());
+  host.replaceChildren();
+  const root=make(host,'div','classic-skill-layout');
+  const sidebar=make(root,'nav','classic-skill-list');
+  sidebar.setAttribute('aria-label','All character skills');
+  for(const group of ['Combat','Gathering','Making']){
+   make(sidebar,'h3','',group);
+   const grid=make(sidebar,'div','classic-skill-grid');
+   for(const skill of skills.filter(s=>s.group===group)){
+    const button=make(grid,'button','classic-skill-card');
+    button.type='button';button.dataset.skillId=skill.id;
+    button.setAttribute('aria-label',skill.name+' level '+skill.level+', inspect unlocks');
+    make(button,'span','skill-icon',skill.icon);
+    make(button,'span','skill-name',skill.name);
+    make(button,'strong','skill-level',skill.level);
+    button.addEventListener('click',()=>showSkill(skill.id));
+   }
+  }
+  if(popup.open)renderDetail(skills.find(s=>s.id===selected));
   lastKey=JSON.stringify(skills.map(s=>[s.id,s.totalXp]));
  }
  return {open(){selected=CLASSIC_SKILLS.some(s=>s.id===selected)?selected:'melee';lastKey='';windowUi.open('skills');render();},
-  render,
+  render,closePopup:()=>{if(popup.open)popup.close();},
   tick(){if(windowUi.current()!=='skills')return;
    const time=combat.getState().time;
    if(time-lastPoll<.35)return;lastPoll=time;

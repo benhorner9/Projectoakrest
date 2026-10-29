@@ -21,7 +21,10 @@ test('combat book derives six weapon-family abilities from the existing authorit
    data.gear[style]=id;
    const catalogue=classicAbilityCatalogue(data,style);
    assert.equal(catalogue.length,6,style+' '+id);
-   assert.deepEqual(catalogue.map(a=>a.id),skillCatalogue(style,id).map(a=>a.id));
+   assert.deepEqual(catalogue.map(a=>a.id).sort(),skillCatalogue(style,id).map(a=>a.id).sort());
+   assert.deepEqual(catalogue.map(a=>a.requiredLevel),
+    catalogue.map(a=>a.requiredLevel).sort((a,b)=>a-b),
+    'full combat skills must be displayed in increasing unlock level');
    assert.ok(catalogue.some(a=>a.unlocked));
    assert.ok(catalogue.some(a=>!a.unlocked));
    assert.ok(weapon.title);

@@ -200,7 +200,7 @@ let browser;
  // Item-on-item crafting remains connected after several item transactions.
  await open('inventory');await bag('material.reed').tap();
  // Use the existing maker for a one-material recipe; item-on-item recipes remain in existing adventure suites.
- await page.locator('.classic-bag-tools summary').tap();await page.getByRole('button',{name:'MAKE FROM BAG',exact:true}).tap();
+ assert.equal(await page.locator('.classic-bag-tools summary').count(),0,'bag maker is always available');await page.getByRole('button',{name:'MAKE FROM BAG',exact:true}).tap();
  const rationRecipe=page.locator('.craft-option').filter({hasText:'Bundle 3 field rations'});
  await rationRecipe.getByRole('button',{name:'MAKE',exact:true}).tap();
  assert.ok((await snapshot()).inventory.materials.ration>8);
@@ -225,10 +225,14 @@ let browser;
  assert.equal(await page.locator('[data-consumable="eat"]').isDisabled(),false);
  await page.locator('[data-consumable="eat"]').tap();
  assert.equal((await snapshot()).inventory.materials.ration,food-2);
- await open('skills');assert.ok(await page.locator('.classic-skill-card').count()>=10);assert.match(await page.locator('.classic-skill-detail').textContent(),/XP to level/);
+ await open('skills');assert.ok(await page.locator('.classic-skill-card').count()>=10);
+ await page.locator('.classic-skill-card[data-skill-id="woodcutting"]').tap();
+ assert.equal(await page.locator('#classic-skill-popup').evaluate(el=>el.open),true);
+ assert.match(await page.locator('#classic-skill-popup .classic-skill-detail').textContent(),/XP to level/);
+ await page.locator('#classic-skill-popup-close').tap();
  await page.locator('#classic-quests-toggle').tap();
  assert.equal(await page.locator('.oakrest-quest-row').count(),8,'quest book must show eight story entries');
- assert.match(await page.locator('.oakrest-quest-legend').textContent(),/Not started/);
+ assert.match(await page.locator('.oakrest-quest-group[data-quest-section="available"] .oakrest-quest-group-heading').textContent(),/AVAILABLE/);
  assert.ok(await page.locator('.oakrest-quest-row.status-available').count()>0,'an unstarted quest is available');
  await open('map');assert.equal(await page.locator('#classic-map-window').isVisible(),true);
  await open('inventory');

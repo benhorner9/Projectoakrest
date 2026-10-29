@@ -18,6 +18,9 @@ export function installClassicIntegratedLayout(doc=document){
  const sidebar=node('aside','classic-sidebar',app);
  sidebar.id='classic-sidebar';sidebar.setAttribute('aria-label','Oakrest character, map and menu');
  const mapHead=node('section','classic-sidebar-map',sidebar);
+ // The decorative Classic title header is hidden in the live framed HUD.
+ // Reparent the real logout control into the visible top-right map header.
+ mapHead.append(get('classic-logout'));
  const map=get('classic-minimap-expand').parentElement;
  // Reuse the actual live location and settings elements. No second indicator,
  // invented player count, or fake time-of-day state is introduced.

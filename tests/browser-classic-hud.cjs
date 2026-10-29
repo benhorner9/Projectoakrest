@@ -89,6 +89,11 @@ let browser;
   await page.locator('#classic-minimap-expand').click();
   assert.equal(await page.locator('#classic-map-window').isVisible(),true);
   assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'map');
+  // The enlarged minimap is now a real modal; dismiss it before using
+  // underlying sidebar tabs, just as on touch Safari.
+  assert.equal(await page.locator('#oakrest-world-map-popup').evaluate(e=>e.open),true);
+  await page.locator('#oakrest-world-map-close').click();
+  await page.waitForFunction(()=>!document.getElementById('oakrest-world-map-popup').open);
   await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('#classic-map-window').isVisible(),false);
   assert.equal(await page.locator('#classic-item-window').isVisible(),true);

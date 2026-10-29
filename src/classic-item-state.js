@@ -244,5 +244,5 @@ export function classicAbilityCatalogue(data,style){
  const w=LOADOUTS[style]?.[weapon];
  return w?skillCatalogue(style,weapon).map(skill=>({
   ...skill,unlocked:skill.requiredLevel<=level
- })):[];
+ })).sort((a,b)=>a.requiredLevel-b.requiredLevel||a.id.localeCompare(b.id)):[];
 }

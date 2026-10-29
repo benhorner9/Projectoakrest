@@ -33,9 +33,9 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const title=q(host,'classic-item-title'),subtitle=q(host,'classic-item-summary');
  const content=q(host,'classic-item-content'),close=q(host,'classic-item-close');
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
- let mode='inventory',detailId=null,arrange=false,moveStart=null,selectedBank=null,selectedShop=null;
+ let mode='inventory',detailId=null,selectedBank=null,selectedShop=null;
  let abilitySlot=0,inspectedAbilityId=null,lastCombatBookKey='';
- let combineSource=null,showMaking=false,toolsExpanded=false;
+ let combineSource=null,showMaking=false;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
@@ -54,22 +54,14 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  function showDetails(id){detailId=id;render();}
  function tile(grid,entry,index,scope){
   if(!entry){
-   const empty=button(grid,'classic-item-cell empty','',()=>{
-    if(arrange&&moveStart&&moveStart.scope===scope){
-     transact({type:'reorder',scope,from:moveStart.index,to:index});moveStart=null;
-    }
-   });
+   const empty=button(grid,'classic-item-cell empty','');
    empty.dataset.scope=scope;empty.dataset.slotIndex=String(index);
    empty.title='Empty slot '+(index+1);empty.setAttribute('aria-label','Empty item slot '+(index+1));
    return;
   }
   const item=getItem(entry.canonical);
   const cell=button(grid,'classic-item-cell',null,()=>{
-   if(arrange){
-    if(!moveStart){moveStart={scope,index};render();return;}
-    if(moveStart.scope===scope)transact({type:'reorder',scope,from:moveStart.index,to:index});
-    moveStart=null;render();return;
-   }
+  // Tap always examines. Drag/Alt+arrow always rearranges without a mode.
    if(mode==='inventory'&&combineSource){
     if(entry.kind==='material'&&entry.id!==combineSource)craftFromBag('combine',{first:combineSource,second:entry.id});
     else {combineSource=null;notify('Choose a different material to combine.');render();}
@@ -82,7 +74,6 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   });
   cell.dataset.scope=scope;cell.dataset.slotIndex=String(index);cell.dataset.canonical=entry.canonical;
   cell.setAttribute('aria-label','Examine '+(item?.title||entry.id));
-  if(moveStart?.scope===scope&&moveStart.index===index)cell.classList.add('move-start');
   icon(cell,entry.canonical);
   if(entry.qty>1)element(cell,'span','classic-item-qty',entry.qty);
   cell.title=item?.title||entry.id;
@@ -151,18 +142,13 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   capacity.title='Equipped gear remains owned in your backpack. Existing over-capacity saves are preserved.';
   grid(content,inventoryEntries(data),'bag','',BAG_MIN_SLOTS);
   if(detailId)examine(content,detailId);
-  const tools=element(content,'details','classic-bag-tools');
-  tools.open=toolsExpanded;
-  tools.addEventListener('toggle',()=>{toolsExpanded=tools.open;});
-  const summary=element(tools,'summary',null,'Inventory tools');
-  summary.title='Arrange items or make supplies from your backpack';
+  // Always-visible backpack utilities; no more "Inventory tools" disclosure.
+  const tools=element(content,'section','classic-bag-tools');
+  tools.setAttribute('aria-label','Backpack actions');
   const actions=element(tools,'div','classic-item-actions');
-  button(actions,arrange?'classic-item-action selected':'classic-item-action',
-   arrange?'FINISH ARRANGING':'ARRANGE SLOTS',()=>{
-    arrange=!arrange;moveStart=null;toolsExpanded=true;render();
-   });
+  element(actions,'small','classic-muted','Drag items to rearrange · Alt+arrow with keyboard.');
   const make=button(actions,'classic-item-action',showMaking?'HIDE RECIPES':'MAKE FROM BAG',()=>{
-   showMaking=!showMaking;combineSource=null;toolsExpanded=true;render();
+   showMaking=!showMaking;combineSource=null;render();
   });
   make.setAttribute('aria-expanded',String(showMaking));
   if(showMaking){
@@ -432,10 +418,10 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  }
  function open(next='inventory'){
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
-  mode=next;detailId=null;selectedBank=null;selectedShop=null;arrange=false;moveStart=null;combineSource=null;toolsExpanded=false;
+  mode=next;detailId=null;selectedBank=null;selectedShop=null;combineSource=null;
   host.hidden=false;content.scrollTop=0;render();onOpen(next);
  }
- function hide(){host.hidden=true;detailId=null;arrange=false;moveStart=null;combineSource=null;toolsExpanded=false;onClose();}
+ function hide(){host.hidden=true;detailId=null;combineSource=null;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
  return {open,hide,render,isOpen:()=>!host.hidden,
