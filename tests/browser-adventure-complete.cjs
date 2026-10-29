@@ -117,6 +117,15 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
   await ensureLog();
   await act('craft',null,'arrows');
   await act('finish','adventure:smith','provisions');
+  // Move actual quest-earned coins into the real bank before checkpoint one.
+  // This proves the full-journey save protects nonempty bank ownership,
+  // rather than merely comparing two empty default bank objects.
+  const bankDeposit=await page.evaluate(()=>{
+   oakrestClassicQA.teleport(-30,14);
+   return oakrestClassicQA.itemAction({type:'bank',kind:'coins',direction:'deposit',quantity:10});
+  });
+  assert.equal(bankDeposit.ok,true,'legitimate first-three-quest coins can be banked');
+  assert.equal((await snapshot()).bank.coins,10);
   await checkpoint('first three quests');
   await act('accept','citizen:guard','road');
   await act('inspect','adventure:cart');await act('inspect','adventure:tracks');
