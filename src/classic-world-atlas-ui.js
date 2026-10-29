@@ -47,7 +47,7 @@ export function setupClassicWorldAtlas({root,canvas,onChange=()=>{}}){
   const zone=findWorldZone(selectedId),entities=worldZoneEntities(selectedId);
   picker.value=selectedId;
   heading.textContent=zone.name;
-  subtitle.textContent=zone.id+' · '+zone.region+' · '+(zone.safe?'Safe zone':'Adventure zone');
+  subtitle.textContent=zone.id+' · '+zone.region+' · '+(zone.safety==='mixed'?'Village and outskirts':zone.safe?'Safe zone':'Adventure zone');
   description.textContent=zone.description;
   counts.textContent=entities.filter(e=>e.type==='npc').length+' NPCs · '+
    entities.filter(e=>e.type==='enemy').length+' enemy spawns · '+
