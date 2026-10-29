@@ -1,0 +1,45 @@
+name: Oakrest Classic — Visual Block 2 character and gear acceptance
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/classic-avatar-art.js'
+      - 'src/classic-sprites.js'
+      - 'src/classic-sprite-rig.js'
+      - 'src/classic-character-ui.js'
+      - 'src/classic-character.css'
+      - 'classic.html'
+      - 'tests/classic-visual-block2.test.js'
+      - 'tests/browser-classic-visual-block2.cjs'
+      - '.github/workflows/classic-visual-block2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual-block2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check && npm test && npm run build
+      - run: npx playwright install chromium
+      - name: Eight-direction creator, armour/weapon art and combat motion
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-classic-visual-block2.cjs
+      - name: Existing creator, 49-pose rig and shared-loadout regression
+        run: |
+          timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-creator.cjs
+          timeout --signal=TERM --kill-after=10s 4m node tests/browser-rebirth-sprites.cjs
+          timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-equipment-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oakrest-classic-visual-block2-evidence
+          path: qa/visual-block2/
+          if-no-files-found: ignore
