@@ -66,6 +66,12 @@ test('Visual Block 1: each existing building family adds roof-cutaway-safe detai
   assert.ok(result.parts>=23,b.id+' needs architectural identity');
   assert.equal(result.cutaway,true);
   assert.ok(roofs.children.length>=22,'all gable/shingle decorations should belong to roof');
+  const roundels=roofs.children.filter(x=>x.name===b.id+' attic roundel');
+  assert.equal(roundels.length,2,'gable details should be attached to both actual side gables');
+  for(const roundel of roundels){
+   assert.ok(Math.abs(Math.abs(roundel.position.x)-b.w/2)<.25,'attic face must align with end wall');
+   assert.ok(Math.abs(roundel.rotation.y-Math.PI/2)<.00001,'roundel must face side gable');
+  }
   for(const el of house.children.filter(x=>x.isMesh)){
    assert.ok(Math.abs(el.position.x)>1.55||el.position.y>3.2,
     b.id+' decorative front piece must not obstruct doorway');
