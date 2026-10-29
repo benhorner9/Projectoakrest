@@ -60,13 +60,14 @@ let browser;
   }
   await page.evaluate(()=>{
    const q=oakrestClassicQA;if(!q.itemAction({type:'equip',kind:'weapon',style:'magic',id:'ember'}).ok)throw Error('Ember equip failed');
-   q.teleport(26,87);q.lockMonster('bandit-a');
-   for(let i=0;i<180&&q.combatState().monsters.find(m=>m.id==='bandit-a').hp===148;i++)q.advance(1/60);
+   // Let the real bandit aggro and land a hit, without letting the test
+   // character one-shot it through a target lock before Warmth can be tested.
+   q.teleport(0,39);q.advance(24);
    q.teleport(26,87);
-   for(let i=0;i<30&&q.combatState().hp===q.combatState().maxHp;i++)q.advance(.5);
+   for(let i=0;i<80&&q.combatState().hp===q.combatState().maxHp;i++)q.advance(.5);
    q.teleport(-1,66);q.advance(.2);
   });
-  const wounded=await state();assert.ok(wounded.hp<wounded.maxHp);
+  const wounded=await state();assert.ok(wounded.hp<wounded.maxHp,'bandit should injure an unshielded player before heal: '+JSON.stringify({hp:wounded.hp,maxHp:wounded.maxHp,bandit:wounded.monsters.find(m=>m.id==='bandit-a')}));
   await press('[data-ability="3"]');await advance(1/60);
   const healed=await state();assert.equal(healed.lastRelease.name,'Warmth');assert.ok(healed.hp>wounded.hp);
   assert.equal((await presentation()).ability.phase,'release');
