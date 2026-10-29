@@ -98,7 +98,8 @@ let playerHurtUntil=0;
 let dodgeTravel=null,nextTargetUi=0;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(OAKREST_PALETTE.sky);
-scene.fog=new THREE.Fog(OAKREST_PALETTE.sky,75,160);
+// Gentle distant haze only, not a local fog-of-war restriction.
+scene.fog=new THREE.Fog(OAKREST_PALETTE.sky,185,350);
 scene.add(new THREE.HemisphereLight(OAKREST_PALETTE.sun,OAKREST_PALETTE.shade,1.7));
 const sun=new THREE.DirectionalLight(OAKREST_PALETTE.sun,1.8);sun.position.set(-27,55,36);scene.add(sun);
 const frameBudget=createClassicFrameBudget();

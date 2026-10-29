@@ -1,12 +1,13 @@
 import {createOakrestTree} from './classic-village.js';
 import {applySkillTreeVisual} from './classic-skill-visuals.js';
+import {addBlock1Ecology} from './classic-block1-ecology.js';
 import * as THREE from 'three';
 import {ADVENTURE_TARGETS,ADVENTURE_PATHS,ADVENTURE_TREES,ADVENTURE_WALLS,DUNGEON_ROOMS,ADVENTURE_SCENERY} from './adventure-content.js';
 import {makeClassicActor} from './classic-sprites.js';
 import {createClassicQuestBeacon} from './classic-quest-beacon.js';
 import {QUEST_GIVER_IDS} from './classic-quest-indicators.js';
 import {groundPolygons} from './classic-terrain-view.js';
-import {terrainVariation,terrainPatch,organicRoadPolygons,trailDetailPolygons,OAKREST_PALETTE} from './classic-art-direction.js';
+import {terrainVariation,terrainPatch,block1TerrainTones,organicRoadPolygons,trailDetailPolygons,OAKREST_PALETTE} from './classic-art-direction.js';
 /** Lightweight shared geometry; scene geometry and map use the same content anchors. */
 export function createAdventureWorld(scene){
  const root=new THREE.Group();scene.add(root);
@@ -29,9 +30,9 @@ export function createAdventureWorld(scene){
   const base=new THREE.Color(g.color),forest=new THREE.Color('#718b68'),
    gravel=new THREE.Color('#9d9976');
   for(let i=0;i<positions.count;i++){
-   const x=positions.getX(i),z=positions.getZ(i),n=terrainVariation(x,z),p=terrainPatch(x,z);
+   const x=positions.getX(i),z=positions.getZ(i),n=terrainVariation(x,z),p=terrainPatch(x,z),tone=block1TerrainTones(x,z);
    positions.setY(i,-.037+index*.004+(p-.5)*.009);
-   const c=base.clone().lerp(index===3?gravel:forest,n*.27).lerp(base,p*.12);
+   const c=base.clone().lerp(index===3?gravel:forest,n*.31+tone.forest*.18).lerp(gravel,tone.dry*.08).lerp(base,p*.12);
    colors.push(c.r,c.g,c.b);
   }
   geometry.computeVertexNormals();
@@ -68,6 +69,7 @@ export function createAdventureWorld(scene){
  // The creek runs beside, rather than across, its accessible investigation path.
  for(const creek of ADVENTURE_SCENERY.creek)box(creek.x,creek.y,creek.z,creek.w,creek.h,creek.d,creek.color);
  for(const [i,t] of ADVENTURE_TREES.entries())createOakrestTree(root,t.x,t.z,i,.9);
+ const ecology=addBlock1Ecology(root,'woodland');
 
  const gates=[241,269,297].map(z=>box(0,1.5,z,6,3,.5,'#769b91'));
  const markers=new Map();
@@ -115,7 +117,7 @@ export function createAdventureWorld(scene){
  for(let i=0;i<6;i++){
   const chip=new THREE.Mesh(chipGeometry,chipMaterials.wood);particles.add(chip);
  }
- return {root,update(state,player,cameraOffset,time=0,action=null){
+ return {root,ecology:ecology.counts,update(state,player,cameraOffset,time=0,action=null){
   gates.forEach((g,i)=>{g.visible=!state?.run?.wards.includes(i);});
   for(const actor of actors)actor.update({facing:{x:0,z:-1},cameraOffset});
   for(const beacon of beacons)beacon.update(state,time);
