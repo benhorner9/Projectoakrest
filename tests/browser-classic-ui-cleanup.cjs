@@ -19,7 +19,7 @@ let browser;
  await page.evaluate(()=>oakrestClassicQA.pauseAutomaticLoop());
  assert.equal(await page.locator('#classic-item-window').isVisible(),true,'bag is default right panel');
  assert.equal(await page.locator('.classic-bag-tools summary').count(),0,'no extra Inventory tools disclosure');
- assert.equal(await page.getByRole('button',{name:'ARRANGE SLOTS'}).isVisible(),true);
+ assert.equal(await page.getByRole('button',{name:'ARRANGE SLOTS'}).count(),0,'rearranging never requires enabling a mode');
  assert.equal(await page.getByRole('button',{name:'MAKE FROM BAG'}).isVisible(),true);
  await page.locator('#classic-abilities-toggle').click();
  const levels=await page.locator('.oakrest-spell-tile').evaluateAll(els=>els.map(el=>Number(el.getAttribute('aria-label')?.match(/level (\d+)/)?.[1]||0)));
