@@ -8,7 +8,7 @@ import {registerWorldObstacle,removeWorldObstacle,blocked,clearWorldObstacles} f
 import {createWoodcuttingTree} from '../src/woodcutting-art.js';
 import {
  TREE_SPECIES,TREE_BY_ID,WOODCUTTING_AXES,WOODCUTTING_LEVEL_XP,
- woodcuttingLevel,woodcuttingProgress,woodcuttingMilestones,bestWoodcuttingAxe,harvestChance,newTreeState,chopOnce,
+ woodcuttingLevel,woodcuttingProgress,woodcuttingMilestones,bestWoodcuttingAxe,harvestChance,newTreeState,chopOnce,woodcuttingCycleSeconds,
  respawnTree,canCutTree,inventoryCanHoldLog
 } from '../src/woodcutting.js';
 
@@ -46,6 +46,16 @@ test('higher-tier axes significantly outperform bronze on familiar low-level tre
  assert.ok(harvestChance(level,pryrite,softwood)-harvestChance(level,bronze,softwood)>.30);
  assert.ok(harvestChance(level,bronze,softwood)>harvestChance(1,bronze,softwood));
  assert.ok(harvestChance(85,pryrite,TREE_BY_ID.elderwood)<harvestChance(85,pryrite,softwood));
+});
+
+test('Woodcutting attempt timing is bounded, variable and not tied to log drop chance',()=>{
+ const low=woodcuttingCycleSeconds(()=>0),mid=woodcuttingCycleSeconds(()=>.5),
+  high=woodcuttingCycleSeconds(()=>.999999);
+ assert.ok(low>=.8&&high<=2);
+ assert.ok(low<mid&&mid<high,'each attempt draws a fresh independent interval');
+ assert.equal(woodcuttingCycleSeconds(()=>-20),low);
+ assert.ok(Math.abs(woodcuttingCycleSeconds(()=>20)-high)<.00001);
+ assert.ok(woodcuttingCycleSeconds(()=>NaN)>low);
 });
 
 test('a tree yields exactly 1–5 logs, falls only after final log and respawns within 15–60s',()=>{
