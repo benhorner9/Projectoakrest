@@ -1,12 +1,13 @@
 /* Oakrest Classic usability tidy-up: scoped to the Classic shell only. */
 #classic-app.oakrest-framed .classic-top{pointer-events:none}
-#classic-app.oakrest-framed .oakrest-logout{
- pointer-events:auto;margin-left:auto;min-height:38px;min-width:78px;
+#classic-app.oakrest-framed .classic-sidebar-map .oakrest-logout{
+ position:absolute;inset:8px 8px auto auto;pointer-events:auto;
+ min-height:38px;min-width:78px;
  padding:7px 11px;border:1px solid #c5a779;border-radius:5px;
  background:#344c3e;color:#f7e9cc;font:700 11px system-ui,sans-serif;
  letter-spacing:.06em;cursor:pointer;z-index:8
 }
-#classic-app.oakrest-framed .oakrest-logout:focus-visible,
+#classic-app.oakrest-framed .classic-sidebar-map .oakrest-logout:focus-visible,
 #classic-app.oakrest-framed .oakrest-skill-popup-close:focus-visible,
 #classic-app.oakrest-framed #oakrest-world-map-close:focus-visible{
  outline:3px solid #f5db9f;outline-offset:2px
@@ -96,7 +97,7 @@
  display:none!important
 }
 @media(max-width:860px){
- #classic-app.oakrest-framed .oakrest-logout{padding:5px 7px;min-width:68px;font-size:10px}
+ #classic-app.oakrest-framed .classic-sidebar-map .oakrest-logout{padding:5px 7px;min-width:68px;font-size:10px}
  #classic-app.oakrest-framed .classic-skills-window .classic-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
  #classic-app.oakrest-framed .oakrest-skill-popup-content{padding:10px 12px}
 }
