@@ -17,6 +17,17 @@ const labels=Object.freeze({
  locked:'Locked'
 });
 export function questStatusLabel(status){return labels[status]||'Unknown';}
+export const QUEST_SECTIONS=Object.freeze([
+ {id:'ready',title:'READY TO TURN IN',statuses:['ready']},
+ {id:'active',title:'IN PROGRESS',statuses:['active']},
+ {id:'available',title:'AVAILABLE',statuses:['available']},
+ {id:'completed',title:'COMPLETED',statuses:['completed']},
+ {id:'locked',title:'LOCKED',statuses:['locked']}
+]);
+export function questJournalSections(catalogue){
+ const quests=Array.isArray(catalogue)?catalogue:[];
+ return QUEST_SECTIONS.map(group=>({...group,quests:quests.filter(q=>group.statuses.includes(q.status))}));
+}
 export function questCompletionSummary(catalogue){
  const entries=Array.isArray(catalogue)?catalogue:[];
  return {completed:entries.filter(q=>q.status==='completed').length,total:entries.length};
@@ -31,25 +42,25 @@ export function renderClassicQuestJournal(root,adventure,{view='list',selectedQu
   const header=node('div','oakrest-quest-heading',null,overview);
   node('strong','', 'QUEST LIST',header);
   node('span','oakrest-quest-progress',summary.completed+' / '+summary.total+' complete',header);
-  const legend=node('div','oakrest-quest-legend',null,overview);
-  for(const [tone,label] of [['available','Not started'],['active','In progress'],['completed','Complete'],['locked','Locked']]){
-   const item=node('span','oakrest-quest-legend-item status-'+tone,null,legend);
-   node('span','oakrest-quest-legend-dot','●',item);
-   node('span','',label,item);
-  }
   const list=node('nav','oakrest-quest-scroll',null,root);
-  list.setAttribute('aria-label','Quests in story order');
-  // Canonical story order matters: do not sort by current completion status.
-  for(const q of quests){
-   const button=node('button','classic-quest-entry oakrest-quest-row status-'+q.status,null,list);
-   button.type='button';
-   button.dataset.questId=q.id;
-   button.setAttribute('aria-label',q.title+', '+questStatusLabel(q.status)+(adventure.tracked===q.id?', tracked':''));
-   const name=node('span','oakrest-quest-name',q.title,button);
-   name.title=q.title;
-   if(adventure.tracked===q.id)node('span','oakrest-quest-tracked','◆',button).title='Currently tracked';
-   if(q.status==='completed')node('span','oakrest-quest-finished','✓',button).setAttribute('aria-hidden','true');
-   button.addEventListener('click',()=>onSelect?.(q.id));
+  list.setAttribute('aria-label','Quests grouped by progress');
+  // Status always comes from authoritative adventure state; quests
+  // move sections automatically without a second stored list.
+  for(const group of questJournalSections(quests)){
+   const section=node('section','oakrest-quest-group',null,list);
+   section.dataset.questSection=group.id;
+   const heading=node('h3','oakrest-quest-group-heading',group.title+' · '+group.quests.length,section);
+   heading.id='oakrest-quest-group-'+group.id;
+   section.setAttribute('aria-labelledby',heading.id);
+   for(const q of group.quests){
+    const button=node('button','classic-quest-entry oakrest-quest-row status-'+q.status,null,section);
+    button.type='button';button.dataset.questId=q.id;
+    button.setAttribute('aria-label',q.title+', '+questStatusLabel(q.status)+(adventure.tracked===q.id?', tracked':''));
+    const name=node('span','oakrest-quest-name',q.title,button);name.title=q.title;
+    if(adventure.tracked===q.id)node('span','oakrest-quest-tracked','◆',button).title='Currently tracked';
+    if(q.status==='completed')node('span','oakrest-quest-finished','✓',button).setAttribute('aria-hidden','true');
+    button.addEventListener('click',()=>onSelect?.(q.id));
+   }
   }
   if(!quests.length)node('p','oakrest-quest-empty','No quests are available yet.',list);
   const footer=node('div','oakrest-quest-footer',null,root);

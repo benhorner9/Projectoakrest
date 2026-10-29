@@ -35,7 +35,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,arrange=false,moveStart=null,selectedBank=null,selectedShop=null;
  let abilitySlot=0,inspectedAbilityId=null,lastCombatBookKey='';
- let combineSource=null,showMaking=false,toolsExpanded=false;
+ let combineSource=null,showMaking=false;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
@@ -151,18 +151,16 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   capacity.title='Equipped gear remains owned in your backpack. Existing over-capacity saves are preserved.';
   grid(content,inventoryEntries(data),'bag','',BAG_MIN_SLOTS);
   if(detailId)examine(content,detailId);
-  const tools=element(content,'details','classic-bag-tools');
-  tools.open=toolsExpanded;
-  tools.addEventListener('toggle',()=>{toolsExpanded=tools.open;});
-  const summary=element(tools,'summary',null,'Inventory tools');
-  summary.title='Arrange items or make supplies from your backpack';
+  // Always-visible backpack utilities; no more "Inventory tools" disclosure.
+  const tools=element(content,'section','classic-bag-tools');
+  tools.setAttribute('aria-label','Backpack actions');
   const actions=element(tools,'div','classic-item-actions');
   button(actions,arrange?'classic-item-action selected':'classic-item-action',
    arrange?'FINISH ARRANGING':'ARRANGE SLOTS',()=>{
-    arrange=!arrange;moveStart=null;toolsExpanded=true;render();
+    arrange=!arrange;moveStart=null;render();
    });
   const make=button(actions,'classic-item-action',showMaking?'HIDE RECIPES':'MAKE FROM BAG',()=>{
-   showMaking=!showMaking;combineSource=null;toolsExpanded=true;render();
+   showMaking=!showMaking;combineSource=null;render();
   });
   make.setAttribute('aria-expanded',String(showMaking));
   if(showMaking){
