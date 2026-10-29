@@ -53,7 +53,7 @@ let browser;
    assert.equal(blueprint.mode,'reference-only');
    assert.equal(blueprint.editable,false);
    assert.equal(blueprint.zone.id,'OAK-WD-002');
-   assert.ok(blueprint.entities.some(e=>e.id==='adventure:softwood'));
+   assert.ok(blueprint.entities.some(e=>e.id==='adventure:tracks'));
    await page.locator('#oakrest-atlas-mode').click();
    assert.equal(await page.locator('#oakrest-atlas-mode').getAttribute('aria-pressed'),'true');
    const before=await page.evaluate(()=>JSON.stringify(oakrestClassicQA.navigationState()));
