@@ -31,7 +31,11 @@ let browser;
  const awarded=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
  assert.ok(awarded.professions.woodcuttingXp>0,'real gameplay awards XP');
  assert.ok((awarded.inventory.materials['softwood-logs']||0)>0,'log acquired without another button');
- await page.evaluate(()=>{oakrestClassicQA.teleport(-8,54.4);oakrestClassicQA.selectTarget('grove:pine-east');oakrestClassicQA.advance(.15);});
+ // Return to the verified reachable tree after its bounded 15–60s regrowth.
+ // This tests cancellation rather than accidentally timing another tree's path.
+ await page.evaluate(()=>{oakrestClassicQA.teleport(-18,57.4);oakrestClassicQA.advance(80);oakrestClassicQA.selectTarget('grove:pine-west');oakrestClassicQA.advance(.15);});
+ const restarting=await page.evaluate(()=>({work:oakrestClassicQA.adventureState().work,status:oakrestClassicQA.state().status}));
+ assert.equal(restarting.work?.skill,'woodcutting','regrown tree must restart without another prompt: '+JSON.stringify(restarting));
  assert.equal(await stop.isVisible(),true);
  await stop.tap({force:true});
  assert.equal((await page.evaluate(()=>oakrestClassicQA.adventureState().work)),null,'tap to stop cancels work');
