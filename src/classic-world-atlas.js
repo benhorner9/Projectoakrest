@@ -12,8 +12,8 @@ import {ADVENTURE_SPAWNS,DUNGEON_ROOMS,ADVENTURE_PATHS} from './adventure-conten
 
 export const WORLD_ATLAS_SCHEMA=1;
 const lock=o=>Object.freeze(o);
-const area=(id,name,description,minZ,maxZ,{minX=CLASSIC_LIMITS.minX,maxX=CLASSIC_LIMITS.maxX,biome='woodland',safe=false,links=[]}={})=>
- lock({id,name,description,region:'Oakrest Valley',biome,safe,
+const area=(id,name,description,minZ,maxZ,{minX=CLASSIC_LIMITS.minX,maxX=CLASSIC_LIMITS.maxX,biome='woodland',safe=false,safety=null,links=[]}={})=>
+ lock({id,name,description,region:'Oakrest Valley',biome,safe,safety:safety||(safe?'safe':'danger'),
   bounds:lock({minX,maxX,minZ,maxZ}),links:lock([...links])});
 
 /** Existing geography only. The new Bracken Boar Farm is intentionally NOT
@@ -22,7 +22,7 @@ const area=(id,name,description,minZ,maxZ,{minX=CLASSIC_LIMITS.minX,maxX=CLASSIC
  */
 export const CLASSIC_WORLD_ZONES=lock([
  area('OAK-VL-001','Oakrest Village','Walled starting settlement, market, services and southern outskirts.',
-  CLASSIC_LIMITS.minZ,CLASSIC_PERIMETER.north,{biome:'settlement',safe:true,links:['OAK-WD-001']}),
+  CLASSIC_LIMITS.minZ,CLASSIC_PERIMETER.north,{biome:'settlement',safety:'mixed',links:['OAK-WD-001']}),
  area('OAK-WD-001','Gate meadows','The real woodland-gate approach, quarry seams and nearby enemies.',
   CLASSIC_PERIMETER.north,105,{biome:'meadow',links:['OAK-VL-001','OAK-WD-002']}),
  area('OAK-WD-002','Alderwood','Creek, softwood grove and broken supply-cart trail.',
@@ -89,7 +89,7 @@ export function worldZoneBlueprint(id){
   schemaVersion:WORLD_ATLAS_SCHEMA,mode:'reference-only',editable:false,
   world:'Oakrest Classic',zone:{
    id:zone.id,name:zone.name,region:zone.region,description:zone.description,
-   biome:zone.biome,safe:zone.safe,bounds:{...zone.bounds},
+   biome:zone.biome,safety:zone.safety,safe:zone.safe,bounds:{...zone.bounds},
    connectedZoneIds:[...zone.links]
   },
   entities:worldZoneEntities(id).map(({id,name,type,x,z,sourceId,kind,role,creature})=>({
@@ -107,7 +107,7 @@ export function worldZoneBrief(id){
  return [
   'OAKREST CLASSIC — AREA REFERENCE (READ-ONLY)',
   'Zone: '+zone.name+' ['+zone.id+']',
-  'Region: '+zone.region+' | '+zone.biome+' | '+(zone.safe?'safe town':'adventure area'),
+  'Region: '+zone.region+' | '+zone.biome+' | '+(zone.safety==='mixed'?'mixed safety (village and outskirts)':zone.safe?'safe town':'adventure area'),
   zone.description,
   'Bounds (x,z): '+b.minX+'..'+b.maxX+', '+b.minZ+'..'+b.maxZ,
   'Connected zones: '+(zone.connectedZoneIds.map(worldZoneReference).join('; ')||'none'),
