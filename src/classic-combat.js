@@ -20,18 +20,13 @@ import {solidAt,slideMove,findClassicPath,clearClassicLine} from './classic-pres
 import {combatSourceSnapshot,awardMonsterVictory} from './gameplay-core.js';
 import {createMonsterDrops,MAX_GROUND_LOOT,closestDrop} from './loot.js';
 import {classicItemAction,classicPickup,classicItemSnapshot} from './classic-item-state.js';
+import {CLASSIC_OVERWORLD_SPAWNS} from './classic-world-spawns.js';
 import {canCompleteInteraction,findClassicInteractable,interactionSight} from './classic-interactions.js';
 
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const toward=(a,b)=>{const d=Math.max(.00001,dist(a,b));return {x:(b.x-a.x)/d,z:(b.z-a.z)/d};};
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
-const spawn=Object.freeze([
- {id:'practice',type:'dummy',x:-1,z:73,maxHp:100},
- {id:'moss-a',type:'mossling',x:-12,z:87,maxHp:58},
- {id:'moss-b',type:'mossling',x:10,z:87,maxHp:58},
- {id:'boar-a',type:'boar',x:1,z:91,maxHp:100},
- {id:'bandit-a',type:'bandit',x:26,z:89,maxHp:148}
-]);
+const spawn=CLASSIC_OVERWORLD_SPAWNS;
 const isAlive=e=>e&&!e.hidden&&!e.dead&&e.hp>0&&!e.retreating;
 const wallClear=(a,b)=>clearClassicLine(a,b,.1);
 function initialMonster(def){
