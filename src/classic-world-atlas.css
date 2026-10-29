@@ -55,6 +55,6 @@
  outline:2px solid #ffda8b;outline-offset:1px;
 }
 @media(max-height:650px){
- #classic-app.oakrest-framed #classic-map-canvas{max-height:240px}
+ /* Keep the full proportional canvas: a squashed object-fit map would misplace tap coordinates. */
  #classic-app.oakrest-framed .oakrest-atlas-panel{padding:6px}
 }
