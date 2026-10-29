@@ -56,7 +56,10 @@ test('creator choices and save representation remain byte-compatible; empty load
  const prior=safeAppearance({sex:'female',hairstyle:'ponytail',hairColor:'#765037',
   skinTone:'#aa7153',outfit:'scholar',outfitColor:'#4d745a'});
  assert.deepEqual(safeAppearance(prior),prior);
- const state=freshCharacterSave(),save=JSON.stringify(state);
+ const state=freshCharacterSave();
+ // Classic new-character registration explicitly starts all three gear slots empty.
+ state.gear={melee:'none',ranged:'none',magic:'none'};
+ const save=JSON.stringify(state);
  for(const style of ['melee','ranged','magic']){
   const p=presentationSnapshot(state,style,{x:0,z:39});
   assert.equal(p.worn.weapon,'none');
