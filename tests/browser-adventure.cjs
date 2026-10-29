@@ -96,6 +96,17 @@ let browser;
   await popup.getByRole('button',{name:'Back to quests'}).click();
   assert.equal(await popup.isVisible(),false,'Back closes popup and preserves list');
   await page.screenshot({path:'qa/first-adventure/quest-list.png'});
+  // A programmatic window change must synchronously dismiss a native quest modal.
+  // Without this, the top-layer dialog can block a newly selected sidebar panel
+  // until the next render tick (especially when Safari suspends the page).
+  await page.locator('.oakrest-quest-row[data-quest-id="road"]').click();
+  assert.equal(await popup.isVisible(),true);
+  await page.evaluate(()=>oakrestClassicQA.openWindow('inventory'));
+  assert.equal(await popup.isVisible(),false,'quest details close immediately on sidebar transition');
+  assert.equal(await page.locator('#classic-item-window').isVisible(),true);
+  await page.locator('#classic-quests-toggle').click();
+  assert.equal(await page.locator('#classic-quest-book .oakrest-quest-row').count(),8,'returning to quest list preserves its contents');
+  await page.locator('#classic-inventory-toggle').click();  await page.screenshot({path:'qa/first-adventure/quest-list.png'});
   await page.locator('#classic-inventory-toggle').click();
   assert.equal(await page.locator('#classic-item-window').isVisible(),true,'BAG replaces QUESTS without empty sidebar');
   await page.locator('#classic-skills-toggle').click();
