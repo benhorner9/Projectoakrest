@@ -112,7 +112,14 @@ function building(parent,b,i){
   }else if(f.id==='bank-safe')cube(g,MAT.brass,f.x,.39+f.h*.55,f.z+f.d/2+.07,.62,.72,.10);
   else if(f.id==='supply-crates')for(const dx of [-.35,.35])
    cube(g,MAT.produce,f.x+dx,.39+f.h+.19,f.z,.43,.32,.43);
-  else if(f.id==='bed')cube(g,MAT.roofGreen,f.x,.39+f.h+.07,f.z,f.w-.1,.14,f.d-.2);
+  else if(f.id==='ledger-lectern'){
+   // The visitor's ledger is on a physical lectern, not a floating texture.
+   cube(g,MAT.parchment,f.x,.39+f.h+.085,f.z,f.w*.73,.09,f.d*.7);
+   cube(g,MAT.brass,f.x,.39+f.h+.14,f.z+.13,.16,.035,.48);
+  }else if(f.id==='display-stand'){
+   for(const dx of [-.25,.25])cube(g,MAT.produce,f.x+dx,.39+f.h+.21,f.z,.34,.37,.46);
+   cube(g,MAT.parchment,f.x,.39+f.h+.43,f.z,.75,.07,.56);
+  }else if(f.id==='bed')cube(g,MAT.roofGreen,f.x,.39+f.h+.07,f.z,f.w-.1,.14,f.d-.2);
  }
  if(b.kind==='bank'||b.kind==='store'||b.kind==='trade')for(const side of [-1,1]){
   cube(g,MAT.brass,side*(doorWidth/2+.47),2.1,d/2+.41,.21,.44,.18);

@@ -41,7 +41,7 @@ test('service NPCs and guard remain fixed, town workers travel actual unobstruct
   assert.deepEqual([p.x,p.z],[npc.x,npc.z]);
  }
  const walkers=CLASSIC_NPCS.filter(n=>n.route?.length>=2);
- assert.equal(walkers.length,3);
+ assert.ok(walkers.length>=6,'town must have several working, moving civilians');
  for(const npc of walkers){
   for(const waypoint of npc.route)assert.equal(solidAt(waypoint[0],waypoint[1],.38),false,npc.id+' waypoint blocked');
   for(const [a,b] of npc.route.slice(1).map((p,i)=>[npc.route[i],p]))

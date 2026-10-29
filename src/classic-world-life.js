@@ -1,30 +1,43 @@
-/** Deterministic town routines: service NPCs stand; designated workers walk real paths. */
+/** Read-only, deterministic street routines. Never writes character saves.
+ * Stops look like stops: gait/stride is off while facing is held. Routes must
+ * be validated against the very same swept collision used by navigation.
+ */
+const speeds=Object.freeze({porter:.88,gardener:.68,messenger:1.15,
+ courier:1.34,baker:.93,caretaker:.72});
+const pauses=Object.freeze({porter:1.3,gardener:3,messenger:1.3,
+ courier:.85,baker:2.5,caretaker:3.6});
+const offsets=Object.freeze({messenger:11,gardener:23,courier:3,baker:7,caretaker:13});
+const stationary=npc=>({x:npc.x,z:npc.z,moving:false,facing:{x:0,z:-1}});
 export function citizenRoutine(npc,time,player){
- const route=npc.route;
+ const route=npc?.route;
  if(!Array.isArray(route)||route.length<2){
-  return {x:npc.x,z:npc.z,moving:false,
-   facing:{x:(player?.x??npc.x)-npc.x,z:(player?.z??npc.z-1)-npc.z}};
+  const still=stationary(npc);
+  const dx=(player?.x??npc.x)-npc.x,dz=(player?.z??npc.z-1)-npc.z;
+  return {...still,facing:Math.hypot(dx,dz)>.15?{x:dx,z:dz}:still.facing};
  }
- const speed=npc.role==='porter'?.88:npc.role==='gardener'?.68:1.15;
- const pause=npc.role==='gardener'?3:1.3;
+ const speed=speeds[npc.role]||1,pause=pauses[npc.role]??1.3;
  const points=[...route,...route.slice(0,-1).reverse()];
- const segments=points.slice(1).map(([x,z],i)=>{
-  const [ax,az]=points[i],distance=Math.hypot(x-ax,z-az);
-  return {ax,az,x,z,distance,duration:distance/speed};
- });
- const cycle=segments.reduce((total,segment)=>total+segment.duration+pause,0);
- let t=((Math.max(0,Number(time)||0)+(npc.role==='messenger'?11:npc.role==='gardener'?23:0))%cycle+cycle)%cycle;
- for(const segment of segments){
-  if(t<segment.duration){
-   const progress=Math.min(1,t/Math.max(.001,segment.duration));
-   return {x:segment.ax+(segment.x-segment.ax)*progress,
-    z:segment.az+(segment.z-segment.az)*progress,moving:true,
-    facing:{x:(segment.x-segment.ax)/segment.distance,z:(segment.z-segment.az)/segment.distance}};
+ const legs=[];
+ for(let i=1;i<points.length;i++){
+  const a=points[i-1],b=points[i];
+  if(!Array.isArray(a)||!Array.isArray(b)||![...a,...b].every(Number.isFinite))return stationary(npc);
+  const dx=b[0]-a[0],dz=b[1]-a[1],distance=Math.hypot(dx,dz);
+  if(distance<.001)continue;
+  legs.push({a,b,distance,duration:distance/speed,heading:{x:dx/distance,z:dz/distance}});
+ }
+ if(!legs.length)return stationary(npc);
+ const cycle=legs.reduce((sum,leg)=>sum+leg.duration+pause,0);
+ let t=((Math.max(0,Number(time)||0)+(offsets[npc.role]||0))%cycle+cycle)%cycle;
+ for(const leg of legs){
+  if(t<leg.duration){
+   const fraction=t/leg.duration;
+   return {x:leg.a[0]+(leg.b[0]-leg.a[0])*fraction,
+    z:leg.a[1]+(leg.b[1]-leg.a[1])*fraction,
+    moving:true,facing:leg.heading};
   }
-  t-=segment.duration;
-  if(t<pause)return {x:segment.x,z:segment.z,moving:false,
-   facing:{x:(segment.x-segment.ax)/segment.distance,z:(segment.z-segment.az)/segment.distance}};
+  t-=leg.duration;
+  if(t<pause)return {x:leg.b[0],z:leg.b[1],moving:false,facing:leg.heading};
   t-=pause;
  }
- return {x:npc.x,z:npc.z,moving:false,facing:{x:0,z:-1}};
+ return stationary(npc);
 }
