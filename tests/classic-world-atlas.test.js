@@ -69,7 +69,7 @@ test('copyable brief and JSON blueprint expose grounded names/IDs, with no edita
  assert.equal(json.editable,false);
  assert.deepEqual(json.zone.connectedZoneIds,['OAK-WD-001','OAK-WD-003']);
  assert.ok(json.entities.some(e=>e.id==='adventure:cart'));
- assert.ok(json.entities.some(e=>e.id==='adventure:softwood'));
+ assert.ok(json.entities.some(e=>e.id==='adventure:tracks'));
  assert.match(brief,/OAK-WD-002/);
  assert.match(brief,/adventure:cart/);
  assert.match(brief,/OAK-WD-001/);
@@ -95,7 +95,7 @@ test('atlas never writes gameplay save keys, character XP or map/navigation boun
 test('malformed future zone drafts are rejected before anybody can publish them',()=>{
  const zone=CLASSIC_WORLD_ZONES[0];
  assert.throws(()=>validateWorldAtlas([...CLASSIC_WORLD_ZONES,zone]),/duplicate zone ID/);
- assert.throws(()=>validateWorldAtlas([...CLASSIC_WORLD_ZONES,{...zone,id:'OAK-VL-999'}]),/Overlapping zones/);
+ assert.throws(()=>validateWorldAtlas([...CLASSIC_WORLD_ZONES,{...zone,id:'OAK-VL-999',links:[]}]),/Overlapping zones/);
  assert.throws(()=>validateWorldAtlas([...CLASSIC_WORLD_ZONES,{...zone,id:'OAK-VL-999',bounds:{...zone.bounds,maxX:999}}]),/Invalid world bounds/);
  assert.throws(()=>validateWorldAtlas(CLASSIC_WORLD_ZONES,[...CLASSIC_WORLD_ENTITIES,CLASSIC_WORLD_ENTITIES[0]]),/Duplicate entity ID/);
  assert.throws(()=>validateWorldAtlas(CLASSIC_WORLD_ZONES,[...CLASSIC_WORLD_ENTITIES,{id:'fake:spawn',x:900,z:900}]),/outside the atlas/);
