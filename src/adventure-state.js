@@ -1,6 +1,6 @@
 /** Stateful adventure transactions. The combat session owns this save; no storage here. */
 import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_SPAWNS,QUEST_PREREQUISITES,WATCH_BOUNTIES,sanitizeAdventure} from './adventure-content.js';
-import {woodcuttingLevel,canCutTree,newTreeState,chopOnce,respawnTree,WOODCUTTING_CHAPTER_XP_CAP} from './woodcutting.js';
+import {woodcuttingLevel,canCutTree,newTreeState,chopOnce,respawnTree,woodcuttingCycleSeconds,WOODCUTTING_CHAPTER_XP_CAP} from './woodcutting.js';
 import {inventoryKeyList} from './item-slot-layout.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const ok=reason=>({ok:true,reason}),no=reason=>({ok:false,reason});
@@ -215,7 +215,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
     respawnTree(trees.get(target.id),time,random);
     if(trees.get(target.id).respawnAt)return no('This tree is regrowing.');
    }
-   work={target,material,remaining:repeats,start:time,end:time+(target.seconds||1.18)};
+   work={target,material,remaining:repeats,start:time,
+    end:time+(material==='softwood-logs'?woodcuttingCycleSeconds(random):target.seconds||1.18)};
   }else return no('Nothing to gather here.');
   return ok('Working… moving away or taking damage cancels.');
  }
@@ -237,7 +238,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
     flag('gather:softwood-logs');
     emit('adventure',{reason:'Gathered softwood logs'+(result.xp?' · +'+result.xp+' Woodcutting XP':'')});
    }
-   if(result.ok&&!result.depleted){work={...w,start:time,end:time+1.18};}
+   if(result.ok&&!result.depleted){work={...w,start:time,end:time+woodcuttingCycleSeconds(random)};}
    else emit('adventure-notice',{reason:result.depleted?'Tree depleted; try another grove.':result.reason});
   }else if(roomFor(w.material)){
    add(w.material,1);

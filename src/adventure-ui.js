@@ -3,6 +3,13 @@ import {QUESTS,RECIPES,ADVENTURE_TARGETS,ADVENTURE_MATERIALS,WATCH_BOUNTIES} fro
 import {woodcuttingLevel} from './woodcutting.js';
 import {renderClassicQuestJournal} from './classic-quest-journal.js';
 const el=(tag,text,parent)=>{const e=document.createElement(tag);e.textContent=text;parent?.append(e);return e;};
+/** Woodcutting gives feedback and a one-tap stop control, not an exact
+ * prediction of the next random log collection. Other work timers remain. */
+export function adventureWorkLabel(work,time){
+ if(!work)return '';
+ if(work.skill==='woodcutting')return 'Chopping wood · tap to stop';
+ return work.name+' · '+Math.max(0,work.end-time).toFixed(1)+'s · tap to cancel';
+}
 export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport,findTarget}){
  const dialog=document.getElementById('classic-dialogue'),title=document.getElementById('classic-dialogue-name'),body=document.getElementById('classic-dialogue-text');
  const content=el('div','',dialog);content.id='adventure-content';
@@ -45,6 +52,12 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  }
  function talk(target){
   combat.adventureVisit(target.id);current=target;
+  // Selecting a tree is the Chop command. Once the player is in reach,
+  // start harvesting immediately with the existing authoritative checks.
+  // No second dialogue/confirmation; an invalid chop reports why in-game.
+  if(target.kind==='grove'||target.kind==='resource'&&target.material==='softwood-logs'){
+   act('gather');return true;
+  }
   if(target.kind==='discovery'||target.kind==='entrance')act('inspect');
   if(['adventure-npc','station','resource','grove','discovery','entrance','exit','ward','heart'].includes(target.kind)||['citizen:guard','service:forester'].includes(target.id)){
    open();render();return true;
@@ -181,7 +194,7 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  tracker.addEventListener('click',showJournal);eatButton.addEventListener('click',()=>act('eat'));work.addEventListener('click',()=>act('cancel'));
  return {talk,showJournal,objective,hideContent:()=>{content.hidden=true;},tick(){
   const a=combat.adventureState(),state=combat.getState();
-  const text=a.work?a.work.name+' · '+Math.max(0,a.work.end-state.time).toFixed(1)+'s · tap to cancel':'';
+  const text=adventureWorkLabel(a.work,state.time);
   if(text!==lastWork){work.textContent=text;work.hidden=!text;lastWork=text;}
   const tracking=a.catalogue.find(q=>q.id===a.tracked);
   tracker.textContent=tracking?(tracking.status==='completed'?'✓ ':tracking.status==='ready'?'◆ ':tracking.status==='active'?'✦ ':'! ')+tracking.title:'✓ All quests complete';

@@ -1,0 +1,34 @@
+name: Oakrest Classic — one-tap Woodcutting acceptance
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/adventure-ui.js'
+      - 'src/adventure-state.js'
+      - 'src/woodcutting.js'
+      - 'tests/woodcutting*.test.js'
+      - 'tests/browser-classic-woodcutting-one-tap.cjs'
+      - '.github/workflows/classic-woodcutting-one-tap.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  woodcutting:
+    name: One-tap UX, stochastic harvest and touch browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check && npm test && npm run build
+      - run: npx playwright install chromium
+      - name: Actual Classic one-tap Woodcutting and stop control
+        run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-woodcutting-one-tap.cjs
+      - name: Adventure and save-browser regression
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-adventure.cjs

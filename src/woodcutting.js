@@ -25,6 +25,16 @@ export const WOODCUTTING_AXES=Object.freeze([
 ].map(([metal,level,tier,colour,price])=>Object.freeze({id:metal+'-axe',metal,name:metal[0].toUpperCase()+metal.slice(1)+' Axe',level,tier,colour,price})));
 export const AXE_BY_ID=Object.freeze(Object.fromEntries(WOODCUTTING_AXES.map(axe=>[axe.id,axe])));
 export const WOODCUTTING_SWING_SECONDS=1.18;
+/** Roll each Woodcutting attempt separately. The player sees neither this
+ * interval nor a countdown; the chance roll still determines whether a log
+ * is collected. Keep the interval bounded for responsive animations.
+ * This changes cadence, never XP/log, yield, axe tiers or respawn values.
+ */
+export function woodcuttingCycleSeconds(random=Math.random){
+ const result=Number(random());
+ const roll=Number.isFinite(result)?Math.min(.999999,Math.max(0,result)):.5;
+ return WOODCUTTING_SWING_SECONDS*(.75+roll*.9);
+}
 export const TREE_MIN_RESPAWN=15;
 export const TREE_MAX_RESPAWN=60;
 export const LOG_STACK_LIMIT=9999;
