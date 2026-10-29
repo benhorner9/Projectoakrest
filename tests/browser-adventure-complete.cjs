@@ -67,6 +67,12 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
    assert.deepEqual(after.adventure,before.adventure,label+' adventure reload');
    assert.deepEqual(after.xp,before.xp,label+' XP reload');
    assert.deepEqual(after.bank,before.bank,label+' bank reload');
+   assert.equal(after.coins,before.coins,label+' wallet reload');
+   assert.deepEqual(after.gear,before.gear,label+' three-style weapon loadout reload');
+   assert.deepEqual(after.slots,before.slots,label+' four-ability loadouts reload');
+   assert.deepEqual(after.armour,before.armour,label+' armour preset reload');
+   assert.deepEqual(after.equipment,before.equipment,label+' nine-slot equipment reload');
+   assert.deepEqual(after.professions,before.professions,label+' Woodcutting training reload');   assert.deepEqual(after.bank,before.bank,label+' bank reload');
    // Canonical validation omits exhausted stacks and rebuilds slot-order keys.
    for(const [id,count] of Object.entries(before.inventory.materials))
     assert.equal(after.inventory.materials[id]||0,count,label+' material '+id);
