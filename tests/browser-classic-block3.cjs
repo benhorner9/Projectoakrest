@@ -13,9 +13,14 @@ let browser;
  await page.waitForFunction(()=>window.oakrestClassicQA);
  // Finish real first-launch creation so simulation time actually advances.
  await page.locator('#classic-creator-name').fill('Environment Tester');
- await page.locator('#classic-creator-form button[type=submit]').click();
- await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
- await page.evaluate(()=>oakrestClassicQA.pauseAutomaticLoop());
+ // Submitting the creator intentionally reloads Classic; wait for the new
+ // page and its QA controller before testing the gameplay world.
+ await Promise.all([
+  page.waitForNavigation({waitUntil:'domcontentloaded'}),
+  page.locator('#classic-creator-form button[type=submit]').click()
+ ]);
+ await page.waitForFunction(()=>window.oakrestClassicQA&&document.getElementById('classic-creator').hidden);
+ await page.evaluate(()=>window.oakrestClassicQA.pauseAutomaticLoop());
  const before=await page.evaluate(()=>({saved:oakrestClassicQA.savedState(),life:oakrestClassicQA.worldLife(),atlas:oakrestClassicQA.atlasState().zones}));
  assert.ok(before.atlas.includes('OAK-VL-001'),'must retain Block 2 zones');
  const result=await page.evaluate(()=>{
