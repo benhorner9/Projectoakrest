@@ -38,10 +38,10 @@ export function createClassicTerrain(root){
  // Four distinct material widths, with shared centreline and tapered shoulder
  // geometry. No player-facing regular square paving or disconnected road tiles.
  const bands=[
-  [7.3,.001,P.verge,'oakrest-soft-grass-verges'],
-  [6.25,.006,P.earth,'oakrest-dusty-road-shoulders'],
-  [4.65,.012,P.trail,'oakrest-packed-earth-paths'],
-  [2.55,.017,P.path,'oakrest-footworn-track']
+  [5.2,.001,P.verge,'oakrest-soft-grass-verges'],
+  [4.35,.006,P.earth,'oakrest-dusty-road-shoulders'],
+  [3.35,.012,P.trail,'oakrest-packed-earth-paths'],
+  [1.85,.017,P.path,'oakrest-footworn-track']
  ];
  for(const [width,y,colour,name] of bands){
   const mesh=groundPolygons(organicRoadPolygons(CLASSIC_ROADS,width),y,colour);

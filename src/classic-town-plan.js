@@ -15,29 +15,18 @@ export const CLASSIC_DISTRICTS=Object.freeze([
 // Loop roads provide several distinct routes between quarters. Each terminates
 // at a real lane or public square, not a blank building shell or tree trunk.
 export const CLASSIC_LOOP_PATHS=Object.freeze([
- frozenPath([[-39,-10],[-39,6],[-39,22],[-39,39],[-39,57],[-39,78],[-39,83]]),
- frozenPath([[39,-10],[39,6],[39,22],[39,39],[39,57],[39,78],[39,83]]),
- frozenPath([[-39,-10],[-21,-10],[0,-10],[21,-10],[39,-10]]),
- frozenPath([[-39,83],[-20,83],[0,83],[20,83],[39,83]]),
- frozenPath([[-39,6],[-21,6],[-8,6]]),
- frozenPath([[39,6],[21,6],[8,6]]),
- frozenPath([[-39,22],[-21,22],[-9,22]]),
- frozenPath([[39,22],[21,22],[9,22]]),
- frozenPath([[-39,39],[-22,39],[-10,39],[0,39]]),
- frozenPath([[39,39],[27,39],[27,35],[25,32],[22,30]]),
- frozenPath([[-39,57],[-21,57],[-9,57],[0,57]]),
- frozenPath([[39,57],[22,57],[9,57],[0,57]]),
- frozenPath([[-39,78],[-22,84],[-8,84],[0,84]]),
- frozenPath([[39,78],[22,84],[8,84],[0,84]]),
- frozenPath([[0,-22],[0,-16],[0,-10],[0,0]]),
- frozenPath([[0,79],[0,86],[0,94]]),
- frozenPath([[-53,39],[-46,39],[-39,39]]),
- frozenPath([[53,39],[46,39],[39,39]])
+ // Short links from the two outer gates, without a second broad ring road.
+ frozenPath([[-46,39],[-36,39],[-23,39]]),
+ frozenPath([[46,39],[35,39],[24,39]]),
+ frozenPath([[-23,39],[-23,46]]),
+ frozenPath([[24,39],[24,44]]),
+ frozenPath([[0,54],[23,54]]),
+ frozenPath([[0,75],[24,75]])
 ]);
 /** Exact town floor slabs and roof palettes shared by village renderer and map. */
 export const CLASSIC_PLAZAS=Object.freeze([
- {x:0,z:39,w:21,d:22},{x:-19,z:40,w:11,d:11},
- {x:22,z:57,w:12,d:11},{x:0,z:74,w:17,d:10}
+ {x:0,z:39,w:15,d:14},{x:-19,z:40,w:8,d:8},
+ {x:22,z:57,w:9,d:8},{x:0,z:74,w:12,d:7}
 ]);
 export const CLASSIC_STALLS=Object.freeze([
  {x:-17,z:38,roof:'#9b675e'},

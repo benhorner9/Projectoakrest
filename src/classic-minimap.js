@@ -64,9 +64,9 @@ function terrain(ctx,project,width,height,scale){
    scale,ADVENTURE_SCENERY.roomColours[i]);
  }
  // Town cartography uses the same continuous, tapered route geometry as the 2.5D world.
- for(const [width,colour] of [[7.3,OAKREST_PALETTE.verge],
-  [6.25,OAKREST_PALETTE.earth],[4.65,OAKREST_PALETTE.trail],
-  [2.55,OAKREST_PALETTE.path]])
+ for(const [width,colour] of [[5.2,OAKREST_PALETTE.verge],
+  [4.35,OAKREST_PALETTE.earth],[3.35,OAKREST_PALETTE.trail],
+  [1.85,OAKREST_PALETTE.path]])
   for(const quad of organicRoadPolygons(CLASSIC_ROADS,width))polygon(ctx,project,quad,colour);
  ctx.lineCap='butt';ctx.lineJoin='miter';ctx.strokeStyle='#a08e6b';
  ctx.lineWidth=Math.max(1,3.6*scale);
