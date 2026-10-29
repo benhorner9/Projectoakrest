@@ -8,6 +8,7 @@ export function setupClassicSkills({combat,windowUi}){
  const header=make(popup,'header','oakrest-skill-popup-header');
  const title=make(header,'strong','', 'SKILL UNLOCKS');title.id='classic-skill-popup-title';
  const close=make(header,'button','oakrest-skill-popup-close','×');
+ close.id='classic-skill-popup-close';
  close.type='button';close.setAttribute('aria-label','Close skill unlocks');
  const popupContent=make(popup,'div','oakrest-skill-popup-content');
  document.getElementById('classic-app').append(popup);
