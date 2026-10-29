@@ -16,11 +16,11 @@ export const CLASSIC_DISTRICTS=Object.freeze([
 // at a real lane or public square, not a blank building shell or tree trunk.
 export const CLASSIC_LOOP_PATHS=Object.freeze([
  // Short links from the two outer gates, without a second broad ring road.
- frozenPath([[-46,39],[-36,39],[-23,39]]),
- frozenPath([[46,39],[35,39],[24,39]]),
- frozenPath([[-23,39],[-23,46]]),
- frozenPath([[24,39],[24,44]]),
- frozenPath([[0,54],[23,54]]),
+ frozenPath([[-46,39],[-36,39],[-26,43],[-24.4,46]]),
+ frozenPath([[46,39],[35,39],[27,43],[24,46]]),
+ frozenPath([[-24.4,46],[-24.4,31]]),
+ frozenPath([[24,46],[24,54]]),
+ frozenPath([[0,54],[24,54]]),
  frozenPath([[0,75],[24,75]])
 ]);
 /** Exact town floor slabs and roof palettes shared by village renderer and map. */

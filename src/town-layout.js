@@ -54,18 +54,23 @@ export const OAKREST_MARKET_BARRELS=Object.freeze([
  [-20.6,25],[-20.6,26.2],[20,20.8],[21.1,20.5],[-15,35],[10.2,-5]
 ]);
 export const OAKREST_VEGETABLE_BEDS=Object.freeze([[-10,51],[39,60],[-22,54]]);
-// One readable avenue and short service/house spurs; no overlapping road grid.
+// One central avenue; shops and homes have purposeful spurs, not a dense grid.
+// Roads bend *around* market fixtures and keep the well's apron fully clear.
 export const OAKREST_PATHS=Object.freeze([
  [[0,-20],[0,-16],[0,14],[0,39],[0,64.5],[0,86],[0,94]],
- [[0,14],[-24.4,14]], // Bank
- [[0,14],[24.4,14]], // Store
+ [[0,20],[-19.8,20],[-19.8,14],[-24.4,14]], // Bank, avoiding south market crates
+ [[0,17],[23,17],[24.4,14]], // Store; keep tables and barrels off paving
  [[0,46],[-24.4,46]], // Forester
  [[0,64.5],[7.4,64.5]], // Trade House
- [[0,39],[-23,39]], [[0,39],[24,39]], // Village square
- [[0,12],[-9.4,12]],[[0,8],[9.4,8]], // South homes
- [[0,27],[-9.4,27]],[[0,27],[9.4,27]], // North homes
+ [[0,46],[24,46]], // Right quarter above the well courtyard
+ [[0,12],[-9.4,12]], [[0,8],[9.4,8]], // South homes
+ [[0,27],[-9.4,27]], [[0,27],[9.4,27]], // North homes
  [[0,31],[-24.4,31]], // West terrace
- [[0,75],[-22.9,75]] // Wardens' Hall
+ [[0,75],[-22.9,75]], // Wardens Hall
+ [[0,0],[-24.4,0]], // West house
+ [[0,1],[23,1]], // East guardhouse
+ [[0,75],[24.4,75]], // Garden house
+ [[0,58],[7,58]] // Discreet northern walking link
 ]);
 
 /**
