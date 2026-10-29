@@ -10,6 +10,9 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
   social:'classic-social-toggle',settings:'classic-settings-toggle'
  };
  let current=null,lastPermanent='inventory',transitioning=false;
+ const listeners=new Set();
+ // Panels may own native dialogs that must close synchronously on tab changes.
+ const notify=name=>{for(const listener of listeners)listener(name);};
  const body=document.getElementById('classic-sidebar-body');
  // Close controls are intentionally kept in the DOM for existing bindings,
  // but never exposed as a way to dismiss the permanent book.
@@ -45,6 +48,7 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
   if(permanent.has(name))lastPermanent=name;
   if(body)body.dataset.active=name;
   pressed(name);
+  notify(name);
  };
  // Dismiss an NPC/service/settings view to the previous permanent tab.
  // Calling hide() on a permanent tab does not clear the sidebar.
@@ -63,6 +67,8 @@ export function createClassicWindowController({items,map,settings,dialogue,minim
   if(permanent.has(name))lastPermanent=name;
   if(body)body.dataset.active=name;
   pressed(name);
+  notify(name);
  };
- return {open,hide,isOpen:()=>current!==null,adopt,current:()=>current};
+ return {open,hide,isOpen:()=>current!==null,adopt,current:()=>current,
+  subscribe:listener=>{listeners.add(listener);return ()=>listeners.delete(listener);}};
 }
