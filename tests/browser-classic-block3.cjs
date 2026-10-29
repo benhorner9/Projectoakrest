@@ -11,6 +11,10 @@ let browser;
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5273/classic.html?qa=1');
  await page.waitForFunction(()=>window.oakrestClassicQA);
+ // Finish real first-launch creation so simulation time actually advances.
+ await page.locator('#classic-creator-name').fill('Environment Tester');
+ await page.locator('#classic-creator-form button[type=submit]').click();
+ await page.waitForFunction(()=>document.getElementById('classic-creator').hidden);
  await page.evaluate(()=>oakrestClassicQA.pauseAutomaticLoop());
  const before=await page.evaluate(()=>({saved:oakrestClassicQA.savedState(),life:oakrestClassicQA.worldLife(),atlas:oakrestClassicQA.atlasState().zones}));
  assert.ok(before.atlas.includes('OAK-VL-001'),'must retain Block 2 zones');
