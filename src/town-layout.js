@@ -58,7 +58,7 @@ export const OAKREST_VEGETABLE_BEDS=Object.freeze([[-10,51],[39,60],[-22,54]]);
 // Roads bend *around* market fixtures and keep the well's apron fully clear.
 export const OAKREST_PATHS=Object.freeze([
  [[0,-20],[0,-16],[0,14],[0,39],[0,64.5],[0,86],[0,94]],
- [[0,20],[-19.8,20],[-19.8,14],[-24.4,14]], // Bank, avoiding south market crates
+ [[0,20],[-19.8,20],[-19.8,14],[-23.2,14]], // Bank doorstep, outside the masonry and away from crates
  [[0,17],[23,17],[24.4,14]], // Store; keep tables and barrels off paving
  [[0,46],[-24.4,46]], // Forester
  [[0,64.5],[7.4,64.5]], // Trade House
