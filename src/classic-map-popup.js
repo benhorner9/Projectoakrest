@@ -19,12 +19,13 @@ export function setupClassicMapPopup({map,body,windowUi,minimap,app}){
   if(windowUi.current()==='map')windowUi.open(restoreTab==='map'?'inventory':restoreTab);
   else minimap.setExpanded(false);
  };
- const closePopup=()=>{if(dialog.open)dialog.close();};
+ const closePopup=()=>{if(dialog.open){dialog.close();restore();}};
  close.addEventListener('click',closePopup);
  dialog.addEventListener('click',event=>{if(event.target===dialog)closePopup();});
  dialog.addEventListener('keydown',event=>event.stopPropagation());
- dialog.addEventListener('close',restore);
- windowUi.subscribe?.(name=>{if(name!=='map'&&dialog.open)dialog.close();});
+ // Escape uses the native close event; button closes restore immediately.
+ dialog.addEventListener('close',()=>{if(map.parentElement!==body)restore();});
+ windowUi.subscribe?.(name=>{if(name!=='map'&&dialog.open)closePopup();});
  return {open(){
   if(dialog.open)return;
   restoreTab=windowUi.current()||'inventory';
