@@ -46,11 +46,18 @@ export function organicRoadPolygons(paths,width=4.1){
    if(len<.0001)continue;
    const steps=Math.max(1,Math.ceil(len/2));
    const edge=t=>{
-    const x=ax+(bx-ax)*t,z=az+(bz-az)*t;
+    const cx=ax+(bx-ax)*t,cz=az+(bz-az)*t;
     const normalX=corners[i-1].x*(1-t)+corners[i].x*t;
     const normalZ=corners[i-1].z*(1-t)+corners[i].z*t;
     const scale=Math.hypot(normalX,normalZ)||1;
-    const weave=(terrainVariation(x*.9+11,z*.9-13)-.5)*.17;
+    // A bounded, zero-at-endpoints lateral shift replaces rigid ruler-straight
+    // strips. Each adjacent segment uses the same exact knot; no cracks.
+    // Purely cosmetic (<0.4m); the shared gameplay road/path model is intact.
+    const wander=Math.sin(Math.PI*t)**2*
+      (terrainVariation((ax+bx)*.14+13,(az+bz)*.14-7)-.5)*.72;
+    const x=cx+normalX/scale*wander,z=cz+normalZ/scale*wander;
+    const weave=(terrainVariation(x*.9+11,z*.9-13)-.5)*.45+
+      Math.sin(x*.27+z*.31)*.055;
     const r=width/2+weave;
     return [[x+normalX/scale*r,z+normalZ/scale*r],
             [x-normalX/scale*r,z-normalZ/scale*r]];

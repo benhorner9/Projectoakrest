@@ -22,6 +22,10 @@ let browser;
   await page.locator('#classic-creator-form button[type=submit]').click();
   await page.waitForFunction(()=>window.oakrestClassicQA&&document.getElementById('classic-creator').hidden);
   await page.waitForFunction(()=>!!document.querySelector('#oakrest-atlas-picker'));
+  // Freeze only the automatic frame loop: map inspection must not be blamed
+  // for a previously ordered walk arriving during the copy/selection checks.
+  // Explicit navigation commands below still update the QA state.
+  await page.evaluate(()=>window.oakrestClassicQA.pauseAutomaticLoop());
   const baseline=await page.evaluate(()=>JSON.stringify(oakrestClassicQA.persistentSnapshot()));
   const map=page.locator('#classic-map-canvas');
   async function clickWorld(x,z){

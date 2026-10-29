@@ -37,7 +37,15 @@ export const CLASSIC_NPCS=Object.freeze([
  Object.freeze({id:'villager',name:'Townsfolk',x:9,z:30,role:'citizen',colour:'#9781a5',targetId:'citizen:villager'}),
  Object.freeze({id:'town-porter',name:'Town Porter',x:0,z:9,role:'porter',colour:'#a9866c',route:[[0,9],[0,22],[0,36],[0,53]]}),
  Object.freeze({id:'town-messenger',name:'Market Messenger',x:3,z:61,role:'messenger',colour:'#7c98a1',route:[[3,61],[3,47],[3,32],[3,16]]}),
- Object.freeze({id:'town-gardener',name:'Town Gardener',x:-2,z:74,role:'gardener',colour:'#88a477',route:[[-2,74],[-2,64],[-2,53],[-2,43]]})
+ Object.freeze({id:'town-gardener',name:'Town Gardener',x:-2,z:74,role:'gardener',colour:'#88a477',route:[[-2,74],[-2,64],[-2,53],[-2,43]]}),
+ // Street workers use the same verified town lanes as the player. They carry
+ // no weapons and keep their work routes within the defensive wall.
+ Object.freeze({id:'town-courier',name:'West Ward Courier',x:-39,z:6,role:'courier',colour:'#c39c79',
+  route:[[-39,6],[-39,22],[-39,39],[-39,57],[-39,78]]}),
+ Object.freeze({id:'town-baker',name:'Market Baker',x:39,z:8,role:'baker',colour:'#c6a579',
+  route:[[39,8],[39,22],[39,39],[39,57]]}),
+ Object.freeze({id:'town-caretaker',name:'Village Caretaker',x:8,z:6,role:'caretaker',colour:'#7e9876',
+  route:[[8,6],[8,17],[8,23],[8,32]]})
 ]);
 export const CLASSIC_TREES=Object.freeze(Array.from({length:70},(_,i)=>{
  const column=i%14,row=Math.floor(i/14);

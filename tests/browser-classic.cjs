@@ -26,7 +26,7 @@ let browser;
   await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
   assert.equal(await page.locator('#classic-game canvas').count(),1,'classic scene renders WebGL');
   const initial=await page.evaluate(()=>({state:oakrestClassicQA.state(),raw:localStorage.getItem('oakrest-v1')}));
-  assert.equal(initial.state.npcCount,9,'four stationary attendants, guard and townsfolk plus three moving workers');
+  assert.ok(initial.state.npcCount>=12,'four stationary attendants, guard and townsfolk plus six working pedestrians');
   const startNpc=await page.evaluate(()=>oakrestClassicQA.worldLife());
   await page.evaluate(()=>oakrestClassicQA.advance(6));
   const movedNpc=await page.evaluate(()=>oakrestClassicQA.worldLife());

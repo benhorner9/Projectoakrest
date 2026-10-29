@@ -5,12 +5,15 @@ export function interiorFixtures(building){
  if(kind==='bank')return [
   {id:'teller-counter',x:0,z:-d*.12,w:w*.68,d:1.15,h:1.6,material:'trim'},
   shelf,
-  {id:'bank-safe',x:w*.38,z:-d*.30,w:1.2,d:1.3,h:1.75,material:'stone'}
+  {id:'bank-safe',x:w*.38,z:-d*.30,w:1.2,d:1.3,h:1.75,material:'stone'},
+  // A separate ledger lectern and visitor display: both visible AND solid.
+  {id:'ledger-lectern',x:-w*.38,z:d*.14,w:1.25,d:1.25,h:1.25,material:'trim'}
  ];
  if(kind==='store'||kind==='trade')return [
   {id:'shop-counter',x:-w*.20,z:-d*.12,w:w*.45,d:1.3,h:1.5,material:'trim'},
   shelf,
-  {id:'supply-crates',x:w*.33,z:-d*.28,w:1.3,d:1.45,h:1.1,material:'wood'}
+  {id:'supply-crates',x:w*.33,z:-d*.28,w:1.3,d:1.45,h:1.1,material:'wood'},
+  {id:'display-stand',x:w*.36,z:d*.13,w:1.05,d:1.45,h:1.35,material:'trim'}
  ];
  return [
   {id:'worktable',x:-w*.25,z:-d*.2,w:2,d:1.4,h:1.1,material:'darkwood'},
