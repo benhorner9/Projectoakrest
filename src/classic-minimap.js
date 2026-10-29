@@ -68,13 +68,17 @@ function terrain(ctx,project,width,height,scale){
   [4.35,OAKREST_PALETTE.earth],[3.35,OAKREST_PALETTE.trail],
   [1.85,OAKREST_PALETTE.path]])
   for(const quad of organicRoadPolygons(CLASSIC_ROADS,width))polygon(ctx,project,quad,colour);
- ctx.lineCap='butt';ctx.lineJoin='miter';ctx.strokeStyle='#a08e6b';
- ctx.lineWidth=Math.max(1,3.6*scale);
- for(const path of ADVENTURE_PATHS){
-  ctx.beginPath();path.forEach(([x,z],i)=>{
-   const p=project({x,z});i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
-  });ctx.stroke();
- }
+ // Mirror the live 3D trail layers rather than a jagged centreline stroke.
+ // Each layer uses the same sampled outdoor routes and polygon generator.
+ const wild=ADVENTURE_PATHS.filter(path=>path[0][1]<195);
+ const hollow=ADVENTURE_PATHS.filter(path=>path[0][1]>=195);
+ for(const [paths,trailWidth,colour] of [
+  [wild,6.4,OAKREST_PALETTE.verge],
+  [wild,5.1,OAKREST_PALETTE.earth],
+  [wild,3.55,OAKREST_PALETTE.path],
+  [hollow,4.15,'#697671'],
+  [hollow,2.7,'#8d9689']])
+  for(const quad of organicRoadPolygons(paths,trailWidth))polygon(ctx,project,quad,colour);
  for(const plaza of CLASSIC_PLAZAS){
   polygon(ctx,project,plazaOutline(plaza),OAKREST_PALETTE.earth);
   polygon(ctx,project,plazaOutline({...plaza,w:plaza.w*.82,d:plaza.d*.82}),OAKREST_PALETTE.packed);

@@ -1,4 +1,5 @@
 /** First Adventure content. Coordinates are shared by collision, map and renderer. */
+import {OUTDOOR_TRAILS} from './classic-outdoor-trails.js';
 export const ADVENTURE_MATERIALS = Object.freeze({
  'copper-ore':['Copper ore','Requires the forge to smelt with tin; cannot be worked by hand.','token'],
  'tin-ore':['Tin ore','Requires the forge to smelt with copper.','token'],
@@ -72,7 +73,9 @@ export const ADVENTURE_SCENERY=Object.freeze({
  camp:Object.freeze({x:26,z:155}),
  logs:Object.freeze([[-30,130],[-34,136],[5,180]])
 });
-export const ADVENTURE_PATHS=[[[0,78],[0,100],[-8,108],[19,117],[23,150],[0,181]],[[0,86],[-24,91],[-31,95],[-20,103]],[[-8,108],[-28,135],[-12,142],[23,150]],[[23,150],[28,159],[16,163],[0,181]],[[19,117],[26,106]],[[0,212],[0,324]]];
+// The same canonical curved centrelines drive 3D paths, map and tree exclusion.
+ // Narrow interior halls remain intentionally straight.
+export const ADVENTURE_PATHS=Object.freeze([...OUTDOOR_TRAILS,Object.freeze([[0,212],[0,324]])]);
 export const ADVENTURE_REGIONS=[{name:'Gate meadows',x:0,z:87},{name:'Alderwood',x:0,z:110},{name:'Whispering wood',x:-22,z:137},{name:'The Last Watch',x:24,z:157},{name:'Warden’s Hollow',x:0,z:181}];
 export const DUNGEON_ROOMS=[{name:'The Root Vestibule',minZ:210,maxZ:241},{name:'The Drowned Archive',minZ:241,maxZ:269},{name:'The Broken Watch',minZ:269,maxZ:297},{name:'The Heart Chamber',minZ:297,maxZ:329}];
 export const ADVENTURE_WALLS=[{x:0,z:200,w:106,d:2},
