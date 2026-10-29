@@ -1,4 +1,4 @@
-import {classicGrip,mirroredDirection} from './classic-sprite-rig.js';
+import {classicGrip,mirroredDirection,classicBodyMotion} from './classic-sprite-rig.js';
 import {classicVisualLoadout,classicVisualWeaponFamily,classicGarmentSilhouette} from './classic-avatar-art.js';
 /** Lightweight directional sprite atlas created in-browser from a single art grammar.
  * Models are never skinned; all combat-style gear uses the same silhouette language.
@@ -27,12 +27,16 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
  if(direction.mirror){c.translate(W,0);c.scale(-1,1);}
  const grip=classicGrip(style,pose,step,weapon);
  const equipped=classicVisualLoadout({helm,chest,legs,boots,weapon,offhand,
-  arrows:arrows?'bronze-arrows':null,amulet:amulet?'wayfarer-amulet':null,ring:ring?'wayfarer-ring':null});
+  arrows,amulet,ring});
  const silhouette=classicGarmentSilhouette({chest});
  const family=classicVisualWeaponFamily(weapon);
  const front=[0,1,7].includes(dir),back=[3,4,5].includes(dir);
  const side=[1,2,3,5,6,7].includes(dir);
  const right=true,shift=side?4:0;
+ // Gameplay and camera direction stay authoritative; subtle 2D animation
+ // shifts never change collision, selection, pathfinding or attack windows.
+ const motion=classicBodyMotion(pose,step);
+ c.translate(motion.x,motion.y);
  const line='#292c2b';
  // Boots and alternating walk cycle, all actors share a consistent outline.
  const stride=step===1?6:step===2?-6:0;
@@ -60,7 +64,13 @@ function renderActor({dir,step,style,coat,skin,hair,helm,shield,boots,offhand,we
   fill(c,'#c6a778',x-7,102+foot,17,6);
  }
  // Equipment that must appear behind the body.
- if(arrows&&style==='ranged'){outline(c,right?20:66,47,11,29);fill(c,'#947b51',right?20:66,47,11,29);for(let i=0;i<3;i++)fill(c,'#d3c7a7',(right?21:67)+i*3,41,2,11);}
+ if(equipped.arrows&&style==='ranged'){
+  const quiver=equipped.arrows;
+  outline(c,right?20:66,47,11,29);
+  fill(c,quiver.shadow,right?20:66,47,11,29);
+  fill(c,quiver.base,right?21:67,50,9,25);
+  for(let i=0;i<3;i++)fill(c,quiver.shine,(right?21:67)+i*3,41,2,11);
+ }
  // Style alone never creates a cloak: empty loadouts always show starter clothes.
  // Left arm, body and moving right arm.
  outline(c,23+shift,49,14,37);fill(c,coat,23+shift,49,14,37);
@@ -303,8 +313,8 @@ export function makeClassicActor({style='melee',coat='#68867f',skin='#d9b08c',ha
   sprite.userData.pose=pose;sprite.userData.workSkill=workSkill;
   const config={style:workSkill?'melee':nextStyle,workSkill,coat,skin,hair,outfit,hairstyle,sex,
    helm:nextWorn.helm||null,shield:!!(!workSkill&&nextStyle==='melee'&&nextWorn.offhand),
-   offhand:nextWorn.offhand||null,boots:nextWorn.boots||null,arrows:!!nextWorn.arrows,
-   amulet:!!nextWorn.amulet,ring:!!nextWorn.ring,
+   offhand:nextWorn.offhand||null,boots:nextWorn.boots||null,arrows:nextWorn.arrows||null,
+   amulet:nextWorn.amulet||null,ring:nextWorn.ring||null,
    chest:nextWorn.chest||null,legs:nextWorn.legs||null,pose,
    weapon:workSkill?'work-'+workSkill:npc?(armed?npcWeapon:'none'):(nextWorn.weapon||'none')};
   const dir=spriteDirection(facing.x,facing.z,cameraOffset),frame=step%3,key=keyFor(config,dir,frame);

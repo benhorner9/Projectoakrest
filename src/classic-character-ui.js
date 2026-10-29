@@ -13,6 +13,7 @@ export function setupClassicCharacterUI({storage,pathname,onOpen=()=>{},beforeSw
   editor=document.getElementById('classic-creator-editor'),
   error=document.getElementById('classic-creator-error'),
   canvas=document.getElementById('classic-creator-preview'),
+  previewHeading=document.getElementById('classic-creator-preview-heading'),
   close=document.getElementById('classic-creator-close'),
   create=document.getElementById('classic-creator-new');
  const context=canvas.getContext('2d');
@@ -34,6 +35,8 @@ export function setupClassicCharacterUI({storage,pathname,onOpen=()=>{},beforeSw
  function preview(){
   if(!context)return;
   const options=getAppearance();
+  if(previewHeading)previewHeading.textContent=
+   'FULL CHARACTER PREVIEW · '+['FRONT','FRONT-RIGHT','RIGHT','BACK-RIGHT','BACK','BACK-LEFT','LEFT','FRONT-LEFT'][direction];
   const actor=makeClassicActor({coat:options.outfitColor,skin:options.skinTone,
    hair:options.hairColor,outfit:options.outfit,hairstyle:options.hairstyle,sex:options.sex});
   actor.update({facing:{x:Math.sin(direction*Math.PI/4),z:-Math.cos(direction*Math.PI/4)},worn:{}});
