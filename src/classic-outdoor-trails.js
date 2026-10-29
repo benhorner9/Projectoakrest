@@ -40,18 +40,22 @@ export function smoothOutdoorTrail(knots,maxStep=4.25){
  * deliberately end at accessible resource/discovery areas.
  */
 export const OUTDOOR_TRAIL_KNOTS=Object.freeze([
- // Woodland Gate → abandoned cart → creekside hoofprints → Last Watch → Hollow.
- [[0,86],[0,93],[-2,101],[-8,108],[0,110],[9,113],[19,117],[21,128],[21,139],[23,150],[20,157],[13,168],[0,181]],
- // Quarry fork and the first forestry grove.
+ // A northbound woodland spine; the cart is on a side path, not a hairpin.
+ [[0,86],[0,94],[2,104],[8,112],[19,117],[21,128],[21,139],
+  [23,150],[20,157],[13,168],[0,181]],
+ // Short cart approach leaves the north road naturally, without a U-turn.
+ [[0,94],[-4,102],[-8,108]],
+ // Quarry and woodcutting spurs follow the edge of the gate meadows.
  [[0,93],[-10,92],[-19,91],[-24,91],[-31,95]],
  [[-24,91],[-21,97],[-20,103],[-14,107],[-8,108]],
- // Deep-west forest to the singing stump, upper reeds and eastern watch.
- [[-8,108],[-13,115],[-20,126],[-28,135],[-23,140],[-12,142]],
+ // Deep western woodland goes by the singing stump, curves to upper reeds.
+ [[-8,108],[-13,115],[-20,126],[-28,135],[-27,140],[-21,143],[-12,142]],
  [[-12,142],[-2,145],[10,148],[23,150]],
- // Creek reeds, ruined watch journal and memorial.
+ // Cree​kside gathering, watch journal, memorial and the Hollow path.
  [[19,117],[23,113],[26,106]],
- [[23,150],[28,159],[23,162],[16,163],[9,170],[0,181]],
- // Quiet side paths, not another broad ring road around the forest.
+ [[23,150],[28,159]],
+ [[23,150],[20,158],[16,163],[9,170],[0,181]],
+ // Optional discoveries are reached via narrow, quiet footpaths.
  [[-20,126],[-29,118],[-39,115]],
  [[21,139],[30,140],[39,143]]
 ]);
