@@ -4,7 +4,7 @@ import {OAKREST_BUILDINGS,OAKREST_PATHS} from '../src/town-layout.js';
 import {CLASSIC_ROADS,CLASSIC_PERIMETER} from '../src/classic-town-plan.js';
 import {OAKREST_SERVICES} from '../src/town-services.js';
 import {CLASSIC_CAMERA,CLASSIC_LIMITS,classicScreenBasis} from '../src/classic-presentation.js';
-import {CLASSIC_MAP_FEATURES,worldToMinimap,minimapToWorld,fullMapTransform,fullMapWorld} from '../src/classic-minimap.js';
+import {CLASSIC_MAP_FEATURES,worldToMinimap,minimapToWorld,fullMapTransform,fullMapPoint,fullMapWorld} from '../src/classic-minimap.js';
 
 test('minimap retains all original buildings/services and uses the shared Classic circuit/wall layout',()=>{
  assert.equal(CLASSIC_MAP_FEATURES.buildings,OAKREST_BUILDINGS);
@@ -45,8 +45,7 @@ test('expanded map screen location converts back to canonical world space',()=>{
   const t=fullMapTransform(w,h);
   assert.ok(t.scale>0&&Number.isFinite(t.scale));
   for(const target of OAKREST_SERVICES){
-   const pixel={x:t.x+(target.x-CLASSIC_LIMITS.minX)*t.scale,
-    y:t.y+(CLASSIC_LIMITS.maxZ-target.z)*t.scale};
+   const pixel=fullMapPoint(target,w,h);
    const actual=fullMapWorld(pixel,w,h);
    assert.ok(Math.hypot(actual.x-target.x,actual.z-target.z)<1e-8);
   }
@@ -63,4 +62,26 @@ test('camera-forward movement points straight up on aligned corner minimap',()=>
  assert.ok(moved.y<mapOrigin.y,'W camera-forward movement rises on minimap');
  assert.ok(Math.abs(moved.x-mapOrigin.x)<1e-8,
   'camera-forward travel must be straight up on the small minimap');
+});
+
+test('expanded north-up map agrees with initial horizontal movement and inverse touch location',()=>{
+ // Rightward movement in the default south-facing view decreases world X.
+ // The full map reflects this, while the world coordinates remain unchanged.
+ const origin={x:0,z:39},basis=classicScreenBasis();
+ assert.ok(basis.right.x<0,'default camera right has negative world-X');
+ for(const [w,h] of [[440,510],[620,600],[1200,800]]){
+  const centre=fullMapPoint(origin,w,h);
+  const screenRight={x:origin.x+basis.right.x*8,z:origin.z+basis.right.z*8};
+  const screenLeft={x:origin.x-basis.right.x*8,z:origin.z-basis.right.z*8};
+  assert.ok(fullMapPoint(screenRight,w,h).x>centre.x,'rightward travel shifts marker right');
+  assert.ok(fullMapPoint(screenLeft,w,h).x<centre.x,'leftward travel shifts marker left');
+  assert.ok(fullMapPoint({x:origin.x,z:origin.z+8},w,h).y<centre.y,'north stays up');
+  assert.ok(fullMapPoint({x:-20,z:origin.z},w,h).x>centre.x);
+  assert.ok(fullMapPoint({x:20,z:origin.z},w,h).x<centre.x);
+  for(const location of [origin,screenRight,screenLeft,{x:-35,z:17},{x:35,z:165}]){
+   const point=fullMapPoint(location,w,h),back=fullMapWorld(point,w,h);
+   assert.ok(Math.hypot(back.x-location.x,back.z-location.z)<1e-8,
+    'projecting to a touch position and back must recover the exact world point');
+  }
+ }
 });
