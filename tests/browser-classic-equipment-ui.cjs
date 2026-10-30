@@ -65,7 +65,9 @@ let browser;
  assert.equal((await page.evaluate(()=>oakrestClassicQA.state())).x,playerBefore.x,'UI drag must not move the world character');
  assert.notEqual(rationIndex,'0');
  await drag(bag('material.ration'),page.locator('[data-hotbar-slot="1"]'));
- assert.equal((await snapshot()).quickSlots[0],'material.ration','any of eight slots can hold food');
+ assert.deepEqual(await page.evaluate(()=>oakrestClassicQA.hotbarState().slots),
+  ['ability0','ability1','ability2','ability3','eat','drink','dodge','attack'],
+  'dragging a bag item cannot replace combat skills');
  // The bar re-renders frequently during idle/combat ticks. Rewriting external
  // SVG <use> references, image srcs or every button ID on each update makes
  // the actual iPad Safari toolbar visibly flash. Only changed bindings may
@@ -87,13 +89,10 @@ let browser;
  assert.equal(idleBar.before.length,8);
  assert.deepEqual(idleBar.after,idleBar.before,'quick slots retain their icon and button identity through idle ticks');
  assert.deepEqual(idleBar.mutated,[],'stable Safari quick bar must not reload icons or re-ID buttons every tick');
- await page.locator('#oakrest-hotbar-edit').tap();
- assert.equal(await page.locator('#oakrest-hotbar-editor select').count(),8);
- await page.locator('#oakrest-hotbar-select-8').selectOption('equipment');
- await page.locator('#oakrest-hotbar-select-2').selectOption('');
- await page.locator('#oakrest-hotbar-edit').tap();
- assert.equal((await snapshot()).quickSlots[7],'equipment');assert.equal((await snapshot()).quickSlots[1],null);
- await page.locator('[data-hotbar-slot="8"]').tap();assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'equipment');
+ assert.equal(await page.locator('#oakrest-hotbar-edit').count(),0,'no quick-item ARRANGE editor');
+ assert.equal(await page.locator('.classic-quick-choice').count(),0,'inventory cannot assign gear to combat bar');
+ assert.equal(await page.locator('[data-hotbar-slot="5"]').getAttribute('data-binding'),'eat');
+ assert.equal(await page.locator('[data-hotbar-slot="8"]').getAttribute('data-binding'),'attack');
  // Drag from the equipment inventory list into the corresponding paperdoll.
  await drag(bag('slot.recruit-shield'),page.locator('[data-equipment-slot="offhand"]'));
  assert.equal((await snapshot()).equipment.melee.offhand,'recruit-shield');
@@ -215,10 +214,10 @@ let browser;
  });
  const hurt=await page.evaluate(()=>oakrestClassicQA.combatState());assert.ok(hurt.hp>0&&hurt.hp<=hurt.maxHp-40,'real damage setup: '+JSON.stringify({hp:hurt.hp,maxHp:hurt.maxHp,bandit:hurt.monsters.find(m=>m.id==='bandit-a')}));
  const food=(await snapshot()).inventory.materials.ration;
- await page.locator('[data-hotbar-slot="1"]').tap();
+ await page.locator('[data-hotbar-slot="5"]').tap();
  assert.equal((await snapshot()).inventory.materials.ration,food-1);
  assert.ok((await page.evaluate(()=>oakrestClassicQA.combatState())).hp>hurt.hp);
- assert.equal(await page.locator('[data-hotbar-slot="1"]').isDisabled(),true);
+ assert.equal(await page.locator('[data-hotbar-slot="5"]').isDisabled(),true);
  await open('inventory');await bag('material.ration').tap();
  assert.equal(await page.locator('[data-consumable="eat"]').isDisabled(),true);
  await page.evaluate(()=>oakrestClassicQA.advance(8));
@@ -284,9 +283,9 @@ let browser;
 
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
- // A second named character must not inherit the first character's eight bindings.
+ // A second character's legacy item/map bindings must migrate to the fixed skill bar.
  await page.evaluate(({other,prefix})=>localStorage.setItem(prefix+'active-character',other),{other,prefix});
  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
- assert.equal((await snapshot()).quickSlots[0],'map');assert.equal((await snapshot()).quickSlots[7],null);
- assert.deepEqual(errors,[]);console.log('PASS: eight saved bindings, touch/mouse drag, nine equipment slots, 2H loadouts, style panels, quantity banking, drops, crafting, skills, quests, map and separate character reload.');
+ assert.deepEqual((await snapshot()).quickSlots,['ability0','ability1','ability2','ability3','eat','drink','dodge','attack']);
+ assert.deepEqual(errors,[]);console.log('PASS: fixed skill bar, touch/mouse drag, nine equipment slots, 2H loadouts, style panels, quantity banking, drops, crafting, skills, quests, map and separate character reload.');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});
