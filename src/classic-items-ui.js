@@ -399,12 +399,12 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   content.scrollTop=scroll;
  }
  function open(next='inventory'){
-  popups.closeItem();popups.closeCraft();
+  popups.closeItem();popups.closeCraft({cancel:true});
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
   mode=next;detailId=null;selectedBank=null;selectedShop=null;combineSource=null;
   host.hidden=false;content.scrollTop=0;render();onOpen(next);
  }
- function hide(){popups.close();host.hidden=true;detailId=null;combineSource=null;onClose();}
+ function hide(){popups.closeCraft({cancel:true});popups.close();host.hidden=true;detailId=null;combineSource=null;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
  return {open,hide,render,isOpen:()=>!host.hidden,
@@ -418,7 +418,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    }
    return transact({type:'drag',...payload});
   },
-  tick:()=>{if(!host.hidden&&mode==='inventory'){
+  tick:()=>{popups.tick();if(!host.hidden&&mode==='inventory'){
    const state=combat.getState();
    for(const node of content.querySelectorAll('[data-consumable]')){
     const kind=node.dataset.consumable,remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
