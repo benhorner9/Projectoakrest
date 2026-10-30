@@ -31,7 +31,7 @@ export function craftQuantityLimit(save,recipe){
 export function setupClassicItemPopups({
  doc=document,save,style,combat,inspect,transact,craft,onUseWith
 }){
- let itemLayer=null,craftLayer=null,craftView=null,anchor=null,previousCraft=null;
+ let itemLayer=null,craftLayer=null,craftView=null,anchor=null,previousCraft=null,lastProgressUpdate=-Infinity,requirementKey='';
  const closeItem=()=>{
   itemLayer?.remove();itemLayer=null;
   if(anchor?.isConnected)anchor.classList.remove('oakrest-item-selected');
@@ -39,7 +39,7 @@ export function setupClassicItemPopups({
  const closeCraft=({cancel=false}={})=>{
   if(cancel&&combat.adventureState()?.work?.recipeId)
    craft('cancel');
-  craftLayer?.remove();craftLayer=null;craftView=null;previousCraft=null;
+  craftLayer?.remove();craftLayer=null;craftView=null;previousCraft=null;lastProgressUpdate=-Infinity;requirementKey='';
  };
  const selectRecipe=(filter=[])=>RECIPES.filter(r=>r.station==='inventory'&&
   filter.every(id=>Object.hasOwn(r.cost,id)));
@@ -137,21 +137,24 @@ export function setupClassicItemPopups({
    const result=craft('craft',{id:recipe.id,quantity:count});
    if(result?.ok){
     previousCraft={id:recipe.id,total:count,completed:0};
-    update();
+    update(true);
    }else progressText.textContent=result?.reason||'Unable to craft.';
   });
   const stop=btn(actions,'STOP CRAFTING',()=>{
-   craft('cancel');update();
+   craft('cancel');update(true);
   });
   craftView={recipes,selector,description,quantity,maximum,timing,progressText,progress,start,stop};
   selector.addEventListener('change',()=>{
-   quantity.value='1';update();
+   quantity.value='1';update(true);
   });
-  quantity.addEventListener('input',update);
-  update();selector.focus({preventScroll:true});
+  quantity.addEventListener('input',()=>update(true));
+  update(true);selector.focus({preventScroll:true});
  }
- function update(){
+ function update(force=false){
   if(!craftView||!craftLayer?.isConnected)return;
+  const now=combat.getState().time;
+  if(!force&&now-lastProgressUpdate<.14)return;
+  lastProgressUpdate=now;
   const {recipes,selector,description,quantity,maximum,timing,progressText,progress,start,stop}=craftView;
   const recipe=recipes.find(r=>r.id===selector.value);
   if(!recipe)return;
@@ -161,12 +164,16 @@ export function setupClassicItemPopups({
   const active=current?.recipeId===recipe.id?current:null;
   const anyCraft=!!current?.recipeId;
   quantity.max=String(limit);maximum.textContent='Maximum '+limit+' cycles from your backpack';
-  description.replaceChildren();
-  make(description,'strong',null,recipe.title);
-  make(description,'p',null,guidance.training);
-  for(const [id,n] of Object.entries(recipe.cost)){
-   const ingredient=ADVENTURE_MATERIALS[id]?.[0]||getItem('material.'+id)?.title||id;
-   make(description,'p',null,ingredient+': '+(data.inventory.materials[id]||0)+' owned / '+n+' each');
+  const key=JSON.stringify([recipe.id,guidance.training,...Object.entries(recipe.cost).map(([id,n])=>[id,n,data.inventory.materials[id]||0])]);
+  if(key!==requirementKey){
+   requirementKey=key;
+   description.replaceChildren();
+   make(description,'strong',null,recipe.title);
+   make(description,'p',null,guidance.training);
+   for(const [id,n] of Object.entries(recipe.cost)){
+    const ingredient=ADVENTURE_MATERIALS[id]?.[0]||getItem('material.'+id)?.title||id;
+    make(description,'p',null,ingredient+': '+(data.inventory.materials[id]||0)+' owned / '+n+' each');
+   }
   }
   const chosen=Number(quantity.value);
   const valid=Number.isSafeInteger(chosen)&&chosen>0&&chosen<=limit&&!guidance.owned&&guidance.ready;
@@ -184,8 +191,8 @@ export function setupClassicItemPopups({
    progressText.textContent='Another crafting or gathering task is active.';
   }else{
    if(previousCraft){
-    progress.max=previousCraft.total;progress.value=previousCraft.total;
-    progressText.textContent='Crafting stopped or completed. Finished items and XP are kept.';
+    progress.max=previousCraft.total;progress.value=previousCraft.completed;
+    progressText.textContent=previousCraft.completed>=previousCraft.total?'Crafting complete · all items and XP awarded.':'Crafting stopped at '+previousCraft.completed+' / '+previousCraft.total+'. Finished items and XP are kept.';
    }else{
     progress.max=1;progress.value=0;
     progressText.textContent=guidance.owned?'You already own this equipment.':valid?'Ready to start.':'Check level, backpack space and ingredients.';
