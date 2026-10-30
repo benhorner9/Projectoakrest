@@ -17,7 +17,7 @@ function labelTexture(name,level){
 }
 export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
  const actors=new Map(),warningMeshes=new Map(),atlas=createClassicEnemyAtlas();
- const projectileView=createClassicProjectileView(scene);
+ const projectileView=createClassicProjectileView(scene,{reducedMotion});
  // A subtle ground circle replaces hard "target lock" visuals.
  const selectedRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.06,40),
   new THREE.MeshBasicMaterial({color:'#f5d58e',transparent:true,opacity:.76,
@@ -188,7 +188,7 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
  }
  function hitObjects(){return [...actors.entries()].filter(([,a])=>a.alive!==false).map(([id,a])=>({id,object:a.sprite}));}
  return {update,hitObjects,stats:()=>({projectiles:projectileView.stats(),creatures:atlas.stats(),warnings:warningMeshes.size,
-  actors:[...actors].map(([id,a])=>({id,visible:a.sprite.visible,opacity:a.sprite.material.opacity,scaleY:a.sprite.scale.y}))}),
+  actors:[...actors].map(([id,a])=>({id,visible:a.sprite.visible,opacity:a.sprite.material.opacity,scaleY:a.sprite.scale.y,pose:a.sprite.userData.visualPose||a.sprite.userData.pose||'idle',kind:a.visualKind||'humanoid'}))}),
   dispose(){
    scene.remove(selectedRing);selectedRing.geometry.dispose();selectedRing.material.dispose();
    projectileView.dispose();
