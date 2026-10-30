@@ -7,7 +7,7 @@ import {skillBookSnapshot,CLASSIC_SKILLS} from '../src/classic-skill-catalogue.j
 import {woodcuttingLevel} from '../src/woodcutting.js';
 const start=()=>{const d=freshCharacterSave();d.onboarding.area='world';return d;};
 const action=(c,kind,choice)=>c.adventureAction(kind,{choice},{x:0,z:39});
-const advance=(c,seconds=3.1)=>c.tick(seconds,{x:0,z:39});
+const advance=(c,seconds=3.1)=>{for(let t=0;t<seconds;t+=.1)c.tick(Math.min(.1,seconds-t),{x:0,z:39});};
 test('only metalwork is a world crafting station; all other crafts use the backpack',()=>{
  assert.deepEqual(ADVENTURE_TARGETS.filter(t=>t.kind==='station').map(t=>t.station),['forge']);
  assert.ok(RECIPES.filter(r=>r.station==='inventory').length>=7);
