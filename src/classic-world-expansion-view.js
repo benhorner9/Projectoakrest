@@ -71,7 +71,7 @@ export function createRegionalWorldScene(scene){
  const terrain=new THREE.Mesh(base,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
  terrain.name='regional-traversable-ground';root.add(terrain);
  // Roads use exactly the same authored centreline as the 2D map.
- const roadGeometry=REGIONAL_ROADS.map(r=>r.points);
+ const roadGeometry=REGIONAL_ROADS.map(r=>r.displayPoints);
  for(const [width,y,color,label] of [
   [7.1,-.055,'#617953','wide-natural-verges'],
   [5.5,-.043,'#85765c','region-dirt-road'],
