@@ -283,6 +283,15 @@ let browser;
 
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
+ // Equipping an owned weapon from BAG selects its inherent style automatically.
+ await page.locator('#classic-styles [data-style="ranged"]').tap();
+ await open('inventory');await bag('weapon.melee.sword').tap();
+ assert.equal(await page.locator('.classic-quick-choice').count(),0);
+ await page.getByRole('button',{name:'EQUIP',exact:true}).tap();
+ assert.equal((await snapshot()).gear.melee,'sword','weapon occupies its correct equipment slot');
+ assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'melee','equipping a sword switches from ranged to melee');
+ assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'melee');
+ assert.equal(await page.locator('[data-hotbar-slot="1"]').getAttribute('data-binding'),'ability0');
  // A second character's legacy item/map bindings must migrate to the fixed skill bar.
  await page.evaluate(({other,prefix})=>localStorage.setItem(prefix+'active-character',other),{other,prefix});
  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
