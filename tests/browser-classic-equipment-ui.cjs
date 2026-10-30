@@ -93,6 +93,8 @@ let browser;
  assert.equal(await page.locator('.classic-quick-choice').count(),0,'inventory cannot assign gear to combat bar');
  assert.equal(await page.locator('[data-hotbar-slot="5"]').getAttribute('data-binding'),'eat');
  assert.equal(await page.locator('[data-hotbar-slot="8"]').getAttribute('data-binding'),'attack');
+ // The GEAR overview displays draggable owned gear and the paper doll together.
+ await open('equipment');
  // Drag from the equipment inventory list into the corresponding paperdoll.
  await drag(bag('slot.recruit-shield'),page.locator('[data-equipment-slot="offhand"]'));
  assert.equal((await snapshot()).equipment.melee.offhand,'recruit-shield');
