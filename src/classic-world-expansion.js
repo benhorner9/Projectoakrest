@@ -27,9 +27,11 @@ const edge=(a,b,via=[])=>{
  const first=byId.get(a),last=byId.get(b);
  if(!first||!last)throw Error('Unknown world road endpoint');
  const knots=[[first.x,first.z],...via,[last.x,last.z]];
+ const points=Object.freeze(smoothOutdoorTrail(knots).map(p=>Object.freeze(p)));
+ const start=first.existing?Math.max(0,points.findIndex(p=>Math.hypot(p[0]-first.x,p[1]-first.z)>=46)):0;
  return Object.freeze({id:a+'--'+b,from:a,to:b,
-  knots:Object.freeze(knots.map(p=>Object.freeze(p))),
-  points:Object.freeze(smoothOutdoorTrail(knots).map(p=>Object.freeze(p)))});
+  knots:Object.freeze(knots.map(p=>Object.freeze(p))),points,
+  displayPoints:Object.freeze(points.slice(start))});
 };
 export const REGIONAL_ROADS=Object.freeze([
  edge('oakrest','brambleford',[[-46,39],[-95,38],[-130,20]]),
