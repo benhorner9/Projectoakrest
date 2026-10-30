@@ -14,10 +14,11 @@ export function createClassicGroundLoot(scene){
   }
   for(const drop of drops||[]){
    if(!roots.has(drop.id)){
-    const root=makeWorldItemModel(drop);
+    const root=makeWorldItemModel(drop,{classic:true});
     if(!root)continue;
     const item=itemFromDrop(drop);
     root.userData.lootId=drop.id;
+    root.userData.lootKind=item.shape;
     const marker=new THREE.Mesh(new THREE.RingGeometry(.62,.75,20),
       new THREE.MeshBasicMaterial({color:item.accent,transparent:true,opacity:.5,
        side:THREE.DoubleSide,depthWrite:false}));
@@ -27,13 +28,13 @@ export function createClassicGroundLoot(scene){
     base.add(root);roots.set(drop.id,root);
    }
    const group=roots.get(drop.id);
-   if(group)group.position.y=.2+.07*Math.sin(time*2.6+drop.x);
+   if(group)group.position.y=.2+.042*Math.sin(time*2.1+drop.x);
   }
  }
  function hitObjects(){
   const list=[];
   for(const [id,group] of roots)group.traverse(child=>{
-   if(child.isMesh&&child.geometry?.type!=='RingGeometry')list.push({id,object:child});
+   if(child.isMesh&&!child.userData.decorativeOnly&&child.geometry?.type!=='RingGeometry')list.push({id,object:child});
   });
   return list;
  }

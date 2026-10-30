@@ -43,7 +43,9 @@ export function classicVisualWeaponFamily(id){
  if(/crossbow/.test(key))return 'crossbow';
  if(/shortbow|longbow|bow/.test(key))return 'bow';
  if(/wand/.test(key))return 'wand';
- if(/staff|frost|ember|inferno|arcane/.test(key))return 'staff';
+ // Ember weapons are short rune wands, matching the preserved model registry.
+ if(/ember/.test(key))return 'wand';
+ if(/staff|frost|inferno|arcane/.test(key))return 'staff';
  if(/dagger|knife/.test(key))return 'daggers';
  if(/greatsword|two-handed|2h/.test(key))return 'greatsword';
  if(/axe|hatchet/.test(key))return 'axe';

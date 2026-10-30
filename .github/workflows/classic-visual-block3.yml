@@ -1,0 +1,43 @@
+name: Oakrest Classic — Visual Block 3 item and loot acceptance
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/classic-item-art.js'
+      - 'src/items.js'
+      - 'src/item-visuals.js'
+      - 'src/classic-loot-view.js'
+      - 'src/classic.css'
+      - 'tests/classic-visual-block3.test.js'
+      - 'tests/browser-classic-visual-block3.cjs'
+      - 'tests/item-model-assets.test.js'
+      - 'tests/kaykit-items.test.js'
+      - '.github/workflows/classic-visual-block3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual-block3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check && npm test && npm run build
+      - run: npx playwright install chromium
+      - name: Touch iPad-size real inventory, equipment, bank, loot and pickup
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-classic-visual-block3.cjs
+      - name: Existing integrated drag, equipment, pickup and bank regression
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-equipment-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oakrest-classic-visual-block3-evidence
+          path: qa/visual-block3/
+          if-no-files-found: ignore
