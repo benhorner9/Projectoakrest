@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {REGIONAL_BOUNDS,REGIONAL_HUBS,REGIONAL_CAMPS,REGIONAL_GATHERING,
- REGIONAL_ROADS,REGIONAL_BUILDINGS,REGIONAL_TREES} from './classic-world-expansion.js';
+ REGIONAL_ROADS,REGIONAL_BUILDINGS,REGIONAL_TREES,REGIONAL_CAMP_TENTS} from './classic-world-expansion.js';
 import {organicRoadPolygons} from './classic-art-direction.js';
 import {groundPolygons} from './classic-terrain-view.js';
 
@@ -137,10 +137,9 @@ export function createRegionalWorldScene(scene){
  for(const camp of REGIONAL_CAMPS){
   const group=new THREE.Group();group.name='regional-camp-'+camp.id;root.add(group);
   const tint=camp.live?'#927352':'#7b7a70';
-  for(let i=0;i<3;i++){
-   const angle=i*2.09,px=camp.x+Math.cos(angle)*5,pz=camp.z+Math.sin(angle)*5;
-   put(group,cone,tint,px,1.5,pz,2.8,3,2.8).rotation.y=Math.PI/4;
-   put(group,cube,'#584737',px,.16,pz,3,.32,3);
+  for(const tent of REGIONAL_CAMP_TENTS.filter(t=>t.camp===camp.id)){
+   put(group,cone,tint,tent.x,1.5,tent.z,2.8,3,2.8).rotation.y=Math.PI/4;
+   put(group,cube,'#584737',tent.x,.16,tent.z,3,.32,3);
   }
   put(group,cube,'#66513b',camp.x,2.2,camp.z,.21,4.4,.21);
   put(group,cube,camp.live?'#ad7254':'#79817c',camp.x+1.1,3.4,camp.z,.1,1.15,2.3);
