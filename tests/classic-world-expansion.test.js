@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {REGIONAL_BOUNDS,REGIONAL_HUBS,REGIONAL_ROADS,REGIONAL_BUILDINGS,
- REGIONAL_TREES,REGIONAL_CAMPS,REGIONAL_GATHERING,REGIONAL_RESOURCE_TARGETS,
+ REGIONAL_TREES,REGIONAL_CAMPS,REGIONAL_CAMP_TENTS,REGIONAL_GATHERING,REGIONAL_RESOURCE_TARGETS,
  REGIONAL_ENCOUNTERS,REGIONAL_HABITATS,regionalSolidAt,regionalLineClear,
  regionalSafeAt,distanceToPolyline,validateRegionalWorld} from '../src/classic-world-expansion.js';
 import {CLASSIC_LIMITS,solidAt,clearClassicLine,findClassicPath} from '../src/classic-presentation.js';
@@ -48,8 +48,8 @@ test('regional colliders and swept lines agree about houses and trees',()=>{
   assert.equal(regionalSolidAt(b.x,b.z),true,b.id);
   assert.equal(regionalLineClear({x:b.x-b.w,z:b.z},{x:b.x+b.w,z:b.z}),false,b.id);
  }
- for(const t of REGIONAL_TREES.slice(0,25)){
-  assert.equal(regionalSolidAt(t.x,t.z),true);
+ for(const t of [...REGIONAL_TREES.slice(0,25),...REGIONAL_CAMP_TENTS]){
+  assert.equal(regionalSolidAt(t.x,t.z),true,t.id||'tree');
   assert.equal(regionalLineClear({x:t.x-3,z:t.z},{x:t.x+3,z:t.z}),false);
  }
  assert.equal(regionalSolidAt(-370,-265),false);
