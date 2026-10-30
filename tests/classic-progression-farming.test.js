@@ -47,11 +47,18 @@ test('batch count validation and supply stack overflow never spend resources or 
  }
  const before=structuredClone(h.data);assert.equal(h.act('craft',{id:'arrows',batches:5}).ok,false);assert.deepEqual(h.data,before);
 });
-test('bulk crafting uses the final bag and permits a consumed stack to free its output slot',()=>{
+test('timed crafting requires enough free capacity for each new output stack',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'softwood-logs':5});fillBag(h.data);
- assert.ok(h.act('craft',{id:'arrows',batches:5}).ok,'consuming a log stack frees a slot before awarding arrows');
- assert.equal(inventoryKeyList(h.data).length,28,'no instant output or change to bag capacity');
- h.adventure.tick(15,15,{x:0,z:39});assert.equal(inventoryKeyList(h.data).length,28);
+ const before=structuredClone(h.data);
+ assert.equal(h.act('craft',{id:'arrows',batches:5}).ok,false,'consuming only one of five logs cannot free the stack for the first output');
+ assert.deepEqual(h.data,before,'failed order leaves every material and XP unchanged');
+ h.data.inventory.slotted.pop();
+ assert.equal(inventoryKeyList(h.data).length,27);
+ assert.ok(h.act('craft',{id:'arrows',batches:5}).ok);
+ assert.equal(inventoryKeyList(h.data).length,27,'start does not grant output');
+ h.adventure.tick(15,15,{x:0,z:39});
+ assert.equal(h.data.inventory.materials['field-arrows'],150);
+ assert.equal(inventoryKeyList(h.data).length,27,'consumed logs and new arrows leave the freed slot open');
 });
 test('forge batch is timed, revalidates at completion, and interruption spends nothing',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'copper-ore':5,'tin-ore':5});
