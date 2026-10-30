@@ -134,3 +134,12 @@
 .classic-damage-layer .classic-damage.hurt,.classic-damage-layer .classic-damage.incoming-miss{color:#ff9c9c!important;border-bottom:3px solid #ef6868}
 .classic-damage-layer .classic-damage.miss{color:#f2ecdc!important}
 .classic-damage-layer .classic-damage.ability{font-size:13px!important}
+
+/* Keep the real logout action discoverable beside the map settings. */
+#classic-app.oakrest-framed .oakrest-place-top .oakrest-visible-logout{
+ position:static!important;display:inline-flex!important;align-items:center;justify-content:center;
+ min-height:36px;min-width:76px;padding:6px 9px;border:1px solid #c2a474;
+ border-radius:5px;background:#344c3e;color:#fff1d4;font:700 11px system-ui;
+ cursor:pointer;pointer-events:auto;z-index:10
+}
+#classic-app.oakrest-framed .oakrest-place-top .oakrest-visible-logout:focus-visible{outline:3px solid #f5db9f;outline-offset:2px}
