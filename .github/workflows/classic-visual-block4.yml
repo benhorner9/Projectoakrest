@@ -1,0 +1,47 @@
+name: Oakrest Classic — Visual Block 4 monsters and combat acceptance
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/classic-enemy-art.js'
+      - 'src/classic-combat-view.js'
+      - 'src/classic-projectile-view.js'
+      - 'src/classic-combat-impacts.js'
+      - 'src/classic-combat-motion.js'
+      - 'src/classic-sprites.js'
+      - 'tests/classic-visual-block4.test.js'
+      - 'tests/browser-classic-visual-block4.cjs'
+      - '.github/workflows/classic-visual-block4.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual-block4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Source, full unit suite, and production-shape Classic build
+        run: npm run check && npm test && npm run build
+      - run: npx playwright install chromium
+      - name: Touch iPad-size enemy silhouette, hit, warning and projectile QA
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-visual-block4.cjs
+      - name: Existing hit contacts and disengagement browser regression
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-combat-impacts.cjs && timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-combat-overhaul.cjs
+      - name: Existing combat performance browser regression
+        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-combat-performance.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oakrest-classic-visual-block4-evidence
+          path: |
+            qa/visual-block4/
+            qa/classic-combat/
+          if-no-files-found: ignore
