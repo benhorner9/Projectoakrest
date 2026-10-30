@@ -116,6 +116,8 @@ export function setupClassicItemPopups({
   for(const recipe of recipes){
    const opt=make(selector,'option',null,recipe.title);opt.value=recipe.id;
   }
+  const activeCraftId=combat.adventureState()?.work?.recipeId;
+  if(recipes.some(r=>r.id===activeCraftId))selector.value=activeCraftId;
   const description=make(body,'div','oakrest-craft-requirements');
   const row=make(body,'div','oakrest-craft-quantity-row');
   const qtyLabel=make(row,'label',null,'QUANTITY (crafting cycles)');
