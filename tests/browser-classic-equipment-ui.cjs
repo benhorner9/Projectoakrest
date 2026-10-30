@@ -196,13 +196,19 @@ let browser;
  let d=await snapshot();assert.equal(d.inventory.materials['softwood-logs'],17);const drop=d.groundLoot.find(d=>d.playerDrop);
  assert.ok(drop);await page.evaluate(id=>oakrestClassicQA.pickupDrop(id),drop.id);
  assert.equal((await snapshot()).inventory.materials['softwood-logs'],20);
- // Item-on-item crafting remains connected after several item transactions.
+ // Tapping an item reveals a compact action menu without scrolling.
  await open('inventory');await bag('material.reed').tap();
- // Use the existing maker for a one-material recipe; item-on-item recipes remain in existing adventure suites.
- assert.equal(await page.locator('.classic-bag-tools summary').count(),0,'bag maker is always available');await page.getByRole('button',{name:'RECIPES',exact:true}).tap();
- const rationRecipe=page.locator('.craft-option').filter({hasText:'Bundle 3 field rations'});
- await rationRecipe.getByRole('button',{name:'MAKE',exact:true}).tap();
- assert.ok((await snapshot()).inventory.materials.ration>8);
+ assert.equal(await page.locator('.oakrest-item-context-menu').isVisible(),true);
+ assert.equal(await page.locator('.classic-bag-tools').count(),0,'old scroll-down bag tools removed');
+ await page.getByRole('button',{name:'CRAFT…',exact:true}).tap();
+ assert.equal(await page.locator('.oakrest-craft-popup').isVisible(),true);
+ await page.getByLabel('Choose crafting recipe').selectOption('rations');
+ await page.getByLabel('Craft quantity').fill('1');
+ await page.getByRole('button',{name:'START CRAFTING'}).tap();
+ assert.equal((await snapshot()).inventory.materials.ration,8,'crafting gives no instant output');
+ await page.evaluate(()=>oakrestClassicQA.advance(3.3));
+ assert.ok((await snapshot()).inventory.materials.ration>8,'one completed cycle grants rations');
+ await page.getByRole('button',{name:'CLOSE',exact:true}).tap();
  // Real damage, quick-slot healing, then the inventory Use button share one cooldown.
  await page.evaluate(()=>{
   const e=oakrestClassicQA.combatState().monsters.find(m=>m.id==='bandit-a');
@@ -219,10 +225,11 @@ let browser;
  assert.ok((await page.evaluate(()=>oakrestClassicQA.combatState())).hp>hurt.hp);
  assert.equal(await page.locator('[data-hotbar-slot="5"]').isDisabled(),true);
  await open('inventory');await bag('material.ration').tap();
- assert.equal(await page.locator('[data-consumable="eat"]').isDisabled(),true);
+ assert.equal(await page.locator('.oakrest-item-context-menu').isVisible(),true);
+ await page.getByRole('button',{name:'CANCEL',exact:true}).tap();
  await page.evaluate(()=>oakrestClassicQA.advance(8));
- assert.equal(await page.locator('[data-consumable="eat"]').isDisabled(),false);
- await page.locator('[data-consumable="eat"]').tap();
+ await bag('material.ration').tap();
+ await page.getByRole('button',{name:'EAT',exact:true}).tap();
  assert.equal((await snapshot()).inventory.materials.ration,food-2);
  await open('skills');assert.ok(await page.locator('.classic-skill-card').count()>=10);
  await page.locator('.classic-skill-card[data-skill-id="woodcutting"]').tap();
