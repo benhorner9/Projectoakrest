@@ -194,6 +194,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(total>1&&!recipe.result.material)return no('Unique equipment can only be crafted once.');
   const available=Math.min(99,...Object.entries(recipe.cost).map(([key,n])=>Math.floor((mats[key]||0)/n)));
   if(total>available)return no('Not enough materials for '+total+' crafting cycles.');
+  if(recipe.result.material){
+   const output=recipe.result.material,amount=recipe.result.amount;
+   if((mats[output]||0)+amount*total>9999)return no('Your result stack cannot hold that many items.');
+  }
   const check=craftCheck(id,station);
   if(!check.ok)return check;
   work={target:target||null,origin:target?null:{x:player.x,z:player.z},recipe:check.recipe,
