@@ -7,7 +7,7 @@ const ok=reason=>({ok:true,reason}),no=reason=>({ok:false,reason});
 export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGuardian,sight=()=>true,random=Math.random}){
  data.adventure=sanitizeAdventure(data.adventure);
  const a=data.adventure,mats=data.inventory.materials;
- const trees=new Map(),respawns=new Map();let work=null,recentCraft=null,eatUntil=0,drinkUntil=0;
+ const trees=new Map(),respawns=new Map();let work=null,recentCraft=null,lastCraft=null,eatUntil=0,drinkUntil=0;
  const progress=id=>a.quests[id];
  const completed=id=>progress(id)?.status==='completed';
  const unlocked=q=>(QUEST_PREREQUISITES[q.id]||[]).every(completed);
@@ -83,7 +83,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
     a.run.kills.push(e.id);emit('adventure',{reason:m.boss?'The keeper is quiet. Restore the heartstone.':'Chamber guardian defeated'});
    }
   }
-  if(e.type==='hurt'||e.type==='dead')work=null;
+  if(e.type==='hurt'||e.type==='dead'){
+   if(work?.recipe)lastCraft={id:work.recipe.id,total:work.total,completed:work.completed,status:'stopped'};
+   work=null;
+  }
   if(e.type==='dead'){a.deaths++;emit('adventure',{reason:'Recovered belongings; cleared Hollow chambers remain cleared.'});}
  }
  function visit(id){flag('visit:'+id);}
@@ -200,6 +203,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }
   const check=craftCheck(id,station);
   if(!check.ok)return check;
+  lastCraft=null;
   work={target:target||null,origin:target?null:{x:player.x,z:player.z},recipe:check.recipe,
    completed:0,total,start:time,end:time+recipe.seconds};
   return ok('Crafting '+total+' × '+recipe.title+' · '+recipe.seconds+'s each. Stop anytime to keep finished items and XP.');
@@ -238,9 +242,11 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(!work)return;
   const w=work;
   if(w.target&&(distance(player,w.target)>w.target.reach||!sight(player,w.target))){
+   if(w.recipe)lastCraft={id:w.recipe.id,total:w.total,completed:w.completed,status:'stopped'};
    work=null;emit('adventure-notice',{reason:'Work cancelled: out of reach.'});return;
   }
   if(w.recipe&&w.origin&&distance(player,w.origin)>.45){
+   lastCraft={id:w.recipe.id,total:w.total,completed:w.completed,status:'stopped'};
    work=null;emit('adventure-notice',{reason:'Crafting stopped: you moved away.'});return;
   }
   if(time<w.end)return;
@@ -250,13 +256,16 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    const cycles=Math.min(w.total-w.completed,Math.max(1,Math.floor((time-w.end)/w.recipe.seconds)+1));
    for(let i=0;i<cycles;i++){
     const made=finishCraft(w.recipe,w.end+i*w.recipe.seconds);
-    if(!made.ok){emit('adventure-notice',{reason:'Crafting stopped: '+made.reason});return;}
+    if(!made.ok){lastCraft={id:w.recipe.id,total:w.total,completed:w.completed,status:'stopped'};emit('adventure-notice',{reason:'Crafting stopped: '+made.reason});return;}
     w.completed++;
    }
    if(w.completed<w.total){
     const next=w.end+cycles*w.recipe.seconds;
     work={...w,start:next-w.recipe.seconds,end:next};
-   }else emit('adventure-notice',{reason:'Crafting completed: '+w.completed+' × '+w.recipe.title});
+   }else {
+    lastCraft={id:w.recipe.id,total:w.total,completed:w.completed,status:'complete'};
+    emit('adventure-notice',{reason:'Crafting completed: '+w.completed+' × '+w.recipe.title});
+   }
   }else if(w.material==='softwood-logs'){
    const previous=data.professions.woodcuttingXp||0;
    const result=chopOnce(data,trees.get(w.target.id),time,random);
@@ -282,7 +291,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   }else emit('adventure-notice',{reason:'Gathering stopped: make room in your backpack.'});
  }
  function action(kind,{target,choice,time,player,threatened=false}={}){
-  if(kind==='cancel'){work=null;return ok('Work cancelled.');}
+  if(kind==='cancel'){
+   if(work?.recipe)lastCraft={id:work.recipe.id,total:work.total,completed:work.completed,status:'stopped'};
+   work=null;return ok('Work cancelled.');
+  }
   if(kind==='track'){
    const q=QUESTS.find(q=>q.id===choice);
    if(!q||questStatus(q)==='locked')return no('That quest is not yet available.');
@@ -396,7 +408,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
     ...(work.recipe?{recipeId:work.recipe.id,completed:work.completed,total:work.total,seconds:work.recipe.seconds,station:work.recipe.station}:{}),
     skill:work.recipe?.profession||work.target?.profession||(work.material==='softwood-logs'?'woodcutting':null),
     targetId:work.target?.id||null,x:work.target?.x,z:work.target?.z}:null,
-   recentCraft:recentCraft?{...recentCraft}:null,
+   recentCraft:recentCraft?{...recentCraft}:null,lastCraft:lastCraft?{...lastCraft}:null,
    trees:[...trees].map(([id,tree])=>({id,respawnAt:tree.respawnAt,fallAt:tree.fallAt}))}),
   canPass:z=>z<241||!!a.run&&(z<269?a.run.wards.includes(0):z<297?a.run.wards.includes(1):a.run.wards.includes(2))};
 }
