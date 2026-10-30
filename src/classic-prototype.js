@@ -1,5 +1,4 @@
 import {bindClassicItemDrag} from './classic-item-drag.js';
-import {classicItemDetails} from './classic-item-state.js';
 import {createClassicSimulationClock} from './classic-combat-clock.js';
 import {installClassicCanvasInput} from './classic-canvas-input.js';
 import {createAudio} from './audio.js';
@@ -122,7 +121,7 @@ let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters,{reducedMotion:reducedCombatMotion});
 const groundView=createClassicGroundLoot(scene);
 let itemUi=null,windowUi=null,characterUI=null,skillsUi=null,mapPopup=null;
-const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!existing.profile,
+const actionbar=setupClassicActionBar({doc:document,combat,
  activateBinding:binding=>{
   if(/^ability[0-3]$/.test(binding))return useCombatAbility(Number(binding.at(-1)));
   if(binding==='dodge'){triggerDodge();return true;}
@@ -130,10 +129,9 @@ const actionbar=setupClassicActionBar({doc:document,combat,legacyPreferences:!ex
   if(binding==='skills'){skillsUi?.open();return true;}
   if(binding==='quests'){adventureUi?.showJournal();return true;}
   if(['inventory','equipment','map'].includes(binding)){windowUi?.open(binding);return true;}
-  const id=binding==='eat'?'material.ration':binding==='drink'?'material.woodland-tonic':binding;
-  const details=classicItemDetails(combat.sandboxSave(),id,style);
-  if(details?.action&&details.action.style!==style)switchStyle(details.action.style);
-  const result=combat.itemAction(details?.action?{...details.action,id:details.item.legacy.itemId}:{type:'use',id},player);
+  if(binding!=='eat'&&binding!=='drink')return false;
+  const id=binding==='eat'?'material.ration':'material.woodland-tonic';
+  const result=combat.itemAction({type:'use',id},player);
   feedback(result.reason);if(result.ok){markProgress();itemUi?.render();refreshHud();}return result.ok;
  },changed:()=>{markProgress();itemUi?.render();},feedback});
 let atlasUi=null;
@@ -799,8 +797,9 @@ itemUi=setupClassicItems({
  onClose:()=>{if(['inventory','equipment','abilities','bank','shop'].includes(windowUi?.current()))windowUi.adopt(null);}
 });
 bindClassicItemDrag($('classic-app'),payload=>{
- if(payload.toScope==='quick'){actionbar.assign(payload.toIndex,payload.fromScope==='quick'?payload.binding:payload.canonical);return;}
- if(payload.fromScope==='quick'){feedback('Drag quick actions to another quick slot, or clear them with Arrange.');return;}
+ if(payload.toScope==='quick'||payload.fromScope==='quick'){
+  feedback('Weapons are equipped in GEAR; combat skill slots are set in COMBAT.');return;
+ }
  itemUi.drop(payload);
 });
 windowUi=createClassicWindowController({items:itemUi,map:$('classic-map-window'),
