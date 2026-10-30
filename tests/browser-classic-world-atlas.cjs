@@ -30,12 +30,11 @@ let browser;
   const map=page.locator('#classic-map-canvas');
   async function clickWorld(x,z){
    const at=await page.evaluate(async({x,z})=>{
-    const {fullMapTransform,CLASSIC_MAP_FEATURES}=await import('./src/classic-minimap.js');
+    const {fullMapPoint}=await import('./src/classic-minimap.js');
     const e=document.querySelector('#classic-map-canvas');
-    const tr=fullMapTransform(e.width,e.height);
-    const rect=e.getBoundingClientRect(),b=CLASSIC_MAP_FEATURES.bounds;
-    return {x:(tr.x+(x-b.minX)*tr.scale)*rect.width/e.width,
-     y:(tr.y+(b.maxZ-z)*tr.scale)*rect.height/e.height};
+    const pixel=fullMapPoint({x,z},e.width,e.height);
+    const rect=e.getBoundingClientRect();
+    return {x:pixel.x*rect.width/e.width,y:pixel.y*rect.height/e.height};
    },{x,z});
    await map.click({position:at});
   }
@@ -43,6 +42,21 @@ let browser;
    await page.setViewportSize(size);
    await page.locator('#classic-map-toggle').click();
    assert.equal(await page.locator('#classic-map-window').isVisible(),true);
+   const axes=await page.evaluate(async()=>{
+    const {fullMapPoint}=await import('./src/classic-minimap.js');
+    const canvas=document.querySelector('#classic-map-canvas');
+    const right=fullMapPoint({x:-8,z:39},canvas.width,canvas.height);
+    const left=fullMapPoint({x:8,z:39},canvas.width,canvas.height);
+    const north=fullMapPoint({x:0,z:47},canvas.width,canvas.height);
+    const origin=fullMapPoint({x:0,z:39},canvas.width,canvas.height);
+    const renderedRight=oakrestClassicQA.projectWorld(-8,39);
+    const renderedLeft=oakrestClassicQA.projectWorld(8,39);
+    return {mapRight:right.x-origin.x,mapLeft:left.x-origin.x,
+     mapNorth:north.y-origin.y,gameRight:renderedRight.x-renderedLeft.x};
+   });
+   assert.ok(axes.gameRight>0,'actual default Classic camera renders world -X to screen right');
+   assert.ok(axes.mapRight>0&&axes.mapLeft<0,'the expanded map matches game east/west');
+   assert.ok(axes.mapNorth<0,'north stays at the top of expanded map');
    assert.equal(await page.locator('#oakrest-atlas-picker option').count(),10);
    const initial=await page.evaluate(()=>oakrestClassicQA.atlasState());
    assert.equal(initial.zones.length,10);
