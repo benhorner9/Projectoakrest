@@ -10,7 +10,7 @@ import {STYLE_ORDER,LOADOUTS,levelFromXp} from './rules.js';
 import {classicBookIcon,classicBookStyleName} from './classic-combat-book.js';
 import {abilityDetails} from './classic-abilities.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
-import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
+import {classicItemDetails,classicAbilityCatalogue,usableItem,canDropItem} from './classic-item-state.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries} from './town-ui.js';
 import {positionedEntries,BAG_MIN_SLOTS,VAULT_MIN_SLOTS} from './item-slot-layout.js';
@@ -41,7 +41,12 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  function transact(action){
   const result=combat.itemAction(action,player());
   notify(result.reason||(result.ok?'Action completed':'Action unavailable'));
-  if(result.ok)changed();
+  if(result.ok){
+   // The weapon determines the style; equipping it changes the active style
+   // and reloads that weapon family's four chosen combat skills.
+   if(action.type==='equip'&&action.kind==='weapon'&&action.id&&action.style!==style())changed(action.style);
+   else changed();
+  }
   render();return result.ok;
  }
  function craftFromBag(kind,choice){
@@ -113,12 +118,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    const state=combat.getState(),kind=id==='material.ration'?'eat':'drink',remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
    const use=button(ex,'classic-item-action',remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK',()=>transact({type:'use',id}),remaining>0||state.hp<=0||state.hp>=state.maxHp||!data.inventory.materials[details.item.legacy.itemId]);use.dataset.consumable=kind;use.dataset.quantity=String(data.inventory.materials[details.item.legacy.itemId]||0);
   }
-  if(mode==='inventory'&&quickBindable(id)){
-   const line=element(ex,'div','classic-item-actions'),select=element(line,'select','classic-quick-choice');
-   select.setAttribute('aria-label','Assign '+details.title+' to quick slot');
-   for(let i=0;i<8;i++){const option=element(select,'option',null,'Slot '+(i+1));option.value=String(i);}
-   button(line,'classic-item-action','ASSIGN QUICK SLOT',()=>transact({type:'quick-slot',index:Number(select.value),id}));
-  }
+  if(mode==='inventory'&&details.item.kind==='weapon')
+   element(ex,'p','classic-muted','Equip this weapon to use its combat style. Choose your four techniques in COMBAT; weapons are never assigned to the skill bar.');
   if(mode==='inventory'&&canDropItem(details.item)){
    const entry=inventoryEntries(data).find(e=>e.canonical===id);
    if(entry){
