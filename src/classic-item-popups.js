@@ -37,7 +37,7 @@ export function setupClassicItemPopups({
   if(anchor?.isConnected)anchor.classList.remove('oakrest-item-selected');
  };
  const closeCraft=({cancel=false}={})=>{
-  if(cancel&&combat.adventureState()?.work?.recipeId)
+  if(cancel&&craftLayer&&combat.adventureState()?.work?.recipeId)
    craft('cancel');
   craftLayer?.remove();craftLayer=null;craftView=null;previousCraft=null;lastProgressUpdate=-Infinity;requirementKey='';
  };
