@@ -21,10 +21,10 @@ test('every mapped CC0 mesh has a local geometry buffer, PNG atlas, icon and pro
   assert.ok(existsSync(new URL('icons/'+name+'.svg',base)),name+' icon');
  }
 });
-test('real asset-backed icons preserve Oakrest item IDs and fallback icons for non-modelled gear',()=>{
+test('legacy CC0 mappings remain valid while all Classic icons use a consistent deterministic local art set',()=>{
  for(const id of ['weapon.melee.sword','weapon.melee.daggers','weapon.melee.greatsword','weapon.magic.frost','weapon.magic.ember','weapon.ranged.crossbow','slot.recruit-shield','slot.bronze-arrows']){
   assert.ok(getItem(id),id);assert.ok(modelNameForItem(id),id);
-  assert.ok(itemIconUrl(id).includes('/assets/kaykit-adventurers/icons/'),id);
+  assert.ok(itemIconUrl(id).startsWith('data:image/svg+xml'),id);
  }
  assert.equal(modelNameForItem('weapon.ranged.bow'),null);
  assert.equal(modelNameForItem('weapon.melee.bronze-axe'),'axe_1handed');
