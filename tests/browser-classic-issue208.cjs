@@ -23,8 +23,10 @@ const server=spawn('python3',['-m','http.server','5298','--bind','127.0.0.1'],{s
  await page.locator('[data-scope=bag][data-canonical="material.reed"]').tap();
  await page.getByRole('button',{name:'USE WITH…',exact:true}).tap();
  await page.locator('[data-scope=bag][data-canonical="material.softwood-logs"]').tap();
- await page.locator('[data-recipe=frost]').getByRole('button',{name:'MAKE',exact:true}).tap();
+ await page.getByLabel('Choose crafting recipe').selectOption('frost');
+ await page.getByRole('button',{name:'START CRAFTING'}).tap();
  await page.evaluate(()=>oakrestClassicQA.advance(4));
+ await page.getByRole('button',{name:'CLOSE',exact:true}).tap();
  assert.ok((await page.evaluate(()=>oakrestClassicQA.persistentSnapshot())).inventory.materials['frost-scroll']>0);
  for(const size of [{width:1194,height:834},{width:1024,height:768},{width:820,height:630}]){
   await page.setViewportSize(size);
