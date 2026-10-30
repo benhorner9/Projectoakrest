@@ -14,23 +14,19 @@ const server=spawn('python3',['-m','http.server','5250','--bind','127.0.0.1'],{s
   assert.deepEqual(small,[],'primary touch targets must be 44 CSS px tall');
  }
  await page.setViewportSize({width:1194,height:834});
- const joy=await page.locator('#classic-joystick').boundingBox(),style=await page.locator('[data-style=magic]').boundingBox();
- const client=await context.newCDPSession(page),touch=(type,points)=>client.send('Input.dispatchTouchEvent',{type,touchPoints:points});
- const first={id:1,x:joy.x+joy.width/2,y:joy.y+10};
- const second={id:2,x:style.x+style.width/2,y:style.y+style.height/2};
- await touch('touchStart',[first]);await page.evaluate(()=>oakrestClassicQA.advance(.2));
+ assert.equal(await page.locator('#classic-joystick').isVisible(),false);
  const before=await page.evaluate(()=>oakrestClassicQA.state());
- await touch('touchStart',[first,second]);await touch('touchEnd',[second]);
- await page.evaluate(()=>oakrestClassicQA.advance(.5));
+ const point=await page.evaluate(()=>{const p=oakrestClassicQA.state();const q=oakrestClassicQA.projectWorld(p.x+3,p.z),b=document.querySelector('#classic-game canvas').getBoundingClientRect();return {x:b.x+(q.x+1)*b.width/2,y:b.y+(q.y+1)*b.height/2};});
+ await page.touchscreen.tap(point.x,point.y);
+ await page.locator('[data-style=magic]').tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(1));
  const after=await page.evaluate(()=>oakrestClassicQA.state());
- assert.equal(after.style,'magic');assert.ok(after.z>before.z,'joystick continues while second finger changes style');
- await touch('touchEnd',[]);const stopped=await page.evaluate(()=>oakrestClassicQA.state());
- await page.evaluate(()=>oakrestClassicQA.advance(.5));assert.equal((await page.evaluate(()=>oakrestClassicQA.state())).z,stopped.z);
+ assert.equal(after.style,'magic');assert.ok(Math.hypot(after.x-before.x,after.z-before.z)>.1,'tap travel continues while changing style');
  // Keyboard activation of a focused menu must not fire Enter's attack shortcut.
  await page.keyboard.press('Escape');
  await page.locator('#classic-inventory-toggle').focus();await page.keyboard.press('Enter');
  assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'inventory');
  assert.equal(await page.evaluate(()=>oakrestClassicQA.combatState().targetId),null);
  assert.ok(await page.locator('.field-style').count()===3);assert.deepEqual(errors,[]);
- console.log('PASS: 44px primary controls, simultaneous joystick/style touch, release stops movement, keyboard menu activation. Emulated Chromium only.');
+ console.log('PASS: 44px primary controls, ground-tap travel with style switch, keyboard menu activation. Emulated Chromium only.');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -195,7 +195,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   const matches=RECIPES.filter(r=>r.station==='inventory'&&
    Object.hasOwn(r.cost,first)&&Object.hasOwn(r.cost,second));
   if(!matches.length)return no('These items cannot be combined. Check the Skills unlock list.');
-  if(matches.length>1)return no('Several recipes use those materials. Choose a result from MAKE in your backpack.');
+  if(matches.length>1)return no('Several recipes use those materials. Examine either material and choose a recipe.');
   return handcraft(matches[0].id,threatened,time);
  }
  function begin(target,time,recipeId){

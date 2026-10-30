@@ -64,7 +64,7 @@ let browser;
    assert.ok(Math.abs(view.canvas.w-view.world.w)<=4&&Math.abs(view.canvas.h-view.world.h)<=4,
     'canvas fills world content rectangle (minus ornamental frame border): '+JSON.stringify({size,view}));
    assert.ok(view.rendererSize.w>0&&view.rendererSize.h>0,'WebGL framebuffer is valid');
-   assert.equal(view.joystick.x>=view.world.x&&view.joystick.right<=view.world.right,true,'only joystick floats inside viewport');
+   assert.equal(view.joystick.w,0,'tap-to-move replaces the joystick');
   }
   await page.setViewportSize({width:1180,height:600});
   if(!await page.locator('#classic-item-window').isVisible())await page.locator('#classic-inventory-toggle').click();

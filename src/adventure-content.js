@@ -102,12 +102,12 @@ export const ADVENTURE_XP_REWARDS=Object.freeze({
  'hollow-elite':210,'hollow-keeper':350
 });
 export const ADVENTURE_SPAWNS=[
- mob('sapling-a','Brambleling','mossling',-12,119,90,3,'melee'),
- mob('sapling-b','Brambleling','mossling',9,108,90,3,'melee'),
- mob('tusk','Root-tusk Boar','boar',28,125,145,5,'ranged'),
- mob('guardian','Rootbound Guardian','boar',-39,137,220,6,'magic'),
- mob('poacher','Hollow Poacher','bandit',30,142,170,6,'melee'),
- mob('acolyte','Sap Acolyte','bandit',-7,162,160,6,'ranged',{pattern:{kind:'pounce',engage:12,radius:2,windup:1.2,cooldown:4,damage:13}}),
+ mob('sapling-a','Brambleling','mossling',-22,127,90,3,'melee',{habitat:'roots'}),
+ mob('sapling-b','Brambleling','mossling',-26,143,90,3,'melee',{habitat:'roots'}),
+ mob('tusk','Root-tusk Boar','boar',24,125,145,5,'ranged',{habitat:'creek'}),
+ mob('guardian','Rootbound Guardian','boar',-39,137,220,6,'magic',{habitat:'roots'}),
+ mob('poacher','Hollow Poacher','bandit',30,142,170,6,'melee',{habitat:'camp'}),
+ mob('acolyte','Sap Acolyte','bandit',-7,162,160,6,'ranged',{habitat:'shrine',pattern:{kind:'pounce',engage:12,radius:2,windup:1.2,cooldown:4,damage:13}}),
  ...[[-7,228],[7,233]].map(([x,z],i)=>mob('hollow-root-'+i,'Root Sentry','mossling',x,z,190,5,'melee',{room:0})),
  ...[[-8,254],[8,259]].map(([x,z],i)=>mob('hollow-sap-'+i,'Drowned Scribe','bandit',x,z,210,6,'ranged',{room:1,pattern:{kind:'pounce',engage:12,radius:2.4,windup:1.3,cooldown:4,damage:15}})),
  mob('hollow-elite','The Last Watchman','bandit',0,284,460,8,'magic',{room:2,elite:true,pattern:{kind:'cleave',engage:4,radius:4,halfAngle:.9,windup:1.2,cooldown:3.8,damage:22}}),

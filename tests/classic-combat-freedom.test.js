@@ -52,7 +52,7 @@ test('approach stops at weapon reach, repositioning keeps target and long moveme
 });
 test('leash stays independent of player attack intent after fleeing',()=>{
  const game=createClassicCombat({save:defaultSave(),random:()=>.01});
- const near={x:-12,z:90};
+ const near={x:-11,z:96};
  step(game,near,2);
  assert.ok(game.getState().monsters.find(m=>m.id==='moss-a').aggro);
  game.chooseTarget('moss-a',near);

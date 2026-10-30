@@ -74,7 +74,7 @@ let browser;
   feedback.event({type:'heal',amount:9,time:10.2},state,{x:0,z:0});
   feedback.update(10.3,camera);result.hurt=host.querySelector('.hurt').textContent;result.heal=host.querySelector('.heal').textContent;
   result.afterKinds=labels().length;
-  feedback.update(11.2,camera);result.expired=labels().length;
+  feedback.update(11.7,camera);result.expired=labels().length;
   feedback.event({type:'hurt',damage:3,time:12},state,{x:1000000,z:0});feedback.update(12,camera);
   result.offscreenHidden=labels()[0].hidden;host.remove();return result;
  });

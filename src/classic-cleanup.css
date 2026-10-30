@@ -101,3 +101,44 @@
  #classic-app.oakrest-framed .classic-skills-window .classic-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
  #classic-app.oakrest-framed .oakrest-skill-popup-content{padding:10px 12px}
 }
+
+/* Issue 208: world-space combat HUD, clear cartography and uncluttered controls. */
+#classic-app.oakrest-framed #classic-joystick{display:none!important}
+#classic-app.oakrest-framed .classic-world-health{
+ position:absolute;inset:14px 16px auto;z-index:20;pointer-events:none;
+ display:flex;justify-content:space-between;align-items:flex-start;gap:20px
+}
+#classic-app.oakrest-framed .classic-player-status,
+#classic-app.oakrest-framed .classic-world-health #classic-combat-target{
+ position:static!important;transform:none!important;margin:0!important;
+ width:230px;max-width:45%;padding:10px 12px;border:1px solid #c2a474;
+ border-radius:7px;background:#16251fec;box-shadow:0 3px 12px #0008;
+ color:#fff1d4;font:700 14px system-ui;box-sizing:border-box
+}
+#classic-app.oakrest-framed .classic-world-health [hidden]{display:none!important}
+#classic-app.oakrest-framed .classic-world-health .player-hp{display:block!important;margin:0}
+#classic-app.oakrest-framed .classic-world-health .classic-hp-track{height:12px;margin:5px 0}
+#classic-app.oakrest-framed #classic-settings-window .oakrest-logout{
+ position:static;min-height:44px;padding:10px 14px;margin:12px 0;
+ border:1px solid #c2a474;border-radius:5px;background:#344c3e;color:#fff1d4
+}
+#classic-app.oakrest-framed .classic-sidebar-map .classic-minimap-frame{
+ display:flex!important;align-items:center;justify-content:center;overflow:visible!important;
+ padding:9px!important;box-sizing:border-box
+}
+#classic-app.oakrest-framed .classic-sidebar-map .minimap-open{
+ position:relative!important;inset:auto!important;transform:none!important;
+ padding:0!important;flex:none;box-sizing:border-box;border-radius:50%!important;
+ width:clamp(100px,18vh,174px)!important;height:clamp(100px,18vh,174px)!important;
+ overflow:hidden!important
+}
+#classic-app.oakrest-framed .minimap-open canvas{display:block!important;border-radius:50%;margin:0!important}
+.classic-damage-layer .classic-damage{
+ font:900 clamp(22px,2.5vw,32px)/1.1 system-ui!important;
+ text-shadow:0 2px 2px #000,2px 0 2px #000,-2px 0 2px #000,0 -2px 2px #000!important;
+ padding:3px 7px;border-radius:6px;background:#102019b8;white-space:nowrap
+}
+.classic-damage-layer .classic-damage.hit{color:#ffe897!important}
+.classic-damage-layer .classic-damage.hurt,.classic-damage-layer .classic-damage.incoming-miss{color:#ff9c9c!important;border-bottom:3px solid #ef6868}
+.classic-damage-layer .classic-damage.miss{color:#f2ecdc!important}
+.classic-damage-layer .classic-damage.ability{font-size:16px!important}

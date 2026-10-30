@@ -138,7 +138,7 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
    actor.releaseUntil=enemy.releaseUntil||0;
    actor.hadWarning=!!enemy.warning;actor.lastX=enemy.x;actor.lastZ=enemy.z;
    actor.alive=show;actor.sprite.visible=show||dying;actor.shadow.visible=show||dying;
-   actor.label.visible=show;
+   actor.label.visible=show&&(enemy.aggro||selected?.id===enemy.id);
    // Avoid floating health bars on every peaceful creature.
    const displayHealth=show&&(enemy.hp<enemy.maxHp||enemy.aggro||selected?.id===enemy.id);
    actor.hpBackground.visible=displayHealth;actor.hpFill.visible=displayHealth;

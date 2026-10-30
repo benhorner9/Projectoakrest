@@ -1,3 +1,4 @@
+import {CLASSIC_HABITATS} from './classic-habitats.js';
 import {createOakrestTree} from './classic-village.js';
 import {applySkillTreeVisual} from './classic-skill-visuals.js';
 import {addBlock1Ecology} from './classic-block1-ecology.js';
@@ -39,6 +40,14 @@ export function createAdventureWorld(scene){
   geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
   const plane=new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
   plane.name='oakrest-frontier-ground-'+index;root.add(plane);
+ }
+ for(const [id,h] of Object.entries(CLASSIC_HABITATS)){
+  const patches=[];
+  for(let i=0;i<12;i++){
+   const x=h.minX+2+(h.maxX-h.minX-4)*((i*7%13)/13),z=h.minZ+2+(h.maxZ-h.minZ-4)*((i*5%13)/13);
+   patches.push(Array.from({length:7},(_,k)=>[x+Math.cos(k*Math.PI*2/7)*(1.2+i%3*.4),z+Math.sin(k*Math.PI*2/7)*(1+i%2*.4)]));
+  }
+  const dressing=groundPolygons(patches,.031,h.colour);dressing.name='habitat-'+id+'-ground';root.add(dressing);
  }
  for(const [i,r] of DUNGEON_ROOMS.entries()){
   box(0,-.025,(r.minZ+r.maxZ)/2,33,.05,r.maxZ-r.minZ,ADVENTURE_SCENERY.roomColours[i]);
@@ -121,7 +130,7 @@ export function createAdventureWorld(scene){
   gates.forEach((g,i)=>{g.visible=!state?.run?.wards.includes(i);});
   for(const actor of actors)actor.update({facing:{x:0,z:-1},cameraOffset});
   for(const beacon of beacons)beacon.update(state,time);
-  for(const [id,m] of markers){const t=ADVENTURE_TARGETS.find(t=>t.id===id);m.visible=Math.hypot(player.x-t.x,player.z-t.z)<27;}
+  for(const [id,m] of markers){const t=ADVENTURE_TARGETS.find(t=>t.id===id);m.visible=t.kind==='adventure-npc'&&QUEST_GIVER_IDS.includes(id)&&Math.hypot(player.x-t.x,player.z-t.z)<10;}
   const treeStates=new Map((state?.trees||[]).map(tree=>[tree.id,tree]));
   for(const [id,visual] of resources){
    if(visual.tree)applySkillTreeVisual(visual.tree,visual.stump,treeStates.get(id),action,time);

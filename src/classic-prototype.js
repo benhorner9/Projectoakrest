@@ -570,6 +570,7 @@ function updateCombatUi(snapshot){
  $('classic-health-label').textContent=snapshot.hp+' / '+snapshot.maxHp+' HP';
  $('classic-health-fill').style.width=(100*snapshot.hp/Math.max(1,snapshot.maxHp))+'%';
  const target=snapshot.target;
+ $('classic-player-status').hidden=!(snapshot.hp>0&&(target||snapshot.monsters.some(m=>m.aggro&&!m.dead&&!m.hidden&&!m.retreating)));
  $('classic-combat-target').hidden=!target;
  $('classic-target-name').textContent=target?target.name+(target.weak?' · weak to '+target.weak:''):'No monster selected';
  $('classic-target-level').textContent=target?'Lv '+target.level:'';
@@ -824,6 +825,7 @@ characterUI=setupClassicCharacterUI({storage:localStorage,pathname:location.path
 });
 $('classic-characters-open').addEventListener('click',()=>characterUI.show());
 $('classic-logout').addEventListener('click',()=>{
+ if(!window.confirm('Save and return to character selection?'))return;
  // This prototype uses local characters rather than server-side sessions.
  // Guard the current save before returning to the character picker.
  if(needsSave&&saveManager.status().enabled&&!saveNow())return;
