@@ -65,12 +65,12 @@ let browser;
   assert.ok(Math.abs(l.canvas.width-l.world.width)<=4);
  }
  await page.setViewportSize({width:1194,height:834});
- // ARRANGE remains usable after moving the original live deck.
- await page.locator('#oakrest-hotbar-edit').click();
- assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),true);
- assert.equal(await page.locator('#oakrest-hotbar-select-1').count(),1);
- await page.locator('#oakrest-hotbar-edit').click();
- assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),false);
+ // Equipment is never assigned to the combat bar; COMBAT equips skills.
+ assert.equal(await page.locator('#oakrest-hotbar-edit').count(),0,'no obsolete item-assign editor');
+ assert.equal(await page.locator('#oakrest-hotbar-editor').count(),0,'no quick-item slot editor');
+ assert.equal(await page.locator('#classic-item-content .classic-quick-choice').count(),0,'no item quick-slot selector');
+ assert.deepEqual(await page.evaluate(()=>oakrestClassicQA.hotbarState().slots),
+  ['ability0','ability1','ability2','ability3','eat','drink','dodge','attack']);
  mkdirSync('qa/mmorpg-ui',{recursive:true});
  await page.screenshot({path:'qa/mmorpg-ui/bag-chat-melee.png'});
  const initial=await page.locator('#oakrest-action-deck').getAttribute('data-combat-style');
