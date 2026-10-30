@@ -1,3 +1,4 @@
+import {regionalSafeAt} from './classic-world-expansion.js';
 import {ADVENTURE_MATERIAL_IDS} from './adventure-content.js';
 import {STARTER_SETS,SLOT_ITEMS,EXTRA_SLOTS} from './equipment-slots.js';
 import {WOODCUTTING_MATERIALS,WOODCUTTING_AXES} from './woodcutting.js';
@@ -38,7 +39,7 @@ export const WOODCUTTING_XP_PER_LOG=35;
 export const WOODCUTTING_HARVEST_SECONDS=9;
 
 /** The roads and streets are non-hostile. The first hostile spawns are well beyond this line. */
-export const isOakrestSafe=(x,z)=>Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x)<=40&&z>=-43&&z<=75;
+export const isOakrestSafe=(x,z)=>Number.isFinite(x)&&Number.isFinite(z)&&(Math.abs(x)<=40&&z>=-43&&z<=75||regionalSafeAt(x,z));
 export function townInteraction(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return null;
   const options=[
