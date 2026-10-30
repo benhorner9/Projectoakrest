@@ -38,9 +38,22 @@ export function fullMapTransform(width,height,pad=16){
  const scale=Math.min((width-2*pad)/spanX,(height-2*pad)/spanZ);
  return {scale,x:(width-spanX*scale)/2,y:(height-spanZ*scale)/2};
 }
+/** The initial Classic camera looks north from the south; screen-right
+ * points towards decreasing world-X. The north-up expanded map must use
+ * that same horizontal orientation, without moving any gameplay geometry.
+ * Terrain, markers, zone outlines and map taps share this single projection.
+ */
+function fullMapPointWithTransform(point,t){
+ const b=CLASSIC_LIMITS;
+ return {x:t.x+(b.maxX-point.x)*t.scale,
+  y:t.y+(b.maxZ-point.z)*t.scale};
+}
+export function fullMapPoint(point,width,height){
+ return fullMapPointWithTransform(point,fullMapTransform(width,height));
+}
 export function fullMapWorld(point,width,height){
  const t=fullMapTransform(width,height),b=CLASSIC_LIMITS;
- return {x:b.minX+(point.x-t.x)/t.scale,z:b.maxZ-(point.y-t.y)/t.scale};
+ return {x:b.maxX-(point.x-t.x)/t.scale,z:b.maxZ-(point.y-t.y)/t.scale};
 }
 /** Overhead cartography derived from the same geometry declarations as the world.
  * No alternate village layout, invented path, or scenic landmarks.
@@ -151,7 +164,7 @@ function marker(ctx,p,kind,full){
  ctx.fillText(({bank:'B',store:'S',skill:'F',trade:'T'})[kind]||'•',p.x,p.y+1);
 }
 function playerArrow(ctx,at,facing,large=false,cameraOffset){
- const basis=large?{right:{x:1,z:0},up:{x:0,z:1}}:classicScreenBasis(cameraOffset);
+ const basis=large?{right:{x:-1,z:0},up:{x:0,z:1}}:classicScreenBasis(cameraOffset);
  const horizontal=(facing.x||0)*basis.right.x+(facing.z||0)*basis.right.z;
  const vertical=(facing.x||0)*basis.up.x+(facing.z||0)*basis.up.z;
  const angle=Math.atan2(horizontal,vertical);
@@ -211,8 +224,7 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
  const staticMap=document.createElement('canvas');staticMap.width=720;staticMap.height=800;
  const mapCtx=staticMap.getContext('2d');
  const t=fullMapTransform(staticMap.width,staticMap.height);
- const pos=p=>({x:t.x+(p.x-CLASSIC_LIMITS.minX)*t.scale,
-  y:t.y+(CLASSIC_LIMITS.maxZ-p.z)*t.scale});
+ const pos=p=>fullMapPointWithTransform(p,t);
  terrain(mapCtx,pos,staticMap.width,staticMap.height,t.scale);
  let zoom=3.45,lastFrame=-Infinity,last=null,expanded=false;
  const sourceAt=(p)=>pos(p);
@@ -222,10 +234,10 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
   ctx.fillStyle='#647d5f';ctx.fillRect(0,0,canvas.width,canvas.height);
   const centre=sourceAt(data.player),size=canvas.width,ratio=zoom/t.scale;
   // Use exactly the same right/up vectors as WASD and the touch joystick.
-  // Canvas source coordinates are east-right/north-up, and the transform
-  // rotates/mirrors the cached village into the camera's actual orientation.
+  // Cached north-up terrain is mirrored on X. Undo this when rotating the
+  // corner minimap to its live camera basis, including after camera orbit.
   const {right,up}=classicScreenBasis(data.cameraOffset);
-  const a=right.x*ratio,b=-up.x*ratio,c=-right.z*ratio,d=up.z*ratio;
+  const a=-right.x*ratio,b=up.x*ratio,c=-right.z*ratio,d=up.z*ratio;
   ctx.save();
   ctx.transform(a,b,c,d,
    size/2-a*centre.x-c*centre.y,
@@ -245,15 +257,14 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
  const drawLarge=(data)=>{
   const width=fullCanvas.width,height=fullCanvas.height;
   const tr=fullMapTransform(width,height);
-  const p=point=>({x:tr.x+(point.x-CLASSIC_LIMITS.minX)*tr.scale,
-   y:tr.y+(CLASSIC_LIMITS.maxZ-point.z)*tr.scale});
+  const p=point=>fullMapPointWithTransform(point,tr);
   terrain(full,p,width,height,tr.scale);
   // Zone outlines are the same canonical coordinates used by the Inspector,
   // not a separate drawing-only set of fictional map pins. Selecting them
   // changes cartographic highlighting only, never gameplay collision.
   const selected=findWorldZone(selectedZoneId());
   for(const zone of CLASSIC_WORLD_ZONES){
-   const b=zone.bounds,left=p({x:b.minX,z:b.maxZ}),right=p({x:b.maxX,z:b.minZ});
+   const b=zone.bounds,left=p({x:b.maxX,z:b.maxZ}),right=p({x:b.minX,z:b.minZ});
    const x=left.x,y=left.y,w=right.x-x,h=right.y-y;
    if(selected?.id===zone.id){
     full.fillStyle='#f2d28b2c';full.fillRect(x,y,w,h);
@@ -271,6 +282,9 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
   markers(full,p,data,true);
   full.font='bold 15px Georgia';full.fillStyle='#f4e5bb';full.textAlign='center';
   full.fillText('NORTH ↑',width/2,20);
+  full.font='bold 12px Georgia';
+  full.fillText('W',tr.x-12,height/2);
+  full.fillText('E',width-tr.x+12,height/2);
  };
  const update=(data,now=0,force=false)=>{
   last=data;
