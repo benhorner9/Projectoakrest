@@ -1,3 +1,4 @@
+import {REGIONAL_HUBS,REGIONAL_ROADS,REGIONAL_CAMPS,REGIONAL_GATHERING} from './classic-world-expansion.js';
 /** Oakrest Classic named-zone atlas.
  * Read-only indexing over the EXACT coordinates used by gameplay. This does
  * not move any spawn, alter collision, add a quest, or mutate character saves.
@@ -12,8 +13,14 @@ import {ADVENTURE_SPAWNS,DUNGEON_ROOMS,ADVENTURE_PATHS} from './adventure-conten
 
 export const WORLD_ATLAS_SCHEMA=1;
 const lock=o=>Object.freeze(o);
-const area=(id,name,description,minZ,maxZ,{minX=CLASSIC_LIMITS.minX,maxX=CLASSIC_LIMITS.maxX,biome='woodland',safe=false,safety=null,links=[]}={})=>
- lock({id,name,description,region:'Oakrest Valley',biome,safe,safety:safety||(safe?'safe':'danger'),
+const originalX=Object.freeze({minX:-53,maxX:53});
+const regionalHubIds=new Map(REGIONAL_HUBS.filter(h=>!h.existing).map((h,i)=>[h.id,'OAK-RG-'+String(i+1).padStart(3,'0')]));
+const hubZoneId=id=>id==='oakrest'?'OAK-VL-001':regionalHubIds.get(id);
+const roadNeighbors=id=>REGIONAL_ROADS.filter(r=>r.from===id||r.to===id)
+ .map(r=>hubZoneId(r.from===id?r.to:r.from));
+
+const area=(id,name,description,minZ,maxZ,{minX=originalX.minX,maxX=originalX.maxX,biome='woodland',safe=false,safety=null,links=[],region='Oakrest Valley'}={})=>
+ lock({id,name,description,region,biome,safe,safety:safety||(safe?'safe':'danger'),
   bounds:lock({minX,maxX,minZ,maxZ}),links:lock([...links])});
 
 /** Existing geography only. The new Bracken Boar Farm is intentionally NOT
@@ -22,7 +29,7 @@ const area=(id,name,description,minZ,maxZ,{minX=CLASSIC_LIMITS.minX,maxX=CLASSIC
  */
 export const CLASSIC_WORLD_ZONES=lock([
  area('OAK-VL-001','Oakrest Village','Walled starting settlement, market, services and southern outskirts.',
-  CLASSIC_LIMITS.minZ,CLASSIC_PERIMETER.north,{biome:'settlement',safety:'mixed',links:['OAK-WD-001']}),
+   -24,CLASSIC_PERIMETER.north,{biome:'settlement',safety:'mixed',links:['OAK-WD-001',...roadNeighbors('oakrest')]}),
  area('OAK-WD-001','Gate meadows','The real woodland-gate approach, quarry seams and nearby enemies.',
   CLASSIC_PERIMETER.north,105,{biome:'meadow',links:['OAK-VL-001','OAK-WD-002']}),
  area('OAK-WD-002','Alderwood','Creek, softwood grove and broken supply-cart trail.',
@@ -37,7 +44,22 @@ export const CLASSIC_WORLD_ZONES=lock([
   'Chamber '+(i+1)+' of the existing Warden’s Hollow expedition.',room.minZ,room.maxZ,{
    minX:-17,maxX:17,biome:'dungeon',
    links:[i===0?'OAK-WD-005':'OAK-DG-00'+i,...(i<3?['OAK-DG-00'+(i+2)]:[])]
-  }))
+  })),
+ ...REGIONAL_HUBS.filter(h=>!h.existing).map(h=>area(hubZoneId(h.id),h.name,h.description,
+  h.z-(h.kind==='city'?30:h.kind==='town'?27:22),
+  h.z+(h.kind==='city'?30:h.kind==='town'?27:22),{
+  minX:h.x-(h.kind==='city'?30:h.kind==='town'?27:22),
+  maxX:h.x+(h.kind==='city'?30:h.kind==='town'?27:22),
+  biome:h.biome,safe:true,links:roadNeighbors(h.id),region:'Oakrest Realm'
+ })),
+ ...REGIONAL_CAMPS.map((c,i)=>area('OAK-CM-'+String(i+1).padStart(3,'0'),
+  c.name,c.description,c.z-12,c.z+12,{
+  minX:c.x-12,maxX:c.x+12,biome:c.biome,region:'Oakrest Realm'
+ })),
+ ...REGIONAL_GATHERING.filter(g=>g.skill!=='farming').map((g,i)=>area('OAK-GA-'+String(i+1).padStart(3,'0'),
+  g.name,g.live?'A working '+g.skill+' location.':'A marked future '+g.skill+' location.',
+  g.z-12,g.z+12,{minX:g.x-12,maxX:g.x+12,biome:g.biome,
+  safe:g.skill==='fishing',region:'Oakrest Realm'}))
 ]);
 const byId=new Map(CLASSIC_WORLD_ZONES.map(zone=>[zone.id,zone]));
 export function findWorldZone(id){return byId.get(id)||null;}
@@ -66,7 +88,10 @@ export const CLASSIC_WORLD_ENTITIES=lock([
  ...CLASSIC_NPCS.map(n=>asEntity('npc:'+n.id,n.name,'npc',n,{
   sourceId:n.targetId||n.id,role:n.role})),
  ...CLASSIC_OVERWORLD_SPAWNS.map(m=>asEntity('spawn:'+m.id,m.id,'enemy',m,{sourceId:m.id,creature:m.type})),
- ...ADVENTURE_SPAWNS.map(m=>asEntity('spawn:'+m.id,m.name,'enemy',m,{sourceId:m.id,creature:m.type}))
+ ...ADVENTURE_SPAWNS.map(m=>asEntity('spawn:'+m.id,m.name,'enemy',m,{sourceId:m.id,creature:m.type})),
+ ...REGIONAL_HUBS.filter(h=>!h.existing).map(h=>asEntity('regional:'+h.id,h.name,'settlement',h,{kind:h.kind})),
+ ...REGIONAL_CAMPS.map(c=>asEntity('camp:'+c.id,c.name,'monster-camp',c,{kind:c.live?'active':'future'})),
+ ...REGIONAL_GATHERING.map(g=>asEntity('gather:'+g.id,g.name,'gathering',g,{kind:g.live?'active':'future'}))
 ]);
 export function worldZoneEntities(id){
  const zone=findWorldZone(id);
@@ -123,7 +148,7 @@ export function worldZoneBrief(id){
 export function validateWorldAtlas(zones=CLASSIC_WORLD_ZONES,entities=CLASSIC_WORLD_ENTITIES){
  const seen=new Set();
  for(const z of zones){
-  if(!/^OAK-(VL|WD|DG)-\d{3}$/.test(z.id)||seen.has(z.id))throw Error('Invalid/duplicate zone ID: '+z.id);
+  if(!/^OAK-(VL|WD|DG|RG|CM|GA)-\d{3}$/.test(z.id)||seen.has(z.id))throw Error('Invalid/duplicate zone ID: '+z.id);
   seen.add(z.id);
   const b=z.bounds;
   if(![b.minX,b.maxX,b.minZ,b.maxZ].every(Number.isFinite)||
