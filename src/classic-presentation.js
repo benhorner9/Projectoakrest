@@ -1,3 +1,4 @@
+import {REGIONAL_BOUNDS,regionalSolidAt,regionalLineClear} from './classic-world-expansion.js';
 import {adventureSolidAt,ADVENTURE_TARGETS,ADVENTURE_WALLS,ADVENTURE_TREES} from './adventure-content.js';
 /** Oakrest Block 2: renderer-free 2.5D camera, navigation and presentation data.
  * Reuses canonical world coordinates and never mutates character saves.
@@ -25,7 +26,7 @@ export function classicScreenBasis(offset=CLASSIC_CAMERA){
   up:{x:-x/length,z:-z/length}
  };
 }
-export const CLASSIC_LIMITS=Object.freeze({minX:-53,maxX:53,minZ:-24,maxZ:334});
+export const CLASSIC_LIMITS=REGIONAL_BOUNDS;
 export const CLASSIC_NPCS=Object.freeze([
  ...OAKREST_SERVICES.map(s=>Object.freeze({
   id:s.id==='store'?'shopkeeper':s.id==='forester'?'forester':s.id==='trade-house'?'trader':'banker',
@@ -69,7 +70,7 @@ export function inBounds(x,z,radius=.4){
  */
 export function solidAt(x,z,radius=.38,allowTalkAcrossCounter=false){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!inBounds(x,z,radius))return true;
- if(wallSolidAt(x,z,radius)||adventureSolidAt(x,z,radius))return true;
+ if(wallSolidAt(x,z,radius)||adventureSolidAt(x,z,radius)||regionalSolidAt(x,z,radius))return true;
  if(Math.hypot(x-OAKREST_WELL.x,z-OAKREST_WELL.z)<OAKREST_WELL.r+radius)return true;
  for(const tree of CLASSIC_TREES)if(Math.hypot(x-tree.x,z-tree.z)<tree.r+radius)return true;
  for(const tree of OAKREST_GROVES)if(Math.hypot(x-tree.x,z-tree.z)<.85+radius)return true;
@@ -131,6 +132,7 @@ const routeCircles=[
 export function clearClassicLine(a,b,radius=.38){
  if(!a||!b||![a.x,a.z,b.x,b.z].every(Number.isFinite)||
   !inBounds(a.x,a.z,radius)||!inBounds(b.x,b.z,radius))return false;
+  if(!regionalLineClear(a,b,radius))return false;
  for(const c of routeCircles)if(segmentCircle(a,b,c.x,c.z,c.r+radius))return false;
  for(const wall of ADVENTURE_WALLS)if(segmentRect(a,b,wall.x-wall.w/2-radius,
   wall.x+wall.w/2+radius,wall.z-wall.d/2-radius,wall.z+wall.d/2+radius))return false;
