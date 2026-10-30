@@ -61,7 +61,7 @@ test('the original town, story positions, save map orientation and dungeon remai
  assert.equal(worldZoneAt({x:0,z:39})?.id,'OAK-VL-001');
  assert.equal(worldZoneAt({x:0,z:91})?.id,'OAK-WD-001');
  assert.equal(worldZoneAt({x:0,z:305})?.id,'OAK-DG-004');
- assert.equal(solidAt(0,39),true,'the old well must not disappear');
+ assert.equal(solidAt(18,36),true,'the old well must not disappear');
  for(const gate of CLASSIC_PERIMETER.gates){
   const approach=gate.id==='north'?{x:gate.x,z:gate.z+2}:gate.id==='south'?{x:gate.x,z:gate.z-2}:
     {x:gate.x+(gate.id==='east'?2:-2),z:gate.z};
