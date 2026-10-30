@@ -8,7 +8,7 @@ import {classicAttackPose,classicDeathProgress} from '../src/classic-combat-moti
 import {createClassicProjectileView,CLASSIC_PROJECTILE_VIEW_LIMIT} from '../src/classic-projectile-view.js';
 import {combatImpactPosition} from '../src/classic-combat-impacts.js';
 
-const near={x:10,z:89},home={x:10,z:87};
+const near={x:12,z:91},home={x:12,z:89};
 const enemy={id:'enemy',type:'mossling',...home,maxHp:1000};
 const dummy={id:'practice',type:'dummy',...home,maxHp:10000};
 const game=(options={})=>createClassicCombat({save:defaultSave(),random:()=>.2,monsterDefinitions:[enemy],...options});
@@ -25,9 +25,9 @@ function returned(){
 test('returned enemy stays idle beside player until a genuinely new proximity entry',()=>{
  const g=returned(),e=g.getState().monsters[0];
  assert.equal(e.aiState,'idle');assert.equal(e.aggro,false);assert.equal(e.noticeSuppressed,true);
- assert.equal(e.x,home.x);assert.equal(e.z,home.z);
+ assert.equal(e.x,e.startX);assert.equal(e.z,e.startZ);
  assert.equal(advance(g,near,6).some(e=>e.type==='warning'),false);
- advance(g,{x:10,z:95},.1);advance(g,near,.1);
+ advance(g,{x:12,z:99},.1);advance(g,near,.1);
  assert.equal(g.getState().monsters[0].aggro,true,'leaving and returning is a new trigger');
 });
 test('explicit fresh contact can reengage a returned enemy without waiting for proximity',()=>{
@@ -96,8 +96,8 @@ test('enemy commits a visible whiff and recovery after the player sidesteps its 
 test('existing ranged casters hold casting distance and cannot kite through obstacles',()=>{
  const caster={...enemy,type:'bandit',pattern:{kind:'pounce',engage:12,radius:2,windup:1.2,cooldown:4,damage:13}};
  const g=game({monsterDefinitions:[caster]});
- const distant={x:10,z:93};advance(g,distant,6);
- assert.ok(Math.hypot(g.getState().monsters[0].x-10,g.getState().monsters[0].z-87)<.1);
+ const distant={x:12,z:96};advance(g,distant,6);
+ assert.ok(Math.hypot(g.getState().monsters[0].x-home.x,g.getState().monsters[0].z-home.z)<.1);
  let previous=g.getState().monsters[0];
  for(let i=0;i<240;i++){
   advance(g,{x:10,z:88},1/60);const next=g.getState().monsters[0];

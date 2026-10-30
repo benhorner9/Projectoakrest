@@ -200,7 +200,7 @@ let browser;
  // Item-on-item crafting remains connected after several item transactions.
  await open('inventory');await bag('material.reed').tap();
  // Use the existing maker for a one-material recipe; item-on-item recipes remain in existing adventure suites.
- assert.equal(await page.locator('.classic-bag-tools summary').count(),0,'bag maker is always available');await page.getByRole('button',{name:'MAKE FROM BAG',exact:true}).tap();
+ assert.equal(await page.locator('.classic-bag-tools summary').count(),0,'bag maker is always available');await page.getByRole('button',{name:'RECIPES',exact:true}).tap();
  const rationRecipe=page.locator('.craft-option').filter({hasText:'Bundle 3 field rations'});
  await rationRecipe.getByRole('button',{name:'MAKE',exact:true}).tap();
  assert.ok((await snapshot()).inventory.materials.ration>8);

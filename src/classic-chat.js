@@ -25,7 +25,7 @@ export function setupClassicChat(doc=document){
  input.placeholder='Press Enter to write a local message…';
  const send=el('button','oakrest-chat-send','SEND',form);
  send.type='submit';
- const hint=el('span','oakrest-chat-notice','Local-only chat · online channels arrive with multiplayer',host);
+ // Connection status is stated in the input and Social panel, not a stray footer.
  let channel='All',messageSequence=0;
  const messages=[];
  function availableForMessage(entry){

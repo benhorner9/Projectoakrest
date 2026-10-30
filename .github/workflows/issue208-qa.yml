@@ -1,0 +1,26 @@
+name: Oakrest issue 208 — combat HUD and habitats
+on:
+  pull_request:
+    branches: [dev]
+permissions:
+  contents: read
+jobs:
+  hud-habitats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check && npm test && npm run build
+      - run: npx playwright install chromium
+      - run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-issue208.cjs
+      - run: timeout --signal=TERM --kill-after=10s 4m node tests/browser-classic-ui-cleanup.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oakrest-issue208-evidence
+          path: qa/issue208/

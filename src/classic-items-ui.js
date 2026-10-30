@@ -35,7 +35,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,selectedBank=null,selectedShop=null;
  let abilitySlot=0,inspectedAbilityId=null,lastCombatBookKey='';
- let combineSource=null,showMaking=false;
+ let combineSource=null,showMaking=false,recipeIngredients=[];
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
@@ -63,7 +63,12 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   const cell=button(grid,'classic-item-cell',null,()=>{
   // Tap always examines. Drag/Alt+arrow always rearranges without a mode.
    if(mode==='inventory'&&combineSource){
-    if(entry.kind==='material'&&entry.id!==combineSource)craftFromBag('combine',{first:combineSource,second:entry.id});
+    if(entry.kind==='material'&&entry.id!==combineSource){
+     const ingredients=[combineSource,entry.id];
+     const matches=RECIPES.filter(r=>r.station==='inventory'&&ingredients.every(id=>Object.hasOwn(r.cost,id)));
+     if(matches.length>1){recipeIngredients=ingredients;showMaking=true;combineSource=null;detailId=null;render();}
+     else craftFromBag('combine',{first:combineSource,second:entry.id});
+    }
     else {combineSource=null;notify('Choose a different material to combine.');render();}
     return;
    }
@@ -99,6 +104,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    element(fact,'span',null,key);element(fact,'strong',null,value);
   }
   if(details.item.kind==='material'&&RECIPES.some(r=>r.station==='inventory'&&Object.hasOwn(r.cost,details.item.legacy.itemId))){
+   button(ex,'classic-item-action','RECIPES',()=>{showMaking=true;recipeIngredients=[];combineSource=null;render();});
    button(ex,'classic-item-action','USE WITH…',()=>{
     combineSource=details.item.legacy.itemId;detailId=null;render();
    });
@@ -147,16 +153,12 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   tools.setAttribute('aria-label','Backpack actions');
   const actions=element(tools,'div','classic-item-actions');
   element(actions,'small','classic-muted','Drag items to rearrange · Alt+arrow with keyboard.');
-  const make=button(actions,'classic-item-action',showMaking?'HIDE RECIPES':'MAKE FROM BAG',()=>{
-   showMaking=!showMaking;combineSource=null;render();
-  });
-  make.setAttribute('aria-expanded',String(showMaking));
   if(showMaking){
    const maker=element(tools,'section','classic-handcraft');
    element(maker,'h3',null,'MAKE FROM YOUR BACKPACK');
    element(maker,'p','classic-muted','Fletching, Inscription and Fieldcraft are made by hand. Metalwork still requires a forge.');
    const materials=data.inventory.materials,progress=data.adventure?.skills||{};
-   for(const recipe of RECIPES.filter(r=>r.station==='inventory')){
+   for(const recipe of RECIPES.filter(r=>r.station==='inventory'&&recipeIngredients.every(id=>Object.hasOwn(r.cost,id)))){
     const row=element(maker,'div','craft-option');row.dataset.recipe=recipe.id;
     element(row,'strong',null,recipe.title);
     element(row,'small',null,Object.entries(recipe.cost).map(([id,n])=>

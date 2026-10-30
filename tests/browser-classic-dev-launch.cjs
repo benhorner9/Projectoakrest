@@ -106,21 +106,13 @@ const base=process.env.OAKREST_TEST_URL||'http://127.0.0.1:5278/oakrest-dev/';
   assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'5');
   assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'6');
   await page.locator('#oakrest-hotbar-edit').tap();
-  // Playwright's mouse API creates an actual active pointer across both
-  // browser engines. Dispatching a fabricated PointerEvent causes both
-  // Chromium and WebKit to reject setPointerCapture (no active pointer).
-  const joyRect=await page.locator('#classic-joystick').boundingBox();
-  assert.ok(joyRect?.width>50&&joyRect?.height>50,'touch joystick exists on iPad-sized viewport');
-  const jx=joyRect.x+joyRect.width/2,jy=joyRect.y+joyRect.height/2;
-  await page.mouse.move(jx,jy);
-  await page.mouse.down();
-  await page.mouse.move(jx,jy-37,{steps:4});
-  const before=await page.evaluate(()=>oakrestClassicQA.state());
-  await page.evaluate(()=>oakrestClassicQA.advance(.35));
+  assert.equal(await page.locator('#classic-joystick').isVisible(),false);
+  const before=await page.evaluate(()=>{oakrestClassicQA.pauseAutomaticLoop();return oakrestClassicQA.state();});
+  const destination=await page.evaluate(()=>{const p=oakrestClassicQA.state();const q=oakrestClassicQA.projectWorld(p.x+3,p.z),b=document.querySelector('#classic-game canvas').getBoundingClientRect();return {x:b.x+(q.x+1)*b.width/2,y:b.y+(q.y+1)*b.height/2};});
+  await page.touchscreen.tap(destination.x,destination.y);
+  await page.evaluate(()=>oakrestClassicQA.advance(1));
   const after=await page.evaluate(()=>oakrestClassicQA.state());
-  await page.mouse.up();
-  assert.ok(Math.abs(after.z-before.z)+Math.abs(after.x-before.x)>.02,
-   'new player can move using the joystick with an actual captured pointer');
+  assert.ok(Math.hypot(after.x-before.x,after.z-before.z)>.1,'new player moves by real ground tap');
   // Earn the welcome reward and training kit through the mounted simulation;
   // use QA travel/time helpers, never inject coins, XP, damage or quest flags.
   await page.evaluate(async()=>{

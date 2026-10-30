@@ -20,7 +20,7 @@ export function installClassicIntegratedLayout(doc=document){
  const mapHead=node('section','classic-sidebar-map',sidebar);
  // The decorative Classic title header is hidden in the live framed HUD.
  // Reparent the real logout control into the visible top-right map header.
- mapHead.append(get('classic-logout'));
+ get('classic-settings-window').append(get('classic-logout'));
  const map=get('classic-minimap-expand').parentElement;
  // Reuse the actual live location and settings elements. No second indicator,
  // invented player count, or fake time-of-day state is introduced.
@@ -50,7 +50,13 @@ export function installClassicIntegratedLayout(doc=document){
  footer.setAttribute('aria-label','Character and combat controls');
  footer.append(doc.querySelector('.classic-panel'),doc.querySelector('.classic-combat-dock'));
  const feed=node('div','classic-footer-events',footer);
- feed.append(get('classic-combat-target'),doc.querySelector('.classic-interaction-bar'),get('classic-toasts'));
+ feed.append(doc.querySelector('.classic-interaction-bar'),get('classic-toasts'));
+ const health=node('div','classic-world-health',get('classic-game'));
+ const playerHealth=node('section','classic-player-status',health);
+ playerHealth.id='classic-player-status';playerHealth.hidden=true;
+ playerHealth.setAttribute('aria-label','Your combat health');
+ playerHealth.append(doc.querySelector('.player-hp'));
+ health.append(get('classic-combat-target'));
  // Keep the action deck inside the LEFT world/chat column, immediately
  // above chat. The right sidebar book now owns the entire column height.
  // Reparent existing controls and retain their listeners and character state.

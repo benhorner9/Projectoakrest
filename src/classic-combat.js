@@ -23,6 +23,8 @@ import {classicItemAction,classicPickup,classicItemSnapshot} from './classic-ite
 import {CLASSIC_OVERWORLD_SPAWNS} from './classic-world-spawns.js';
 import {canCompleteInteraction,findClassicInteractable,interactionSight} from './classic-interactions.js';
 
+import {insideHabitat,classicMonsterRadius} from './classic-habitats.js';
+
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const toward=(a,b)=>{const d=Math.max(.00001,dist(a,b));return {x:(b.x-a.x)/d,z:(b.z-a.z)/d};};
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
@@ -30,6 +32,17 @@ const spawn=CLASSIC_OVERWORLD_SPAWNS;
 const isAlive=e=>e&&!e.hidden&&!e.dead&&e.hp>0&&!e.retreating;
 const wallClear=(a,b)=>clearClassicLine(a,b,.1);
 function initialMonster(def){
+ // Validate authoring and respawns against the same solids as movement.
+ const radius=classicMonsterRadius(def);
+ if(solidAt(def.x,def.z,radius)||!insideHabitat(def,def.habitat,radius)){
+  let safe=null;
+  for(let ring=1;ring<=20&&!safe;ring++)for(let i=0;i<32;i++){
+   const point={x:def.x+Math.cos(i*Math.PI/16)*ring*.5,z:def.z+Math.sin(i*Math.PI/16)*ring*.5};
+   if(!solidAt(point.x,point.z,radius)&&insideHabitat(point,def.habitat,radius)){safe=point;break;}
+  }
+  if(!safe)throw Error('No collision-safe spawn for '+def.id);
+  def={...def,...safe};
+ }
  return {...def,x:def.x,z:def.z,startX:def.x,startZ:def.z,
   name:def.name||ENEMY_COMBAT[def.type].name,level:def.level||ENEMY_COMBAT[def.type].level,
   hp:def.maxHp,aggro:false,retreating:false,dead:false,lastAttack:0,
@@ -300,9 +313,10 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   return true;
  }
  function moveEnemy(e,destination,speed,dt){
+  const radius=classicMonsterRadius(e);
   let goal=destination;
-  if(!clearClassicLine(e,destination,.4)){
-   if(!e.route||time>=e.routeAt){e.route=findClassicPath(e,destination);e.routeAt=time+.9;}
+  if(!clearClassicLine(e,destination,radius)){
+   if(!e.route||time>=e.routeAt){e.route=findClassicPath(e,destination,{radius,canOccupy:p=>insideHabitat(p,e.habitat,radius)});e.routeAt=time+.9;}
    while(e.route.length&&dist(e,e.route[0])<.08)e.route.shift();
    goal=e.route[0];
   }else e.route=null;
@@ -310,7 +324,7 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
   if(goal){
    const heading=toward(e,goal),distance=Math.min(dist(e,goal),speed*dt);
    const next={x:e.x+heading.x*distance,z:e.z+heading.z*distance};
-   if(clearClassicLine(e,next,.4)){e.x=next.x;e.z=next.z;}
+   if(insideHabitat(next,e.habitat,radius)&&!solidAt(next.x,next.z,radius)&&clearClassicLine(e,next,radius)){e.x=next.x;e.z=next.z;}
   }
   e.stuckFor=dist(before,e)<.0001?e.stuckFor+dt:0;
  }
@@ -362,6 +376,8 @@ export function createClassicCombat({save,random=Math.random,adventure=false,mon
    if(!safeOrDead&&!e.aggro&&!e.retreating&&e.patrol?.length){
     decision=dist(e,player)<=cfg.sight&&dist(player,{x:e.startX,z:e.startZ})<=cfg.leash?'acquire':'patrol';
    }
+   if(!insideHabitat(player,e.habitat)&&e.aggro)decision='retreat';
+   if(!insideHabitat(player,e.habitat)&&decision==='acquire')decision='idle';
    if(decision==='patrol'){
     const goal=e.patrol[e.patrolIndex%e.patrol.length];
     if(Number.isFinite(goal?.x)&&Number.isFinite(goal?.z)&&dist(goal,{x:e.startX,z:e.startZ})<=cfg.leash){

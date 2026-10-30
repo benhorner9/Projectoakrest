@@ -177,36 +177,38 @@ function pathFrontier(){
 /** Bounded 8-way A*. Both endpoints connect through verified clear segments.
  * Collision caches belong to this query, so changed world obstacles cannot
  * leave stale routes in future calls. No partial paths are reported as success. */
-export function findClassicPath(start,end){
- if(!start||!end||![start.x,start.z,end.x,end.z].every(Number.isFinite)||solidAt(start.x,start.z))return [];
+export function findClassicPath(start,end,{radius=.38,canOccupy=()=>true}={}){
+ const blockedPoint=(x,z)=>solidAt(x,z,radius)||!canOccupy({x,z});
+ const clear=(a,b)=>clearClassicLine(a,b,radius);
+ if(!start||!end||![start.x,start.z,end.x,end.z].every(Number.isFinite)||blockedPoint(start.x,start.z))return [];
  let goal={x:clamp(end.x,CLASSIC_LIMITS.minX+1,CLASSIC_LIMITS.maxX-1),z:clamp(end.z,CLASSIC_LIMITS.minZ+1,CLASSIC_LIMITS.maxZ-1)};
- if(solidAt(goal.x,goal.z)){
+ if(blockedPoint(goal.x,goal.z)){
   let near=null;
   for(let radius=CELL;radius<=5*CELL&&!near;radius+=CELL)for(let a=0;a<24;a++){
    const p={x:goal.x+Math.cos(a*Math.PI/12)*radius,z:goal.z+Math.sin(a*Math.PI/12)*radius};
-   if(!solidAt(p.x,p.z)){near=p;break;}
+   if(!blockedPoint(p.x,p.z)){near=p;break;}
   }
   if(!near)return [];
   goal=near;
  }
- if(clearClassicLine(start,goal))return [goal];
+ if(clear(start,goal))return [goal];
  const sx=snap(start.x),sz=snap(start.z);
  const h=(x,z)=>Math.hypot(x*CELL-goal.x,z*CELL-goal.z)/CELL;
  const records=new Map(),closed=new Set(),occupancy=new Map(),edges=new Map(),open=pathFrontier();
  const blocked=(x,z)=>{
-  const key=code(x,z);if(!occupancy.has(key))occupancy.set(key,solidAt(x*CELL,z*CELL));
+  const key=code(x,z);if(!occupancy.has(key))occupancy.set(key,blockedPoint(x*CELL,z*CELL));
   return occupancy.get(key);
  };
  const clearEdge=(from,to)=>{
   const a=code(from.x,from.z),b=code(to.x,to.z),key=a<b?a+'|'+b:b+'|'+a;
-  if(!edges.has(key))edges.set(key,clearClassicLine(nodeAt(from.x,from.z),nodeAt(to.x,to.z)));
+  if(!edges.has(key))edges.set(key,clear(nodeAt(from.x,from.z),nodeAt(to.x,to.z)));
   return edges.get(key);
  };
  // Rounding to one grid cell can place a valid player on the other side of a
  // facade. Seed only neighbours that are reachable from the REAL position.
  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
   const x=sx+dx,z=sz+dz,point=nodeAt(x,z);
-  if(blocked(x,z)||!clearClassicLine(start,point))continue;
+  if(blocked(x,z)||!clear(start,point))continue;
   const g=Math.hypot(point.x-start.x,point.z-start.z)/CELL;
   const node={x,z,g,f:g+h(x,z),parent:null};records.set(code(x,z),node);open.push(node);
  }
@@ -216,7 +218,7 @@ export function findClassicPath(start,end){
   if(closed.has(currentKey)||records.get(currentKey)!==current)continue;
   closed.add(currentKey);
   // Being near the goal is insufficient: a wall may lie in the final metre.
-  if(h(current.x,current.z)<=2&&clearClassicLine(nodeAt(current.x,current.z),goal)){found=current;break;}
+  if(h(current.x,current.z)<=2&&clear(nodeAt(current.x,current.z),goal)){found=current;break;}
   for(const [dx,dz] of MOVES){
    const x=current.x+dx,z=current.z+dz,key=code(x,z);
    if(closed.has(key)||blocked(x,z))continue;
@@ -233,8 +235,8 @@ export function findClassicPath(start,end){
  const compact=[];let cursor=start;
  for(let i=0;i<path.length;){
   let next=i;
-  for(let j=path.length-1;j>i;j--)if(clearClassicLine(cursor,path[j])){next=j;break;}
-  if(!clearClassicLine(cursor,path[next]))return [];
+  for(let j=path.length-1;j>i;j--)if(clear(cursor,path[j])){next=j;break;}
+  if(!clear(cursor,path[next]))return [];
   compact.push(path[next]);cursor=path[next];i=next+1;
  }
  return compact;

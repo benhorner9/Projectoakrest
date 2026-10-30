@@ -55,8 +55,8 @@ test('each legacy live service, story target, ordinary mob and dungeon enemy kee
   assert.deepEqual([e?.x,e?.z],[mob.x,mob.z],mob.id);
  }
  const boar=CLASSIC_OVERWORLD_SPAWNS.find(s=>s.id==='boar-a');
- assert.deepEqual([boar.x,boar.z],[1,91],'B2 must not silently move story-adjacent boar into an unbuilt farm');
- assert.equal(worldZoneAt(boar)?.id,'OAK-WD-001');
+ assert.deepEqual([boar.x,boar.z],[19,109],'approved creek habitat must match the live world');
+ assert.equal(worldZoneAt(boar)?.id,'OAK-WD-002');
  const bank=CLASSIC_WORLD_ENTITIES.find(e=>e.id==='service:bank');
  assert.ok(bank);
  assert.equal(worldZoneAt(bank)?.id,'OAK-VL-001');
