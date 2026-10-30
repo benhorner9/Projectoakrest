@@ -209,6 +209,24 @@ let browser;
  await page.evaluate(()=>oakrestClassicQA.advance(3.3));
  assert.ok((await snapshot()).inventory.materials.ration>8,'one completed cycle grants rations');
  await page.getByRole('button',{name:'CLOSE',exact:true}).tap();
+ // Stop after the first of two queued crafting cycles: one reward and one
+ // increment of XP, without consuming unfinished ingredients.
+ await open('inventory');await bag('material.reed').tap();
+ await page.getByRole('button',{name:'CRAFT…',exact:true}).tap();
+ await page.getByLabel('Choose crafting recipe').selectOption('rations');
+ await page.getByLabel('Craft quantity').fill('2');
+ const beforePartial=await snapshot(),beforeCooking=beforePartial.adventure.skills.cooking||0;
+ await page.getByRole('button',{name:'START CRAFTING'}).tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(3.3));
+ const midCraft=await snapshot();
+ assert.equal(midCraft.inventory.materials.ration,beforePartial.inventory.materials.ration+3,'one completed craft cycle yields exactly one ration batch');
+ assert.equal(midCraft.adventure.skills.cooking,beforeCooking+12,'XP awarded on the first finished cycle');
+ await page.getByRole('button',{name:'STOP CRAFTING'}).tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(5));
+ const stopped=await snapshot();
+ assert.equal(stopped.inventory.materials.ration,midCraft.inventory.materials.ration,'cancelling does not grant second batch');
+ assert.equal(stopped.adventure.skills.cooking,midCraft.adventure.skills.cooking,'cancelling does not grant unfinished XP');
+ await page.getByRole('button',{name:'CLOSE',exact:true}).tap();
  // Real damage, quick-slot healing, then the inventory Use button share one cooldown.
  await page.evaluate(()=>{
   const e=oakrestClassicQA.combatState().monsters.find(m=>m.id==='bandit-a');
