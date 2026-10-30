@@ -93,7 +93,7 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
    for(const id of ['adventure:copper','adventure:tin'])await gather(id);
    await act('craft','adventure:forge','bar');await advance(4);
    await gather('adventure:reed');await gather('adventure:reed');
-   await act('craft',null,'seal');
+   await act('craft',null,'seal');await advance(4);
   };
   await act('accept','citizen:guard','welcome');
   for(const id of ['service:bank','service:store','service:forester']){
@@ -125,7 +125,7 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
   await act('accept','adventure:smith','provisions');
   for(const id of ['adventure:copper','adventure:tin','adventure:softwood'])await gather(id);
   await ensureLog();
-  await act('craft',null,'arrows');
+  await act('craft',null,'arrows');await advance(4);
   await act('finish','adventure:smith','provisions');
   // Move actual quest-earned coins into the real bank before checkpoint one.
   // This proves the full-journey save protects nonempty bank ownership,
@@ -156,12 +156,12 @@ const evidence={scope:'New-character browser integration with deterministic RNG,
   // Earn a full expedition's ammunition and food using real gather/craft calls.
   for(let batch=0;batch<40;batch++){
    await ensureLog();
-   await act('craft',null,'arrows');
+   await act('craft',null,'arrows');await advance(4);
    if((batch+1)%10===0)console.log('Complete adventure: earned',batch+1,'ammunition batches');
   }
   for(let batch=0;batch<40;batch++){
    await gather('adventure:reed');await gather('adventure:reed');
-   await act('craft',null,'rations');
+   await act('craft',null,'rations');await advance(4);
   }
   // One spare seal is legitimately gathered for the repeat-run boundary check.
   await craftSeal();
