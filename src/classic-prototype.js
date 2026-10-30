@@ -790,7 +790,8 @@ itemUi=setupClassicItems({
  combat,player:()=>player,style:()=>style,notify:feedback,
  changed:next=>{
   if(STYLE_ORDER.includes(next))switchStyle(next);
-  else markProgress();
+  // Cross-style weapon equipping also mutates persistent gear ownership.
+  markProgress();
   refreshHud();
  },
  onOpen:tab=>windowUi?.adopt(tab),
