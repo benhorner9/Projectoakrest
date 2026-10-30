@@ -102,8 +102,11 @@ export const distanceToPolyline=(point,polyline)=>polyline.slice(1).reduce((best
 export const REGIONAL_BUILDINGS=Object.freeze(REGIONAL_HUBS.filter(h=>!h.existing).flatMap(h=>{
  const count=h.kind==='city'?12:h.kind==='town'?7:3;
  return Array.from({length:count},(_,i)=>{
-  const side=i%2===0?-1:1,row=Math.floor(i/2),spacing=h.kind==='farm'?15:14;
-  const x=h.x+side*(h.kind==='farm'?14:19),z=h.z+(row-Math.floor((count-1)/4))*spacing;
+  const side=i%2===0?-1:1,row=Math.floor(i/2);
+  // Farms need an accessible farmhouse and barns beside, not *on*, through-roads.
+  const farmOffset=[[-25,-20],[0,-25],[20,25]][i];
+  const x=h.x+(farmOffset?farmOffset[0]:side*19),
+   z=h.z+(farmOffset?farmOffset[1]:(row-Math.floor((count-1)/4))*14);
   const w=h.kind==='farm'?9:10,d=h.kind==='farm'?8:9;
   return Object.freeze({id:h.id+'-house-'+i,hub:h.id,x,z,w,d,roof:i%3});
  }).filter(b=>!REGIONAL_ROADS.some(road=>distanceToPolyline(b,road.points)<Math.max(b.w,b.d)*.5+4.5));
