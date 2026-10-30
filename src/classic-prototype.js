@@ -90,7 +90,7 @@ function savedWorn(){
 const player={x:0,z:39},input={x:0,z:0},npcActors=[];
 let combatPursuitId=null;
 const combatMovementIntent=createClassicCombatMovementIntent();
-let style='melee',zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
+let style='melee',pendingEquipStyle=null,zoom=1,look={x:0,z:1},walkClock=0,lastInside=null;
 const orbitCamera=createClassicOrbitCamera();
 let selectedTarget=null,lastInteraction=null,lastStatus='Tap to move, or select a person or object.';
 let playerHurtUntil=0;
@@ -271,13 +271,14 @@ function refreshHud(){
  actionbar.update(combat.getState());
 }
 function switchStyle(which){
- if(!combat.styleSwitch(which))return;
+ if(!combat.styleSwitch(which))return false;
  const current=combat.getState().style;
  if(current!==style){style=current;refreshHud();itemUi?.render();}
  updateCombatUi(combat.getState());
+ return true;
 }
 for(const b of document.querySelectorAll('[data-style]'))
- bindClassicPress(b,()=>switchStyle(b.dataset.style));
+ bindClassicPress(b,()=>{pendingEquipStyle=null;switchStyle(b.dataset.style);});
 function updateLocation(){
  const building=occupantBuilding(player.x,player.z);
  const id=building?.id||null;
@@ -789,7 +790,9 @@ function tick(time){
 itemUi=setupClassicItems({
  combat,player:()=>player,style:()=>style,notify:feedback,
  changed:next=>{
-  if(STYLE_ORDER.includes(next))switchStyle(next);
+  if(STYLE_ORDER.includes(next)&&!switchStyle(next)){
+   pendingEquipStyle=next;feedback('Weapon equipped; combat style switches when ready.');
+  }
   // Cross-style weapon equipping also mutates persistent gear ownership.
   markProgress();
   refreshHud();
