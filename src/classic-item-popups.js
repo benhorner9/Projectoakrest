@@ -145,7 +145,7 @@ export function setupClassicItemPopups({
   });
   craftView={recipes,selector,description,quantity,maximum,timing,progressText,progress,start,stop};
   selector.addEventListener('change',()=>{
-   quantity.value='1';update(true);
+   quantity.value='1';previousCraft=null;update(true);
   });
   quantity.addEventListener('input',()=>update(true));
   update(true);selector.focus({preventScroll:true});
@@ -160,7 +160,9 @@ export function setupClassicItemPopups({
   if(!recipe)return;
   const data=save(),limit=craftQuantityLimit(data,recipe);
   const guidance=recipeGuidance(data,recipe);
-  const current=combat.adventureState()?.work;
+  const adventure=combat.adventureState();
+  const current=adventure?.work;
+  const finished=adventure?.lastCraft?.id===recipe.id?adventure.lastCraft:null;
   const active=current?.recipeId===recipe.id?current:null;
   const anyCraft=!!current?.recipeId;
   quantity.max=String(limit);maximum.textContent='Maximum '+limit+' cycles from your backpack';
@@ -170,6 +172,7 @@ export function setupClassicItemPopups({
    description.replaceChildren();
    make(description,'strong',null,recipe.title);
    make(description,'p',null,guidance.training);
+   make(description,'p',null,recipe.result.material?'One '+recipe.seconds+'s cycle makes '+recipe.result.amount+' × '+(getItem('material.'+recipe.result.material)?.title||recipe.result.material):'One '+recipe.seconds+'s cycle makes one equipment item');
    for(const [id,n] of Object.entries(recipe.cost)){
     const ingredient=ADVENTURE_MATERIALS[id]?.[0]||getItem('material.'+id)?.title||id;
     make(description,'p',null,ingredient+': '+(data.inventory.materials[id]||0)+' owned / '+n+' each');
@@ -190,9 +193,11 @@ export function setupClassicItemPopups({
   }else if(anyCraft){
    progressText.textContent='Another crafting or gathering task is active.';
   }else{
-   if(previousCraft){
-    progress.max=previousCraft.total;progress.value=previousCraft.completed;
-    progressText.textContent=previousCraft.completed>=previousCraft.total?'Crafting complete · all items and XP awarded.':'Crafting stopped at '+previousCraft.completed+' / '+previousCraft.total+'. Finished items and XP are kept.';
+   if(finished||previousCraft?.id===recipe.id){
+    const result=finished||previousCraft;
+    progress.max=result.total;progress.value=result.completed;
+    progressText.textContent=result.completed>=result.total?'Crafting complete · '+result.completed+' cycles rewarded.':
+     'Stopped at '+result.completed+' / '+result.total+' cycles. Only finished items and XP are kept.';
    }else{
     progress.max=1;progress.value=0;
     progressText.textContent=guidance.owned?'You already own this equipment.':valid?'Ready to start.':'Check level, backpack space and ingredients.';
