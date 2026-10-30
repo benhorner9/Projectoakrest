@@ -208,10 +208,10 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(matches.length>1)return no('Several recipes use those materials. Examine either material and choose a recipe.');
   return startCraft(matches[0].id,'inventory',null,time,threatened,player);
  }
- function begin(target,time,recipeId){
+ function begin(target,time,recipeId,player,threatened){
   if(work)return no('Finish or cancel your current work first.');
   if(target.kind==='station'){
-   return startCraft(recipeId,target.station,target,time,false,player);
+   return startCraft(recipeId,target.station,target,time,threatened,player);
   }else if(target.kind==='resource'||target.kind==='grove'){
    if((respawns.get(target.id)||0)>time)return no('This resource is recovering. Try another nearby deposit.');
    const repeats=recipeId?.batches??1;
@@ -308,7 +308,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(kind==='inspect')return inspect(target.id);
   if(kind==='gather'||kind==='craft'){
    if(threatened)return no('Finish the fight before working.');
-   return begin(target,time,choice);
+   return begin(target,time,choice,player,threatened);
   }
   if(kind==='rest'&&['adventure:spring','adventure:cook'].includes(target.id)){
    if(threatened)return no('You cannot rest while pursued.');
