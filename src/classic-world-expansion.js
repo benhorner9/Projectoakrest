@@ -125,18 +125,29 @@ export const REGIONAL_TREES=Object.freeze(groves.flatMap((g,gi)=>
  !REGIONAL_HUBS.some(h=>Math.hypot(p.x-h.x,p.z-h.z)<42)&&
  !REGIONAL_GATHERING.some(s=>Math.hypot(p.x-s.x,p.z-s.z)<8)&&
  !REGIONAL_CAMPS.some(s=>Math.hypot(p.x-s.x,p.z-s.z)<13))).map(Object.freeze));
+export const REGIONAL_CAMP_TENTS=Object.freeze(REGIONAL_CAMPS.flatMap(c=>
+ Array.from({length:3},(_,i)=>{
+  const angle=i*2.09;
+  return Object.freeze({camp:c.id,id:c.id+'-tent-'+i,
+   x:c.x+Math.cos(angle)*9,z:c.z+Math.sin(angle)*9,r:2.9});
+ }).filter(t=>!REGIONAL_ROADS.some(road=>distanceToPolyline(t,road.points)<6.5))));
+const regionCircles=Object.freeze([...REGIONAL_TREES,...REGIONAL_CAMP_TENTS]);
 const overlap=(x,z,r,b)=>Math.abs(x-b.x)<b.w/2+r&&Math.abs(z-b.z)<b.d/2+r;
+const insideLegacyCore=(x,z)=>x>=-58&&x<=58&&z>=-30&&z<=335;
 export function regionalSolidAt(x,z,r=.38){
+ // New region obstacles never occupy the preserved old village/dungeon strip.
+ if(insideLegacyCore(x,z))return false;
  if(REGIONAL_BUILDINGS.some(b=>overlap(x,z,r,b)))return true;
- return REGIONAL_TREES.some(t=>sqr(t.x-x)+sqr(t.z-z)<sqr(t.r+r));
+ return regionCircles.some(t=>sqr(t.x-x)+sqr(t.z-z)<sqr(t.r+r));
 }
 /** Exact segment against inflated rectangle and circular tree footprints. */
 export function regionalLineClear(a,b,r=.38){
  if(!a||!b)return false;
+ if(insideLegacyCore(a.x,a.z)&&insideLegacyCore(b.x,b.z))return true;
  const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz;
  const minX=Math.min(a.x,b.x)-r,maxX=Math.max(a.x,b.x)+r;
  const minZ=Math.min(a.z,b.z)-r,maxZ=Math.max(a.z,b.z)+r;
- for(const t of REGIONAL_TREES){
+ for(const t of regionCircles){
   if(t.x+t.r<minX||t.x-t.r>maxX||t.z+t.r<minZ||t.z-t.r>maxZ)continue;
   const u=length?Math.max(0,Math.min(1,((t.x-a.x)*dx+(t.z-a.z)*dz)/length)):0;
   if(sqr(a.x+dx*u-t.x)+sqr(a.z+dz*u-t.z)<=sqr(t.r+r))return false;
