@@ -106,7 +106,7 @@ export const REGIONAL_BUILDINGS=Object.freeze(REGIONAL_HUBS.filter(h=>!h.existin
   const x=h.x+side*(h.kind==='farm'?14:19),z=h.z+(row-Math.floor((count-1)/4))*spacing;
   const w=h.kind==='farm'?9:10,d=h.kind==='farm'?8:9;
   return Object.freeze({id:h.id+'-house-'+i,hub:h.id,x,z,w,d,roof:i%3});
- });
+ }).filter(b=>!REGIONAL_ROADS.some(road=>distanceToPolyline(b,road.points)<Math.max(b.w,b.d)*.5+4.5));
 }));
 /** Trees are real, finite colliders, with exclusions near town squares, roads,
  * gathering targets and hostile spawns. Deterministic between sessions.
