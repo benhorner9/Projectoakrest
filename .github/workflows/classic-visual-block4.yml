@@ -35,8 +35,8 @@ jobs:
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-visual-block4.cjs
       - name: Existing hit contacts and disengagement browser regression
         run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-combat-impacts.cjs && timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-combat-overhaul.cjs
-      - name: Existing combat performance browser regression
-        run: timeout --signal=TERM --kill-after=10s 5m node tests/browser-combat-performance.cjs
+      - name: Current Classic iPad renderer and frame budget browser regression
+        run: timeout --signal=TERM --kill-after=10s 6m node tests/browser-classic-framed.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
