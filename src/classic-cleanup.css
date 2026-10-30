@@ -134,3 +134,81 @@
 .classic-damage-layer .classic-damage.hurt,.classic-damage-layer .classic-damage.incoming-miss{color:#ff9c9c!important;border-bottom:3px solid #ef6868}
 .classic-damage-layer .classic-damage.miss{color:#f2ecdc!important}
 .classic-damage-layer .classic-damage.ability{font-size:16px!important}
+
+/* Compact, anchored OSRS-like item actions: no scroll-to-examine inventory. */
+.oakrest-item-layer{
+ position:fixed;inset:0;z-index:4100;background:transparent;
+ pointer-events:auto
+}
+.oakrest-item-context-menu{
+ position:fixed;box-sizing:border-box;width:224px;max-width:calc(100vw - 20px);
+ max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;
+ padding:7px;display:flex;flex-direction:column;gap:5px;
+ border:2px solid #bc9d6d;border-radius:7px;
+ background:linear-gradient(155deg,#334737,#17271f);color:#f5e5c5;
+ box-shadow:0 10px 35px #07110be6;touch-action:pan-y
+}
+.oakrest-item-context-title{
+ padding:3px 6px 7px;margin-bottom:2px;border-bottom:1px solid #826f4c;
+ color:#ffe5b0;font:700 13px Georgia,serif
+}
+.oakrest-item-menu-option{
+ display:flex;align-items:center;justify-content:center;min-height:41px;
+ padding:7px 10px;border:1px solid #8d7954;border-radius:4px;
+ background:#304537;color:#f5e7ce;font:700 12px system-ui;cursor:pointer;
+ touch-action:manipulation
+}
+.oakrest-item-menu-option:disabled{opacity:.47;cursor:default}
+.oakrest-item-menu-option:focus-visible,
+.oakrest-craft-popup input:focus-visible,
+.oakrest-craft-popup select:focus-visible{outline:3px solid #f5dc91;outline-offset:1px}
+.oakrest-item-drop-row{display:flex;align-items:center;justify-content:space-between;gap:6px;font:11px system-ui}
+.oakrest-item-drop-row input{
+ width:68px;min-height:38px;padding:5px;border-radius:4px;
+ border:1px solid #a48a5b;background:#16281f;color:#f8e6c0
+}
+#classic-app.oakrest-framed .classic-item-cell.oakrest-item-selected{
+ outline:2px solid #e5c684;outline-offset:-2px
+}
+.oakrest-inventory-overlay{
+ position:fixed;inset:0;z-index:4200;display:flex;align-items:center;
+ justify-content:center;padding:12px;background:#07130dc9;box-sizing:border-box
+}
+.oakrest-item-inspection,.oakrest-craft-popup{
+ display:flex;flex-direction:column;box-sizing:border-box;
+ width:min(470px,96vw);max-height:min(86dvh,780px);min-height:0;
+ overflow:hidden;border:2px solid #bca074;border-radius:9px;
+ background:#26392d;color:#f1e3c8;box-shadow:0 12px 55px #020702cf
+}
+.oakrest-inventory-popup-head{
+ display:flex;align-items:center;justify-content:space-between;flex:none;
+ gap:8px;padding:10px 13px;background:#344c39;border-bottom:1px solid #967e56
+}
+.oakrest-inventory-popup-head strong{font:700 15px Georgia,serif;color:#ffe7b5}
+.oakrest-inventory-popup-scroll{
+ min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ touch-action:pan-y;padding:13px;display:flex;flex-direction:column;gap:8px
+}
+.oakrest-item-inspection .classic-examine{
+ margin:0!important;padding:8px!important;min-height:0!important;
+ background:transparent!important;border:0!important
+}
+.oakrest-craft-recipe-select,.oakrest-craft-quantity{
+ min-height:44px;max-width:100%;padding:8px;
+ border-radius:5px;border:1px solid #a58a59;background:#17271f;color:#f9e9c9;
+ font:13px system-ui
+}
+.oakrest-craft-requirements{padding:9px;border:1px solid #716344;border-radius:5px;background:#1c2c23}
+.oakrest-craft-requirements p{font-size:11px;margin:6px 0;color:#d8c6a5}
+.oakrest-craft-quantity-row{display:flex;align-items:center;justify-content:space-between;gap:9px}
+.oakrest-craft-quantity-row label{display:flex;flex-direction:column;gap:5px;font:11px system-ui}
+.oakrest-craft-quantity{width:90px}
+.oakrest-craft-maximum{color:#ddcba6;max-width:54%;text-align:right}
+.oakrest-craft-timing,.oakrest-craft-status{margin:3px 0;font:12px system-ui}
+.oakrest-craft-progress{height:15px;width:100%;accent-color:#c6ad75}
+.oakrest-craft-actions{display:flex;gap:8px;flex-wrap:wrap}
+.oakrest-craft-actions button{flex:1;min-width:130px}
+@media(max-height:650px){
+ .oakrest-item-inspection,.oakrest-craft-popup{max-height:94dvh}
+ .oakrest-inventory-popup-scroll{padding:8px;gap:5px}
+}
