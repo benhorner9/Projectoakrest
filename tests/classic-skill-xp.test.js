@@ -84,7 +84,8 @@ test('successful backpack craft emits exact fletching gain and level event, fail
  const c=createClassicCombat({save,adventure:true,random:()=>0});
  const player={x:0,z:39};
  assert.equal(c.adventureAction('craft',{choice:'arrows'},player).ok,true);
- const events=c.tick(0,player);
+ let events=[];
+ for(let i=0;i<35;i++)events.push(...c.tick(.1,player));
  assert.deepEqual(events.filter(e=>e.type==='skill-xp').map(e=>[e.skill,e.amount]),[['fletching',18]]);
  assert.deepEqual(events.filter(e=>e.type==='skill-level-up').map(e=>[e.skill,e.level]),[['fletching',2]]);
  assert.equal(c.adventureAction('craft',{choice:'arrows'},player).ok,false);
