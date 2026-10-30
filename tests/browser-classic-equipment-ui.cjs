@@ -313,6 +313,7 @@ let browser;
  await open('inventory');await bag('weapon.melee.sword').tap();
  assert.equal(await page.locator('.classic-quick-choice').count(),0);
  await page.getByRole('button',{name:'EQUIP',exact:true}).tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(1));
  assert.equal((await snapshot()).gear.melee,'sword','weapon occupies its correct equipment slot');
  assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'melee','equipping a sword switches from ranged to melee');
  assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'melee');
