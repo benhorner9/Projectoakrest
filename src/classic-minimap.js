@@ -1,3 +1,4 @@
+import {REGIONAL_HUBS,REGIONAL_ROADS,REGIONAL_CAMPS,REGIONAL_GATHERING} from './classic-world-expansion.js';
 import {OAKREST_PALETTE,organicRoadPolygons,plazaOutline} from './classic-art-direction.js';
 import {ADVENTURE_PATHS,ADVENTURE_WALLS,ADVENTURE_TREES,ADVENTURE_TARGETS,ADVENTURE_SCENERY,DUNGEON_ROOMS} from './adventure-content.js';
 /** Oakrest Classic minimap: one canonical village model, no secondary scene.
@@ -16,7 +17,8 @@ export const CLASSIC_MAP_FEATURES=Object.freeze({
  trees:[...CLASSIC_TREES,...OAKREST_GROVES],well:OAKREST_WELL,
  services:OAKREST_SERVICES,notices:OAKREST_NOTICES,adventure:ADVENTURE_TARGETS,
  scenery:ADVENTURE_SCENERY,plazas:CLASSIC_PLAZAS,stalls:CLASSIC_STALLS,questGivers:QUEST_GIVER_IDS,
- zones:CLASSIC_WORLD_ZONES
+ zones:CLASSIC_WORLD_ZONES,regionalHubs:REGIONAL_HUBS,regionalRoads:REGIONAL_ROADS,
+ regionalCamps:REGIONAL_CAMPS,regionalGathering:REGIONAL_GATHERING
 });
 /** Match the ACTUAL control orientation on the angled 2.5D game view.
  * The large world map is north-up; the corner minimap is camera-aligned.
@@ -57,7 +59,28 @@ function polygon(ctx,project,corners,color){
 }
 function terrain(ctx,project,width,height,scale){
  ctx.fillStyle=OAKREST_PALETTE.meadow;ctx.fillRect(0,0,width,height);
+ // Map biome patches, city footprints and roads are derived from the same
+ // regional registry as the actual Three.js landscape (not background art).
+ for(const hub of REGIONAL_HUBS){
+  if(hub.existing)continue;
+  const at=project(hub),radius=(hub.kind==='city'?68:hub.kind==='farm'?50:56)*scale;
+  ctx.beginPath();ctx.arc(at.x,at.y,radius,0,Math.PI*2);
+  ctx.fillStyle=({forest:'#49734f',marsh:'#52755d',river:'#70916e',
+   snow:'#afc4bd',highlands:'#777d70',coast:'#8ca68b',farmland:'#a19b69'})[hub.biome]||'#75906a';
+  ctx.fill();
+ }
  rect(ctx,project,{x:0,z:38,w:126,d:154},scale,OAKREST_PALETTE.meadow);
+ for(const [band,colour] of [[7.1,'#617953'],[5.5,'#85765c'],[3.7,'#b8a07a']]){
+  ctx.strokeStyle=colour;ctx.lineWidth=Math.max(.6,band*scale);ctx.lineJoin='round';ctx.lineCap='round';
+  for(const road of REGIONAL_ROADS){
+   ctx.beginPath();
+   road.displayPoints.forEach((p,i)=>{
+    const point=project({x:p[0],z:p[1]});
+    if(i)ctx.lineTo(point.x,point.y);else ctx.moveTo(point.x,point.y);
+   });
+   ctx.stroke();
+  }
+ }
  for(const ground of ADVENTURE_SCENERY.ground)rect(ctx,project,ground,scale);
  for(const [i,room] of DUNGEON_ROOMS.entries()){
   rect(ctx,project,{x:0,z:(room.minZ+room.maxZ)/2,w:33,d:room.maxZ-room.minZ},
@@ -162,6 +185,41 @@ function playerArrow(ctx,at,facing,large=false,cameraOffset){
  ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r*.63,r*.7);ctx.lineTo(0,r*.3);
  ctx.lineTo(-r*.63,r*.7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
+function regionalMarkers(ctx,project,full=false){
+ const c=ctx.canvas;
+ const within=point=>point.x>=9&&point.x<=c.width-9&&point.y>=9&&point.y<=c.height-9;
+ for(const hub of REGIONAL_HUBS){
+  const p=project(hub);if(!within(p))continue;
+  const radius=hub.kind==='city'?full?6.5:4.5:hub.kind==='town'?full?5:3.5:full?4:3;
+  ctx.fillStyle=hub.kind==='city'?'#ffe2a2':hub.kind==='town'?'#d3e2a7':'#ebbc75';
+  ctx.strokeStyle='#27382d';ctx.lineWidth=full?1.6:1.1;
+  ctx.beginPath();
+  if(hub.kind==='city')ctx.arc(p.x,p.y,radius,0,Math.PI*2);
+  else ctx.rect(p.x-radius,p.y-radius,radius*2,radius*2);
+  ctx.fill();ctx.stroke();
+  if(full){
+   ctx.textAlign='center';ctx.textBaseline='bottom';ctx.font='bold 11px Georgia,serif';
+   ctx.lineWidth=2.8;ctx.strokeStyle='#1b2c25';ctx.strokeText(hub.name,p.x,p.y-radius-5,105);
+   ctx.fillStyle='#fff0ca';ctx.fillText(hub.name,p.x,p.y-radius-5,105);
+  }
+ }
+ if(!full)return;
+ for(const site of REGIONAL_CAMPS){
+  const p=project(site);if(!within(p))continue;
+  ctx.fillStyle=site.live?'#d28e6e':'#8f9691';ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();
+  ctx.font='9px system-ui';ctx.textBaseline='top';ctx.textAlign='center';
+  ctx.fillStyle='#f2dfc6';ctx.fillText(site.name,p.x,p.y+5,95);
+ }
+ for(const site of REGIONAL_GATHERING){
+  if(site.skill==='farming')continue; // Same site as its named farm.
+  const p=project(site);if(!within(p))continue;
+  ctx.fillStyle=site.live?'#d8e6a4':'#9da69a';
+  ctx.fillRect(p.x-2.5,p.y-2.5,5,5);
+  ctx.font='9px system-ui';ctx.textBaseline='bottom';ctx.textAlign='center';
+  ctx.fillStyle=site.live?'#e3eec2':'#bdc7bc';
+  ctx.fillText(site.name,p.x,p.y-5,95);
+ }
+}
 function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cameraOffset,objective,questGivers=[],adventure},full=false){
  for(const s of OAKREST_SERVICES){
   const p=project({x:s.x,z:s.z});
@@ -202,6 +260,7 @@ function markers(ctx,project,{player,facing,destination,monsters=[],drops=[],cam
  for(const drop of drops){
   const p=project(drop);ctx.fillStyle='#f4ce7d';ctx.fillRect(p.x-2,p.y-2,4,4);
  }
+ regionalMarkers(ctx,project,full);
  playerArrow(ctx,project(player),facing,full,cameraOffset);
 }
 export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
@@ -262,7 +321,7 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
     full.strokeStyle='#e6d29a70';full.lineWidth=.75;
    }
    full.strokeRect(x,y,w,h);
-   if(zone.id.startsWith('OAK-WD')||zone.id==='OAK-VL-001'){
+   if(w>36&&h>16&&(zone.id.startsWith('OAK-WD')||zone.id==='OAK-VL-001')){
     full.font='bold 9px system-ui';full.textAlign='center';full.textBaseline='middle';
     full.fillStyle=selected?.id===zone.id?'#fff2c5':'#f0e1b4';
     full.fillText(zone.name,x+w/2,y+h/2,Math.max(25,w-3));
@@ -271,6 +330,9 @@ export function createClassicMinimap({canvas,fullCanvas,onDestination=()=>{},
   markers(full,p,data,true);
   full.font='bold 15px Georgia';full.fillStyle='#f4e5bb';full.textAlign='center';
   full.fillText('NORTH ↑',width/2,20);
+   full.font='10px system-ui';full.fillStyle='#ebe0bd';
+   full.fillText('Gold: settlements  ·  Red: active camps  ·  Green: gathering  ·  Grey: future content',
+    width/2,height-7,Math.max(100,width-12));
  };
  const update=(data,now=0,force=false)=>{
   last=data;

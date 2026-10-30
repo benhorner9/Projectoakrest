@@ -1,3 +1,4 @@
+import {createRegionalWorldScene} from './classic-world-expansion-view.js';
 import {bindClassicItemDrag} from './classic-item-drag.js';
 import {createClassicSimulationClock} from './classic-combat-clock.js';
 import {installClassicCanvasInput} from './classic-canvas-input.js';
@@ -117,6 +118,7 @@ const abilityView=createClassicAbilityView(scene,{reducedMotion:reducedCombatMot
 const impactEffects=createClassicCombatImpacts(scene,{reducedMotion:reducedCombatMotion});
 const skillXpFloats=createClassicSkillXpFloats(root,{reducedMotion:reducedCombatMotion});
 const adventureWorld=createAdventureWorld(scene);
+const regionalWorld=createRegionalWorldScene(scene);
 let adventureUi=null;
 const combatView=createClassicCombatView(scene,combat.getState().monsters,{reducedMotion:reducedCombatMotion});
 const groundView=createClassicGroundLoot(scene);
@@ -726,6 +728,7 @@ function drawStep(dt,render=true){
  if(!render)return;
  updateLocation();
  adventureWorld.update(adventureState,player,cameraOffset,state.time,skillVisual);
+ regionalWorld.update(player);
  village.update(state.time,skillVisual,adventureState.trees);
  for(const npc of npcActors)npc.beacon?.update(adventureState,state.time);
  // UI refresh is bounded; input, combat and world rendering remain at 60 Hz.

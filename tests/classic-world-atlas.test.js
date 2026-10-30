@@ -11,12 +11,12 @@ import {CLASSIC_WORLD_ZONES,CLASSIC_WORLD_ENTITIES,worldAtlasSnapshot,
  worldZoneBlueprint,worldZoneBrief,validateWorldAtlas} from '../src/classic-world-atlas.js';
 
 test('existing world is indexed by stable immutable, contiguous, nonoverlapping zone IDs',()=>{
- assert.deepEqual(validateWorldAtlas(),{zones:10,entities:CLASSIC_WORLD_ENTITIES.length});
+ assert.deepEqual(validateWorldAtlas(),{zones:33,entities:CLASSIC_WORLD_ENTITIES.length});
  assert.equal(worldAtlasSnapshot().schemaVersion,1);
  assert.equal(worldAtlasSnapshot().mode,'read-only');
- assert.equal(CLASSIC_WORLD_ZONES[0].bounds.minX,CLASSIC_LIMITS.minX);
- assert.equal(CLASSIC_WORLD_ZONES[0].bounds.maxX,CLASSIC_LIMITS.maxX);
- assert.equal(CLASSIC_WORLD_ZONES[0].bounds.minZ,CLASSIC_LIMITS.minZ);
+ assert.equal(CLASSIC_WORLD_ZONES[0].bounds.minX,-53,'existing village footprint must not stretch over distant settlements');
+ assert.equal(CLASSIC_WORLD_ZONES[0].bounds.maxX,53,'existing village footprint must not stretch over distant settlements');
+ assert.equal(CLASSIC_WORLD_ZONES[0].bounds.minZ,-24,'legacy start zone retains old southern edge');
  assert.equal(CLASSIC_WORLD_ZONES[0].bounds.maxZ,CLASSIC_PERIMETER.north);
  assert.equal(CLASSIC_MAP_FEATURES.zones,CLASSIC_WORLD_ZONES,
   'world map must use same exact named zone registry');
