@@ -48,12 +48,13 @@ let browser;
   }
   // Make supplies through the actual Classic inventory, no world fletching table.
   if(!await page.locator('#classic-item-window').isVisible())await page.locator('#classic-inventory-toggle').click();
-  assert.equal(await page.locator('.classic-bag-tools > summary').count(),0,'inventory actions require no disclosure');
+  assert.equal(await page.locator('.classic-bag-tools').count(),0,'no scroll-down inventory actions');
   await page.locator('[data-scope=bag][data-canonical="material.softwood-logs"]').click();
-  await page.getByRole('button',{name:'RECIPES',exact:true}).click();
-  const arrows=page.locator('.craft-option').filter({hasText:'Fletch 30 field ammunition'});
-  await arrows.getByRole('button',{name:'MAKE',exact:true}).click();
-  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'CRAFT…',exact:true}).click();
+  await page.getByLabel('Choose crafting recipe').selectOption('arrows');
+  await page.getByRole('button',{name:'START CRAFTING'}).click();
+  await step(4);
+  await page.getByRole('button',{name:'CLOSE',exact:true}).click();
   await act('finish','adventure:smith');
   assert.equal(await page.evaluate(()=>oakrestClassicQA.saveNow()),true);
   const before=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
