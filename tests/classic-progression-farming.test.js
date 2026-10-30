@@ -49,10 +49,8 @@ test('batch count validation and supply stack overflow never spend resources or 
 });
 test('bulk crafting uses the final bag and permits a consumed stack to free its output slot',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'softwood-logs':5});fillBag(h.data);
- assert.equal(h.act('craft',{id:'arrows',batches:5}).ok,false,'first timed cycle cannot create a 29th stack');
- assert.equal(inventoryKeyList(h.data).length,28);
- h.data.inventory.slotted.pop();
- assert.ok(h.act('craft',{id:'arrows',batches:5}).ok);
+ assert.ok(h.act('craft',{id:'arrows',batches:5}).ok,'consuming a log stack frees a slot before awarding arrows');
+ assert.equal(inventoryKeyList(h.data).length,28,'no instant output or change to bag capacity');
  h.adventure.tick(15,15,{x:0,z:39});assert.equal(inventoryKeyList(h.data).length,28);
 });
 test('forge batch is timed, revalidates at completion, and interruption spends nothing',()=>{
@@ -75,6 +73,7 @@ for(const id of ['leather','robes','quiver','focus','amulet','forged','reinforce
  assert.equal(h.act('craft',{id,batches:2},r.station==='forge'?'adventure:forge':null).ok,false);
  const made=h.act('craft',id,r.station==='forge'?'adventure:forge':null);assert.ok(made.ok,made.reason);
  if(r.station==='forge'){const t=ADVENTURE_TARGETS.find(t=>t.station==='forge');h.adventure.tick(4,4,{x:t.x,z:t.z-1});}
+ else h.adventure.tick(4,4,{x:0,z:39});
  const o=r.result,key=o.weapon?'weapons':o.armour?'armour':'slotted',item=o.weapon||o.armour||o.slot;
  const bag=o.weapon?h.data.inventory.weapons[o.style]:h.data.inventory[key],bank=o.weapon?h.data.bank.weapons[o.style]:h.data.bank[key];
  assert.ok(bag.includes(item));Object.assign(h.data.inventory.materials,{...r.cost});
