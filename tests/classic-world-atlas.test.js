@@ -4,7 +4,7 @@ import {CLASSIC_LIMITS} from '../src/classic-presentation.js';
 import {CLASSIC_PERIMETER} from '../src/classic-town-plan.js';
 import {ADVENTURE_TARGETS,ADVENTURE_SPAWNS,DUNGEON_ROOMS} from '../src/adventure-content.js';
 import {CLASSIC_OVERWORLD_SPAWNS} from '../src/classic-world-spawns.js';
-import {CLASSIC_MAP_FEATURES,fullMapWorld,fullMapTransform} from '../src/classic-minimap.js';
+import {CLASSIC_MAP_FEATURES,fullMapPoint,fullMapWorld,fullMapTransform} from '../src/classic-minimap.js';
 import {freshCharacterSave,validSave} from '../src/rules.js';
 import {CLASSIC_WORLD_ZONES,CLASSIC_WORLD_ENTITIES,worldAtlasSnapshot,
  worldZoneAt,findWorldZone,worldZoneEntities,worldZoneReference,
@@ -87,8 +87,7 @@ test('atlas never writes gameplay save keys, character XP or map/navigation boun
  for(const [w,h] of [[440,510],[320,380]]){
   const t=fullMapTransform(w,h);
   const point={x:0,z:39};
-  assert.ok(Math.hypot(fullMapWorld({x:t.x+(point.x-CLASSIC_LIMITS.minX)*t.scale,
-   y:t.y+(CLASSIC_LIMITS.maxZ-point.z)*t.scale},w,h).x-point.x)<1e-8);
+  assert.ok(Math.hypot(fullMapWorld(fullMapPoint(point,w,h),w,h).x-point.x)<1e-8);
  }
 });
 
