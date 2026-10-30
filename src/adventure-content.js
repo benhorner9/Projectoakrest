@@ -1,3 +1,4 @@
+import {REGIONAL_RESOURCE_TARGETS} from './classic-world-expansion.js';
 /** First Adventure content. Coordinates are shared by collision, map and renderer. */
 import {OUTDOOR_TRAILS} from './classic-outdoor-trails.js';
 export const ADVENTURE_MATERIALS = Object.freeze({
@@ -54,7 +55,8 @@ export const ADVENTURE_TARGETS=Object.freeze([
  target('entrance','Warden’s Hollow',0,181,'entrance',{flag:'entrance',text:'A cleft beneath a giant dead oak. Three lamps descend into the dark. The outer ward is broken; a restoration seal can reconnect it.'}),
  ...[218,246,274,305].map((z,i)=>target('exit-'+i,'Refuge bell · return to forest',-12,z,'exit')),
  ...[240,268,296].map((z,i)=>target('ward-'+i,['Root ward','Water ward','Echo ward'][i],0,z,'ward',{room:i})),
- target('heart','Keeper’s heartstone',0,321,'heart')
+ target('heart','Keeper’s heartstone',0,321,'heart'),
+  ...REGIONAL_RESOURCE_TARGETS
 ]);
 /** Exact ground, creek, camp and dungeon dressing used by both Three.js and the map. */
 export const ADVENTURE_SCENERY=Object.freeze({
