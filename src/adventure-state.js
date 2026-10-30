@@ -182,27 +182,36 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   const message='Made: '+r.title+(r.batches>1?' × '+r.batches+' batches':'')+(earnedXp?' · +'+earnedXp+' '+r.profession+' XP':'');
   emit('adventure',{reason:message});return ok(message);
  }
- /** No station interaction necessary; selecting two materials selects an
-  * unambiguous matching craft. More complex shared inputs use the recipe book. */
- function handcraft(recipeId,threatened,time){
+ /** Timed, per-item crafting; each finished cycle awards XP and materials. */
+ function startCraft(choice,station,target,time,threatened,player){
   if(work)return no('Finish or cancel your current work first.');
   if(threatened)return no('Cannot craft while enemies are attacking.');
-  const check=craftCheck(recipeId,'inventory');
-  return check.ok?finishCraft(check.recipe,time):check;
+  const id=typeof choice==='string'?choice:choice?.id;
+  const total=typeof choice==='string'?1:(choice?.quantity??choice?.batches??1);
+  if(!Number.isSafeInteger(total)||total<1||total>99)return no('Choose between 1 and 99 crafting cycles.');
+  const recipe=RECIPES.find(r=>r.id===id&&r.station===station);
+  if(!recipe)return no('This recipe needs another crafting method or workstation.');
+  if(total>1&&!recipe.result.material)return no('Unique equipment can only be crafted once.');
+  const available=Math.min(99,...Object.entries(recipe.cost).map(([key,n])=>Math.floor((mats[key]||0)/n)));
+  if(total>available)return no('Not enough materials for '+total+' crafting cycles.');
+  const check=craftCheck(id,station);
+  if(!check.ok)return check;
+  work={target:target||null,origin:target?null:{x:player.x,z:player.z},recipe:check.recipe,
+   completed:0,total,start:time,end:time+recipe.seconds};
+  return ok('Crafting '+total+' × '+recipe.title+' · '+recipe.seconds+'s each. Stop anytime to keep finished items and XP.');
  }
- function combine(first,second,threatened,time){
+ function combine(first,second,threatened,time,player){
   if(typeof first!=='string'||typeof second!=='string'||first===second)return no('Choose two different crafting materials.');
   const matches=RECIPES.filter(r=>r.station==='inventory'&&
    Object.hasOwn(r.cost,first)&&Object.hasOwn(r.cost,second));
   if(!matches.length)return no('These items cannot be combined. Check the Skills unlock list.');
   if(matches.length>1)return no('Several recipes use those materials. Examine either material and choose a recipe.');
-  return handcraft(matches[0].id,threatened,time);
+  return startCraft(matches[0].id,'inventory',null,time,threatened,player);
  }
  function begin(target,time,recipeId){
   if(work)return no('Finish or cancel your current work first.');
   if(target.kind==='station'){
-   const check=craftCheck(recipeId,target.station);if(!check.ok)return check;
-   work={target,recipe:check.recipe,start:time,end:time+check.recipe.seconds};
+   return startCraft(recipeId,target.station,target,time,false,player);
   }else if(target.kind==='resource'||target.kind==='grove'){
    if((respawns.get(target.id)||0)>time)return no('This resource is recovering. Try another nearby deposit.');
    const repeats=recipeId?.batches??1;
@@ -224,12 +233,26 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
   if(a.run&&!a.run.complete&&player.z>210)a.run.seconds=Math.min(86400,a.run.seconds+dt);
   if(!work)return;
   const w=work;
-  if(distance(player,w.target)>w.target.reach||!sight(player,w.target)){work=null;emit('adventure-notice',{reason:'Work cancelled: out of reach.'});return;}
+  if(w.target&&(distance(player,w.target)>w.target.reach||!sight(player,w.target))){
+   work=null;emit('adventure-notice',{reason:'Work cancelled: out of reach.'});return;
+  }
+  if(w.recipe&&w.origin&&distance(player,w.origin)>.45){
+   work=null;emit('adventure-notice',{reason:'Crafting stopped: you moved away.'});return;
+  }
   if(time<w.end)return;
   work=null;
   if(w.recipe){
-   const made=finishCraft(w.recipe,time);
-   if(!made.ok)emit('adventure-notice',{reason:made.reason});
+   // Even if many ticks elapsed, spend and reward one recipe batch at a time.
+   const cycles=Math.min(w.total-w.completed,Math.max(1,Math.floor((time-w.end)/w.recipe.seconds)+1));
+   for(let i=0;i<cycles;i++){
+    const made=finishCraft(w.recipe,w.end+i*w.recipe.seconds);
+    if(!made.ok){emit('adventure-notice',{reason:'Crafting stopped: '+made.reason});return;}
+    w.completed++;
+   }
+   if(w.completed<w.total){
+    const next=w.end+cycles*w.recipe.seconds;
+    work={...w,start:next-w.recipe.seconds,end:next};
+   }else emit('adventure-notice',{reason:'Crafting completed: '+w.completed+' × '+w.recipe.title});
   }else if(w.material==='softwood-logs'){
    const previous=data.professions.woodcuttingXp||0;
    const result=chopOnce(data,trees.get(w.target.id),time,random);
@@ -262,8 +285,8 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    a.tracked=q.id;emit('adventure',{reason:'Tracking '+q.title});
    return ok('Tracking '+q.title);
   }
-  if(kind==='craft'&&!target)return handcraft(choice,threatened,time);
-  if(kind==='combine'&&!target)return combine(choice?.first,choice?.second,threatened,time);
+  if(kind==='craft'&&!target)return startCraft(choice,'inventory',null,time,threatened,player);
+  if(kind==='combine'&&!target)return combine(choice?.first,choice?.second,threatened,time,player);
   if(kind==='eat'){
    if(time<eatUntil)return no('Wait before eating again.');
    if((mats.ration||0)<1)return no('Make field rations from reeds in your backpack.');
@@ -366,6 +389,7 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    catalogue:QUESTS.map(q=>({...q,status:questStatus(q),flags:[...progress(q.id).flags],
     prerequisites:QUEST_PREREQUISITES[q.id]||[]})),
    work:work?{name:work.recipe?.title||work.material,start:work.start,end:work.end,
+    ...(work.recipe?{recipeId:work.recipe.id,completed:work.completed,total:work.total,seconds:work.recipe.seconds,station:work.recipe.station}:{}),
     skill:work.recipe?.profession||work.target?.profession||(work.material==='softwood-logs'?'woodcutting':null),
     targetId:work.target?.id||null,x:work.target?.x,z:work.target?.z}:null,
    recentCraft:recentCraft?{...recentCraft}:null,
