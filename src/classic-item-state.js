@@ -1,5 +1,4 @@
 import {materialUses,materialSource} from './classic-progression.js';
-import {QUICK_ACTIONS,normalizeQuickSlots,assignQuickSlot} from './quick-slots.js';
 import {combatSourceSnapshot} from './gameplay-core.js';
 import {classicWeaponInterval} from './classic-combat-clock.js';
 /**
@@ -17,7 +16,8 @@ import {positionedEntries,reorderSlot,positionTransfer,inventoryKeyList,BAG_MIN_
 import {getItem} from './items.js';
 
 export const usableItem=id=>id==='material.ration'||id==='material.woodland-tonic';
-export const quickBindable=id=>usableItem(id)||['weapon','armour','slot'].includes(getItem(id)?.kind);
+/** Gear and consumables are never assignable to a combat skill slot. */
+export const quickBindable=()=>false;
 const owned=(data,item)=>{
  if(!item)return false;
  const {kind,legacy}=item;
@@ -54,17 +54,7 @@ export function classicItemSnapshot(data,style='melee'){
 function mutateItem(data,action,{atBank=false,atStore=false,player,dropId}={}){
  if(!action||typeof action!=='object')return {ok:false,reason:'Unknown action'};
  const {type,kind,style,id,slot,scope,from,to,direction}=action;
- if(type==='quick-slot'){
-  if(id!==null&&!QUICK_ACTIONS.includes(id)&&!quickBindable(id))return {ok:false,reason:'This item has no quick action.'};
-  const next=assignQuickSlot(data.quickSlots,action.index,id);
-  if(!next)return {ok:false,reason:'Choose one of the eight quick slots.'};
-  data.quickSlots=next;return {ok:true,reason:id?'Quick slot assigned.':'Quick slot cleared.'};
- }
- if(type==='quick-slots'){
-  const next=normalizeQuickSlots(action.bindings,quickBindable);
-  if(!next)return {ok:false,reason:'Invalid quick slot assignments.'};
-  data.quickSlots=next;return {ok:true,reason:'Quick slots updated.'};
- }
+ if(type==='quick-slot'||type==='quick-slots')return {ok:false,reason:'Combat slots hold skills only. Equip weapons from your backpack and select skills in COMBAT.'};
  if(type==='drop')return dropItem(data,action,player,dropId);
  if(type==='drag'){
   const {fromScope,toScope,fromIndex,toIndex,canonical}=action;

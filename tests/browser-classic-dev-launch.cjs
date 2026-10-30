@@ -98,14 +98,13 @@ const base=process.env.OAKREST_TEST_URL||'http://127.0.0.1:5278/oakrest-dev/';
   await page.locator('[data-style=magic]').tap();
   assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'magic');
   assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'magic');
-  // The utility editor must respond to real touch in iPad-size Chromium and
-  // WebKit emulation. This is not a substitute for physical Safari validation.
-  await page.locator('#oakrest-hotbar-edit').tap();
-  assert.equal(await page.locator('#oakrest-hotbar-editor').isVisible(),true);
-  await page.locator('#oakrest-hotbar-select-5').selectOption('drink');
-  assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'5');
-  assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'6');
-  await page.locator('#oakrest-hotbar-edit').tap();
+  // Old assign-any-item editor must not reappear on touch.
+  assert.equal(await page.locator('#oakrest-hotbar-edit').count(),0);
+  assert.equal(await page.locator('#oakrest-hotbar-editor').count(),0);
+  assert.deepEqual(await page.evaluate(()=>oakrestClassicQA.hotbarState().slots),
+   ['ability0','ability1','ability2','ability3','eat','drink','dodge','attack']);
+  assert.equal(await page.locator('#oakrest-food-slot').getAttribute('data-hotbar-slot'),'5');
+  assert.equal(await page.locator('#oakrest-potion-slot').getAttribute('data-hotbar-slot'),'6');
   assert.equal(await page.locator('#classic-joystick').isVisible(),false);
   const before=await page.evaluate(()=>{oakrestClassicQA.pauseAutomaticLoop();return oakrestClassicQA.state();});
   const destination=await page.evaluate(()=>{const p=oakrestClassicQA.state();const q=oakrestClassicQA.projectWorld(p.x+3,p.z),b=document.querySelector('#classic-game canvas').getBoundingClientRect();return {x:b.x+(q.x+1)*b.width/2,y:b.y+(q.y+1)*b.height/2};});

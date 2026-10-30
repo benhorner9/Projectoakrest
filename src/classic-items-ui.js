@@ -1,7 +1,5 @@
-import {recipeGuidance} from './classic-progression.js';
 import {findClassicInteractable} from './classic-interactions.js';
-import {RECIPES,ADVENTURE_MATERIALS} from './adventure-content.js';
-import {woodcuttingLevel} from './woodcutting.js';
+import {RECIPES} from './adventure-content.js';
 /** Classic 2.5D inventory and economy presentation.
  * DOM concerns stay here. All mutations use combat.itemAction and combat.pickup.
  */
@@ -10,10 +8,11 @@ import {STYLE_ORDER,LOADOUTS,levelFromXp} from './rules.js';
 import {classicBookIcon,classicBookStyleName} from './classic-combat-book.js';
 import {abilityDetails} from './classic-abilities.js';
 import {SLOT_ITEMS} from './equipment-slots.js';
-import {classicItemDetails,classicAbilityCatalogue,usableItem,quickBindable,canDropItem} from './classic-item-state.js';
+import {classicItemDetails,classicAbilityCatalogue,usableItem,canDropItem} from './classic-item-state.js';
 import {inventoryEntries} from './equipment-ui.js';
 import {bankGridEntries} from './town-ui.js';
 import {positionedEntries,BAG_MIN_SLOTS,VAULT_MIN_SLOTS} from './item-slot-layout.js';
+import {setupClassicItemPopups} from './classic-item-popups.js';
 const q=(root,id)=>root.querySelector('#'+id);
 function element(parent,tag,cls,text){
  const n=document.createElement(tag);if(cls)n.className=cls;
@@ -35,13 +34,18 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
  const tabs=[...host.querySelectorAll('[data-item-tab]')];
  let mode='inventory',detailId=null,selectedBank=null,selectedShop=null;
  let abilitySlot=0,inspectedAbilityId=null,lastCombatBookKey='';
- let combineSource=null,showMaking=false,recipeIngredients=[];
+ let combineSource=null;
  const save=()=>combat.sandboxSave();
  const view=()=>combat.itemSnapshot(style());
  function transact(action){
   const result=combat.itemAction(action,player());
   notify(result.reason||(result.ok?'Action completed':'Action unavailable'));
-  if(result.ok)changed();
+  if(result.ok){
+   // The weapon determines the style; equipping it changes the active style
+   // and reloads that weapon family's four chosen combat skills.
+   if(action.type==='equip'&&action.kind==='weapon'&&action.id&&action.style!==style())changed(action.style);
+   else changed();
+  }
   render();return result.ok;
  }
  function craftFromBag(kind,choice){
@@ -49,8 +53,14 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   notify(result?.reason||'Unable to make that.');
   if(result?.ok)changed();
   detailId=null;combineSource=null;render();
-  return result?.ok===true;
+  return result;
  }
+ const popups=setupClassicItemPopups({
+  doc:document,save,style,combat,
+  inspect:(parent,id)=>examine(parent,id,false),
+  transact,craft:craftFromBag,
+  onUseWith:id=>{combineSource=id;render();content.scrollTop=0;}
+ });
  function showDetails(id){detailId=id;render();}
  function tile(grid,entry,index,scope){
   if(!entry){
@@ -66,8 +76,12 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
     if(entry.kind==='material'&&entry.id!==combineSource){
      const ingredients=[combineSource,entry.id];
      const matches=RECIPES.filter(r=>r.station==='inventory'&&ingredients.every(id=>Object.hasOwn(r.cost,id)));
-     if(matches.length>1){recipeIngredients=ingredients;showMaking=true;combineSource=null;detailId=null;render();}
-     else craftFromBag('combine',{first:combineSource,second:entry.id});
+     if(matches.length>1){combineSource=null;detailId=null;render();popups.openCraft(ingredients);}
+    else {
+     const first=combineSource;
+     const result=craftFromBag('combine',{first,second:entry.id});
+     if(result?.ok)popups.openCraft([first,entry.id]);
+    }
     }
     else {combineSource=null;notify('Choose a different material to combine.');render();}
     return;
@@ -75,10 +89,11 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    if(mode==='bank'){
     selectedBank={...entry,scope};
     detailId=entry.canonical;render();
-   }else showDetails(entry.canonical);
+   }else if(mode==='inventory')popups.openItem(cell,entry.canonical);
+   else showDetails(entry.canonical);
   });
   cell.dataset.scope=scope;cell.dataset.slotIndex=String(index);cell.dataset.canonical=entry.canonical;
-  cell.setAttribute('aria-label','Examine '+(item?.title||entry.id));
+  cell.setAttribute('aria-label','Open actions for '+(item?.title||entry.id));
   icon(cell,entry.canonical);
   if(entry.qty>1)element(cell,'span','classic-item-qty',entry.qty);
   cell.title=item?.title||entry.id;
@@ -91,7 +106,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   slots.forEach((entry,i)=>tile(wrapper,entry,i,scope));
   return wrapper;
  }
- function examine(parent,id){
+ function examine(parent,id,includeActions=true){
   const data=save(),details=classicItemDetails(data,id,style());
   if(!details)return;
   const ex=element(parent,'div','classic-examine');
@@ -103,22 +118,13 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    const fact=element(ex,'div','classic-item-fact');
    element(fact,'span',null,key);element(fact,'strong',null,value);
   }
-  if(details.item.kind==='material'&&RECIPES.some(r=>r.station==='inventory'&&Object.hasOwn(r.cost,details.item.legacy.itemId))){
-   button(ex,'classic-item-action','RECIPES',()=>{showMaking=true;recipeIngredients=[];combineSource=null;render();});
-   button(ex,'classic-item-action','USE WITH…',()=>{
-    combineSource=details.item.legacy.itemId;detailId=null;render();
-   });
-  }
+  if(!includeActions)return;
   if(mode==='inventory'&&usableItem(id)){
    const state=combat.getState(),kind=id==='material.ration'?'eat':'drink',remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);
    const use=button(ex,'classic-item-action',remaining>0?'READY IN '+remaining.toFixed(1)+'s':kind==='eat'?'EAT':'DRINK',()=>transact({type:'use',id}),remaining>0||state.hp<=0||state.hp>=state.maxHp||!data.inventory.materials[details.item.legacy.itemId]);use.dataset.consumable=kind;use.dataset.quantity=String(data.inventory.materials[details.item.legacy.itemId]||0);
   }
-  if(mode==='inventory'&&quickBindable(id)){
-   const line=element(ex,'div','classic-item-actions'),select=element(line,'select','classic-quick-choice');
-   select.setAttribute('aria-label','Assign '+details.title+' to quick slot');
-   for(let i=0;i<8;i++){const option=element(select,'option',null,'Slot '+(i+1));option.value=String(i);}
-   button(line,'classic-item-action','ASSIGN QUICK SLOT',()=>transact({type:'quick-slot',index:Number(select.value),id}));
-  }
+  if(mode==='inventory'&&details.item.kind==='weapon')
+   element(ex,'p','classic-muted','Equip this weapon to use its combat style. Choose your four techniques in COMBAT; weapons are never assigned to the skill bar.');
   if(mode==='inventory'&&canDropItem(details.item)){
    const entry=inventoryEntries(data).find(e=>e.canonical===id);
    if(entry){
@@ -147,34 +153,8 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   const capacity=element(content,'span','classic-bag-capacity',s.capacity.bag+' / '+s.capacity.limit+' slots');
   capacity.title='Equipped gear remains owned in your backpack. Existing over-capacity saves are preserved.';
   grid(content,inventoryEntries(data),'bag','',BAG_MIN_SLOTS);
-  if(detailId)examine(content,detailId);
-  // Always-visible backpack utilities; no more "Inventory tools" disclosure.
-  const tools=element(content,'section','classic-bag-tools');
-  tools.setAttribute('aria-label','Backpack actions');
-  const actions=element(tools,'div','classic-item-actions');
-  element(actions,'small','classic-muted','Drag items to rearrange · Alt+arrow with keyboard.');
-  if(showMaking){
-   const maker=element(tools,'section','classic-handcraft');
-   element(maker,'h3',null,'MAKE FROM YOUR BACKPACK');
-   element(maker,'p','classic-muted','Fletching, Inscription and Fieldcraft are made by hand. Metalwork still requires a forge.');
-   const materials=data.inventory.materials,progress=data.adventure?.skills||{};
-   for(const recipe of RECIPES.filter(r=>r.station==='inventory'&&recipeIngredients.every(id=>Object.hasOwn(r.cost,id)))){
-    const row=element(maker,'div','craft-option');row.dataset.recipe=recipe.id;
-    element(row,'strong',null,recipe.title);
-    element(row,'small',null,Object.entries(recipe.cost).map(([id,n])=>
-     (ADVENTURE_MATERIALS[id]?.[0]||getItem('material.'+id)?.title||id)+
-     ' '+(materials[id]||0)+'/'+n).join(' · '));
-    const level=recipe.profession?woodcuttingLevel(progress[recipe.profession]||0).level:99;
-    const ready=Object.entries(recipe.cost).every(([id,n])=>(materials[id]||0)>=n);
-    const guide=recipeGuidance(data,recipe);
-    element(row,'small',null,guide.training+(guide.requirement?' · '+guide.requirement:''));
-    element(row,'small',null,guide.owned?'Already owned in bag or bank':ready?'Materials ready':'Gather more materials');
-    button(row,'classic-item-action',guide.owned?'OWNED':ready&&level>=recipe.level?'MAKE':'LOCKED / MATERIALS',
-     ()=>craftFromBag('craft',recipe.id),guide.owned||!ready||level<recipe.level);
-    if(recipe.result.material)button(row,'classic-item-action','MAKE 5 BATCHES · '+recipe.result.amount*5,
-     ()=>craftFromBag('craft',{id:recipe.id,batches:5}),level<recipe.level||!Object.entries(recipe.cost).every(([id,n])=>(materials[id]||0)>=n*5));
-   }
-  }
+  // Item actions and recipes are available without scrolling the bag.
+
  }
  function renderEquip(){
   const s=view(),panel=element(content,'section','classic-gear-panel');
@@ -419,11 +399,12 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
   content.scrollTop=scroll;
  }
  function open(next='inventory'){
+  popups.closeItem();popups.closeCraft({cancel:true});
   if(!['inventory','equipment','bank','shop','abilities'].includes(next))return;
   mode=next;detailId=null;selectedBank=null;selectedShop=null;combineSource=null;
   host.hidden=false;content.scrollTop=0;render();onOpen(next);
  }
- function hide(){host.hidden=true;detailId=null;combineSource=null;onClose();}
+ function hide(){popups.closeCraft({cancel:true});popups.close();host.hidden=true;detailId=null;combineSource=null;onClose();}
  for(const tab of tabs)tab.addEventListener('click',()=>open(tab.dataset.itemTab));
  close.addEventListener('click',hide);
  return {open,hide,render,isOpen:()=>!host.hidden,
@@ -437,7 +418,7 @@ export function setupClassicItems({combat,player,style,notify,changed,onOpen=()=
    }
    return transact({type:'drag',...payload});
   },
-  tick:()=>{if(!host.hidden&&mode==='inventory'){
+  tick:()=>{popups.tick();if(!host.hidden&&mode==='inventory'){
    const state=combat.getState();
    for(const node of content.querySelectorAll('[data-consumable]')){
     const kind=node.dataset.consumable,remaining=Math.max(0,(state.consumableCooldowns?.[kind]||0)-state.time);

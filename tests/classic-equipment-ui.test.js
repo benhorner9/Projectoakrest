@@ -85,16 +85,14 @@ test('full stack or full bag leaves ground loot available, including duplicate e
  d.inventory.materials.ration=9999;d.groundLoot=[{id:'ration',kind:'material',itemId:'ration',playerDrop:true,amount:2,x:0,z:39}];
  assert.equal(classicPickup(d,at.player,'ration').ok,false);assert.equal(d.groundLoot.length,1);assert.equal(d.inventory.materials.ration,9999);
 });
-test('all eight character quick slots assign, swap, clear and sanitize without changing equipped abilities',()=>{
+test('weapon and item quick slot assignments are rejected and existing ability loadouts survive save migration',()=>{
  const d=defaultSave(),abilities=structuredClone(d.slots);
- assert.ok(act(d,{type:'quick-slot',index:0,id:'eat'}).ok);assert.equal(d.quickSlots[0],'eat');assert.equal(d.quickSlots[4],'ability0');
- assert.ok(act(d,{type:'quick-slot',index:7,id:'material.ration'}).ok);
- assert.ok(act(d,{type:'quick-slot',index:1,id:null}).ok);
- assert.equal(act(d,{type:'quick-slot',index:8,id:'drink'}).ok,false);
- assert.equal(act(d,{type:'quick-slot',index:2,id:'material.softwood-logs'}).ok,false);
- assert.deepEqual(validSave(d).quickSlots,d.quickSlots);assert.deepEqual(d.slots,abilities);
+ for(const id of ['eat','material.ration','weapon.melee.sword','slot.wayfarer-amulet',null]){
+  assert.equal(act(d,{type:'quick-slot',index:0,id}).ok,false);
+ }
+ assert.deepEqual(d.slots,abilities);
  d.quickSlots=['eat','eat','bad','weapon.melee.sword',null];
- assert.deepEqual(validSave(d).quickSlots,['eat',null,null,'weapon.melee.sword',null,null,null,null]);
+ assert.deepEqual(validSave(d).quickSlots,DEFAULT_QUICK_SLOTS);
  assert.equal(defaultSave().quickSlots,null);assert.equal(DEFAULT_QUICK_SLOTS.length,8);
 });
 test('bank transactions preserve the live adventure material reference and consumable cooldown authority',()=>{

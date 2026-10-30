@@ -44,17 +44,25 @@ let browser;
    await page.goto('http://127.0.0.1:5278/classic.html?qa=1',{waitUntil:'domcontentloaded'});
    await page.waitForFunction(()=>window.oakrestClassicQA);await page.evaluate(()=>oakrestClassicQA.enableSaving());await advance(0);
    await press(page.locator('#classic-inventory-toggle'));
-   assert.equal(await page.locator('.classic-bag-tools summary').count(),0);
+   assert.equal(await page.locator('.classic-bag-tools').count(),0,'no scroll-dependent crafting controls');
    assert.equal(await page.getByRole('button',{name:'MAKE FROM BAG'}).count(),0);
-   await press(page.locator('[data-scope=bag][data-canonical="material.softwood-logs"]'));
-   await press(page.getByRole('button',{name:'RECIPES',exact:true}));
-   await press(page.locator('[data-recipe="arrows"]').getByRole('button',{name:'MAKE 5 BATCHES · 150',exact:true}));
-   await press(page.locator('[data-recipe="frost"]').getByRole('button',{name:'MAKE 5 BATCHES · 300',exact:true}));
-   for(const recipe of ['leather','robes','quiver','focus'])await press(page.locator('[data-recipe="'+recipe+'"]').getByRole('button',{name:'MAKE',exact:true}));
+   const craftInventory=async(recipe,count,source)=>{
+    await press(page.locator('#classic-inventory-toggle'));
+    await press(page.locator('[data-scope=bag][data-canonical="material.'+source+'"]'));
+    await press(page.getByRole('button',{name:'CRAFT…',exact:true}));
+    await page.getByLabel('Choose crafting recipe').selectOption(recipe);
+    await page.getByLabel('Craft quantity').fill(String(count));
+    assert.ok((await page.locator('.oakrest-craft-timing').textContent()).includes(String(count*3)));
+    await press(page.getByRole('button',{name:'START CRAFTING'}));
+    await advance(count*3+.6);
+    await press(page.getByRole('button',{name:'CLOSE',exact:true}));
+   };
+   await craftInventory('arrows',5,'softwood-logs');
+   await craftInventory('frost',5,'softwood-logs');
+   for(const [recipe,source] of [['leather','boar-hide'],['robes','moss-fibre'],['quiver','bronze-bar'],['focus','moss-fibre']])
+    await craftInventory(recipe,1,source);
    let state=await snapshot();assert.equal(state.inventory.materials['field-arrows'],150);assert.equal(state.inventory.materials['frost-scroll'],300);
    assert.ok(state.inventory.armour.includes('leather'));assert.ok(state.inventory.slotted.includes('apprentice-orb'));
-   assert.equal(await page.locator('[data-recipe="leather"]').getByRole('button',{name:'OWNED',exact:true}).isDisabled(),true);
-   await page.locator('[data-recipe="frost"]').scrollIntoViewIfNeeded();
    await page.screenshot({path:'qa/progression/'+(touch?'touch':'desktop')+'-recipes.png'});
    await interact('adventure:forge');
    for(const title of ['Forge wayfarer amulet','Forge strengthened longsword']){

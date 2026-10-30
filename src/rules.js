@@ -360,11 +360,7 @@ export function validSave(raw){
       });
     }
   }
-  d.quickSlots=normalizeQuickSlots(raw.quickSlots,id=>{
-   const [kind,a,b,...extra]=id.split('.');
-   if(extra.length||kind!=='weapon'&&b!==undefined)return false;
-   return kind==='weapon'?Object.hasOwn(LOADOUTS[a]||{},b):kind==='armour'?Object.hasOwn(ARMOUR,a):
-    kind==='slot'?Object.hasOwn(SLOT_ITEMS,a):['material.ration','material.woodland-tonic'].includes(id);
-  });
+  // Migrate old assignable item bindings without touching gear or ability loadouts.
+  d.quickSlots=normalizeQuickSlots(raw.quickSlots);
   return d;
 }

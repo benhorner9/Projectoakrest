@@ -28,6 +28,11 @@ function fillBag(d){
 test('five craft batches debit and grant exactly once, train per batch, and survive reload',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'softwood-logs':5});
  assert.ok(h.act('craft',{id:'arrows',batches:5}).ok);
+ assert.equal(h.data.inventory.materials['field-arrows']||0,0,'no free materials on button press');
+ h.adventure.tick(3,3,{x:0,z:39});
+ assert.equal(h.data.inventory.materials['field-arrows'],30,'first completed cycle awards output');
+ assert.equal(h.data.adventure.skills.fletching,18,'first completed cycle grants its own XP');
+ h.adventure.tick(15,12,{x:0,z:39});
  assert.equal(h.data.inventory.materials['field-arrows'],150);
  assert.equal(h.data.inventory.materials['softwood-logs'],0);
  assert.equal(h.data.adventure.skills.fletching,90);
@@ -37,23 +42,37 @@ test('five craft batches debit and grant exactly once, train per batch, and surv
 });
 test('batch count validation and supply stack overflow never spend resources or grant XP',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'softwood-logs':99,'field-arrows':9900});
- for(const batches of [0,-1,1.5,11,Infinity,'5',undefined]){
+ for(const batches of [0,-1,1.5,100,Infinity,'5']){
   const before=structuredClone(h.data);assert.equal(h.act('craft',{id:'arrows',batches}).ok,false);assert.deepEqual(h.data,before);
  }
  const before=structuredClone(h.data);assert.equal(h.act('craft',{id:'arrows',batches:5}).ok,false);assert.deepEqual(h.data,before);
 });
-test('bulk crafting uses the final bag and permits a consumed stack to free its output slot',()=>{
+test('timed crafting requires enough free capacity for each new output stack',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'softwood-logs':5});fillBag(h.data);
- assert.ok(h.act('craft',{id:'arrows',batches:5}).ok);assert.equal(inventoryKeyList(h.data).length,28);
+ const before=structuredClone(h.data);
+ assert.equal(h.act('craft',{id:'arrows',batches:5}).ok,false,'consuming only one of five logs cannot free the stack for the first output');
+ assert.deepEqual(h.data,before,'failed order leaves every material and XP unchanged');
+ h.data.inventory.slotted.pop();
+ assert.equal(inventoryKeyList(h.data).length,27);
+ assert.ok(h.act('craft',{id:'arrows',batches:5}).ok);
+ assert.equal(inventoryKeyList(h.data).length,27,'start does not grant output');
+ h.adventure.tick(15,15,{x:0,z:39});
+ assert.equal(h.data.inventory.materials['field-arrows'],150);
+ assert.equal(inventoryKeyList(h.data).length,27,'consumed logs and new arrows leave the freed slot open');
 });
 test('forge batch is timed, revalidates at completion, and interruption spends nothing',()=>{
  const h=harness();Object.assign(h.data.inventory.materials,{'copper-ore':5,'tin-ore':5});
  const forge=ADVENTURE_TARGETS.find(t=>t.station==='forge'),p={x:forge.x,z:forge.z-1};
  assert.ok(h.act('craft',{id:'bar',batches:5},forge.id).ok);
- h.adventure.tick(14,14,p);assert.equal(h.data.inventory.materials['bronze-bar'],undefined);
- h.adventure.event({type:'hurt'});h.adventure.tick(16,2,p);assert.equal(h.data.inventory.materials['copper-ore'],5);
- assert.ok(h.act('craft',{id:'bar',batches:5},forge.id).ok);
- h.adventure.tick(15,15,p);assert.equal(h.data.inventory.materials['bronze-bar'],5);assert.equal(h.data.adventure.skills.blacksmithing,90);
+ h.adventure.tick(7,7,p);
+ assert.equal(h.data.inventory.materials['bronze-bar'],2,'each of two finished cycles awards bars');
+ assert.equal(h.data.adventure.skills.blacksmithing,36,'each finished cycle awards 18 XP');
+ h.adventure.event({type:'hurt'});h.adventure.tick(9,2,p);
+ assert.equal(h.data.inventory.materials['copper-ore'],3,'unfinished third cycle spends nothing');
+ assert.ok(h.act('craft',{id:'bar',batches:3},forge.id).ok);
+ h.adventure.tick(9,9,p);
+ assert.equal(h.data.inventory.materials['bronze-bar'],5);
+ assert.equal(h.data.adventure.skills.blacksmithing,90);
  assert.equal(h.data.inventory.materials['copper-ore'],0);
 });
 for(const id of ['leather','robes','quiver','focus','amulet','forged','reinforced','runic'])test(id+' recipe preserves ownership and rejects bag/bank duplicates without spending',()=>{
@@ -61,6 +80,7 @@ for(const id of ['leather','robes','quiver','focus','amulet','forged','reinforce
  assert.equal(h.act('craft',{id,batches:2},r.station==='forge'?'adventure:forge':null).ok,false);
  const made=h.act('craft',id,r.station==='forge'?'adventure:forge':null);assert.ok(made.ok,made.reason);
  if(r.station==='forge'){const t=ADVENTURE_TARGETS.find(t=>t.station==='forge');h.adventure.tick(4,4,{x:t.x,z:t.z-1});}
+ else h.adventure.tick(4,4,{x:0,z:39});
  const o=r.result,key=o.weapon?'weapons':o.armour?'armour':'slotted',item=o.weapon||o.armour||o.slot;
  const bag=o.weapon?h.data.inventory.weapons[o.style]:h.data.inventory[key],bank=o.weapon?h.data.bank.weapons[o.style]:h.data.bank[key];
  assert.ok(bag.includes(item));Object.assign(h.data.inventory.materials,{...r.cost});

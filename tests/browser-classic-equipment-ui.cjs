@@ -65,7 +65,9 @@ let browser;
  assert.equal((await page.evaluate(()=>oakrestClassicQA.state())).x,playerBefore.x,'UI drag must not move the world character');
  assert.notEqual(rationIndex,'0');
  await drag(bag('material.ration'),page.locator('[data-hotbar-slot="1"]'));
- assert.equal((await snapshot()).quickSlots[0],'material.ration','any of eight slots can hold food');
+ assert.deepEqual(await page.evaluate(()=>oakrestClassicQA.hotbarState().slots),
+  ['ability0','ability1','ability2','ability3','eat','drink','dodge','attack'],
+  'dragging a bag item cannot replace combat skills');
  // The bar re-renders frequently during idle/combat ticks. Rewriting external
  // SVG <use> references, image srcs or every button ID on each update makes
  // the actual iPad Safari toolbar visibly flash. Only changed bindings may
@@ -87,13 +89,12 @@ let browser;
  assert.equal(idleBar.before.length,8);
  assert.deepEqual(idleBar.after,idleBar.before,'quick slots retain their icon and button identity through idle ticks');
  assert.deepEqual(idleBar.mutated,[],'stable Safari quick bar must not reload icons or re-ID buttons every tick');
- await page.locator('#oakrest-hotbar-edit').tap();
- assert.equal(await page.locator('#oakrest-hotbar-editor select').count(),8);
- await page.locator('#oakrest-hotbar-select-8').selectOption('equipment');
- await page.locator('#oakrest-hotbar-select-2').selectOption('');
- await page.locator('#oakrest-hotbar-edit').tap();
- assert.equal((await snapshot()).quickSlots[7],'equipment');assert.equal((await snapshot()).quickSlots[1],null);
- await page.locator('[data-hotbar-slot="8"]').tap();assert.equal(await page.evaluate(()=>oakrestClassicQA.windowState()),'equipment');
+ assert.equal(await page.locator('#oakrest-hotbar-edit').count(),0,'no quick-item ARRANGE editor');
+ assert.equal(await page.locator('.classic-quick-choice').count(),0,'inventory cannot assign gear to combat bar');
+ assert.equal(await page.locator('[data-hotbar-slot="5"]').getAttribute('data-binding'),'eat');
+ assert.equal(await page.locator('[data-hotbar-slot="8"]').getAttribute('data-binding'),'attack');
+ // The GEAR overview displays draggable owned gear and the paper doll together.
+ await open('equipment');
  // Drag from the equipment inventory list into the corresponding paperdoll.
  await drag(bag('slot.recruit-shield'),page.locator('[data-equipment-slot="offhand"]'));
  assert.equal((await snapshot()).equipment.melee.offhand,'recruit-shield');
@@ -197,13 +198,37 @@ let browser;
  let d=await snapshot();assert.equal(d.inventory.materials['softwood-logs'],17);const drop=d.groundLoot.find(d=>d.playerDrop);
  assert.ok(drop);await page.evaluate(id=>oakrestClassicQA.pickupDrop(id),drop.id);
  assert.equal((await snapshot()).inventory.materials['softwood-logs'],20);
- // Item-on-item crafting remains connected after several item transactions.
+ // Tapping an item reveals a compact action menu without scrolling.
  await open('inventory');await bag('material.reed').tap();
- // Use the existing maker for a one-material recipe; item-on-item recipes remain in existing adventure suites.
- assert.equal(await page.locator('.classic-bag-tools summary').count(),0,'bag maker is always available');await page.getByRole('button',{name:'RECIPES',exact:true}).tap();
- const rationRecipe=page.locator('.craft-option').filter({hasText:'Bundle 3 field rations'});
- await rationRecipe.getByRole('button',{name:'MAKE',exact:true}).tap();
- assert.ok((await snapshot()).inventory.materials.ration>8);
+ assert.equal(await page.locator('.oakrest-item-context-menu').isVisible(),true);
+ assert.equal(await page.locator('.classic-bag-tools').count(),0,'old scroll-down bag tools removed');
+ await page.getByRole('button',{name:'CRAFT…',exact:true}).tap();
+ assert.equal(await page.locator('.oakrest-craft-popup').isVisible(),true);
+ await page.getByLabel('Choose crafting recipe').selectOption('rations');
+ await page.getByLabel('Craft quantity').fill('1');
+ await page.getByRole('button',{name:'START CRAFTING'}).tap();
+ assert.equal((await snapshot()).inventory.materials.ration,8,'crafting gives no instant output');
+ await page.evaluate(()=>oakrestClassicQA.advance(3.3));
+ assert.ok((await snapshot()).inventory.materials.ration>8,'one completed cycle grants rations');
+ await page.getByRole('button',{name:'CLOSE',exact:true}).tap();
+ // Stop after the first of two queued crafting cycles: one reward and one
+ // increment of XP, without consuming unfinished ingredients.
+ await open('inventory');await bag('material.reed').tap();
+ await page.getByRole('button',{name:'CRAFT…',exact:true}).tap();
+ await page.getByLabel('Choose crafting recipe').selectOption('rations');
+ await page.getByLabel('Craft quantity').fill('2');
+ const beforePartial=await snapshot(),beforeCooking=beforePartial.adventure.skills.cooking||0;
+ await page.getByRole('button',{name:'START CRAFTING'}).tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(3.3));
+ const midCraft=await snapshot();
+ assert.equal(midCraft.inventory.materials.ration,beforePartial.inventory.materials.ration+3,'one completed craft cycle yields exactly one ration batch');
+ assert.equal(midCraft.adventure.skills.cooking,beforeCooking+12,'XP awarded on the first finished cycle');
+ await page.getByRole('button',{name:'STOP CRAFTING'}).tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(5));
+ const stopped=await snapshot();
+ assert.equal(stopped.inventory.materials.ration,midCraft.inventory.materials.ration,'cancelling does not grant second batch');
+ assert.equal(stopped.adventure.skills.cooking,midCraft.adventure.skills.cooking,'cancelling does not grant unfinished XP');
+ await page.getByRole('button',{name:'CLOSE',exact:true}).tap();
  // Real damage, quick-slot healing, then the inventory Use button share one cooldown.
  await page.evaluate(()=>{
   const e=oakrestClassicQA.combatState().monsters.find(m=>m.id==='bandit-a');
@@ -215,15 +240,16 @@ let browser;
  });
  const hurt=await page.evaluate(()=>oakrestClassicQA.combatState());assert.ok(hurt.hp>0&&hurt.hp<=hurt.maxHp-40,'real damage setup: '+JSON.stringify({hp:hurt.hp,maxHp:hurt.maxHp,bandit:hurt.monsters.find(m=>m.id==='bandit-a')}));
  const food=(await snapshot()).inventory.materials.ration;
- await page.locator('[data-hotbar-slot="1"]').tap();
+ await page.locator('[data-hotbar-slot="5"]').tap();
  assert.equal((await snapshot()).inventory.materials.ration,food-1);
  assert.ok((await page.evaluate(()=>oakrestClassicQA.combatState())).hp>hurt.hp);
- assert.equal(await page.locator('[data-hotbar-slot="1"]').isDisabled(),true);
+ assert.equal(await page.locator('[data-hotbar-slot="5"]').isDisabled(),true);
  await open('inventory');await bag('material.ration').tap();
- assert.equal(await page.locator('[data-consumable="eat"]').isDisabled(),true);
+ assert.equal(await page.locator('.oakrest-item-context-menu').isVisible(),true);
+ await page.getByRole('button',{name:'CANCEL',exact:true}).tap();
  await page.evaluate(()=>oakrestClassicQA.advance(8));
- assert.equal(await page.locator('[data-consumable="eat"]').isDisabled(),false);
- await page.locator('[data-consumable="eat"]').tap();
+ await bag('material.ration').tap();
+ await page.getByRole('button',{name:'EAT',exact:true}).tap();
  assert.equal((await snapshot()).inventory.materials.ration,food-2);
  await open('skills');assert.ok(await page.locator('.classic-skill-card').count()>=10);
  await page.locator('.classic-skill-card[data-skill-id="woodcutting"]').tap();
@@ -284,9 +310,19 @@ let browser;
 
  }
  await open('equipment');await page.evaluate(()=>oakrestClassicQA.advance(.02));await page.screenshot({path:'qa/classic-block3-equipment.png'});
- // A second named character must not inherit the first character's eight bindings.
+ // Equipping an owned weapon from BAG selects its inherent style automatically.
+ await page.locator('#classic-styles [data-style="ranged"]').tap();
+ await open('inventory');await bag('weapon.melee.sword').tap();
+ assert.equal(await page.locator('.classic-quick-choice').count(),0);
+ await page.getByRole('button',{name:'EQUIP',exact:true}).tap();
+ await page.evaluate(()=>oakrestClassicQA.advance(1));
+ assert.equal((await snapshot()).gear.melee,'sword','weapon occupies its correct equipment slot');
+ assert.equal(await page.evaluate(()=>oakrestClassicQA.state().style),'melee','equipping a sword switches from ranged to melee');
+ assert.equal(await page.locator('#oakrest-action-deck').getAttribute('data-combat-style'),'melee');
+ assert.equal(await page.locator('[data-hotbar-slot="1"]').getAttribute('data-binding'),'ability0');
+ // A second character's legacy item/map bindings must migrate to the fixed skill bar.
  await page.evaluate(({other,prefix})=>localStorage.setItem(prefix+'active-character',other),{other,prefix});
  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.oakrestClassicQA);
- assert.equal((await snapshot()).quickSlots[0],'map');assert.equal((await snapshot()).quickSlots[7],null);
- assert.deepEqual(errors,[]);console.log('PASS: eight saved bindings, touch/mouse drag, nine equipment slots, 2H loadouts, style panels, quantity banking, drops, crafting, skills, quests, map and separate character reload.');
+ assert.deepEqual((await snapshot()).quickSlots,['ability0','ability1','ability2','ability3','eat','drink','dodge','attack']);
+ assert.deepEqual(errors,[]);console.log('PASS: fixed skill bar, touch/mouse drag, nine equipment slots, 2H loadouts, style panels, quantity banking, drops, crafting, skills, quests, map and separate character reload.');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -67,6 +67,8 @@ test('crafting uses freed input slots at bag capacity without losing materials',
  fillBag(save);
  const h=create(save);
  assert.equal(h.act('craft',null,'arrows').ok,true);
+ assert.equal(save.inventory.materials['softwood-logs']||0,1,'materials remain until craft completes');
+ h.world.tick(3.1,3.1,{x:0,z:39});
  assert.equal(save.inventory.materials['softwood-logs']||0,0);
  assert.equal(save.inventory.materials['field-arrows'],30);
  assert.equal(inventoryKeyList(save).length,28);
