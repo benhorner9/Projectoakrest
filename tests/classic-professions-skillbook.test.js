@@ -7,6 +7,7 @@ import {skillBookSnapshot,CLASSIC_SKILLS} from '../src/classic-skill-catalogue.j
 import {woodcuttingLevel} from '../src/woodcutting.js';
 const start=()=>{const d=freshCharacterSave();d.onboarding.area='world';return d;};
 const action=(c,kind,choice)=>c.adventureAction(kind,{choice},{x:0,z:39});
+const advance=(c,seconds=3.1)=>c.tick(seconds,{x:0,z:39});
 test('only metalwork is a world crafting station; all other crafts use the backpack',()=>{
  assert.deepEqual(ADVENTURE_TARGETS.filter(t=>t.kind==='station').map(t=>t.station),['forge']);
  assert.ok(RECIPES.filter(r=>r.station==='inventory').length>=7);
@@ -18,12 +19,13 @@ test('backpack makes ammunition without a bench, spends resources and trains fle
  const c=createClassicCombat({save,adventure:true,random:()=>.1});
  const r=action(c,'craft','arrows');
  assert.equal(r.ok,true,r.reason);
- const post=c.persistentSave();
+ assert.equal(c.persistentSave().inventory.materials['softwood-logs'],3,'starting work spends nothing');
+ advance(c);const post=c.persistentSave();
  assert.equal(post.inventory.materials['softwood-logs'],2);
  assert.equal(post.inventory.materials['field-arrows'],30);
  assert.equal(post.adventure.skills.fletching,18);
  assert.equal(action(c,'craft','arrows').ok,true);
- assert.equal(c.persistentSave().adventure.skills.fletching,36);
+ advance(c);assert.equal(c.persistentSave().adventure.skills.fletching,36);
 });
 test('use-with requires two actual different components and fails safely without a valid pairing',()=>{
  const save=start();save.inventory.materials={'reed':4,'moss-fibre':2,'copper-ore':2};
@@ -33,7 +35,7 @@ test('use-with requires two actual different components and fails safely without
  assert.equal(c.persistentSave().inventory.materials.reed,4);
  const made=action(c,'combine',{first:'reed',second:'moss-fibre'});
  assert.equal(made.ok,true,made.reason);
- const after=c.persistentSave();
+ advance(c);const after=c.persistentSave();
  assert.equal(after.inventory.materials.reed,2);
  assert.equal(after.inventory.materials['moss-fibre'],1);
  assert.equal(after.inventory.materials['ember-scroll'],60);
@@ -50,7 +52,8 @@ test('Fieldcraft gains independent persistent levels; level-unlock book uses rea
  const save=start();save.inventory.materials={'reed':6};
  let c=createClassicCombat({save,adventure:true});
  assert.equal(action(c,'craft','rations').ok,true);
- assert.equal(c.persistentSave().adventure.skills.cooking,12);
+ assert.equal(c.persistentSave().adventure.skills.cooking||0,0,'XP starts at cycle completion');
+ advance(c);assert.equal(c.persistentSave().adventure.skills.cooking,12);
  const reloaded=validSave(c.persistentSave());
  c=createClassicCombat({save:reloaded,adventure:true});
  assert.equal(c.adventureState().skills.cooking,12);
