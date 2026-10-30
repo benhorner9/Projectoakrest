@@ -27,7 +27,7 @@ let browser;
   await page.waitForFunction(()=>!!window.oakrestClassicQA,{timeout:30000});
   await page.evaluate(()=>oakrestClassicQA.pauseAutomaticLoop());
   assert.equal(await page.evaluate(()=>oakrestClassicQA.adventureAction('craft',null,'arrows').ok),true);
-  await page.evaluate(()=>oakrestClassicQA.advance(.1));
+  await page.evaluate(()=>oakrestClassicQA.advance(3.1));
   const result=await page.evaluate(()=>{
    const qa=oakrestClassicQA;
    const float=document.querySelector('.classic-skill-xp-float');
