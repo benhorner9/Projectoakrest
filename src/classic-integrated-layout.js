@@ -20,7 +20,7 @@ export function installClassicIntegratedLayout(doc=document){
  const mapHead=node('section','classic-sidebar-map',sidebar);
  // The decorative Classic title header is hidden in the live framed HUD.
  // Reparent the real logout control into the visible top-right map header.
- get('classic-settings-window').append(get('classic-logout'));
+ // The existing logout control remains in the visible location header.
  const map=get('classic-minimap-expand').parentElement;
  // Reuse the actual live location and settings elements. No second indicator,
  // invented player count, or fake time-of-day state is introduced.
@@ -29,6 +29,11 @@ export function installClassicIntegratedLayout(doc=document){
  const top=node('div','oakrest-place-top',place);
  node('strong','oakrest-place-brand',top).textContent='OAKREST';
  top.append(get('classic-settings-toggle'));
+ const logout=get('classic-logout');
+ logout.classList.add('oakrest-visible-logout');
+ logout.textContent='LOG OUT';
+ logout.setAttribute('aria-label','Save and return to character selection');
+ top.append(logout);
  node('small','oakrest-place-kicker',place).textContent='CURRENT LOCATION';
  const liveLocation=map.querySelector('.location');
  if(liveLocation)place.append(liveLocation);
