@@ -62,8 +62,7 @@ let browser;
    const q=oakrestClassicQA;if(!q.itemAction({type:'equip',kind:'weapon',style:'magic',id:'ember'}).ok)throw Error('Ember equip failed');
    // Let the real bandit aggro and land a hit, without letting the test
    // character one-shot it through a target lock before Warmth can be tested.
-   q.teleport(0,39);q.advance(24);
-   q.teleport(26,87);
+   q.teleport(37,145);
    for(let i=0;i<80&&q.combatState().hp===q.combatState().maxHp;i++)q.advance(.5);
    q.teleport(-1,66);q.advance(.2);
   });
@@ -91,7 +90,7 @@ let browser;
     if(!q.itemAction({type:'equip',kind:'weapon',style:a.style,id:a.weapon}).ok)throw Error('Equip '+a.name);
     if(!q.itemAction({type:'ability',style:a.style,weapon:a.weapon,index:0,id:a.id}).ok)throw Error('Slot '+a.name);
     if(a.kind==='heal'){
-     q.teleport(26,87);q.lockMonster('bandit-a');q.advance(.6);q.teleport(26,87);
+     q.teleport(37,145);q.lockMonster('bandit-a');q.advance(.6);q.teleport(37,145);
      for(let i=0;i<120&&q.combatState().hp===q.combatState().maxHp;i++)q.advance(.5);
     }
     q.teleport(-1,71.3);q.advance(.2);
