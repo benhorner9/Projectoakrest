@@ -96,7 +96,7 @@ test('Block 6: complete first adventure, craft and resupply, gated Hollow, repea
   const p=at==='inventory'?null:target('forge');
   const result=adventure.action('craft',{target:p,choice:id,time:t,player:p?{x:p.x,z:p.z}:{x:0,z:0}});
   assert.equal(result.ok,true,'craft '+id+': '+result.reason);
-  if(p){advance(4);adventure.tick(t,4,{x:p.x,z:p.z});}
+  advance(4);adventure.tick(t,4,p?{x:p.x,z:p.z}:{x:0,z:0});
  };
  assert.equal(interact('enter','entrance').ok,false,'cannot skip the first seven quests');
  assert.equal(interact('accept','guard','welcome').ok,true);
