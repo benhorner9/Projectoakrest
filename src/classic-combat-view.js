@@ -5,39 +5,7 @@ import {makeClassicActor,makeGroundShadow} from './classic-sprites.js';
 import {hitRecoilStrength} from './classic-combat-impacts.js';
 import {classicAttackPose,classicEnemyProfile,classicDeathProgress} from './classic-combat-motion.js';
 import {createClassicProjectileView} from './classic-projectile-view.js';
-const makeTexture=(kind)=>{
- const c=document.createElement('canvas');c.width=96;c.height=100;
- const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
- const rect=(color,x,y,w,h)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
- const poly=(color,points)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fill();};
- if(kind==='keeper'||kind==='guardian'){
-  poly('#243d35',[[10,91],[23,60],[17,36],[35,28],[48,9],[62,28],[80,36],[73,64],[89,92]]);
-  poly('#6b8061',[[19,88],[31,57],[29,38],[47,24],[66,38],[64,59],[78,88]]);
-  for(const side of [-1,1])poly('#b09a68',[[48+side*17,39],[48+side*31,18],[48+side*25,5],[48+side*17,25]]);
-  if(kind==='guardian'){
-   poly('#6b8d56',[[12,53],[6,30],[29,38],[35,12],[43,38],[65,14],[64,39],[88,31],[82,58]]);
-   rect('#d6c389',38,39,7,5);rect('#d6c389',53,39,7,5);
-  }
-  poly(kind==='keeper'?'#b1e2cd':'#c5b37b',[[48,43],[57,58],[48,74],[39,58]]);rect('#def2d7',37,34,6,5);rect('#def2d7',55,34,6,5);
- }else if(kind==='mossling'){
-  poly('#293c2e',[[20,79],[12,67],[26,29],[42,18],[68,26],[82,68],[74,82]]);
-  poly('#6c9760',[[22,78],[17,63],[29,32],[43,22],[65,30],[77,64],[70,78]]);
-  rect('#a2c98e',33,38,27,16);rect('#243f2e',34,43,7,8);rect('#243f2e',54,43,7,8);
-  for(let i=0;i<5;i++)poly('#90b077',[[23+i*11,31],[29+i*11,19],[34+i*11,34]]);
- }else if(kind==='boar'){
-  rect('#53352d',15,48,68,31);rect('#926849',19,39,61,34);
-  rect('#3f302b',18,77,13,16);rect('#3f302b',60,77,14,16);
-  rect('#aa8560',25,28,41,36);rect('#40332a',30,41,8,8);
-  rect('#40332a',58,41,8,8);rect('#bd9780',37,54,27,17);
-  rect('#694c3c',41,60,6,5);rect('#694c3c',55,60,6,5);
-  poly('#e2d8b2',[[30,65],[20,57],[26,73]]);
-  poly('#e2d8b2',[[70,65],[80,57],[74,73]]);
- }
- const texture=new THREE.CanvasTexture(c);
- texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.NearestFilter;
- texture.generateMipmaps=false;texture.colorSpace=THREE.SRGBColorSpace;
- return texture;
-};
+import {classicCreaturePose,createClassicEnemyAtlas} from './classic-enemy-art.js';
 function labelTexture(name,level){
  const c=document.createElement('canvas');c.width=256;c.height=72;
  const ctx=c.getContext('2d');ctx.fillStyle='#20372bdc';ctx.fillRect(4,8,248,54);
@@ -47,10 +15,9 @@ function labelTexture(name,level){
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
  return t;
 }
-const assets={mossling:makeTexture('mossling'),boar:makeTexture('boar'),keeper:makeTexture('keeper'),guardian:makeTexture('guardian')};
 export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
- const actors=new Map(),warningMeshes=new Map();
- const projectileView=createClassicProjectileView(scene);
+ const actors=new Map(),warningMeshes=new Map(),atlas=createClassicEnemyAtlas();
+ const projectileView=createClassicProjectileView(scene,{reducedMotion});
  // A subtle ground circle replaces hard "target lock" visuals.
  const selectedRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.06,40),
   new THREE.MeshBasicMaterial({color:'#f5d58e',transparent:true,opacity:.76,
@@ -64,11 +31,12 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
    model=makeClassicActor({style:caster?'magic':'melee',coat:caster?'#657c79':e.type==='bandit'?'#785d50':'#9c8769',
     skin:'#c99a76',hair:'#4a3328',npc:true,armed:e.type==='bandit',npcWeapon:caster?'frost':'sword'});
   }else{
+   const kind=e.boss?'keeper':e.id==='guardian'?'guardian':e.type;
    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-    map:assets[e.boss?'keeper':e.id==='guardian'?'guardian':e.type],transparent:true,alphaTest:.06,depthWrite:false
+    map:atlas.get(kind),transparent:true,alphaTest:.06,depthWrite:false
    }));
    sprite.scale.set(e.boss?4.6:e.id==='guardian'?3.7:e.type==='boar'?3.2:2.35,e.boss?4.8:e.id==='guardian'?3.9:e.type==='boar'?2.6:2.5,1);
-   sprite.center.set(.5,0);model={sprite,update:()=>{}};
+   sprite.center.set(.5,0);model={sprite,update:()=>{},visualKind:kind};
   }
   const shadow=makeGroundShadow();
   const label=new THREE.Sprite(new THREE.SpriteMaterial({
@@ -91,6 +59,28 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
   return new THREE.CircleGeometry(w.radius,40,
    -Math.PI/2-w.halfAngle,w.halfAngle*2);
  }
+ function warningContour(w){
+  const points=[];
+  if(w.kind==='charge'){
+   points.push(new THREE.Vector3(-w.width,-w.length/2,0),new THREE.Vector3(w.width,-w.length/2,0),
+    new THREE.Vector3(w.width,w.length/2,0),new THREE.Vector3(-w.width,w.length/2,0));
+  }else{
+   const radius=w.radius,segments=40,start=w.kind==='cleave'?-Math.PI/2-w.halfAngle:0,
+    sweep=w.kind==='cleave'?w.halfAngle*2:Math.PI*2;
+   if(w.kind==='cleave')points.push(new THREE.Vector3(0,0,0));
+   for(let i=0;i<=(w.kind==='cleave'?segments:segments-1);i++){
+    const a=start+sweep*i/segments;
+    points.push(new THREE.Vector3(Math.cos(a)*radius,Math.sin(a)*radius,0));
+   }
+  }
+  return new THREE.BufferGeometry().setFromPoints(points);
+ }
+ function disposeWarning(plane){
+  scene.remove(plane);
+  const edge=plane.userData.edge;
+  if(edge){plane.remove(edge);edge.geometry.dispose();edge.material.dispose();}
+  plane.geometry.dispose();plane.material.dispose();
+ }
  function updateWarnings(monsters,t){
   const activeIds=new Set();
   for(const e of monsters){
@@ -98,10 +88,10 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
    const w=e.warning;activeIds.add(e.id);
    const previous=warningMeshes.get(e.id);
    if(previous&&previous.userData.startedAt!==w.startedAt){
-    scene.remove(previous);previous.geometry.dispose();previous.material.dispose();warningMeshes.delete(e.id);
+    disposeWarning(previous);warningMeshes.delete(e.id);
    }
    if(!warningMeshes.has(e.id)){
-    const mat=new THREE.MeshBasicMaterial({color:'#d34b49',transparent:true,opacity:.27,
+    const mat=new THREE.MeshBasicMaterial({color:w.kind==='charge'?'#da794a':w.kind==='cleave'?'#c96050':'#cd5351',transparent:true,opacity:.27,
      depthWrite:false,side:THREE.DoubleSide});
     const plane=new THREE.Mesh(warningGeometry(w),mat);plane.rotation.x=-Math.PI/2;
     if(w.kind==='charge'){
@@ -111,14 +101,22 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
      plane.position.set(w.x,.075,w.z);
      if(w.kind==='cleave')plane.rotation.z=Math.atan2(w.direction.x,-w.direction.z);
     }
+    const edge=new THREE.LineLoop(warningContour(w),new THREE.LineBasicMaterial({
+     color:w.kind==='charge'?'#ffd99b':'#ffdfb6',transparent:true,opacity:.77,
+     depthWrite:false,depthTest:false
+    }));
+    edge.position.z=.016;edge.renderOrder=5;plane.add(edge);plane.userData.edge=edge;
     plane.userData.startedAt=w.startedAt;scene.add(plane);warningMeshes.set(e.id,plane);
    }
    const plane=warningMeshes.get(e.id);
    const progress=Math.max(0,Math.min(1,(t-w.startedAt)/Math.max(.001,w.end-w.startedAt)));
-   plane.material.opacity=.23+progress*.25;
+   // Warning outlines share the exact authoritative geometry and direction.
+   // A final-beat brightness cue announces danger without changing hit timing.
+   plane.material.opacity=.20+progress*.28+(reducedMotion?0:Math.sin(progress*Math.PI*6)*.035);
+   plane.userData.edge.material.opacity=.58+progress*.4;
   }
   for(const [id,obj] of warningMeshes)if(!activeIds.has(id)){
-   scene.remove(obj);obj.geometry.dispose();obj.material.dispose();warningMeshes.delete(id);
+   disposeWarning(obj);warningMeshes.delete(id);
   }
  }
  function update(snapshot,cameraOffset,player){
@@ -157,6 +155,13 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
    // These visual offsets never move collision coordinates or hit geometry.
    const preparation=enemy.warning?Math.max(0,Math.min(1,(t-enemy.warning.startedAt)/(enemy.warning.end-enemy.warning.startedAt))):0;
    const contact=t<(enemy.releaseUntil||0)?Math.max(0,(enemy.releaseUntil-t)/.22):0;
+   if(actor.visualKind){
+    const pose=classicCreaturePose({moving:Math.hypot(dx,dz)>.001,hit,warning:!!enemy.warning,
+     releasing:contact>0,dying,time:t,reducedMotion});
+    const frame=atlas.get(actor.visualKind,pose);
+    if(actor.sprite.material.map!==frame){actor.sprite.material.map=frame;actor.sprite.material.needsUpdate=true;}
+    actor.sprite.userData.visualPose=pose;
+   }
    if(!reducedMotion&&!enemy.dead){
     actor.sprite.scale.y*=1-preparation*.07+contact*.07;
     actor.sprite.position.y+=preparation*.07+contact*.12;
@@ -179,17 +184,23 @@ export function createClassicCombatView(scene,spawns,{reducedMotion=false}={}){
     step:Math.hypot(dx,dz)>.001?1+Math.floor(t*5)%2:0});
   }
   updateWarnings(snapshot.monsters,t);
-  projectileView.update(snapshot.projectiles);
+  projectileView.update(snapshot.projectiles,t);
  }
  function hitObjects(){return [...actors.entries()].filter(([,a])=>a.alive!==false).map(([id,a])=>({id,object:a.sprite}));}
- return {update,hitObjects,stats:()=>({projectiles:projectileView.stats(),
-  actors:[...actors].map(([id,a])=>({id,visible:a.sprite.visible,opacity:a.sprite.material.opacity,scaleY:a.sprite.scale.y}))}),
+ return {update,hitObjects,stats:()=>({projectiles:projectileView.stats(),creatures:atlas.stats(),warnings:warningMeshes.size,
+  actors:[...actors].map(([id,a])=>({id,visible:a.sprite.visible,opacity:a.sprite.material.opacity,scaleY:a.sprite.scale.y,pose:a.sprite.userData.visualPose||a.sprite.userData.pose||'idle',kind:a.visualKind||'humanoid'}))}),
   dispose(){
    scene.remove(selectedRing);selectedRing.geometry.dispose();selectedRing.material.dispose();
    projectileView.dispose();
-   for(const [id,mesh] of warningMeshes){scene.remove(mesh);mesh.geometry.dispose();mesh.material.dispose();}
+   for(const [,mesh] of warningMeshes)disposeWarning(mesh);
+   warningMeshes.clear();atlas.dispose();
    for(const actor of actors.values()){
     for(const obj of [actor.sprite,actor.shadow,actor.label,actor.hpBackground,actor.hpFill])scene.remove(obj);
+    actor.dispose?.();
+    if(actor.visualKind)actor.sprite.material.dispose();
+    actor.shadow.geometry.dispose();actor.shadow.material.dispose();
+    actor.label.material.map?.dispose();actor.label.material.dispose();
+    for(const bar of [actor.hpBackground,actor.hpFill]){bar.geometry.dispose();bar.material.dispose();}
    }
   }
  };
