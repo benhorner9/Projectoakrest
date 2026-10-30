@@ -1,0 +1,90 @@
+// In-browser iPad-sized acceptance of real bag/bank/gear item icons and physical Classic loot.
+const assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+const {resolve,join}=require('node:path');
+const {mkdirSync,writeFileSync}=require('node:fs');
+const root=resolve(__dirname,'..'),out=join(root,'qa','visual-block3');
+mkdirSync(out,{recursive:true});
+const server=spawn('python3',['-m','http.server','5298','--bind','127.0.0.1'],{cwd:root,stdio:'ignore'});
+let browser;
+const evidence={environment:'touch Chromium 1194x834, NOT physical iPad Safari',views:[],errors:[]};
+(async()=>{try{
+ await new Promise(r=>setTimeout(r,900));
+ browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ const context=await browser.newContext({viewport:{width:1194,height:834},hasTouch:true,deviceScaleFactor:1});
+ const {defaultSave}=await import('../src/rules.js');
+ const save=defaultSave();save.coins=650;save.xp.melee=5000;
+ save.inventory.materials={ration:6,'woodland-tonic':3,'softwood-logs':9,'copper-ore':2,'tin-ore':2,reed:3,'boar-hide':1,'moss-fibre':2};
+ save.inventory.slotted.push('recruit-helm','recruit-shield','scout-hood','wayfarer-amulet');
+ save.inventory.weapons.melee.push('greatsword');
+ const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ await context.addInitScript(({save,id})=>{
+  if(!localStorage.getItem('oakrest-characters-v1')){
+   localStorage.setItem('oakrest-characters-v1',JSON.stringify([{id,name:'Item Art QA'}]));
+   localStorage.setItem('oakrest-active-character',id);
+   localStorage.setItem('oakrest-character-save-'+id,JSON.stringify(save));
+  }
+  let qa;Object.defineProperty(window,'oakrestClassicQA',{configurable:true,get:()=>qa,set:v=>{qa=v;v?.pauseAutomaticLoop?.();}});
+ },{save,id});
+ const page=await context.newPage();page.on('pageerror',e=>evidence.errors.push(e.message));
+ await page.goto('http://127.0.0.1:5298/classic.html?qa=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.oakrestClassicQA,null,{timeout:30000});
+ const before=await page.evaluate(()=>JSON.stringify(oakrestClassicQA.persistentSnapshot()));
+ const open=mode=>page.evaluate(mode=>oakrestClassicQA.openWindow(mode),mode);
+ await open('inventory');
+ const bagIcons=await page.locator('#classic-item-content .classic-item-cell img.classic-item-icon').evaluateAll(imgs=>imgs.map(img=>({src:img.getAttribute('src'),ready:img.complete&&img.naturalWidth>0})));
+ assert.ok(bagIcons.length>=8);
+ assert.ok(bagIcons.every(i=>i.src.startsWith('data:image/svg+xml')&&i.ready),'all backpack icons must render without remote requests');
+ const rationSrc=await page.locator('#classic-item-content [data-canonical="material.ration"] img.classic-item-icon').getAttribute('src');
+ const data=await page.evaluate(async()=>{
+  const {ITEM_CATALOG,itemIconSvg}=await import('./src/items.js');
+  const {makeWorldItemModel}=await import('./src/item-visuals.js');
+  const {classicItemArtProfile}=await import('./src/classic-item-art.js');
+  const counts={};
+  for(const item of ITEM_CATALOG){
+   const svg=itemIconSvg(item.id),art=classicItemArtProfile(item);
+   if(!svg||!art)throw Error('missing art for '+item.id);
+   counts[art.shape]=(counts[art.shape]||0)+1;
+  }
+  const drop={kind:'material',itemId:'softwood-logs',amount:2,x:0,z:39,id:'qa-art-drop'};
+  const group=makeWorldItemModel(drop,{classic:true});
+  const shape=group.userData.visualShape;
+  let meshes=0;group.traverse(x=>{if(x.isMesh){meshes++;x.geometry.dispose();x.material.dispose();}});
+  return {total:ITEM_CATALOG.length,types:counts,ground:{shape,meshes}};
+ });
+ assert.ok(data.total>45);
+ assert.ok(Object.keys(data.types).length>=16,'many independent silhouettes across the catalogue');
+ assert.equal(data.ground.shape,'logs');
+ evidence.catalogue=data;
+ const inventory=join(out,'inventory.png');await page.screenshot({path:inventory});evidence.views.push('inventory');
+ await open('equipment');
+ const equipped=await page.locator('#classic-item-content .classic-paper-slot img.classic-item-icon').count();
+ assert.ok(equipped>=1,'real worn gear renders full item icon');
+ const owned=await page.locator('#classic-item-content .classic-gear-choice img.classic-item-icon').count();
+ assert.ok(owned>=3,'authentic gear selection icons render');
+ await page.screenshot({path:join(out,'equipment.png')});evidence.views.push('equipment');
+ await page.evaluate(()=>oakrestClassicQA.teleport(-30,14));
+ await open('bank');
+ const bankIcon=page.locator('#classic-item-content [data-scope="bag"][data-canonical="material.ration"] img.classic-item-icon');
+ assert.equal(await bankIcon.getAttribute('src'),rationSrc,'bank and bag show exact same canonical item art');
+ await page.screenshot({path:join(out,'bank.png')});evidence.views.push('bank');
+ await open('inventory');
+ const dropped=await page.evaluate(()=>oakrestClassicQA.itemAction({type:'drop',id:'material.softwood-logs',quantity:2}));
+ assert.equal(dropped.ok,true,JSON.stringify(dropped));
+ await page.evaluate(()=>{oakrestClassicQA.step(.08);});
+ const lootState=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot().groundLoot);
+ const drop=lootState.find(d=>d.playerDrop&&d.kind==='material'&&d.itemId==='softwood-logs');
+ assert.ok(drop,'real action creates physically persistent loot');
+ await page.screenshot({path:join(out,'ground-loot.png')});evidence.views.push('ground-loot');
+ const pick=await page.evaluate(id=>oakrestClassicQA.pickupDrop(id),drop.id);
+ assert.ok(pick?.ok||pick===true,'unchanged pickup path recovers ground loot');
+ const after=await page.evaluate(()=>oakrestClassicQA.persistentSnapshot());
+ assert.equal(after.inventory.materials['softwood-logs'],9,'ground model changes cannot duplicate or delete logs');
+ assert.equal(after.groundLoot.some(d=>d.id===drop.id),false);
+ assert.equal(await page.locator('#classic-creator').isVisible(),false);
+ assert.deepEqual(evidence.errors,[],'no runtime exception in real Classic item UI');
+ evidence.beforeLength=before.length;evidence.afterLength=JSON.stringify(after).length;
+ writeFileSync(join(out,'visual-qa.json'),JSON.stringify(evidence,null,2));
+ console.log('PASS Visual Block 3: bag, gear, bank, ground model and pickup in real touch Chromium.',data);
+}finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e.stack||e);process.exitCode=1;});
