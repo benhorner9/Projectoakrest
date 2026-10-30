@@ -30,7 +30,16 @@ test('every adventure target has a traversable approach; routes do not pass thro
 test('fresh character completes all eight quests using real resources, combat, and round-trip saves',()=>{
  const h=harness();success(h.act('accept','citizen:guard'));
  for(const id of ['service:bank','service:store','service:forester'])h.combat.adventureVisit(id);
- success(h.act('finish','citizen:guard'));assert.equal(h.combat.adventureState().index,1);
+ const firstReward=success(h.act('finish','citizen:guard'));
+ assert.deepEqual(firstReward.completion,{
+  id:'welcome',title:'A Place Behind the Walls',
+  ending:firstReward.reason,
+  rewards:[{kind:'coins',label:'Coins',amount:20}]
+ });
+ assert.equal(h.combat.persistentSave().coins,20);
+ assert.equal(h.act('finish','citizen:guard','welcome').ok,false,'same quest cannot award twice');
+ assert.equal(h.combat.persistentSave().coins,20,'failed hand-in cannot change coins');
+ assert.equal(h.combat.adventureState().index,1);
  success(h.act('accept','adventure:rowan'));
  for(const style of ['melee','magic','ranged']){
   h.combat.stopTarget();h.step(3);h.combat.styleSwitch(style);h.step(1);h.player={x:-1,z:71};

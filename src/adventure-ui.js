@@ -40,6 +40,48 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
   if(windowUi.current()==='quests')
    questBook.querySelector('[data-quest-id="'+selectedQuest+'"]')?.focus({preventScroll:true});
  });
+ // A separate celebration appears only after the hand-in transaction succeeds;
+ // saved journal entries never replay it on character load.
+ const completionPopup=el('dialog','',document.getElementById('classic-app'));
+ completionPopup.id='classic-quest-complete';completionPopup.className='oakrest-quest-complete';
+ completionPopup.setAttribute('aria-labelledby','classic-quest-complete-title');
+ completionPopup.setAttribute('aria-describedby','classic-quest-complete-story');
+ const completionCard=el('section','',completionPopup);completionCard.className='oakrest-quest-complete-card';
+ el('p','✦ QUEST COMPLETE ✦',completionCard).className='oakrest-quest-complete-kicker';
+ const completionTitle=el('h2','',completionCard);completionTitle.id='classic-quest-complete-title';
+ const completionStory=el('p','',completionCard);completionStory.id='classic-quest-complete-story';
+ el('h3','Rewards received',completionCard);
+ const completionRewards=el('ul','',completionCard);completionRewards.className='oakrest-quest-complete-rewards';
+ const completionContinue=el('button','Continue adventuring',completionCard);
+ completionContinue.type='button';completionContinue.className='oakrest-quest-complete-continue';
+ completionContinue.addEventListener('click',()=>completionPopup.close());
+ completionPopup.addEventListener('keydown',event=>event.stopPropagation());
+ completionPopup.addEventListener('click',event=>{
+  if(event.target===completionPopup)completionPopup.close();
+ });
+ completionPopup.addEventListener('close',()=>{
+  if(windowUi.current()==='dialogue')
+   document.getElementById('classic-dialogue-close')?.focus({preventScroll:true});
+ });
+ windowUi.subscribe?.(name=>{if(name!=='dialogue'&&completionPopup.open)completionPopup.close();});
+ function showCompletion(completion){
+  if(!completion||completionPopup.open)return;
+  if(questPopup.open)questPopup.close();
+  completionTitle.textContent=completion.title;
+  completionStory.textContent=completion.ending;
+  completionRewards.replaceChildren();
+  for(const reward of completion.rewards||[]){
+   const row=el('li','',completionRewards);
+   row.className='oakrest-quest-complete-reward';
+   row.dataset.rewardKind=reward.kind;
+   el('span',reward.label,row);
+   el('strong','+'+reward.amount.toLocaleString(),row);
+  }
+  if(!completionRewards.childElementCount)
+   el('li','Quest completed — no additional items or coins.',completionRewards);
+  completionPopup.showModal();
+  completionContinue.focus({preventScroll:true});
+ }
  const eatButton=el('button','Eat',document.querySelector('.classic-item-buttons'));eatButton.type='button';eatButton.id='adventure-eat';eatButton.title='Eat field ration (35 Health)';el('small','RATION',eatButton);
  const work=el('button','',document.querySelector('.classic-footer-events'));work.id='adventure-work';work.hidden=true;work.type='button';work.title='Cancel gathering or crafting';
  const tracker=el('button','',document.querySelector('.classic-sidebar-map'));tracker.id='adventure-journal';tracker.type='button';tracker.title='Open quest journal';
@@ -47,7 +89,8 @@ export function setupAdventureUI({combat,player,windowUi,notify,changed,teleport
  function open(){if(windowUi.current()!=='dialogue')windowUi.open('dialogue');content.hidden=false;body.textContent='';}
  function act(kind,choice){
   const result=combat.adventureAction(kind,{target:current,choice},player());notify(result?.reason||'Action unavailable');
-  if(result?.ok){changed();if(result.teleport){windowUi.hide();teleport(result.teleport);}else if(kind==='gather'||kind==='craft'){windowUi.hide();}else render();}
+  if(result?.ok){changed();if(result.teleport){windowUi.hide();teleport(result.teleport);}else if(kind==='gather'||kind==='craft'){windowUi.hide();}else render();
+   if(kind==='finish'&&result.completion)showCompletion(result.completion);}
   return result;
  }
  function talk(target){

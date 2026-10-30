@@ -119,7 +119,12 @@ export function createAdventure(data,{emit,grantWeapon,heal,resetDungeon,calmGua
    QUESTS.find(x=>questStatus(x)==='active')?.id||
    QUESTS.find(x=>questStatus(x)==='available')?.id||null;
   syncLegacy();
-  emit('adventure',{reason:'Completed: '+q.title+' · '+q.coins+' coins'});return ok(q.end);
+  // Claim data is returned only by this successful, once-only transaction.
+  // The popup must reflect earned rewards, not unrelated quest flavour text.
+  const completion={id:q.id,title:q.title,ending:q.end,
+   rewards:q.coins>0?[{kind:'coins',label:'Coins',amount:q.coins}]:[]};
+  emit('adventure',{reason:'Completed: '+q.title+' · '+q.coins+' coins'});
+  return {...ok(q.end),completion};
  }
  function teach(){
   if(starterAxe()&&!canCarry({}, {},[{kind:'weapon',style:'melee',id:'bronze-axe'}]))

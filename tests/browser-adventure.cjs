@@ -33,7 +33,24 @@ let browser;
   for(const id of ['service:bank','service:store','service:forester']){
    await page.evaluate(async id=>{const {findClassicInteractable}=await import('./src/classic-interactions.js');const t=findClassicInteractable(id);oakrestClassicQA.teleport(t.x,t.z-1.5);oakrestClassicQA.selectTarget(id);},id);
   }
-  await act('finish','citizen:guard');await act('accept','adventure:rowan');
+  // Player-facing hand-in must open the completion celebration, not just a toast.
+  await page.evaluate(()=>{oakrestClassicQA.teleport(5,46);oakrestClassicQA.interactNow();});
+  await page.getByRole('button',{name:'Complete quest · 20 coins'}).click();
+  const completion=page.locator('#classic-quest-complete');
+  assert.equal(await completion.isVisible(),true,'successful NPC hand-in opens a completion popup');
+  assert.equal(await completion.evaluate(e=>e.open),true,'native accessible modal shown');
+  assert.equal(await completion.locator('h2').textContent(),'A Place Behind the Walls');
+  assert.match(await completion.locator('#classic-quest-complete-story').textContent(),/Now you know the people behind these walls/);
+  assert.match(await completion.locator('.oakrest-quest-complete-reward').textContent(),/Coins\s*\+20/);
+  assert.equal(await completion.locator('.oakrest-quest-complete-reward').count(),1,'no invented XP or items');
+  mkdirSync('qa/first-adventure',{recursive:true});
+  await page.screenshot({path:'qa/first-adventure/quest-complete.png'});
+  await completion.getByRole('button',{name:'Continue adventuring'}).click();
+  assert.equal(await completion.isVisible(),false,'Continue dismisses celebration');
+  const duplicate=await page.evaluate(()=>oakrestClassicQA.adventureAction('finish','citizen:guard','welcome'));
+  assert.equal(duplicate.ok,false,'duplicate quest hand-in is blocked');
+  assert.equal(await completion.isVisible(),false,'failed claim does not re-open celebration');
+  await act('accept','adventure:rowan');
   for(const style of ['melee','magic','ranged']){
    await page.evaluate(style=>{oakrestClassicQA.teleport(-1,71);oakrestClassicQA.switchStyle(style);},style);await step(2);
    await page.evaluate(()=>oakrestClassicQA.lockMonster('practice'));await step(5);
